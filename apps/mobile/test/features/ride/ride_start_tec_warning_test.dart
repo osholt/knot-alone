@@ -8,7 +8,6 @@ import 'package:ride_relay/controllers/ride_code_preference_controller.dart';
 import 'package:ride_relay/controllers/ride_controller.dart';
 import 'package:ride_relay/controllers/rider_profile_controller.dart';
 import 'package:ride_relay/controllers/shared_route_controller.dart';
-import 'package:ride_relay/controllers/speed_limit_display_controller.dart';
 import 'package:ride_relay/data/in_memory_event_store.dart';
 import 'package:ride_relay/data/in_memory_session_store.dart';
 import 'package:ride_relay/domain/completed_ride_store.dart';
@@ -35,7 +34,6 @@ void main() {
     );
     _riderProfile.takePendingRideChoice();
     _sharedRoutes = await SharedRouteController.load();
-    _speedLimitDisplay = SpeedLimitDisplayController.inMemory();
     _mapStyleMode = await MapStyleModeController.load();
     _completedRides = await CompletedRidesController.load(
       InMemoryCompletedRideStore(),
@@ -221,7 +219,6 @@ void main() {
 
 late RiderProfileController _riderProfile;
 late SharedRouteController _sharedRoutes;
-late SpeedLimitDisplayController _speedLimitDisplay;
 late MapStyleModeController _mapStyleMode;
 late CompletedRidesController _completedRides;
 
@@ -249,7 +246,6 @@ class _Harness {
     rideCodePreference: RideCodePreferenceController.memory(),
     riderProfile: _riderProfile,
     sharedRoutes: _sharedRoutes,
-    speedLimitDisplay: _speedLimitDisplay,
     recordedRoutes: InMemoryRecordedRouteStore(),
     completedRides: _completedRides,
     enableNativeServices: false,

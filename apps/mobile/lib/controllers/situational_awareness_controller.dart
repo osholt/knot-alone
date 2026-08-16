@@ -3,15 +3,12 @@ import 'package:uuid/uuid.dart';
 
 import '../domain/event_store.dart';
 import '../domain/geo_point.dart';
-import '../domain/hazard.dart';
 import '../domain/ride_event.dart';
 import '../domain/ride_role.dart';
 import '../domain/ride_session.dart';
 import '../domain/rider_location.dart';
 import '../domain/route_alert.dart';
 import '../relay/live_presence.dart';
-import '../services/external_hazard_provider.dart';
-import '../services/hazard_deduplicator.dart';
 import '../services/route_deviation_detector.dart';
 import '../services/leader_track_exemption.dart';
 import '../services/situation_event_factory.dart';
@@ -22,13 +19,10 @@ class SituationalAwarenessController extends ChangeNotifier {
     this._session, {
     required List<GeoPoint> route,
     List<List<GeoPoint>>? routeSegments,
-    List<ExternalHazardProvider> externalProviders = const [],
     SituationClock? clock,
     SituationIdFactory? idFactory,
     this.rideStarted = true,
     this.rideStartedAt,
-    this.expiryPolicy = const HazardExpiryPolicy(),
-    this.deduplicator = const HazardDeduplicator(),
     this.routeConfig = const RouteDeviationConfig(),
     this.freshnessPolicy = const PresenceFreshnessPolicy(),
     this.onEventStored,
@@ -38,7 +32,6 @@ class SituationalAwarenessController extends ChangeNotifier {
            (segment) => List<GeoPoint>.unmodifiable(segment),
          ),
        ),
-       _externalProviders = List.unmodifiable(externalProviders),
        _clock = clock ?? DateTime.now,
        _idFactory = idFactory ?? const Uuid().v7 {
     _eventFactory = SituationEventFactory(
@@ -52,13 +45,10 @@ class SituationalAwarenessController extends ChangeNotifier {
   RideSession _session;
   final List<GeoPoint> _route;
   final List<List<GeoPoint>> _routeSegments;
-  final List<ExternalHazardProvider> _externalProviders;
   final SituationClock _clock;
   final SituationIdFactory _idFactory;
   final bool rideStarted;
   final DateTime? rideStartedAt;
-  final HazardExpiryPolicy expiryPolicy;
-  final HazardDeduplicator deduplicator;
   final RouteDeviationConfig routeConfig;
 
   /// Documented age thresholds shared with the ephemeral presence channels, so
@@ -76,7 +66,6 @@ class SituationalAwarenessController extends ChangeNotifier {
 
   final Map<String, RiderLocation> _locations = {};
   final Map<String, RiderLocationEvidence> _locationEvidence = {};
-  final Map<String, HazardReport> _hazards = {};
   final Map<String, RiderRouteAlert> _alerts = {};
   final Map<String, RouteDeviationDetector> _detectors = {};
   final Map<String, bool> _followingLeaderTrack = {};
@@ -122,20 +111,6 @@ class SituationalAwarenessController extends ChangeNotifier {
         journal: _locations.values,
       );
 
-  List<HazardReport> get activeHazards {
-    final now = _clock();
-    final values = _hazards.values
-        .where((hazard) => hazard.isActiveAt(now))
-        .toList();
-    values.sort((first, second) {
-      final bySeverity = second.severity.index.compareTo(first.severity.index);
-      return bySeverity != 0
-          ? bySeverity
-          : second.updatedAt.compareTo(first.updatedAt);
-    });
-    return List.unmodifiable(values);
-  }
-
   List<RiderRouteAlert> get routeAlerts {
     final values = _alerts.values
         .map(_exemptIfFollowingLeaderTrack)
@@ -148,8 +123,6 @@ class SituationalAwarenessController extends ChangeNotifier {
     );
     return List.unmodifiable(values);
   }
-
-  List<ExternalHazardProvider> get externalProviders => _externalProviders;
 
   RiderLocation? get localLocation => _locations[_session.localRiderId];
 
@@ -199,7 +172,6 @@ class SituationalAwarenessController extends ChangeNotifier {
         await Future<void>.delayed(Duration.zero);
       }
     }
-    _removeExpiredHazards();
     notifyListeners();
   }
 
@@ -232,70 +204,6 @@ class SituationalAwarenessController extends ChangeNotifier {
           previousAlert?.audience != currentAlert?.audience) {
         await _persistAlertTransition(location.riderId);
       }
-    });
-  }
-
-  Future<HazardReport?> reportHazard({
-    required HazardType type,
-    required HazardSeverity severity,
-    GeoPoint? position,
-    String? details,
-  }) async {
-    if (!type.isRiderReportable) {
-      throw const FormatException('That hazard type cannot be reported.');
-    }
-    HazardReport? result;
-    await _run(() async {
-      final reportPosition = position ?? localLocation?.sample.position;
-      if (reportPosition == null) {
-        throw const FormatException(
-          'A current location is required to report a hazard.',
-        );
-      }
-      final now = _clock();
-      final trimmedDetails = details?.trim();
-      final incoming = HazardReport(
-        id: _idFactory(),
-        rideId: _session.rideId,
-        type: type,
-        severity: severity,
-        position: reportPosition,
-        reportedAt: now,
-        updatedAt: now,
-        expiresAt: now.add(expiryPolicy.durationFor(type, severity)),
-        reporterId: _session.localRiderId,
-        reporterName: _session.displayName,
-        source: HazardSource.rider,
-        details: trimmedDetails == null || trimmedDetails.isEmpty
-            ? null
-            : trimmedDetails.substring(
-                0,
-                trimmedDetails.length > 160 ? 160 : trimmedDetails.length,
-              ),
-      );
-      result = deduplicator.mergeOrAdd(incoming, activeHazards);
-      final event = _eventFactory.create(
-        type: RideEventType.hazardReported,
-        payload: {'hazard': result!.toJson()},
-        priority: _priorityForSeverity(result!.severity),
-        expiresAt: result!.expiresAt,
-      );
-      await _appendAndApply(event);
-    });
-    return result;
-  }
-
-  Future<void> clearHazard(String hazardId, {String reason = 'cleared'}) async {
-    if (!_hazards.containsKey(hazardId)) {
-      return;
-    }
-    await _run(() async {
-      final event = _eventFactory.create(
-        type: RideEventType.hazardCleared,
-        payload: {'hazardId': hazardId, 'reason': reason},
-        priority: EventPriority.important,
-      );
-      await _appendAndApply(event);
     });
   }
 
@@ -333,52 +241,10 @@ class SituationalAwarenessController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> refreshExternalHazards() async {
-    if (_route.isEmpty) {
-      return;
-    }
-    await _run(() async {
-      for (final provider in _externalProviders) {
-        if (!provider.status.canFetch) {
-          continue;
-        }
-        final result = await provider.fetch(
-          ExternalHazardQuery(
-            rideId: _session.rideId,
-            route: _route,
-            requestedAt: _clock(),
-          ),
-        );
-        for (final hazard in result.hazards) {
-          if (hazard.source != HazardSource.externalProvider ||
-              hazard.providerId != provider.id ||
-              hazard.rideId != _session.rideId) {
-            continue;
-          }
-          final existingProviderIncident = _hazards[hazard.id];
-          final merged =
-              existingProviderIncident?.source ==
-                      HazardSource.externalProvider &&
-                  existingProviderIncident?.providerId == provider.id
-              ? hazard
-              : deduplicator.mergeOrAdd(hazard, activeHazards);
-          final event = _eventFactory.create(
-            type: RideEventType.hazardReported,
-            payload: {'hazard': merged.toJson()},
-            priority: _priorityForSeverity(merged.severity),
-            expiresAt: merged.expiresAt,
-          );
-          await _appendAndApply(event);
-        }
-      }
-    });
-  }
-
   Future<void> refreshStaleness() async {
     if (_refreshingStaleness) return;
     _refreshingStaleness = true;
     try {
-      _removeExpiredHazards();
       final locations = List<RiderLocation>.of(_locations.values);
       for (final location in locations) {
         final previous = _alerts[location.riderId]?.assessment;
@@ -453,17 +319,6 @@ class SituationalAwarenessController extends ChangeNotifier {
           _evaluateLocation(location);
         }
         break;
-      case RideEventType.hazardReported:
-        final hazard = HazardReport.fromJson(
-          _mapPayload(event.payload['hazard']),
-        );
-        if (hazard.rideId == _session.rideId && hazard.isActiveAt(_clock())) {
-          _hazards[hazard.id] = hazard;
-        }
-        break;
-      case RideEventType.hazardCleared:
-        _hazards.remove(event.payload['hazardId']);
-        break;
       case RideEventType.routeDeviationChanged:
       case RideEventType.routeAlertAcknowledged:
         final alert = RiderRouteAlert.fromJson(
@@ -502,12 +357,14 @@ class SituationalAwarenessController extends ChangeNotifier {
       case RideEventType.tecRoleRequested:
       case RideEventType.tecRoleResponded:
       case RideEventType.rejoinRouteShared:
+      // Recorded by builds that still had the road hazard surfaces. Kept in the
+      // journal so an archived ride still decodes; nothing projects them now.
+      case RideEventType.hazardReported:
+      case RideEventType.hazardCleared:
       case RideEventType.riderContactShared:
         break;
     }
-    if (!replaying) {
-      _removeExpiredHazards();
-    }
+    if (!replaying) {}
   }
 
   bool _isWithinRideActivity(RideEvent event) {
@@ -699,11 +556,6 @@ class SituationalAwarenessController extends ChangeNotifier {
     );
   }
 
-  void _removeExpiredHazards() {
-    final now = _clock();
-    _hazards.removeWhere((_, hazard) => !hazard.isActiveAt(now));
-  }
-
   Future<void> _run(Future<void> Function() operation) async {
     if (_busy) {
       return;
@@ -729,14 +581,6 @@ class SituationalAwarenessController extends ChangeNotifier {
   static Map<String, Object?> _mapPayload(Object? value) =>
       Map<String, Object?>.from(value! as Map);
 
-  static EventPriority _priorityForSeverity(HazardSeverity severity) =>
-      switch (severity) {
-        HazardSeverity.advisory => EventPriority.routine,
-        HazardSeverity.caution ||
-        HazardSeverity.serious => EventPriority.important,
-        HazardSeverity.critical => EventPriority.critical,
-      };
-
   static EventPriority _priorityForAlert(RouteAlertLevel level) =>
       switch (level) {
         RouteAlertLevel.none || RouteAlertLevel.watch => EventPriority.routine,
@@ -746,8 +590,6 @@ class SituationalAwarenessController extends ChangeNotifier {
 
   static const _supportedSituationalEventTypes = {
     RideEventType.riderLocationUpdated,
-    RideEventType.hazardReported,
-    RideEventType.hazardCleared,
     RideEventType.routeDeviationChanged,
     RideEventType.routeAlertAcknowledged,
   };

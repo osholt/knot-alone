@@ -4,7 +4,6 @@ import 'package:ride_relay/controllers/distance_unit_controller.dart';
 import 'package:ride_relay/controllers/map_style_mode_controller.dart';
 import 'package:ride_relay/controllers/rider_profile_controller.dart';
 import 'package:ride_relay/controllers/route_progress_display_controller.dart';
-import 'package:ride_relay/controllers/speed_limit_display_controller.dart';
 import 'package:ride_relay/features/settings/unit_settings_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,11 +14,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final mapStyle = await MapStyleModeController.load();
     final riderProfile = await RiderProfileController.load();
-    final speedLimit = SpeedLimitDisplayController.inMemory();
     final routeProgress = RouteProgressDisplayController.inMemory();
     addTearDown(mapStyle.dispose);
     addTearDown(riderProfile.dispose);
-    addTearDown(speedLimit.dispose);
     addTearDown(routeProgress.dispose);
 
     await tester.pumpWidget(
@@ -31,7 +28,6 @@ void main() {
             ),
             mapStyleMode: mapStyle,
             riderProfile: riderProfile,
-            speedLimitDisplay: speedLimit,
             routeProgressDisplay: routeProgress,
             embedded: true,
           ),

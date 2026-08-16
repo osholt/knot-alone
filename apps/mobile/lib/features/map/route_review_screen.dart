@@ -10,7 +10,6 @@ import '../../services/basemap_configuration.dart';
 import '../../services/biker_place_catalogue.dart';
 import '../../services/measurement_formatter.dart';
 import '../../services/navigation_guidance.dart';
-import '../../services/route_marker_plan.dart';
 import '../../services/route_reshape_planner.dart';
 import '../../services/route_twistiness.dart';
 import '../../services/route_waypoint_editor.dart';
@@ -38,8 +37,6 @@ class RouteReviewScreen extends StatefulWidget {
     this.previousRoute,
     this.comparisonRoute,
     this.canEditStops = false,
-    this.showMarkerPlan = true,
-    this.onMarkerReviewChanged,
     this.onReshapeRoute,
     this.onRouteChanged,
     this.pointOfInterestLoader,
@@ -63,12 +60,7 @@ class RouteReviewScreen extends StatefulWidget {
   /// length-change warning and is used by ordinary route editing flows.
   final ImportedRoute? comparisonRoute;
   final bool canEditStops;
-  final bool showMarkerPlan;
 
-  /// Reports each change to the route's marker review so the caller can store
-  /// it with the route it belongs to. Assistance only suggests; this is where
-  /// the person reviewing says which suggestions they will actually use (#179).
-  final ValueChanged<MarkerPlanReview>? onMarkerReviewChanged;
   final RouteReshapeCallback? onReshapeRoute;
   final ValueChanged<ImportedRoute>? onRouteChanged;
   final Future<BikerPlaceCatalogue> Function()? pointOfInterestLoader;
@@ -85,8 +77,6 @@ class RouteReviewScreen extends StatefulWidget {
     ImportedRoute? previousRoute,
     ImportedRoute? comparisonRoute,
     bool canEditStops = false,
-    bool showMarkerPlan = true,
-    ValueChanged<MarkerPlanReview>? onMarkerReviewChanged,
     RouteReshapeCallback? onReshapeRoute,
     ValueChanged<ImportedRoute>? onRouteChanged,
     Future<BikerPlaceCatalogue> Function()? pointOfInterestLoader,
@@ -105,8 +95,6 @@ class RouteReviewScreen extends StatefulWidget {
             previousRoute: previousRoute,
             comparisonRoute: comparisonRoute,
             canEditStops: canEditStops,
-            showMarkerPlan: showMarkerPlan,
-            onMarkerReviewChanged: onMarkerReviewChanged,
             onReshapeRoute: onReshapeRoute,
             onRouteChanged: onRouteChanged,
             pointOfInterestLoader: pointOfInterestLoader,
@@ -120,10 +108,14 @@ class RouteReviewScreen extends StatefulWidget {
 }
 
 class _RouteReviewScreenState extends State<RouteReviewScreen> {
-  static const _analyzer = RouteMarkerPlanAnalyzer();
   static const _reshapePreviewDelay = Duration(milliseconds: 450);
 
-  late MarkerPlanReview _markerReview = widget.route.markerReview;
+  /// The route's stored marker review, carried through recalculation unchanged.
+  ///
+  /// Nothing edits it now that the junction-marker surfaces are gone; it is kept
+  /// so a route saved by an earlier build round-trips rather than silently
+  /// losing data.
+  late final MarkerPlanReview _markerReview = widget.route.markerReview;
   late ImportedRoute _route = widget.route;
   late ImportedRoute _lastSuccessfulRoute = widget.route;
   late double? _distanceMeters = widget.distanceMeters;
@@ -193,11 +185,6 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
     } finally {
       if (mounted) setState(() => _loadingPointsOfInterest = false);
     }
-  }
-
-  void _applyReview(MarkerPlanReview review) {
-    setState(() => _markerReview = review);
-    widget.onMarkerReviewChanged?.call(review);
   }
 
   @override
@@ -467,60 +454,6 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
         .firstOrNull;
   }
 
-  void _reject(MarkerPlanPoint point) =>
-      _applyReview(_markerReview.rejecting(point.toReviewPoint()));
-
-  void _restore(String id) => _applyReview(_markerReview.restoring(id));
-
-  Future<void> _addMissedJunction() async {
-    final candidates = _analyzer.candidates(route);
-    if (candidates.isEmpty) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'No further junctions were found on this route to add.',
-          ),
-        ),
-      );
-      return;
-    }
-    final chosen = await showModalBottomSheet<MarkerPlanCandidate>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) => SafeArea(
-        child: ListView(
-          key: const Key('marker-plan-candidates'),
-          shrinkWrap: true,
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          children: [
-            Text(
-              'Add a marking position',
-              style: Theme.of(sheetContext).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Junctions on this route the detector did not suggest. Adding one '
-              'does not start marker mode; it only offers the position.',
-              style: TextStyle(color: Color(0xFF98A3B1)),
-            ),
-            const SizedBox(height: 6),
-            for (final candidate in candidates)
-              ListTile(
-                key: Key('marker-plan-add-${candidate.id}'),
-                dense: true,
-                leading: const Icon(Icons.add_location_alt_outlined),
-                title: Text(candidate.label),
-                onTap: () => Navigator.of(sheetContext).pop(candidate),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (chosen == null) return;
-    _applyReview(_markerReview.adding(chosen.toReviewPoint()));
-  }
-
   @override
   Widget build(BuildContext context) {
     final route = this.route;
@@ -541,9 +474,6 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
         .where((points) => points.isNotEmpty)
         .toList(growable: false);
     final reviewWaypoints = _reviewWaypoints(route);
-    final markerPlan = widget.showMarkerPlan
-        ? _analyzer.analyze(route)
-        : const RouteMarkerPlan(points: []);
     final visiblePointsOfInterest = canEditStops && _showPointsOfInterest
         ? _nearbyPointsOfInterest
         : const <BikerPlace>[];
@@ -627,20 +557,6 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                               (entry) => RoutePreviewPin(
                                 point: entry.$2.point,
                                 kind: entry.$1 == 0 ? 'start' : 'waypoint',
-                              ),
-                            )
-                            .followedBy(
-                              markerPlan.points.map(
-                                (point) => RoutePreviewPin(
-                                  point: point.position,
-                                  kind: switch (point.kind) {
-                                    MarkerPlanPointKind.likelyMarker =>
-                                      'marker',
-                                    MarkerPlanPointKind.safetyReview =>
-                                      'safety',
-                                    MarkerPlanPointKind.musterPoint => 'muster',
-                                  },
-                                ),
                               ),
                             )
                             .followedBy(
@@ -801,34 +717,6 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                                   )
                                   .toList(growable: false),
                             ),
-                          if (markerPlan.points.isNotEmpty)
-                            MarkerLayer(
-                              key: const Key('route-review-marker-plan'),
-                              markers: markerPlan.points
-                                  .take(500)
-                                  .map(
-                                    (point) => Marker(
-                                      point: _latLng(point.position),
-                                      width: 38,
-                                      height: 38,
-                                      child: Tooltip(
-                                        message: point.label,
-                                        child: Icon(
-                                          _markerPlanIcon(point),
-                                          color: _markerPlanColor(point.kind),
-                                          size: 32,
-                                          shadows: const [
-                                            Shadow(
-                                              color: Color(0xFF10151C),
-                                              blurRadius: 4,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(growable: false),
-                            ),
                         ],
                       ),
               ),
@@ -867,27 +755,6 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                           label:
                               '$maneuverCount turn '
                               'instruction${maneuverCount == 1 ? '' : 's'}',
-                        ),
-                      if (route.maneuvers.isNotEmpty)
-                        _SummaryItem(
-                          icon: Icons.person_pin_circle_outlined,
-                          label:
-                              '${markerPlan.likelyMarkers.length} likely marker '
-                              'position${markerPlan.likelyMarkers.length == 1 ? '' : 's'}',
-                        ),
-                      if (markerPlan.safetyReviews.isNotEmpty)
-                        _SummaryItem(
-                          icon: Icons.warning_amber_rounded,
-                          label:
-                              '${markerPlan.safetyReviews.length} junction '
-                              'safety review${markerPlan.safetyReviews.length == 1 ? '' : 's'}',
-                        ),
-                      if (markerPlan.musterPoints.isNotEmpty)
-                        _SummaryItem(
-                          icon: Icons.groups_2_outlined,
-                          label:
-                              '${markerPlan.musterPoints.length} muster '
-                              'point${markerPlan.musterPoints.length == 1 ? '' : 's'}',
                         ),
                       // The same score, thresholds and wording the web planner
                       // shows for the same geometry (#46, #182).
@@ -1027,107 +894,6 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                       ),
                     ],
                   ],
-                  if (widget.showMarkerPlan &&
-                      (markerPlan.points.isNotEmpty ||
-                          markerPlan.rejectedPoints.isNotEmpty ||
-                          route.maneuvers.isNotEmpty)) ...[
-                    const SizedBox(height: 8),
-                    ExpansionTile(
-                      key: const Key('marker-plan-review-section'),
-                      tilePadding: EdgeInsets.zero,
-                      childrenPadding: EdgeInsets.zero,
-                      initiallyExpanded:
-                          markerPlan.points.length +
-                              markerPlan.rejectedPoints.length <=
-                          8,
-                      title: Text(
-                        'Marker plan (${markerPlan.points.length})',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      subtitle: const Text(
-                        'Tap to review, reject or add marking positions.',
-                      ),
-                      children: [
-                        const Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Advisory only. The leader must choose a visible, '
-                            'legal place away from live traffic lanes. Reject '
-                            'any position the group does not need; the rejection '
-                            'stays with this route.',
-                            style: TextStyle(color: Color(0xFF98A3B1)),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        for (final point in markerPlan.points)
-                          ListTile(
-                            key: Key('marker-plan-${point.id}'),
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            leading: Icon(
-                              _markerPlanIcon(point),
-                              color: _markerPlanColor(point.kind),
-                            ),
-                            title: Text(point.label),
-                            subtitle: point.detail == null
-                                ? null
-                                : Text(point.detail!),
-                            trailing: IconButton(
-                              key: Key('marker-plan-reject-${point.id}'),
-                              tooltip:
-                                  point.source == MarkerPlanPointSource.manual
-                                  ? 'Remove this added position'
-                                  : 'Not needed — reject this suggestion',
-                              onPressed: () =>
-                                  point.source == MarkerPlanPointSource.manual
-                                  ? _restore(point.id)
-                                  : _reject(point),
-                              icon: const Icon(Icons.block_outlined),
-                            ),
-                          ),
-                        if (markerPlan.rejectedPoints.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          const Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              'Rejected for this route',
-                              style: TextStyle(color: Color(0xFF98A3B1)),
-                            ),
-                          ),
-                          for (final point in markerPlan.rejectedPoints)
-                            ListTile(
-                              key: Key('marker-plan-rejected-${point.id}'),
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(
-                                Icons.block_outlined,
-                                color: Color(0xFF98A3B1),
-                              ),
-                              title: Text(
-                                point.label,
-                                style: const TextStyle(
-                                  color: Color(0xFF98A3B1),
-                                  decoration: TextDecoration.lineThrough,
-                                ),
-                              ),
-                              trailing: IconButton(
-                                key: Key('marker-plan-restore-${point.id}'),
-                                tooltip: 'Restore this suggestion',
-                                onPressed: () => _restore(point.id),
-                                icon: const Icon(Icons.undo),
-                              ),
-                            ),
-                        ],
-                        const SizedBox(height: 6),
-                        OutlinedButton.icon(
-                          key: const Key('marker-plan-add'),
-                          onPressed: _addMissedJunction,
-                          icon: const Icon(Icons.add_location_alt_outlined),
-                          label: const Text('Add a missed junction'),
-                        ),
-                      ],
-                    ),
-                  ],
                   const SizedBox(height: 8),
                   ExpansionTile(
                     key: const Key('route-review-points-section'),
@@ -1219,21 +985,6 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
     );
   }
 }
-
-IconData _markerPlanIcon(MarkerPlanPoint point) =>
-    point.source == MarkerPlanPointSource.manual
-    ? Icons.add_location_alt_outlined
-    : switch (point.kind) {
-        MarkerPlanPointKind.likelyMarker => Icons.person_pin_circle_outlined,
-        MarkerPlanPointKind.safetyReview => Icons.warning_amber_rounded,
-        MarkerPlanPointKind.musterPoint => Icons.groups_2_outlined,
-      };
-
-Color _markerPlanColor(MarkerPlanPointKind kind) => switch (kind) {
-  MarkerPlanPointKind.likelyMarker => const Color(0xFF6ED89A),
-  MarkerPlanPointKind.safetyReview => const Color(0xFFFF8A4C),
-  MarkerPlanPointKind.musterPoint => const Color(0xFF68A9FF),
-};
 
 bool _sameMapPoint(GeoPoint first, GeoPoint second) {
   final latitude = first.latitude - second.latitude;

@@ -4,13 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ride_relay/controllers/ride_controller.dart';
 import 'package:ride_relay/data/in_memory_event_store.dart';
 import 'package:ride_relay/data/in_memory_session_store.dart';
-import 'package:ride_relay/domain/geo_point.dart';
 import 'package:ride_relay/domain/ride_event.dart';
 import 'package:ride_relay/domain/ride_role.dart';
 import 'package:ride_relay/domain/ride_session.dart';
 import 'package:ride_relay/internet/internet_relay_client.dart';
 import 'package:ride_relay/services/nearby_bridge.dart';
-import 'package:ride_relay/services/rejoin_route_share.dart';
 import 'package:ride_relay/services/ride_event_authenticator.dart';
 import 'package:ride_relay/services/tec_role_assignment.dart';
 
@@ -291,151 +289,6 @@ void main() {
           controller.tecRoleAssignments.latest?.status,
           TecRoleAssignmentStatus.pending,
         );
-      },
-    );
-  });
-
-  group('sharing a rejoin route with the leader', () {
-    SharedRejoinRoute share(String riderId) => SharedRejoinRoute(
-      riderId: riderId,
-      displayName: 'Bill',
-      computedAt: now,
-      expiresAt: now.add(const Duration(minutes: 10)),
-      routeRevisionNumber: 0,
-      breadcrumb: const [
-        GeoPoint(latitude: 51.5, longitude: -0.1),
-        GeoPoint(latitude: 51.51, longitude: -0.09),
-      ],
-    );
-
-    Future<void> joinWithALeader() async {
-      await controller.createRide('Bill');
-      await controller.setRole(RideRole.rider);
-      final session = controller.session!;
-      await eventStore.append(
-        _sign(
-          RideEvent(
-            id: 'leader-join',
-            rideId: session.rideId,
-            deviceId: 'leader',
-            type: RideEventType.riderJoined,
-            priority: EventPriority.routine,
-            createdAt: now,
-            payload: const {'displayName': 'Lead', 'role': 'lead'},
-            signature: '',
-          ),
-          session.inviteSecret,
-        ),
-      );
-      await controller.reloadEvents();
-    }
-
-    test('addresses the event to the leader and to nobody else', () async {
-      await joinWithALeader();
-
-      final sent = await controller.shareRejoinRoute(
-        share(controller.session!.localRiderId),
-      );
-
-      expect(sent, isTrue);
-      final event = controller.events.singleWhere(
-        (item) => item.type == RideEventType.rejoinRouteShared,
-      );
-      expect(event.payload['recipientRiderIds'], ['leader']);
-      expect(event.expiresAt, now.add(const Duration(minutes: 10)));
-      expect(event.signature, hasLength(64));
-    });
-
-    test('records nothing when there is no leader to address', () async {
-      // A lone rider: this phone is the leader, so there is nobody to send to.
-      await controller.createRide('Lead');
-
-      expect(
-        await controller.shareRejoinRoute(
-          share(controller.session!.localRiderId),
-        ),
-        isFalse,
-      );
-      expect(
-        controller.events.where(
-          (event) => event.type == RideEventType.rejoinRouteShared,
-        ),
-        isEmpty,
-      );
-    });
-
-    test('records nothing when the relay cannot carry it', () async {
-      await joinWithALeader();
-
-      expect(
-        await controller.shareRejoinRoute(
-          share(controller.session!.localRiderId),
-          relayCanCarryShare: false,
-        ),
-        isFalse,
-      );
-      expect(
-        controller.events.where(
-          (event) => event.type == RideEventType.rejoinRouteShared,
-        ),
-        isEmpty,
-      );
-    });
-
-    test('refuses to publish a plan attributed to another rider', () async {
-      await joinWithALeader();
-
-      expect(await controller.shareRejoinRoute(share('someone-else')), isFalse);
-      expect(
-        controller.events.where(
-          (event) => event.type == RideEventType.rejoinRouteShared,
-        ),
-        isEmpty,
-      );
-    });
-
-    test(
-      'the addressed leader reads it back; the ride ending clears it',
-      () async {
-        await controller.createRide('Lead');
-        await addRider('bill', 'Bill');
-        final session = controller.session!;
-        final billsShare = SharedRejoinRoute(
-          riderId: 'bill',
-          displayName: 'Bill',
-          computedAt: now,
-          expiresAt: now.add(const Duration(minutes: 10)),
-          routeRevisionNumber: 0,
-          breadcrumb: const [
-            GeoPoint(latitude: 51.5, longitude: -0.1),
-            GeoPoint(latitude: 51.51, longitude: -0.09),
-          ],
-        );
-        await eventStore.append(
-          _sign(
-            RideEvent(
-              id: 'bill-share',
-              rideId: session.rideId,
-              deviceId: 'bill',
-              type: RideEventType.rejoinRouteShared,
-              priority: EventPriority.routine,
-              createdAt: now,
-              payload: SharedRejoinRouteReducer.payload(
-                share: billsShare,
-                leaderRiderId: session.localRiderId,
-              ),
-              signature: '',
-            ),
-            session.inviteSecret,
-          ),
-        );
-        await controller.reloadEvents();
-
-        expect(controller.sharedRejoinRoutes.keys, ['bill']);
-        expect(controller.sharedRejoinRoutes['bill']!.breadcrumb, hasLength(2));
-
-        await controller.endRide();
-        expect(controller.sharedRejoinRoutes, isEmpty);
       },
     );
   });

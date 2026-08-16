@@ -1,6 +1,6 @@
 import '../domain/imported_route.dart';
 import 'road_routing.dart';
-import 'route_marker_plan.dart';
+import 'route_primary_path.dart';
 
 class RouteReshapeResult {
   const RouteReshapeResult({
@@ -39,7 +39,7 @@ class RouteReshapePlanner {
       controls,
       preferences: route.preferences,
     );
-    final primary = RouteMarkerPlanAnalyzer.primaryRiddenPath(route);
+    final primary = routePrimaryPath(route);
     final primaryPath = route.paths
         .where((path) => identical(path.points, primary))
         .firstOrNull;
@@ -80,7 +80,7 @@ List<GeoPoint> routeShapingControls(
       ? route.waypoints
             .map((waypoint) => waypoint.point)
             .toList(growable: false)
-      : switch (RouteMarkerPlanAnalyzer.primaryRiddenPath(route)) {
+      : switch (routePrimaryPath(route)) {
           final points when points.length >= 2 => [points.first, points.last],
           _ => const <GeoPoint>[],
         };
@@ -107,7 +107,7 @@ List<RouteShapingPoint> insertRouteShapingPoint(
   GeoPoint point, {
   required String id,
 }) {
-  final geometry = RouteMarkerPlanAnalyzer.primaryRiddenPath(route);
+  final geometry = routePrimaryPath(route);
   final legIndex = routeLegIndexForPoint(route, point);
   final pointProgress = _nearestRouteProgress(geometry, point);
   var insertion = existing.length;
@@ -129,7 +129,7 @@ List<RouteShapingPoint> insertRouteShapingPoint(
 }
 
 int routeLegIndexForPoint(ImportedRoute route, GeoPoint point) {
-  final geometry = RouteMarkerPlanAnalyzer.primaryRiddenPath(route);
+  final geometry = routePrimaryPath(route);
   final anchorPoints = route.waypoints.length >= 2
       ? route.waypoints
             .map((waypoint) => waypoint.point)

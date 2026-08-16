@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ride_relay/controllers/distance_unit_controller.dart';
 import 'package:ride_relay/controllers/map_style_mode_controller.dart';
 import 'package:ride_relay/controllers/rider_profile_controller.dart';
-import 'package:ride_relay/controllers/speed_limit_display_controller.dart';
 import 'package:ride_relay/controllers/spoken_guidance_controller.dart';
 import 'package:ride_relay/features/settings/unit_settings_sheet.dart';
 import 'package:ride_relay/services/natural_voice_pack.dart';
@@ -40,7 +39,6 @@ void main() {
             ),
             mapStyleMode: mapStyle,
             riderProfile: riderProfile,
-            speedLimitDisplay: SpeedLimitDisplayController.inMemory(),
             spokenGuidance: spoken,
             embedded: true,
           ),
@@ -86,7 +84,6 @@ void main() {
             ),
             mapStyleMode: mapStyle,
             riderProfile: riderProfile,
-            speedLimitDisplay: SpeedLimitDisplayController.inMemory(),
             spokenGuidance: spoken,
             embedded: true,
           ),
@@ -140,7 +137,6 @@ void main() {
               ),
               mapStyleMode: mapStyle,
               riderProfile: riderProfile,
-              speedLimitDisplay: SpeedLimitDisplayController.inMemory(),
               spokenGuidance: spoken,
               embedded: true,
             ),
@@ -211,7 +207,6 @@ void main() {
             ),
             mapStyleMode: mapStyle,
             riderProfile: riderProfile,
-            speedLimitDisplay: SpeedLimitDisplayController.inMemory(),
             spokenGuidance: spoken,
             embedded: true,
           ),

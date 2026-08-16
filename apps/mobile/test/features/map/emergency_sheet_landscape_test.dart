@@ -61,7 +61,6 @@ void main() {
           onEmergencyAlert: () async {},
           onEmergencyIssue: (_) async {},
           onLeaveRide: () async {},
-          onReportHazard: (_) async {},
         ),
       ),
     );

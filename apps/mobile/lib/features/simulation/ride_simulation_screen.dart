@@ -307,13 +307,6 @@ class _SimulationControls extends StatelessWidget {
               value: controller.tecDelayed,
               onChanged: controller.setTecDelayed,
             ),
-            const SizedBox(height: 6),
-            OutlinedButton.icon(
-              key: const Key('simulation-hazard'),
-              onPressed: () => unawaited(controller.reportRoadworks()),
-              icon: const Icon(Icons.warning_amber_rounded),
-              label: const Text('Drop roadworks 450 m ahead'),
-            ),
             const SizedBox(height: 8),
             if (!controller.automaticMarkerActive)
               FilledButton.tonalIcon(

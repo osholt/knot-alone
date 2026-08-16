@@ -146,7 +146,6 @@ void main() {
                 onOpenRideMenu: () async {},
                 onEmergencyAlert: () async {},
                 onLeaveRide: () async {},
-                onReportHazard: (_) async {},
               ),
             ),
           ),

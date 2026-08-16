@@ -7,7 +7,6 @@ import '../../controllers/distance_unit_controller.dart';
 import '../../controllers/map_style_mode_controller.dart';
 import '../../controllers/rider_profile_controller.dart';
 import '../../controllers/route_progress_display_controller.dart';
-import '../../controllers/speed_limit_display_controller.dart';
 import '../../controllers/ride_diagnostics_controller.dart';
 import '../../controllers/spoken_guidance_controller.dart';
 import '../../controllers/test_control_controller.dart';
@@ -29,7 +28,6 @@ class UnitSettingsSheet extends StatelessWidget {
     required this.controller,
     required this.mapStyleMode,
     required this.riderProfile,
-    required this.speedLimitDisplay,
     this.routeProgressDisplay,
     this.currentRideActive = false,
     this.lastRelaySync,
@@ -43,7 +41,6 @@ class UnitSettingsSheet extends StatelessWidget {
   final DistanceUnitController controller;
   final MapStyleModeController mapStyleMode;
   final RiderProfileController riderProfile;
-  final SpeedLimitDisplayController speedLimitDisplay;
   final RouteProgressDisplayController? routeProgressDisplay;
   final bool currentRideActive;
 
@@ -78,7 +75,6 @@ class UnitSettingsSheet extends StatelessWidget {
     DistanceUnitController controller,
     MapStyleModeController mapStyleMode,
     RiderProfileController riderProfile, {
-    required SpeedLimitDisplayController speedLimitDisplay,
     RouteProgressDisplayController? routeProgressDisplay,
     bool currentRideActive = false,
     DateTime? lastRelaySync,
@@ -94,7 +90,6 @@ class UnitSettingsSheet extends StatelessWidget {
       controller: controller,
       mapStyleMode: mapStyleMode,
       riderProfile: riderProfile,
-      speedLimitDisplay: speedLimitDisplay,
       routeProgressDisplay: routeProgressDisplay,
       currentRideActive: currentRideActive,
       lastRelaySync: lastRelaySync,
@@ -110,7 +105,6 @@ class UnitSettingsSheet extends StatelessWidget {
     animation: Listenable.merge([
       controller,
       mapStyleMode,
-      speedLimitDisplay,
       ?routeProgressDisplay,
     ]),
     builder: (context, _) => SingleChildScrollView(
@@ -260,19 +254,6 @@ class UnitSettingsSheet extends StatelessWidget {
             style: TextStyle(color: Color(0xFF98A3B1)),
           ),
           const SizedBox(height: 18),
-          SwitchListTile.adaptive(
-            key: const Key('posted-speed-limit-toggle'),
-            contentPadding: EdgeInsets.zero,
-            value: speedLimitDisplay.enabled,
-            onChanged: speedLimitDisplay.setEnabled,
-            title: const Text('Show mapped speed limit'),
-            subtitle: const Text(
-              'On by default. Matches your position and up to 1 km ahead to '
-              'roads in Great Britain and the Isle of Man using © OpenStreetMap '
-              'contributors via Valhalla. Mapped limits are not live; roadside '
-              'signs always apply. Turning this off is remembered.',
-            ),
-          ),
           if (routeProgressDisplay case final progressDisplay?) ...[
             const SizedBox(height: 8),
             SwitchListTile.adaptive(

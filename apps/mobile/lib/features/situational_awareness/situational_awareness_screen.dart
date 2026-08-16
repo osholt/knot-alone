@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../controllers/foreground_location_controller.dart';
 import '../../controllers/situational_awareness_controller.dart';
-import '../../domain/hazard.dart';
 import '../../domain/route_alert.dart';
 import '../../services/device_location_source.dart';
-import '../../services/external_hazard_provider.dart';
 import '../map/route_trail_style.dart';
 
 class SituationalAwarenessScreen extends StatelessWidget {
@@ -16,11 +14,6 @@ class SituationalAwarenessScreen extends StatelessWidget {
     this.locationController,
     this.rideStarted = true,
     this.onLocationStopped,
-    this.trafficRerouteHazards = const [],
-    this.trafficRerouting = false,
-    this.trafficRerouteError,
-    this.onReviewTrafficAlternative,
-    this.onDismissTrafficAlternative,
     this.rejoinGuidance,
   });
 
@@ -29,11 +22,6 @@ class SituationalAwarenessScreen extends StatelessWidget {
   final ForegroundLocationController? locationController;
   final bool rideStarted;
   final Future<void> Function()? onLocationStopped;
-  final List<HazardReport> trafficRerouteHazards;
-  final bool trafficRerouting;
-  final String? trafficRerouteError;
-  final Future<void> Function()? onReviewTrafficAlternative;
-  final Future<void> Function()? onDismissTrafficAlternative;
 
   /// Issue #102: advisory rejoin guidance for the local rider, or null when
   /// they are on route. Shown verbatim - it already says when routing is
@@ -77,47 +65,6 @@ class SituationalAwarenessScreen extends StatelessWidget {
                   ),
                 ],
               ],
-              const SizedBox(height: 20),
-              _SectionHeader(
-                title: 'ROAD ALERTS',
-                action: FilledButton.icon(
-                  key: const Key('report-hazard-button'),
-                  onPressed: controller.busy
-                      ? null
-                      : () => _showHazardSheet(context),
-                  icon: const Icon(Icons.add_alert_outlined),
-                  label: const Text('Report'),
-                ),
-              ),
-              const SizedBox(height: 10),
-              if (controller.activeHazards.isEmpty)
-                const _EmptyCard(
-                  icon: Icons.check_circle_outline,
-                  title: 'No active road alerts',
-                  detail: 'Report something the riders behind need to know.',
-                )
-              else
-                ...controller.activeHazards.map(
-                  (hazard) => Padding(
-                    padding: const EdgeInsets.only(bottom: 9),
-                    child: HazardCard(
-                      hazard: hazard,
-                      onClear: () => controller.clearHazard(hazard.id),
-                    ),
-                  ),
-                ),
-              if (trafficRerouteHazards.isNotEmpty &&
-                  onReviewTrafficAlternative != null &&
-                  onDismissTrafficAlternative != null) ...[
-                const SizedBox(height: 12),
-                _TrafficRerouteCard(
-                  hazards: trafficRerouteHazards,
-                  busy: trafficRerouting,
-                  error: trafficRerouteError,
-                  onReview: onReviewTrafficAlternative!,
-                  onDismiss: onDismissTrafficAlternative!,
-                ),
-              ],
               if (controller.routeAlerts.isNotEmpty) ...[
                 const SizedBox(height: 20),
                 const _SectionHeader(title: 'RIDERS NEEDING ATTENTION'),
@@ -141,111 +88,6 @@ class SituationalAwarenessScreen extends StatelessWidget {
       ),
     ),
   );
-
-  Future<void> _showHazardSheet(BuildContext context) async {
-    final draft = await showModalBottomSheet<HazardDraft>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const HazardReportSheet(),
-    );
-    if (draft != null) {
-      await controller.reportHazard(
-        type: draft.type,
-        severity: draft.severity,
-        details: draft.details,
-      );
-    }
-  }
-}
-
-class _TrafficRerouteCard extends StatelessWidget {
-  const _TrafficRerouteCard({
-    required this.hazards,
-    required this.busy,
-    required this.error,
-    required this.onReview,
-    required this.onDismiss,
-  });
-
-  final List<HazardReport> hazards;
-  final bool busy;
-  final String? error;
-  final Future<void> Function() onReview;
-  final Future<void> Function() onDismiss;
-
-  @override
-  Widget build(BuildContext context) {
-    final first = hazards.first;
-    return Card(
-      key: const Key('traffic-reroute-card'),
-      color: const Color(0xFF2A211A),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.alt_route_rounded, color: Color(0xFFFFC857)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    hazards.length == 1
-                        ? 'Serious incident may affect the route'
-                        : '${hazards.length} serious incidents may affect the route',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              first.details ??
-                  '${first.type.label} · ${first.severity.label} · live traffic',
-              style: const TextStyle(color: Color(0xFFD8CBBE)),
-            ),
-            if (error case final message?) ...[
-              const SizedBox(height: 8),
-              Text(
-                message,
-                key: const Key('traffic-reroute-error'),
-                style: const TextStyle(color: Color(0xFFFF8A80)),
-              ),
-            ],
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 10,
-              runSpacing: 8,
-              children: [
-                FilledButton.icon(
-                  key: const Key('review-traffic-alternative'),
-                  onPressed: busy ? null : onReview,
-                  icon: busy
-                      ? const SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.route_outlined),
-                  label: Text(busy ? 'Calculating…' : 'Review alternative'),
-                ),
-                TextButton(
-                  key: const Key('dismiss-traffic-alternative'),
-                  onPressed: busy ? null : onDismiss,
-                  child: const Text('Dismiss this incident'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'The group route changes only after the leader reviews and '
-              'confirms the alternative.',
-              style: TextStyle(color: Color(0xFFAD9E90), fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _PreStartLocationCard extends StatelessWidget {
@@ -346,138 +188,6 @@ class ForegroundLocationCard extends StatelessWidget {
       };
 }
 
-class HazardDraft {
-  const HazardDraft({required this.type, required this.severity, this.details});
-
-  final HazardType type;
-  final HazardSeverity severity;
-  final String? details;
-}
-
-class HazardReportSheet extends StatefulWidget {
-  const HazardReportSheet({super.key});
-
-  @override
-  State<HazardReportSheet> createState() => _HazardReportSheetState();
-}
-
-class _HazardReportSheetState extends State<HazardReportSheet> {
-  HazardType _type = HazardType.roadworks;
-  HazardSeverity _severity = HazardSeverity.caution;
-  final _detailsController = TextEditingController();
-
-  @override
-  void dispose() {
-    _detailsController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => SafeArea(
-    child: Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        20 + MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Report a hazard',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 18),
-            DropdownButtonFormField<HazardType>(
-              key: const Key('hazard-type-field'),
-              initialValue: _type,
-              decoration: const InputDecoration(labelText: 'Hazard'),
-              items: riderReportableHazardTypes
-                  .map(
-                    (type) =>
-                        DropdownMenuItem(value: type, child: Text(type.label)),
-                  )
-                  .toList(growable: false),
-              onChanged: (value) => setState(() => _type = value ?? _type),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<HazardSeverity>(
-              key: const Key('hazard-severity-field'),
-              initialValue: _severity,
-              decoration: const InputDecoration(labelText: 'Severity'),
-              items: HazardSeverity.values
-                  .map(
-                    (severity) => DropdownMenuItem(
-                      value: severity,
-                      child: Text(severity.label),
-                    ),
-                  )
-                  .toList(growable: false),
-              onChanged: (value) =>
-                  setState(() => _severity = value ?? _severity),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _detailsController,
-              maxLength: 160,
-              maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: 'Optional detail',
-                hintText: 'e.g. gravel across both lanes',
-              ),
-            ),
-            const SizedBox(height: 8),
-            FilledButton(
-              key: const Key('submit-hazard-button'),
-              onPressed: () => Navigator.pop(
-                context,
-                HazardDraft(
-                  type: _type,
-                  severity: _severity,
-                  details: _detailsController.text,
-                ),
-              ),
-              child: const Text('Share with ride'),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-class HazardCard extends StatelessWidget {
-  const HazardCard({super.key, required this.hazard, required this.onClear});
-
-  final HazardReport hazard;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _severityColor(hazard.severity);
-    return Card(
-      child: ListTile(
-        leading: Icon(Icons.warning_amber_rounded, color: color),
-        title: Text(hazard.type.label),
-        subtitle: Text(
-          '${hazard.severity.label} • ${hazard.confirmations} report'
-          '${hazard.confirmations == 1 ? '' : 's'}'
-          '${hazard.details == null ? '' : '\n${hazard.details}'}',
-        ),
-        isThreeLine: hazard.details != null,
-        trailing: IconButton(
-          tooltip: 'Clear hazard',
-          onPressed: onClear,
-          icon: const Icon(Icons.done),
-        ),
-      ),
-    );
-  }
-}
-
 class RiderStatusCard extends StatelessWidget {
   const RiderStatusCard({
     super.key,
@@ -506,31 +216,6 @@ class RiderStatusCard extends StatelessWidget {
                 child: Text(alert!.acknowledged ? 'Seen' : 'Acknowledge'),
               )
             : null,
-      ),
-    );
-  }
-}
-
-class ProviderStatusCard extends StatelessWidget {
-  const ProviderStatusCard({super.key, required this.provider});
-
-  final ExternalHazardProvider provider;
-
-  @override
-  Widget build(BuildContext context) {
-    final available = provider.status.canFetch;
-    return Card(
-      child: ListTile(
-        leading: Icon(
-          available ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
-          color: available ? const Color(0xFF6ED89A) : const Color(0xFF8EA7C4),
-        ),
-        title: Text(provider.displayName),
-        subtitle: Text(provider.status.message),
-        trailing: Text(
-          provider.status.state.label.toUpperCase(),
-          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
-        ),
       ),
     );
   }
@@ -611,10 +296,9 @@ class _RouteStatusCard extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, this.action});
+  const _SectionHeader({required this.title});
 
   final String title;
-  final Widget? action;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -628,46 +312,7 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
       ),
-      ?action,
     ],
-  );
-}
-
-class _EmptyCard extends StatelessWidget {
-  const _EmptyCard({
-    required this.icon,
-    required this.title,
-    required this.detail,
-  });
-
-  final IconData icon;
-  final String title;
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        children: [
-          Icon(icon, color: const Color(0xFF8EA7C4)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 3),
-                Text(detail, style: const TextStyle(color: Color(0xFF9CA7B5))),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
   );
 }
 
@@ -692,13 +337,6 @@ class _ErrorBanner extends StatelessWidget {
     ),
   );
 }
-
-Color _severityColor(HazardSeverity severity) => switch (severity) {
-  HazardSeverity.advisory => const Color(0xFF8EA7C4),
-  HazardSeverity.caution => const Color(0xFFFFC857),
-  HazardSeverity.serious => const Color(0xFFFF9D4D),
-  HazardSeverity.critical => const Color(0xFFFF715B),
-};
 
 Color _alertColor(RouteAlertLevel level) => switch (level) {
   RouteAlertLevel.none => const Color(0xFF6ED89A),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../controllers/foreground_location_controller.dart';
 import '../../controllers/map_style_mode_controller.dart';
-import '../../controllers/speed_limit_display_controller.dart';
 import '../../domain/distance_unit.dart';
 import '../../domain/completed_ride_store.dart';
 import '../../domain/imported_route.dart' as route_domain;
@@ -26,7 +25,6 @@ class HomeMapBackdrop extends StatefulWidget {
   const HomeMapBackdrop({
     super.key,
     required this.mapStyleMode,
-    required this.speedLimitDisplay,
     required this.distanceUnit,
     this.enableNativeServices = true,
     this.locationController,
@@ -50,7 +48,6 @@ class HomeMapBackdrop extends StatefulWidget {
   final ValueNotifier<route_domain.GeoPoint?>? position;
 
   final MapStyleModeController mapStyleMode;
-  final SpeedLimitDisplayController speedLimitDisplay;
   final DistanceUnit distanceUnit;
   final CompletedRideStore? completedRideStore;
   final ValueChanged<String>? onMapStyleResolved;
@@ -140,7 +137,6 @@ class _HomeMapBackdropState extends State<HomeMapBackdrop> {
             ),
             restrainedLightMapStyle:
                 widget.mapStyleMode.dayStyle == DayMapStyle.restrained,
-            speedLimitDisplay: widget.speedLimitDisplay,
             distanceUnit: widget.distanceUnit,
             onMapStyleResolved: widget.onMapStyleResolved,
             // No ride yet, so nothing may edit a ride's route from here and no

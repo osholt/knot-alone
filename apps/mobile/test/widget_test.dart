@@ -10,7 +10,6 @@ import 'package:ride_relay/controllers/ride_code_preference_controller.dart';
 import 'package:ride_relay/controllers/ride_controller.dart';
 import 'package:ride_relay/controllers/rider_profile_controller.dart';
 import 'package:ride_relay/controllers/shared_route_controller.dart';
-import 'package:ride_relay/controllers/speed_limit_display_controller.dart';
 import 'package:ride_relay/data/in_memory_event_store.dart';
 import 'package:ride_relay/data/in_memory_session_store.dart';
 import 'package:ride_relay/domain/distance_unit.dart';
@@ -40,7 +39,6 @@ void main() {
     );
     _riderProfile.takePendingRideChoice();
     _sharedRoutes = await SharedRouteController.load();
-    _speedLimitDisplay = SpeedLimitDisplayController.inMemory();
     _mapStyleMode = await MapStyleModeController.load();
     _rideCodePreference = RideCodePreferenceController.memory();
     _completedRides = await CompletedRidesController.load(
@@ -439,7 +437,6 @@ void main() {
         rideCodePreference: _rideCodePreference,
         riderProfile: _riderProfile,
         sharedRoutes: _sharedRoutes,
-        speedLimitDisplay: _speedLimitDisplay,
         recordedRoutes: _recordedRoutes,
         completedRides: _completedRides,
         enableNativeServices: false,
@@ -483,14 +480,7 @@ void main() {
     expect(find.text('Navigation map'), findsNothing);
     expect(find.text('End ride'), findsNothing);
 
-    await tester.scrollUntilVisible(
-      find.text('MARKING STATS'),
-      260,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Marker mode'), findsOneWidget);
     expect(find.byKey(const Key('open-ride-actions')), findsNothing);
-    expect(find.text('MARKING STATS'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text('QUICK MESSAGES'),
@@ -539,7 +529,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Alerts'), findsOneWidget);
-    expect(find.text('ROAD ALERTS'), findsOneWidget);
     expect(find.text('EXTERNAL SOURCES'), findsNothing);
     expect(find.text('RIDER STATUS'), findsNothing);
   });
@@ -750,43 +739,6 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('end ride confirmation includes marking summary', (tester) async {
-    final controller = await _controller();
-    await controller.createRide('Oliver');
-    await controller.startRide();
-    await controller.startMarker();
-    await controller.recordMarkerPass('rider-a');
-    // The state that exposed the guard defect (#306). Marking changes the
-    // session role, so `session.role` is no longer `lead` while
-    // `isLocalRideLeader` still is — and the shell's own end-ride guard read the
-    // former while both entry points offer the action on the latter. A leader
-    // marking a junction could tap End ride and have nothing happen.
-    expect(controller.session?.role, isNot(RideRole.lead));
-    expect(controller.isLocalRideLeader, isTrue);
-    await tester.pumpWidget(_app(controller));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byIcon(Icons.two_wheeler_outlined));
-    await tester.pumpAndSettle();
-    final leaveOrEnd = find.byKey(const Key('ride-actions-leave-or-end'));
-    await tester.ensureVisible(leaveOrEnd);
-    await tester.pumpAndSettle();
-    await tester.tap(leaveOrEnd);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('end-ride-for-everyone')));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('end-ride-marking-summary')), findsOneWidget);
-    expect(find.textContaining('1 session'), findsOneWidget);
-    // The consolidated Leave-or-end decision reaches the one full
-    // confirmation, including the consequence the old dashboard dialog missed.
-    expect(find.textContaining('ends the group ride for everyone'), findsOne);
-
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-    controller.dispose();
-  });
-
   testWidgets('ended ride retains relay recovery until removal', (
     tester,
   ) async {
@@ -896,7 +848,6 @@ void main() {
 
 late RiderProfileController _riderProfile;
 late SharedRouteController _sharedRoutes;
-late SpeedLimitDisplayController _speedLimitDisplay;
 late MapStyleModeController _mapStyleMode;
 late RideCodePreferenceController _rideCodePreference;
 late CompletedRidesController _completedRides;
@@ -921,7 +872,6 @@ RideRelayApp _app(
   rideCodePreference: rideCodePreference ?? _rideCodePreference,
   riderProfile: _riderProfile,
   sharedRoutes: _sharedRoutes,
-  speedLimitDisplay: _speedLimitDisplay,
   recordedRoutes: _recordedRoutes,
   completedRides: _completedRides,
   planDirectory: planDirectory,

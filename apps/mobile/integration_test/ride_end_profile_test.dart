@@ -155,14 +155,9 @@ void main() {
           completedRideStore: InMemoryCompletedRideStore(),
         );
         final initialize = await _timeAsync(controller.initialize);
-        // What the dashboard and its menus read during build, twice - a
-        // rebuild pays it again.
-        final marking = _time(() => controller.markingSummary);
-        final markingAgain = _time(() => controller.markingSummary);
         final clear = await _timeAsync(controller.clearEndedRide);
         debugPrint(
           'PROFILE #165 ${_pad(scale)}  initialize=${_ms(initialize)}  '
-          'markingSummary=${_ms(marking)} (again=${_ms(markingAgain)})  '
           'clearEndedRide=${_ms(clear)}',
         );
         controller.dispose();

@@ -7,7 +7,6 @@ import '../../controllers/distance_unit_controller.dart';
 import '../../controllers/internet_relay_controller.dart';
 import '../../controllers/ride_controller.dart';
 import '../../controllers/nearby_relay_controller.dart';
-import '../../controllers/marker_assistance_controller.dart';
 import '../../domain/quick_message.dart';
 import '../../domain/ride_coordination_mode.dart';
 import '../../domain/ride_event.dart';
@@ -16,7 +15,6 @@ import '../../services/ride_connectivity_summary.dart';
 import '../internet/internet_relay_status_card.dart';
 import '../nearby/relay_status_card.dart';
 import 'ride_invitation_qr_sheet.dart';
-import 'marker_assistance_widgets.dart';
 
 class RideDashboard extends StatelessWidget {
   const RideDashboard({
@@ -26,7 +24,6 @@ class RideDashboard extends StatelessWidget {
     required this.rideActions,
     required this.onOpenRoster,
     this.relayController,
-    this.markerAssistanceController,
     this.internetRelayController,
     this.onSendQuickMessage,
     this.localObserverAssistanceActive = false,
@@ -39,7 +36,6 @@ class RideDashboard extends StatelessWidget {
   final Widget rideActions;
   final VoidCallback onOpenRoster;
   final NearbyRelayController? relayController;
-  final MarkerAssistanceController? markerAssistanceController;
   final InternetRelayController? internetRelayController;
   final Future<void> Function(QuickMessage)? onSendQuickMessage;
 
@@ -54,7 +50,6 @@ class RideDashboard extends StatelessWidget {
     final session = controller.session!;
     final mode = controller.coordinationMode;
     final isSolo = mode == RideCoordinationMode.solo;
-    final usesMarkers = mode.usesSecondBikeDropOff;
 
     return Scaffold(
       appBar: AppBar(
@@ -62,7 +57,7 @@ class RideDashboard extends StatelessWidget {
         backgroundColor: Colors.transparent,
       ),
       body: AnimatedBuilder(
-        animation: Listenable.merge([controller, ?markerAssistanceController]),
+        animation: controller,
         builder: (context, _) => Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
@@ -107,19 +102,6 @@ class RideDashboard extends StatelessWidget {
                 if (serviceWarning case final warning?) ...[
                   const SizedBox(height: 14),
                   _ServiceWarning(message: warning),
-                ],
-                if (usesMarkers) ...[
-                  const SizedBox(height: 14),
-                  if (markerAssistanceController case final assistance?) ...[
-                    MarkerAssistancePrompt(
-                      controller: assistance,
-                      distanceUnit: distanceUnits.value,
-                    ),
-                    if (assistance.hasSuggestion) const SizedBox(height: 14),
-                  ],
-                  _MarkerCard(controller: controller),
-                  const SizedBox(height: 14),
-                  MarkerStatisticsCard(summary: controller.markingSummary),
                 ],
                 if (!isSolo) ...[
                   const SizedBox(height: 22),
@@ -378,84 +360,6 @@ class _StatusRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _MarkerCard extends StatelessWidget {
-  const _MarkerCard({required this.controller});
-
-  final RideController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final active = controller.markerActive;
-    final rideStarted = controller.rideStarted;
-    final primary = Theme.of(context).colorScheme.primary;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: active
-            ? primary.withValues(alpha: 0.1)
-            : const Color(0xFF171D25),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: active ? primary : const Color(0xFF2B3542)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: active
-                  ? primary.withValues(alpha: 0.18)
-                  : const Color(0xFF222B35),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              Icons.signpost_outlined,
-              color: active ? primary : null,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  active ? 'Marking this junction' : 'Marker mode',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  active
-                      ? controller.tecPassedCurrentMarker
-                            ? 'TEC passed · ${controller.verifiedMarkerPassCount} '
-                                  'verified riders'
-                            : '${controller.verifiedMarkerPassCount} verified · '
-                                  '${controller.markerPassCount} total riders'
-                      : rideStarted
-                      ? 'Assistance only suggests; you always confirm marker mode'
-                      : 'Marker assistance begins after the leader starts the ride',
-                  style: const TextStyle(
-                    color: Color(0xFF9CA7B5),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          FilledButton.tonal(
-            onPressed: controller.busy || !rideStarted
-                ? null
-                : active
-                ? controller.endMarker
-                : controller.startMarker,
-            child: Text(active ? 'Finish' : 'Start'),
-          ),
-        ],
-      ),
     );
   }
 }

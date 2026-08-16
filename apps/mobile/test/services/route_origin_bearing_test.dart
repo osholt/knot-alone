@@ -95,21 +95,5 @@ void main() {
       expect(source, contains("'bearings':"));
       expect(source, contains('originBearingDegrees: originBearingDegrees'));
     });
-
-    test('the rejoin planner supplies the rider heading and speed', () {
-      // The parameter can exist and be threaded correctly while nothing ever
-      // passes a heading — which would leave the defect exactly as it was.
-      final source = File(
-        'lib/services/route_rejoin_planner.dart',
-      ).readAsStringSync();
-
-      expect(source, contains('final originBearing = rejoinOriginBearing('));
-      expect(source, contains('originBearingDegrees: originBearing'));
-      expect(source, contains('headingDegrees: sample.headingDegrees'));
-      expect(
-        source,
-        contains('speedMetersPerSecond: sample.speedMetersPerSecond'),
-      );
-    });
   });
 }

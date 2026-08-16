@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
 import '../domain/geo_point.dart';
-import '../domain/hazard.dart';
 import '../domain/ride_event.dart';
 import '../domain/ride_role.dart';
 import '../domain/ride_session.dart';
@@ -448,22 +447,6 @@ class RideSimulationController extends ChangeNotifier {
   void rideOff() {
     if (!canRideOff) return;
     setMarkerMode(false);
-  }
-
-  Future<void> reportRoadworks() async {
-    final lead = _agents.firstWhere(
-      (agent) => agent.role == RideRole.lead,
-      orElse: () => _agents.first,
-    );
-    final hazardPoint = _routeSampler
-        .sampleAt(math.min(routeDistanceMeters, lead.progressMeters + 450))
-        .point;
-    await _awarenessController.reportHazard(
-      type: HazardType.roadworks,
-      severity: HazardSeverity.caution,
-      position: hazardPoint,
-      details: 'Synthetic Ride Lab hazard',
-    );
   }
 
   Future<void> _tick(Duration realElapsed) async {

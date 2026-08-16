@@ -9,7 +9,6 @@ import 'package:ride_relay/controllers/ride_code_preference_controller.dart';
 import 'package:ride_relay/controllers/ride_controller.dart';
 import 'package:ride_relay/controllers/rider_profile_controller.dart';
 import 'package:ride_relay/controllers/shared_route_controller.dart';
-import 'package:ride_relay/controllers/speed_limit_display_controller.dart';
 import 'package:ride_relay/data/in_memory_event_store.dart';
 import 'package:ride_relay/data/in_memory_session_store.dart';
 import 'package:ride_relay/domain/completed_ride.dart';
@@ -42,7 +41,6 @@ void main() {
   late RideCodePreferenceController rideCodePreference;
   late RiderProfileController riderProfile;
   late SharedRouteController sharedRoutes;
-  late SpeedLimitDisplayController speedLimitDisplay;
   late CompletedRidesController completedRides;
 
   setUp(() async {
@@ -64,7 +62,6 @@ void main() {
     rideCodePreference = await RideCodePreferenceController.load();
     riderProfile = await RiderProfileController.load();
     sharedRoutes = await SharedRouteController.load(planDirectory: null);
-    speedLimitDisplay = SpeedLimitDisplayController.inMemory();
     completedRides = await CompletedRidesController.load(
       _EmptyCompletedRideStore(),
     );
@@ -77,7 +74,6 @@ void main() {
     rideCodePreference.dispose();
     riderProfile.dispose();
     sharedRoutes.dispose();
-    speedLimitDisplay.dispose();
     completedRides.dispose();
   });
 
@@ -92,7 +88,6 @@ void main() {
           rideCodePreference: rideCodePreference,
           riderProfile: riderProfile,
           sharedRoutes: sharedRoutes,
-          speedLimitDisplay: speedLimitDisplay,
           recordedRoutes: InMemoryRecordedRouteStore(),
           completedRides: completedRides,
           // The home map backdrop is live in production. Without this it would

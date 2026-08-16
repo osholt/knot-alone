@@ -82,7 +82,6 @@ void main() {
           onAcknowledgeQuickMessage: (_) async {},
           onEmergencyAlert: () async => presses.sos += 1,
           onLeaveRide: () async => presses.leave += 1,
-          onReportHazard: (_) async {},
         ),
       ),
     );

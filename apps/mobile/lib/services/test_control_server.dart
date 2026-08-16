@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart';
 import '../controllers/ride_controller.dart';
 import '../controllers/situational_awareness_controller.dart';
 import '../controllers/test_control_controller.dart';
-import '../domain/hazard.dart';
 import '../domain/geo_point.dart';
 import '../domain/rider_location.dart';
 import '../domain/ride_join_payload.dart';
@@ -275,15 +274,6 @@ class TestControlServer {
         await _ride.endRide();
       case '/v1/role':
         await _ride.setRole(_requireEnum(body, 'role', RideRole.values));
-      case '/v1/hazard':
-        await _awareness.reportHazard(
-          type: _requireEnum(body, 'type', HazardType.values),
-          severity:
-              _optionalEnum(body, 'severity', HazardSeverity.values) ??
-              HazardSeverity.caution,
-          position: _optionalPosition(body),
-          details: body['details'] as String?,
-        );
       // Injecting a fix lets step 20 - ride 1 km off route and back - be driven
       // on a bench. It is not a substitute for real GPS: a mock fix arrives with
       // whatever accuracy is asked for, so it cannot exercise the multipath and

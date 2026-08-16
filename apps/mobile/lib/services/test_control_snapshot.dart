@@ -1,6 +1,5 @@
 import '../controllers/ride_controller.dart';
 import '../controllers/situational_awareness_controller.dart';
-import '../domain/hazard.dart';
 import '../relay/live_presence.dart';
 import 'ride_membership.dart';
 
@@ -63,24 +62,6 @@ class TestControlSnapshot {
           _participantJson(participant, now),
       ],
       'presence': [for (final rider in presence) _presenceJson(rider, now)],
-      // Sub-step 3 of step 8b measures how long a hazard takes to travel from one
-      // idle phone to another, so the receiving phone must be able to say whether
-      // it has arrived yet. Without this the delay is not measurable at all: an
-      // earlier driver script tried to infer arrival from the presence count,
-      // which never changes when a hazard lands, and so reported an instant
-      // delivery every single time.
-      'hazards': [
-        for (final hazard in awareness?.activeHazards ?? const <HazardReport>[])
-          {
-            'id': hazard.id,
-            'type': hazard.type.name,
-            'severity': hazard.severity.name,
-            'reporterId': hazard.reporterId,
-            'source': hazard.source.name,
-            'reportedAt': hazard.reportedAt.toUtc().toIso8601String(),
-            'ageSeconds': now.difference(hazard.reportedAt).inSeconds,
-          },
-      ],
       'reconciliation': reconcile(participants, presence),
     });
   }

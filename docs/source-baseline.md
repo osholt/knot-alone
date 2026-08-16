@@ -63,3 +63,33 @@ rather than renaming them. Removed so far:
   they are left for backlog #10 to adopt or replace rather than deleted here.
   `tools/discovery/generate_speed_cameras.py` and `generate_mini_roundabouts.py`
   remain until their own surfaces are removed.
+- **Speed limits, enforcement alerts, road hazards, traffic feeds and junction
+  markers** — removed as one unit, because `SituationalAwarenessController`,
+  `EnforcementAlertDetector` and the marker planner were mutually dependent and
+  splitting them would have left the tree unbuildable between commits. Gone:
+  the posted-speed sign and its lookup, the speed-camera/police warning bubble
+  and border, the bundled fixed-camera layer and its generator, the hazard
+  domain/symbols/deduplicator/relevance rules, the TomTom traffic reroute offer,
+  the junction-marker plan, assistance, statistics and pass detection, and the
+  advisory off-route rejoin planner and its relayed share.
+
+  **Kept, and why:**
+
+  - `SituationalAwarenessController` survives minus its hazard half. It also
+    owns rider locations, live presence, the leader trail and route-deviation
+    alerts, all of which the marine product needs.
+  - The Alerts screen survives as route alerts and location-sharing status.
+  - `RideEventType.hazardReported` / `hazardCleared` and `RideRole.marker` stay
+    in the journal so rides recorded by an earlier build still decode. Nothing
+    writes them now. Replacing the event model is backlog #2's job.
+  - `routePrimaryPath` was lifted out of the marker planner into
+    `lib/services/route_primary_path.dart`: picking the travelled path out of a
+    multi-path route is route geometry, not a marker rule, and waypoint editing
+    and route reshaping both still need it.
+  - The map compass took over the corner slot it used to share with the speed
+    sign.
+  - Ride Lab keeps its marker simulation as a pure visual simulation; with the
+    journal commands gone it records nothing.
+
+  A marine hazard layer is P1 pilotage work (backlog #10) with licensed sources
+  and different categories — a fresh build, not a rename of this.

@@ -12,7 +12,6 @@ import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart' as vmt;
 
-import '../../controllers/speed_limit_display_controller.dart';
 import '../../controllers/shared_route_controller.dart';
 import '../../controllers/personal_ride_heatmap_controller.dart';
 import '../../data/json_file_completed_ride_store.dart';
@@ -20,7 +19,6 @@ import '../../data/json_file_recorded_route_store.dart';
 import '../../data/json_file_route_store.dart';
 import '../../domain/completed_ride_store.dart';
 import '../../domain/distance_unit.dart';
-import '../../domain/hazard.dart';
 import '../../domain/imported_route.dart';
 import '../../domain/quick_message.dart';
 import '../../domain/recorded_route_store.dart';
@@ -31,10 +29,7 @@ import '../../internet/plan_directory.dart';
 import '../../services/basemap_configuration.dart';
 import '../../services/basemap_status.dart';
 import '../../services/demo_route_loader.dart';
-import '../../services/enforcement_alert_detector.dart';
 import 'ride_clock.dart';
-import '../../services/enforcement_alert_presentation.dart';
-import '../../services/fixed_speed_camera_catalogue.dart';
 import '../../services/ride_completion_detector.dart';
 import '../../services/gpx_import_source.dart';
 import '../../services/group_pip_bridge.dart';
@@ -57,15 +52,12 @@ import '../../services/rider_trail_recorder.dart';
 import '../../services/road_routing.dart';
 import '../../services/route_geometry_enricher.dart';
 import '../../services/route_importer.dart';
-import '../../services/route_marker_plan.dart';
 import '../../services/route_journey_progress.dart';
 import '../../services/route_progress.dart';
 import '../../services/route_reshape_planner.dart';
-import '../../services/speed_limit.dart';
 import '../../services/stored_route_library.dart';
 import '../../services/trail_direction_arrows.dart';
 import 'destination_route_sheet.dart';
-import 'hazard_map_symbol.dart';
 import 'map_camera_guard.dart';
 import 'maneuver_list_screen.dart';
 import 'maneuver_symbol.dart';
@@ -177,7 +169,6 @@ class RideMapFeature extends StatefulWidget {
     this.groupRiderCount,
     this.onOpenRoster,
     this.junctionMarkerOverlay,
-    this.enforcementAlert,
     this.rideCompletionSuggestion,
     this.onEndRideForEveryone,
     this.onDismissRideCompletion,
@@ -187,11 +178,8 @@ class RideMapFeature extends StatefulWidget {
     this.dismissedQuickMessageReceiptIds = const {},
     this.onDismissQuickMessageInterrupt,
     this.onDismissQuickMessageReceipt,
-    this.dismissedEnforcementAlertId,
-    this.onDismissEnforcementAlert,
     this.initialRouteStartConnector,
     this.onRouteStartConnectorChanged,
-    this.onReportHazard,
     this.emergencyContacts = const [],
     this.onEmergencyAlert,
     this.onEmergencyIssue,
@@ -221,7 +209,6 @@ class RideMapFeature extends StatefulWidget {
     this.completedRideStore,
     this.personalRideHeatmap,
     this.distanceUnit = DistanceUnit.kilometres,
-    this.speedLimitDisplay,
     this.showRouteProgress = true,
     this.basemapConfiguration = const BasemapConfiguration(),
     this.localMotorcycleStyle = motorcycleIconStyleDefault,
@@ -242,7 +229,6 @@ class RideMapFeature extends StatefulWidget {
     int? groupRiderCount,
     VoidCallback? onOpenRoster,
     ValueListenable<MapJunctionMarkerOverlay?>? junctionMarkerOverlay,
-    ValueListenable<EnforcementAlert?>? enforcementAlert,
     ValueListenable<RideCompletionAssessment?>? rideCompletionSuggestion,
     VoidCallback? onEndRideForEveryone,
     VoidCallback? onDismissRideCompletion,
@@ -253,11 +239,8 @@ class RideMapFeature extends StatefulWidget {
     Set<String> dismissedQuickMessageReceiptIds = const {},
     ValueChanged<String>? onDismissQuickMessageInterrupt,
     ValueChanged<String>? onDismissQuickMessageReceipt,
-    String? dismissedEnforcementAlertId,
-    ValueChanged<String>? onDismissEnforcementAlert,
     ImportedRoute? initialRouteStartConnector,
     ValueChanged<ImportedRoute?>? onRouteStartConnectorChanged,
-    Future<void> Function(HazardType type)? onReportHazard,
     List<MapEmergencyContact> emergencyContacts = const [],
     Future<void> Function()? onEmergencyAlert,
     Future<void> Function(QuickMessage message)? onEmergencyIssue,
@@ -283,7 +266,6 @@ class RideMapFeature extends StatefulWidget {
     PersonalRideHeatmapController? personalRideHeatmap,
     bool canEditRoute = true,
     DistanceUnit distanceUnit = DistanceUnit.kilometres,
-    SpeedLimitDisplayController? speedLimitDisplay,
     bool showRouteProgress = true,
     bool darkMapStyle = false,
     bool restrainedLightMapStyle = true,
@@ -303,7 +285,6 @@ class RideMapFeature extends StatefulWidget {
     groupRiderCount: groupRiderCount,
     onOpenRoster: onOpenRoster,
     junctionMarkerOverlay: junctionMarkerOverlay,
-    enforcementAlert: enforcementAlert,
     rideCompletionSuggestion: rideCompletionSuggestion,
     onEndRideForEveryone: onEndRideForEveryone,
     onDismissRideCompletion: onDismissRideCompletion,
@@ -311,13 +292,10 @@ class RideMapFeature extends StatefulWidget {
     onAcknowledgeQuickMessage: onAcknowledgeQuickMessage,
     dismissedQuickMessageInterruptIds: dismissedQuickMessageInterruptIds,
     dismissedQuickMessageReceiptIds: dismissedQuickMessageReceiptIds,
-    dismissedEnforcementAlertId: dismissedEnforcementAlertId,
-    onDismissEnforcementAlert: onDismissEnforcementAlert,
     initialRouteStartConnector: initialRouteStartConnector,
     onRouteStartConnectorChanged: onRouteStartConnectorChanged,
     onDismissQuickMessageInterrupt: onDismissQuickMessageInterrupt,
     onDismissQuickMessageReceipt: onDismissQuickMessageReceipt,
-    onReportHazard: onReportHazard,
     emergencyContacts: emergencyContacts,
     onEmergencyAlert: onEmergencyAlert,
     onEmergencyIssue: onEmergencyIssue,
@@ -343,7 +321,6 @@ class RideMapFeature extends StatefulWidget {
     personalRideHeatmap: personalRideHeatmap,
     canEditRoute: canEditRoute,
     distanceUnit: distanceUnit,
-    speedLimitDisplay: speedLimitDisplay,
     showRouteProgress: showRouteProgress,
     basemapConfiguration: BasemapConfiguration.fromEnvironment().forBrightness(
       dark: darkMapStyle,
@@ -368,7 +345,6 @@ class RideMapFeature extends StatefulWidget {
   final int? groupRiderCount;
   final VoidCallback? onOpenRoster;
   final ValueListenable<MapJunctionMarkerOverlay?>? junctionMarkerOverlay;
-  final ValueListenable<EnforcementAlert?>? enforcementAlert;
 
   /// The arrival the group has reached, offered rather than imposed (#380).
   ///
@@ -404,14 +380,11 @@ class RideMapFeature extends StatefulWidget {
   /// `State` is therefore silently undone by a tab change, which is what a
   /// tester hit: cleared alerts returning, and an accepted route-start leg
   /// having to be accepted again.
-  final String? dismissedEnforcementAlertId;
-  final ValueChanged<String>? onDismissEnforcementAlert;
 
   /// The routed "navigate to start" leg the rider has already accepted (#262),
   /// seeded from the shell so accepting it survives a tab change.
   final ImportedRoute? initialRouteStartConnector;
   final ValueChanged<ImportedRoute?>? onRouteStartConnectorChanged;
-  final Future<void> Function(HazardType type)? onReportHazard;
   final List<MapEmergencyContact> emergencyContacts;
   final Future<void> Function()? onEmergencyAlert;
   final Future<void> Function(QuickMessage message)? onEmergencyIssue;
@@ -443,7 +416,6 @@ class RideMapFeature extends StatefulWidget {
   final CompletedRideStore? completedRideStore;
   final PersonalRideHeatmapController? personalRideHeatmap;
   final DistanceUnit distanceUnit;
-  final SpeedLimitDisplayController? speedLimitDisplay;
   final bool showRouteProgress;
   final BasemapConfiguration basemapConfiguration;
   final MotorcycleIconStyle localMotorcycleStyle;
@@ -567,7 +539,6 @@ class _RideMapFeatureState extends State<RideMapFeature> {
         groupRiderCount: widget.groupRiderCount,
         onOpenRoster: widget.onOpenRoster,
         junctionMarkerOverlay: widget.junctionMarkerOverlay,
-        enforcementAlert: widget.enforcementAlert,
         rideCompletionSuggestion: widget.rideCompletionSuggestion,
         onEndRideForEveryone: widget.onEndRideForEveryone,
         onDismissRideCompletion: widget.onDismissRideCompletion,
@@ -576,13 +547,10 @@ class _RideMapFeatureState extends State<RideMapFeature> {
         dismissedQuickMessageInterruptIds:
             widget.dismissedQuickMessageInterruptIds,
         dismissedQuickMessageReceiptIds: widget.dismissedQuickMessageReceiptIds,
-        dismissedEnforcementAlertId: widget.dismissedEnforcementAlertId,
-        onDismissEnforcementAlert: widget.onDismissEnforcementAlert,
         initialRouteStartConnector: widget.initialRouteStartConnector,
         onRouteStartConnectorChanged: widget.onRouteStartConnectorChanged,
         onDismissQuickMessageInterrupt: widget.onDismissQuickMessageInterrupt,
         onDismissQuickMessageReceipt: widget.onDismissQuickMessageReceipt,
-        onReportHazard: widget.onReportHazard,
         emergencyContacts: widget.emergencyContacts,
         onEmergencyAlert: widget.onEmergencyAlert,
         onEmergencyIssue: widget.onEmergencyIssue,
@@ -605,7 +573,6 @@ class _RideMapFeatureState extends State<RideMapFeature> {
         acquireCurrentPosition: widget.acquireCurrentPosition,
         navigationExportCoordinator: widget.navigationExportCoordinator,
         distanceUnit: widget.distanceUnit,
-        speedLimitDisplay: widget.speedLimitDisplay,
         showRouteProgress: widget.showRouteProgress,
         localMotorcycleStyle: widget.localMotorcycleStyle,
         localRiderSymbol: widget.localRiderSymbol,
@@ -654,7 +621,6 @@ class RideMapScreen extends StatefulWidget {
     this.groupRiderCount,
     this.onOpenRoster,
     this.junctionMarkerOverlay,
-    this.enforcementAlert,
     this.rideCompletionSuggestion,
     this.onEndRideForEveryone,
     this.onDismissRideCompletion,
@@ -662,13 +628,10 @@ class RideMapScreen extends StatefulWidget {
     this.onAcknowledgeQuickMessage,
     this.dismissedQuickMessageInterruptIds = const {},
     this.dismissedQuickMessageReceiptIds = const {},
-    this.dismissedEnforcementAlertId,
-    this.onDismissEnforcementAlert,
     this.initialRouteStartConnector,
     this.onRouteStartConnectorChanged,
     this.onDismissQuickMessageInterrupt,
     this.onDismissQuickMessageReceipt,
-    this.onReportHazard,
     this.emergencyContacts = const [],
     this.onEmergencyAlert,
     this.onEmergencyIssue,
@@ -703,7 +666,6 @@ class RideMapScreen extends StatefulWidget {
     this.personalRideHeatmap,
     this.storedRouteLibrary,
     this.distanceUnit = DistanceUnit.kilometres,
-    this.speedLimitDisplay,
     this.showRouteProgress = true,
     this.disposeOfflineTileCache = false,
     this.localMotorcycleStyle = motorcycleIconStyleDefault,
@@ -742,7 +704,6 @@ class RideMapScreen extends StatefulWidget {
   final int? groupRiderCount;
   final VoidCallback? onOpenRoster;
   final ValueListenable<MapJunctionMarkerOverlay?>? junctionMarkerOverlay;
-  final ValueListenable<EnforcementAlert?>? enforcementAlert;
 
   /// The arrival the group has reached, offered rather than imposed (#380).
   ///
@@ -768,13 +729,10 @@ class RideMapScreen extends StatefulWidget {
 
   /// Held by the ride shell rather than by this widget, because a tab change
   /// disposes this widget and the shell survives it (#282).
-  final String? dismissedEnforcementAlertId;
-  final ValueChanged<String>? onDismissEnforcementAlert;
   final ImportedRoute? initialRouteStartConnector;
   final ValueChanged<ImportedRoute?>? onRouteStartConnectorChanged;
   final ValueChanged<String>? onDismissQuickMessageInterrupt;
   final ValueChanged<String>? onDismissQuickMessageReceipt;
-  final Future<void> Function(HazardType type)? onReportHazard;
   final List<MapEmergencyContact> emergencyContacts;
   final Future<void> Function()? onEmergencyAlert;
   final Future<void> Function(QuickMessage message)? onEmergencyIssue;
@@ -822,7 +780,6 @@ class RideMapScreen extends StatefulWidget {
   final StoredRouteLibrary? storedRouteLibrary;
 
   final DistanceUnit distanceUnit;
-  final SpeedLimitDisplayController? speedLimitDisplay;
   final bool showRouteProgress;
   final bool disposeOfflineTileCache;
   final MotorcycleIconStyle localMotorcycleStyle;
@@ -844,7 +801,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
   static const _waypointSource = 'ride-relay-waypoints';
   static const _positionSource = 'ride-relay-position';
   static const _overlaySource = 'ride-relay-overlays';
-  static const _markerPlanSource = 'ride-relay-marker-plan';
   static const _trailDirectionArrowImage = 'ride-relay-trail-direction-arrow';
 
   /// How many of the direction arrows the planned route may claim before the
@@ -868,8 +824,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
   late final DestinationRoutePlanner _defaultDestinationRoutePlanner;
   late final RouteGeometryEnricher _defaultRouteGeometryEnricher;
   late final ImportedTrackMatcher _defaultImportedTrackMatcher;
-  late SpeedLimitDisplayController _speedLimitDisplay;
-  late bool _ownsSpeedLimitDisplay;
   PersonalRideHeatmapController? _personalRideHeatmap;
   bool _ownsPersonalRideHeatmap = false;
   late final GroupPipBridge _groupPipBridge;
@@ -949,7 +903,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
   bool _navigationMode = false;
   bool _navigationCanvasActive = false;
   bool _markerOverviewVisible = false;
-  bool _markerPlanVisible = false;
   bool _autoFollowSuppressed = false;
   bool _cameraFramingRefreshScheduled = false;
   bool _emergencyAlertSending = false;
@@ -960,7 +913,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
   double _lastHeadingDegrees = 0;
   // Dismissal is per hazard, so passing this one and approaching the next
   // still raises a fresh warning.
-  String? _dismissedEnforcementAlertId;
 
   /// Assigns the accepted route-start leg **and** tells the shell, so the two
   /// cannot drift. Every assignment goes through here for that reason.
@@ -1101,80 +1053,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
   RouteProgressGeometry get _navigationProgressGeometry =>
       _rejoinRoute == null ? _progressGeometry : _rejoinProgressGeometry;
 
-  /// Route-derived: the marker plan is an analysis of the planned route.
-  RouteMarkerPlan get _markerPlan =>
-      !widget.markerFeaturesEnabled || _route == null
-      ? const RouteMarkerPlan(points: [])
-      : const RouteMarkerPlanAnalyzer().analyze(_route!);
-
-  /// The review action on the day: a green dot the group turns out not to need
-  /// is rejected here rather than argued with at the roadside (#179).
-  ///
-  /// Reviewing the whole plan at leisure belongs on the route review screen and,
-  /// in time, the web planner; this surface is for the one that is wrong now.
-  Future<void> _showMarkerPlanPoint(MarkerPlanPoint point) async {
-    final manual = point.source == MarkerPlanPointSource.manual;
-    final reject = await showModalBottomSheet<bool>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                point.label,
-                style: Theme.of(sheetContext).textTheme.titleMedium,
-              ),
-              if (point.detail case final detail?) ...[
-                const SizedBox(height: 6),
-                Text(detail, style: const TextStyle(color: Color(0xFF98A3B1))),
-              ],
-              if (widget.canEditRoute) ...[
-                const SizedBox(height: 14),
-                OutlinedButton.icon(
-                  key: const Key('reject-marker-plan-point'),
-                  onPressed: () => Navigator.of(sheetContext).pop(true),
-                  icon: const Icon(Icons.block_outlined),
-                  label: Text(
-                    manual
-                        ? 'Remove this added position'
-                        : 'Not needed — reject for this route',
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-    if (reject != true || !mounted) return;
-    await _rejectMarkerPlanPoint(point);
-  }
-
-  Future<void> _rejectMarkerPlanPoint(MarkerPlanPoint point) async {
-    final route = _route;
-    if (route == null || !widget.canEditRoute) return;
-    final updated = route.withMarkerReview(
-      point.source == MarkerPlanPointSource.manual
-          ? route.markerReview.restoring(point.id)
-          : route.markerReview.rejecting(point.toReviewPoint()),
-    );
-    await widget.routeStore.saveActiveRoute(updated);
-    if (!mounted) return;
-    setState(() => _route = updated);
-    await _syncMapLibreSources();
-    widget.onRouteChanged?.call(updated);
-    widget.onRouteCommitted?.call(updated);
-    _showMessage(
-      point.source == MarkerPlanPointSource.manual
-          ? '${point.label}: removed from the marker plan.'
-          : '${point.label}: rejected for this route.',
-    );
-  }
-
   DestinationRoutePlanner get _destinationRoutePlanner =>
       widget.destinationRoutePlanner ?? _defaultDestinationRoutePlanner;
 
@@ -1187,9 +1065,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
   @override
   void initState() {
     super.initState();
-    // Restored from the shell, which outlives a tab change: see the field
-    // comments on RideMapFeature (#282).
-    _dismissedEnforcementAlertId = widget.dismissedEnforcementAlertId;
     _routeStartConnector = widget.initialRouteStartConnector;
     _routingClient = http.Client();
     final routingConfiguration = RoutingConfiguration.fromEnvironment();
@@ -1222,9 +1097,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
       client: _routingClient,
       baseUrl: routingConfiguration.routingBaseUrl,
     );
-    _ownsSpeedLimitDisplay = widget.speedLimitDisplay == null;
-    _speedLimitDisplay =
-        widget.speedLimitDisplay ?? SpeedLimitDisplayController.inMemory();
     _groupPipBridge = GroupPipBridge();
     _mapLibreOfflineManager =
         widget.mapLibreOfflineManager ??
@@ -1243,9 +1115,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
     // The app-level AnimatedBuilder already listens to this shared controller.
     // Starting the lookup here used to notify that ancestor while its
     // FutureBuilder was still constructing this map (#485).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _observeSpeedLimit(_navigationFix);
-    });
     _watchBasemapViewLoad();
     _markerOverviewVisible =
         widget.junctionMarkerOverlay?.value?.isLocalMarker ?? false;
@@ -1294,13 +1163,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
       oldWidget.junctionMarkerOverlay?.removeListener(_onJunctionMarkerChanged);
       widget.junctionMarkerOverlay?.addListener(_onJunctionMarkerChanged);
       _onJunctionMarkerChanged();
-    }
-    if (oldWidget.speedLimitDisplay != widget.speedLimitDisplay) {
-      if (_ownsSpeedLimitDisplay) _speedLimitDisplay.dispose();
-      _ownsSpeedLimitDisplay = widget.speedLimitDisplay == null;
-      _speedLimitDisplay =
-          widget.speedLimitDisplay ?? SpeedLimitDisplayController.inMemory();
-      _observeSpeedLimit(_navigationFix);
     }
     _watchBasemapViewLoad();
   }
@@ -1356,7 +1218,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
     _basemapViewLoadWatchdog = null;
     _riderSpeed.dispose();
     _mapBearing.dispose();
-    if (_ownsSpeedLimitDisplay) _speedLimitDisplay.dispose();
     _personalRideHeatmap?.removeListener(_onPersonalRideHeatmapChanged);
     if (_ownsPersonalRideHeatmap) _personalRideHeatmap?.dispose();
     unawaited(_groupPipBridge.dispose());
@@ -1632,39 +1493,12 @@ class _RideMapScreenState extends State<RideMapScreen> {
                         ],
                       ),
                     ),
-                    PopupMenuItem(
-                      value: _MapAction.speedLimitDisplay,
-                      child: Row(
-                        children: [
-                          Icon(
-                            _speedLimitDisplay.enabled
-                                ? Icons.check_box
-                                : Icons.check_box_outline_blank,
-                          ),
-                          const SizedBox(width: 10),
-                          // A popup menu constrains its items, and this label
-                          // was wide enough to be clipped without flexing.
-                          const Expanded(
-                            child: Text('Show mapped speed limit'),
-                          ),
-                        ],
-                      ),
-                    ),
                     // Route-derived: both read manoeuvres off the plan.
                     if (_route?.maneuvers.isNotEmpty ?? false) ...[
                       const PopupMenuItem(
                         value: _MapAction.maneuverList,
                         child: Text('All turns for this route'),
                       ),
-                      if (widget.markerFeaturesEnabled)
-                        PopupMenuItem(
-                          value: _MapAction.markerPlan,
-                          child: Text(
-                            _markerPlanVisible
-                                ? 'Hide marker plan'
-                                : 'Show marker plan',
-                          ),
-                        ),
                     ],
                     if (!kIsWeb &&
                         defaultTargetPlatform == TargetPlatform.android)
@@ -1766,41 +1600,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
                         : _WaitingForLeaderRoutePrompt(
                             onDismiss: _continueWithoutRoute,
                           ),
-                  ),
-                // An approaching camera or police report, in two parts: a bubble
-                // that announces it and a border that holds for the rest of the
-                // approach (#446). The announcement sits at the top-centre,
-                // clear of the rider marker and the bottom navigation rails.
-                if (widget.enforcementAlert != null)
-                  Positioned.fill(
-                    child: ValueListenableBuilder<EnforcementAlert?>(
-                      valueListenable: widget.enforcementAlert!,
-                      builder: (context, alert, _) {
-                        if (alert == null ||
-                            alert.hazard.id == _dismissedEnforcementAlertId) {
-                          return const SizedBox.shrink();
-                        }
-                        return _EnforcementAlertLayer(
-                          // A new hazard gets a new State, so its ten seconds
-                          // start again rather than inheriting the last one's.
-                          key: ValueKey(alert.hazard.id),
-                          alert: alert,
-                          distanceUnit: widget.distanceUnit,
-                          topInset: overlayTop,
-                          onDismiss: () {
-                            setState(
-                              () => _dismissedEnforcementAlertId =
-                                  alert.hazard.id,
-                            );
-                            // Reported up so the decision survives this widget
-                            // being rebuilt by a tab change (#282).
-                            widget.onDismissEnforcementAlert?.call(
-                              alert.hazard.id,
-                            );
-                          },
-                        );
-                      },
-                    ),
                   ),
                 // Above even that: a rider asking the group for help outranks a
                 // speed camera. Critical only - "Need fuel" must not blank the
@@ -2183,13 +1982,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
               ),
             )
           : null;
-      // Reporting a camera or a patrol car is a ride action, not a route action,
-      // and it earns a place beside them (#125).
-      final reportButton = !widget.rideStarted || widget.onReportHazard == null
-          ? null
-          : _ReportSightingButton(onPressed: _reportEnforcementSighting);
-      final hasActions =
-          sosButton != null || leaveButton != null || reportButton != null;
+      final hasActions = sosButton != null || leaveButton != null;
       // One arrangement per orientation, fixed for every state (#142). #139 used
       // a `Wrap` in landscape, and a `Wrap` decides its runs from its children's
       // measured widths - so the moment SOS said "ALERT SENT" the rail could no
@@ -2206,7 +1999,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
       final leaveSubtree = leaveButton == null || actionTargetHeight == null
           ? leaveButton
           : SizedBox(height: actionTargetHeight, child: leaveButton);
-      final reportSubtree = reportButton;
       final safetyCluster = !hasActions
           ? null
           : landscape
@@ -2219,10 +2011,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
                 if (sosSubtree != null && leaveSubtree != null)
                   const SizedBox(height: 8),
                 ?leaveSubtree,
-                if (reportSubtree != null) ...[
-                  const SizedBox(height: 8),
-                  reportSubtree,
-                ],
               ],
             )
           : Row(
@@ -2242,63 +2030,26 @@ class _RideMapScreenState extends State<RideMapScreen> {
                       ?leaveSubtree,
                     ],
                   ),
-                if (reportSubtree != null) ...[
-                  const SizedBox(width: 10),
-                  reportSubtree,
-                ],
               ],
             );
-      // The speed sign owns its own slot at the edge of the band, clear of the
-      // action row: portrait puts it under the actions and hard right, landscape
-      // in the right-hand rail away from the centre column (#125).
-      final speedLimit = markerOverviewActive || !widget.rideStarted
-          ? null
-          : KeyedSubtree(
-              key: const Key('posted-speed-limit-position'),
-              child: AnimatedBuilder(
-                animation: _speedLimitDisplay,
-                builder: (context, _) => _speedLimitDisplay.enabled
-                    ? ValueListenableBuilder<({double value, bool ageing})?>(
-                        valueListenable: _riderSpeed,
-                        builder: (context, riderSpeed, _) =>
-                            _EnforcementEmphasis(
-                              alert: widget.enforcementAlert,
-                              dismissedHazardId: _dismissedEnforcementAlertId,
-                              builder: (emphasised) => _PostedSpeedLimitBadge(
-                                status: _speedLimitDisplay.status,
-                                outcome: _speedLimitDisplay.lastOutcome,
-                                limit: _speedLimitDisplay.limit,
-                                riderSpeedMetersPerSecond: riderSpeed?.value,
-                                riderSpeedIsAgeing: riderSpeed?.ageing ?? false,
-                                emphasised: emphasised,
-                              ),
-                            ),
-                      )
-                    : _SpeedLimitOptInChip(
-                        onPressed: _confirmEnableSpeedLimitDisplay,
-                      ),
-              ),
-            );
-      final compass = speedLimit == null
-          ? null
-          : ValueListenableBuilder<double>(
-              valueListenable: _mapBearing,
-              builder: (context, bearing, _) => _RideCompass(
-                bearingDegrees: bearing,
-                diameter: 58,
-                darkMap: _basemap.dark,
-              ),
-            );
-      final speedCluster = speedLimit == null
+      // The compass owns the corner slot the posted-speed sign used to share
+      // with it (#133): the one surface glanced at repeatedly without acting on
+      // it, so it belongs where the eye already is.
+      final speedCluster = markerOverviewActive || !widget.rideStarted
           ? null
           : Row(
               key: const Key('speed-compass-cluster'),
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ?compass,
-                if (compass != null) const SizedBox(width: 8),
-                speedLimit,
+                ValueListenableBuilder<double>(
+                  valueListenable: _mapBearing,
+                  builder: (context, bearing, _) => _RideCompass(
+                    bearingDegrees: bearing,
+                    diameter: 58,
+                    darkMap: _basemap.dark,
+                  ),
+                ),
               ],
             );
       final followMe = showFollowMe
@@ -2451,7 +2202,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       // orientation and nothing else (#142). The `Spacer` between it and the
       // speed sign absorbs the sign's own width, so the targets keep their place
       // whatever the sign says.
-      final actionCluster = !hasActions && speedLimit == null
+      final actionCluster = !hasActions && speedCluster == null
           ? null
           : Row(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -2762,54 +2513,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
                 )
                 .toList(growable: false),
           ),
-        if (_markerPlanVisible && _markerPlan.points.isNotEmpty)
-          MarkerLayer(
-            key: const Key('ride-marker-plan-layer'),
-            markers: _markerPlan.points
-                .take(500)
-                .map(
-                  (point) => Marker(
-                    point: _latLng(point.position),
-                    width: 38,
-                    height: 38,
-                    child: GestureDetector(
-                      key: Key('ride-marker-plan-${point.id}'),
-                      onTap: () => unawaited(_showMarkerPlanPoint(point)),
-                      child: Tooltip(
-                        message: point.label,
-                        child: Icon(
-                          point.source == MarkerPlanPointSource.manual
-                              ? Icons.add_location_alt_outlined
-                              : switch (point.kind) {
-                                  MarkerPlanPointKind.likelyMarker =>
-                                    Icons.person_pin_circle_outlined,
-                                  MarkerPlanPointKind.safetyReview =>
-                                    Icons.warning_amber_rounded,
-                                  MarkerPlanPointKind.musterPoint =>
-                                    Icons.groups_2_outlined,
-                                },
-                          color: switch (point.kind) {
-                            MarkerPlanPointKind.likelyMarker => const Color(
-                              0xFF6ED89A,
-                            ),
-                            MarkerPlanPointKind.safetyReview => const Color(
-                              0xFFFF8A4C,
-                            ),
-                            MarkerPlanPointKind.musterPoint => const Color(
-                              0xFF68A9FF,
-                            ),
-                          },
-                          size: 32,
-                          shadows: const [
-                            Shadow(color: Color(0xFF10151C), blurRadius: 4),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                )
-                .toList(growable: false),
-          ),
         if (_effectivePosition case final currentPosition?)
           MarkerLayer(
             rotate: true,
@@ -2840,12 +2543,8 @@ class _RideMapScreenState extends State<RideMapScreen> {
                     (overlay) => Marker(
                       key: ValueKey(overlay.id),
                       point: _latLng(overlay.point),
-                      // A reported hazard gets a larger box than a rider so its
-                      // badge is not clipped and so a gloved tap lands: the issue
-                      // asks for the tap to work without fine interaction while
-                      // moving.
-                      width: overlay.hazardSymbol == null ? 42 : 52,
-                      height: overlay.hazardSymbol == null ? 42 : 52,
+                      width: 42,
+                      height: 42,
                       child: Tooltip(
                         message: overlay.label,
                         child: _overlayMarkerChild(overlay),
@@ -3459,7 +3158,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
       );
       _updateNavigationGuidance(position);
     }
-    _observeSpeedLimit(navigationFix);
     // MapLibre receives sources directly. Keep its platform view mounted while
     // the simulation is running; only FlutterMap needs a widget rebuild for
     // fresh route-progress geometry.
@@ -3493,29 +3191,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
       });
     }
     unawaited(_publishGroupPipSnapshot());
-  }
-
-  /// Feeds the speed-limit controller, which resolves the road from one fix.
-  ///
-  /// Deliberately the navigation fix rather than the bare current position: the
-  /// confidence test that replaced the wait-for-movement delay is built on
-  /// reported accuracy and heading, and a position without them cannot be tested
-  /// for confidence at all (#126).
-  void _observeSpeedLimit(MapNavigationPosition? fix) {
-    if (fix == null) return;
-    final location = SpeedLimitLocation(
-      point: fix.point,
-      recordedAt: fix.recordedAt,
-      accuracyMeters: fix.accuracyMeters,
-      headingDegrees: fix.headingDegrees,
-    );
-    _speedLimitDisplay.observe(location);
-    _speedLimitDisplay.prefetchAhead(
-      current: location,
-      routeAhead:
-          _navigationProgressGeometry.remainingPaths.firstOrNull ??
-          const <GeoPoint>[],
-    );
   }
 
   void _updateNavigationGuidance(GeoPoint? position) {
@@ -3557,7 +3232,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
       _effectivePosition,
     );
     _updateNavigationGuidance(_effectivePosition);
-    _observeSpeedLimit(_navigationFix);
     _scheduleMapLibreSync(progress: true, overlays: true);
   }
 
@@ -4129,18 +3803,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
 
   /// The badge for one overlay marker in the flutter_map fallback.
   ///
-  /// A reported hazard draws [HazardMapSymbolPainter] - the same painter the
-  /// MapLibre images are baked from - and answers a tap the way the native
-  /// renderer does, so the two behave the same rather than one of them needing a
-  /// long press to reveal a tooltip (#141).
   Widget _overlayMarkerChild(MapOverlayMarker overlay) {
-    final hazard = overlay.hazardSymbol;
-    if (hazard != null) {
-      return GestureDetector(
-        onTap: () => _showMessage(overlay.label),
-        child: HazardMapSymbolBadge(symbol: hazard),
-      );
-    }
     final style = overlay.motorcycleStyle;
     return style == null
         ? _IconBadge(icon: overlay.icon, badgeColor: overlay.color, size: 34)
@@ -4153,7 +3816,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
           );
   }
 
-  static const _hazardIconImage = 'ride-relay-hazard-warning';
+  static const _overlayFallbackIconImage = 'ride-relay-overlay-marker';
   bool _markerImagesRegistered = false;
   final Set<String> _registeredRiderSymbolImages = {};
 
@@ -4172,22 +3835,10 @@ class _RideMapScreenState extends State<RideMapScreen> {
       );
     }
     await controller.addImage(
-      _hazardIconImage,
-      await rasterizeIconGlyphPng(Icons.warning_amber_rounded),
+      _overlayFallbackIconImage,
+      await rasterizeIconGlyphPng(Icons.place_outlined),
       true,
     );
-    // Every hazard badge the map can draw, baked from the shared painter. Full
-    // colour, so registered with `sdf: false` and drawn by its own layer, which
-    // applies no `icon-color`: the fill and the ring are artwork rather than
-    // layer paint, because the flutter_map fallback has no layer paint to match
-    // them with.
-    for (final symbol in HazardMapSymbols.catalogue) {
-      await controller.addImage(
-        symbol.imageName,
-        await rasterizeHazardMapSymbolPng(symbol),
-        false,
-      );
-    }
     await controller.addImage(
       _trailDirectionArrowImage,
       await rasterizeIconGlyphPng(Icons.navigation_rounded),
@@ -4346,29 +3997,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
           circleStrokeColor: '#10151C',
         ),
       );
-      await controller.addGeoJsonSource(
-        _markerPlanSource,
-        _markerPlanGeoJson(),
-      );
-      await controller.addCircleLayer(
-        _markerPlanSource,
-        'ride-relay-marker-plan-points',
-        const ml.CircleLayerProperties(
-          circleRadius: [
-            'case',
-            [
-              '==',
-              ['get', 'kind'],
-              'safety',
-            ],
-            9,
-            7,
-          ],
-          circleColor: ['get', 'color'],
-          circleStrokeWidth: 3,
-          circleStrokeColor: '#10151C',
-        ),
-      );
       await controller.addGeoJsonSource(_positionSource, _positionGeoJson());
       await controller.addCircleLayer(
         _positionSource,
@@ -4436,21 +4064,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
           iconIgnorePlacement: true,
         ),
         filter: _riderOverlayFilter,
-      );
-      // Reported cameras, police sightings and road defects (#135). One layer,
-      // one constant size, no paint properties: everything that distinguishes a
-      // fresh camera from a fading police sighting is in the image, drawn by the
-      // painter the fallback renderer also uses.
-      await controller.addSymbolLayer(
-        _overlaySource,
-        _hazardSymbolLayer,
-        const ml.SymbolLayerProperties(
-          iconImage: ['get', 'iconImage'],
-          iconSize: 1 / hazardMapSymbolRasterScale,
-          iconAllowOverlap: true,
-          iconIgnorePlacement: true,
-        ),
-        filter: _hazardOverlayFilter,
       );
       _mapLibreStyleReady = true;
       await _syncMapLibreSources();
@@ -4534,10 +4147,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
         _trailDirectionArrowGeoJson(),
       );
       await controller.setGeoJsonSource(_waypointSource, _waypointGeoJson());
-      await controller.setGeoJsonSource(
-        _markerPlanSource,
-        _markerPlanGeoJson(),
-      );
       await controller.setGeoJsonSource(_positionSource, _positionGeoJson());
       await controller.setGeoJsonSource(_overlaySource, _overlayGeoJson());
     } on Object catch (error) {
@@ -4598,10 +4207,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
         await controller.setGeoJsonSource(
           _riderTrailSource,
           _riderTrailGeoJson(),
-        );
-        await controller.setGeoJsonSource(
-          _markerPlanSource,
-          _markerPlanGeoJson(),
         );
         await controller.setGeoJsonSource(_overlaySource, _overlayGeoJson());
       }
@@ -4783,30 +4388,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
         const <MapGeoJsonPoint>[],
   );
 
-  Map<String, dynamic> _markerPlanGeoJson() => MapGeoJson.points(
-    _markerPlanVisible
-        ? _markerPlan.points.map(
-            (point) => MapGeoJsonPoint(
-              id: point.id,
-              point: point.position,
-              properties: {
-                'label': point.label,
-                'kind': switch (point.kind) {
-                  MarkerPlanPointKind.likelyMarker => 'marker',
-                  MarkerPlanPointKind.safetyReview => 'safety',
-                  MarkerPlanPointKind.musterPoint => 'muster',
-                },
-                'color': switch (point.kind) {
-                  MarkerPlanPointKind.likelyMarker => '#6ED89A',
-                  MarkerPlanPointKind.safetyReview => '#FF8A4C',
-                  MarkerPlanPointKind.musterPoint => '#68A9FF',
-                },
-              },
-            ),
-          )
-        : const <MapGeoJsonPoint>[],
-  );
-
   Map<String, dynamic> _positionGeoJson() {
     final point = _effectivePosition;
     return MapGeoJson.points(
@@ -4816,21 +4397,13 @@ class _RideMapScreenState extends State<RideMapScreen> {
     );
   }
 
-  /// Layer holding the reported-hazard badges (#135).
-  static const _hazardSymbolLayer = 'ride-relay-hazard-symbols';
-
-  /// Which overlay features each of the two badge families draws.
+  /// Which overlay features the rider badge layer draws.
   ///
   /// A single flag on the feature rather than a test on its icon name, so the
-  /// filters and the GeoJSON writer below cannot drift apart.
-  static const _hazardOverlayFilter = [
-    '==',
-    ['get', 'hazardSymbol'],
-    true,
-  ];
+  /// filter and the GeoJSON writer below cannot drift apart.
   static const _riderOverlayFilter = [
     '!=',
-    ['get', 'hazardSymbol'],
+    ['get', 'nonRiderSymbol'],
     true,
   ];
 
@@ -4871,10 +4444,9 @@ class _RideMapScreenState extends State<RideMapScreen> {
             properties: {
               'label': overlay.label,
               'color': _hexColor(overlay.color),
-              'hazardSymbol': overlay.hazardSymbol != null,
+              'nonRiderSymbol': overlay.motorcycleStyle == null,
               'iconImage': _overlayIconImage(overlay),
               'initialsSymbol':
-                  overlay.hazardSymbol == null &&
                   overlay.riderSymbol.kind == RiderSymbolKind.initials,
             },
           ),
@@ -4882,10 +4454,8 @@ class _RideMapScreenState extends State<RideMapScreen> {
   );
 
   String _overlayIconImage(MapOverlayMarker overlay) {
-    final hazardImage = overlay.hazardSymbol?.imageName;
-    if (hazardImage != null) return hazardImage;
     final style = overlay.motorcycleStyle;
-    if (style == null) return _hazardIconImage;
+    if (style == null) return _overlayFallbackIconImage;
     return overlay.riderSymbol.imageName(
       overlay.riderDisplayName ?? overlay.label,
       style,
@@ -4899,15 +4469,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
     String layerId,
     ml.Annotation? annotation,
   ) {
-    if (layerId == 'ride-relay-marker-plan-points') {
-      final point = _markerPlan.points
-          .where((item) => item.id == id)
-          .firstOrNull;
-      if (point != null) unawaited(_showMarkerPlanPoint(point));
-      return;
-    }
     if (layerId != 'ride-relay-overlay-icons' &&
-        layerId != _hazardSymbolLayer &&
         layerId != 'ride-relay-waypoint-circles') {
       return;
     }
@@ -5212,8 +4774,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
       previousRoute: previousRoute ?? _route,
       comparisonRoute: comparisonRoute,
       canEditStops: canEditStops,
-      showMarkerPlan: widget.markerFeaturesEnabled,
-      onMarkerReviewChanged: (review) => markerReview = review,
       onReshapeRoute: (candidate, shapingPoints) => RouteReshapePlanner(
         routingService: _roadRoutingService,
       ).reshape(candidate, shapingPoints),
@@ -5516,17 +5076,8 @@ class _RideMapScreenState extends State<RideMapScreen> {
         await _loadDemoRoute();
       case _MapAction.personalRideHeatmap:
         await _togglePersonalRideHeatmap();
-      case _MapAction.speedLimitDisplay:
-        if (_speedLimitDisplay.enabled) {
-          await _speedLimitDisplay.setEnabled(false);
-        } else {
-          await _confirmEnableSpeedLimitDisplay();
-        }
       case _MapAction.maneuverList:
         await _showManeuverList();
-      case _MapAction.markerPlan:
-        setState(() => _markerPlanVisible = !_markerPlanVisible);
-        _scheduleMapLibreSync(overlays: true);
       case _MapAction.groupPip:
         await _openGroupPip();
       case _MapAction.downloadOffline:
@@ -5547,7 +5098,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
             _progressGeometry = const RouteProgressGeometry.empty();
             _navigationMode = false;
             _navigationCanvasActive = false;
-            _markerPlanVisible = false;
             _initialCameraPositioned = false;
             _releaseNavigationViewport();
           });
@@ -5671,94 +5221,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
           offCourseCount > 0 ||
           overlays.any((marker) => marker.motorcycleStyle == null),
     );
-  }
-
-  Future<void> _reportEnforcementSighting() async {
-    final report = widget.onReportHazard;
-    if (report == null) return;
-    final type = await showModalBottomSheet<HazardType>(
-      context: context,
-      backgroundColor: const Color(0xFF161D26),
-      showDragHandle: true,
-      // Without this the sheet is capped at nine sixteenths of the screen - 219
-      // pixels on a 390 pixel landscape phone - and two glove-sized targets plus
-      // a title and a cancel do not fit, so the second one fell below the fold
-      // and selecting police needed a scroll (#133). The sheet takes the height
-      // it needs instead of the targets being shrunk to fit a cap.
-      isScrollControlled: true,
-      builder: (sheetContext) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(bottom: 14),
-                child: Text(
-                  'Tell the group',
-                  style: TextStyle(
-                    color: Color(0xFFE4E9EF),
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              _ReportSightingOptions(
-                onSpeedCamera: () =>
-                    Navigator.of(sheetContext).pop(HazardType.speedCamera),
-                onPolice: () =>
-                    Navigator.of(sheetContext).pop(HazardType.policeActivity),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(sheetContext).pop(),
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (type == null || !mounted) return;
-    try {
-      await report(type);
-      _showMessage('${type.label} reported to the group.');
-    } on FormatException catch (error) {
-      _showMessage('Report not sent. ${error.message}');
-    } on Object {
-      _showMessage('Report not sent. Try again in a moment.');
-    }
-  }
-
-  Future<void> _confirmEnableSpeedLimitDisplay() async {
-    if (_speedLimitDisplay.enabled) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Show mapped speed limits?'),
-        content: const Text(
-          'When this is on, the app sends your current and recent foreground '
-          'GPS positions, plus sampled points up to 1 km ahead on your route '
-          'or heading, to a Valhalla road-matching service. It works in Great '
-          'Britain and the Isle of Man and uses mapped OpenStreetMap limits, '
-          'which may be missing or out of date. Roadside signs always apply.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Not now'),
-          ),
-          FilledButton(
-            key: const Key('confirm-speed-limit-opt-in'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Turn on'),
-          ),
-        ],
-      ),
-    );
-    if (!mounted || confirmed != true) return;
-    await _speedLimitDisplay.setEnabled(true);
-    _observeSpeedLimit(_navigationFix);
   }
 
   Future<bool> _confirmRemoveRoute() async =>
@@ -5951,9 +5413,7 @@ enum _MapAction {
   importGpx,
   loadDemo,
   personalRideHeatmap,
-  speedLimitDisplay,
   maneuverList,
-  markerPlan,
   groupPip,
   downloadOffline,
   removeRoute,
@@ -6130,7 +5590,6 @@ class MapOverlayMarker {
     this.motorcycleStyle,
     this.riderSymbol = riderSymbolDefault,
     this.riderDisplayName,
-    this.hazardSymbol,
   });
 
   final String id;
@@ -6144,16 +5603,6 @@ class MapOverlayMarker {
   final MotorcycleIconStyle? motorcycleStyle;
   final RiderSymbol riderSymbol;
   final String? riderDisplayName;
-
-  /// A reported hazard's decided symbol: shape, glyph, fill and freshness (#135).
-  ///
-  /// The one field both renderers read for hazard artwork. When it is set, the
-  /// MapLibre symbol layer draws a raster of [HazardMapSymbolPainter] and the
-  /// flutter_map fallback draws the same painter directly, so the two cannot
-  /// disagree about what shipped (#141). Null keeps the older generic
-  /// icon-on-a-circle badge, which is what a caller that has no report behind the
-  /// marker still gets.
-  final HazardMapSymbol? hazardSymbol;
 }
 
 LatLng _latLng(GeoPoint point) => LatLng(point.latitude, point.longitude);
@@ -7913,52 +7362,6 @@ class _MarkerStatusPill extends StatelessWidget {
   );
 }
 
-class _SpeedLimitOptInChip extends StatelessWidget {
-  const _SpeedLimitOptInChip({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) => Tooltip(
-    message: 'Mapped speed limits are off',
-    child: FilledButton.tonalIcon(
-      key: const Key('speed-limit-opt-in-chip'),
-      onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        backgroundColor: const Color(0xE6252E39),
-        foregroundColor: const Color(0xFFE4E9EF),
-        padding: const EdgeInsets.fromLTRB(7, 5, 11, 5),
-        minimumSize: const Size(0, 40),
-        side: const BorderSide(color: Color(0xFF445262)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-      icon: Container(
-        width: 30,
-        height: 30,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFF8993A0), width: 3),
-        ),
-        child: const Text(
-          '–',
-          style: TextStyle(
-            color: Color(0xFF30343B),
-            fontSize: 18,
-            height: 1,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ),
-      label: const Text(
-        'Limits off',
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
-      ),
-    ),
-  );
-}
-
 /// The fixed square every action target's leading glyph sits in.
 ///
 /// A `CircularProgressIndicator` sized for a button is 20 pixels where a
@@ -8028,690 +7431,6 @@ class _ActionLabel extends StatelessWidget {
       child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Text(text, maxLines: 1, softWrap: false),
-      ),
-    );
-  }
-}
-
-/// Compact map control that opens the enforcement sighting picker.
-///
-/// Deliberately small: it sits over the map for a whole ride, so it earns only
-/// as much space as a gloved thumb needs. The targets it opens are the large
-/// ones.
-class _ReportSightingButton extends StatelessWidget {
-  const _ReportSightingButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  /// The square the target occupies, in every state and both orientations. #142
-  /// takes the width a narrow landscape rail needs out of the two labels, never
-  /// out of this: 62 px is a deliberate glove size, well past the 48 px minimum.
-  static const double side = 62;
-
-  @override
-  Widget build(BuildContext context) => Tooltip(
-    message: 'Report a camera or police to the group',
-    child: Material(
-      color: const Color(0xF21C2530),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: const BorderSide(color: Color(0xFF5A6878)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: const Key('report-sighting-button'),
-        onTap: onPressed,
-        child: SizedBox(
-          width: side,
-          height: side,
-          child: const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.add_alert_rounded, size: 26, color: Color(0xFFFFD24A)),
-              SizedBox(height: 2),
-              // The target keeps its 62 pixels at every text size, so the caption
-              // is what gives way rather than the box overflowing: the icon is
-              // what a rider aims at, and the word underneath only names it.
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    'REPORT',
-                    style: TextStyle(
-                      color: Color(0xFFE4E9EF),
-                      fontSize: 9,
-                      height: 1,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-/// The two report targets, side by side wherever both fit.
-///
-/// Stacked, they needed 176 pixels of a sheet the framework caps at 219 on a
-/// landscape phone, so police fell below the fold and could only be reached by
-/// scrolling - unusable on a bike, and it defeated the two-tap design, which
-/// exists so a stray map tap cannot broadcast a warning to the whole group
-/// (#133). Neither target is shrunk to achieve it: the pair goes side by side
-/// when each half can still hold a full-size target, and stacks otherwise, which
-/// is what keeps the largest accessibility text sizes honest.
-class _ReportSightingOptions extends StatelessWidget {
-  const _ReportSightingOptions({
-    required this.onSpeedCamera,
-    required this.onPolice,
-  });
-
-  final VoidCallback onSpeedCamera;
-  final VoidCallback onPolice;
-
-  /// Width one option needs for its icon, its label at the current text scale,
-  /// and the padding a gloved hand needs around them.
-  static double _minimumOptionWidth(BuildContext context) =>
-      34 + 24 + MediaQuery.textScalerOf(context).scale(22) * 7.2;
-
-  @override
-  Widget build(BuildContext context) {
-    final camera = _ReportSightingOption(
-      optionKey: const Key('report-speed-camera-option'),
-      label: 'SPEED CAMERA',
-      icon: Icons.speed_rounded,
-      color: const Color(0xFF9B1B23),
-      onPressed: onSpeedCamera,
-    );
-    final police = _ReportSightingOption(
-      optionKey: const Key('report-police-option'),
-      label: 'POLICE',
-      icon: Icons.local_police_rounded,
-      color: const Color(0xFF17497F),
-      onPressed: onPolice,
-    );
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final available = constraints.maxWidth;
-        final sideBySide =
-            available.isFinite &&
-            (available - 12) / 2 >= _minimumOptionWidth(context);
-        if (!sideBySide) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [camera, police],
-          );
-        }
-        return Row(
-          key: const Key('report-options-side-by-side'),
-          // Each option carries its own height, so the row must not try to
-          // stretch to a parent that has none to give.
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: camera),
-            const SizedBox(width: 12),
-            Expanded(child: police),
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// One report target, sized for a rider wearing gloves, on a moving bike.
-class _ReportSightingOption extends StatelessWidget {
-  const _ReportSightingOption({
-    required this.optionKey,
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.onPressed,
-  });
-
-  final Key optionKey;
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: SizedBox(
-      // Both options must be reachable on a landscape phone without scrolling;
-      // the sheet scrolls as a backstop, but a rider should never have to reach
-      // for it. This height is never traded away to make them fit - see
-      // [_ReportSightingOptions], which changes the arrangement instead.
-      height: 76,
-      child: FilledButton.icon(
-        key: optionKey,
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
-        icon: Icon(icon, size: 34),
-        label: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.5,
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-/// The two-part enforcement warning: a bubble, then a border (#446).
-///
-/// See `enforcement_alert_presentation.dart` for why it is two parts and not one
-/// panel. In short: announcing a camera is an event and being on the approach is a
-/// state, and the panel was doing both badly because a surface loud enough to
-/// announce is too big to hold for a mile.
-class _EnforcementAlertLayer extends StatefulWidget {
-  const _EnforcementAlertLayer({
-    super.key,
-    required this.alert,
-    required this.distanceUnit,
-    required this.topInset,
-    required this.onDismiss,
-  });
-
-  final EnforcementAlert alert;
-  final DistanceUnit distanceUnit;
-
-  /// Safe-area inset, so the bubble follows a notch or Dynamic Island.
-  final double topInset;
-
-  final VoidCallback onDismiss;
-
-  @override
-  State<_EnforcementAlertLayer> createState() => _EnforcementAlertLayerState();
-}
-
-class _EnforcementAlertLayerState extends State<_EnforcementAlertLayer> {
-  Timer? _bubbleTimer;
-  bool _announced = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Fixed, and not restarted when the distance changes. The distance updates
-    // several times a second on an approach, and a life tied to it would never
-    // end — which is how the panel came to own the screen for a whole mile.
-    _bubbleTimer = Timer(enforcementBubbleLife, () {
-      if (mounted) setState(() => _announced = true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _bubbleTimer?.cancel();
-    super.dispose();
-  }
-
-  EnforcementAlertStage get _stage => enforcementAlertStage(
-    armed: true,
-    dismissed: false,
-    // The widget is rebuilt from scratch for a new hazard, so elapsed time is
-    // carried by the timer rather than measured against a stored clock.
-    sinceArmed: _announced ? enforcementBubbleLife : Duration.zero,
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final camera = widget.alert.hazard.type == HazardType.speedCamera;
-    final stage = _stage;
-    return Stack(
-      children: [
-        // The border holds for the whole approach and is the entire warning once
-        // the bubble has gone. IgnorePointer because it covers the map: a warning
-        // that swallowed a pan would be the full-screen problem again in a
-        // thinner disguise.
-        Positioned.fill(
-          child: IgnorePointer(
-            child: DecoratedBox(
-              key: const Key('enforcement-alert-border'),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(enforcementBorderRadius),
-                border: Border.all(
-                  color: camera
-                      ? const Color(0xFFFF3B30)
-                      : const Color(0xFF4C9AFF),
-                  width: enforcementBorderWidth,
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (stage == EnforcementAlertStage.announcing)
-          Positioned(
-            left: 0,
-            right: 0,
-            top: widget.topInset + 12,
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: _EnforcementAlertBubble(
-                alert: widget.alert,
-                distanceUnit: widget.distanceUnit,
-                onDismiss: widget.onDismiss,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// The announcement itself: compact, loud, and clear of the rider marker.
-///
-/// Top-centre keeps it away from the forward-biased current position and the
-/// bottom navigation rails. [enforcementBubbleMaxWidth] keeps a landscape phone
-/// to a notification rather than a band across the screen.
-class _EnforcementAlertBubble extends StatelessWidget {
-  const _EnforcementAlertBubble({
-    required this.alert,
-    required this.distanceUnit,
-    required this.onDismiss,
-  });
-
-  final EnforcementAlert alert;
-  final DistanceUnit distanceUnit;
-  final VoidCallback onDismiss;
-
-  @override
-  Widget build(BuildContext context) {
-    final camera = alert.hazard.type == HazardType.speedCamera;
-    final title = camera ? 'SPEED CAMERA' : 'POLICE';
-    final distance = MeasurementFormatter(
-      distanceUnit,
-    ).distance(alert.distanceMeters);
-    final enforcedLimit = enforcementLimitLabel(alert.hazard.details);
-    return Semantics(
-      key: const Key('enforcement-alert-overlay'),
-      container: true,
-      liveRegion: true,
-      label: '$title ahead in $distance.',
-      button: true,
-      onTapHint: 'Dismiss',
-      child: GestureDetector(
-        onTap: onDismiss,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          constraints: const BoxConstraints(
-            maxWidth: enforcementBubbleMaxWidth,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            // Opaque: anything showing through the words competes with them at
-            // the moment the rider has least attention to spare (#107).
-            color: camera ? const Color(0xFF6E1015) : const Color(0xFF0F3560),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: camera ? const Color(0xFFFF3B30) : const Color(0xFF4C9AFF),
-              width: 3,
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x99000000),
-                blurRadius: 12,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          // A row, not a column. The stacked column is what made every previous
-          // version tall, and height is the only dimension that competes with the
-          // map.
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                camera ? Icons.speed_rounded : Icons.local_police_rounded,
-                size: 30,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        height: 1.1,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    Text(
-                      key: const Key('enforcement-alert-distance'),
-                      distance,
-                      maxLines: 1,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        height: 1.15,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (enforcedLimit != null) ...[
-                const SizedBox(width: 12),
-                // The limit is the one number that matters at a camera, so it
-                // gets the sign shape rather than a line of text. `VARIABLE` and
-                // the rest of the wording come from #418's own label.
-                Container(
-                  key: const Key('enforcement-alert-limit'),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFD71920),
-                      width: 4,
-                    ),
-                  ),
-                  child: Text(
-                    enforcedLimit,
-                    maxLines: 1,
-                    style: const TextStyle(
-                      color: Color(0xFF111111),
-                      fontSize: 18,
-                      height: 1,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// The badge sits directly on the map without a panel behind it, so every label
-// outside the white sign face carries its own shadow for legibility.
-const _mapOverlayTextShadows = [
-  Shadow(color: Color(0xCC0B0F14), blurRadius: 6),
-  Shadow(color: Color(0x990B0F14), blurRadius: 2, offset: Offset(0, 1)),
-];
-
-/// Light text drawn over an unknown map background.
-///
-/// A shadow alone washes out over a light daytime basemap, so the glyphs are
-/// painted twice: a dark stroke first, then the fill.
-class _MapOverlayLabel extends StatelessWidget {
-  const _MapOverlayLabel(
-    this.text, {
-    required this.style,
-    required this.strokeWidth,
-    this.fillKey,
-  });
-
-  final String text;
-  final TextStyle style;
-  final double strokeWidth;
-  final Key? fillKey;
-
-  @override
-  Widget build(BuildContext context) => Stack(
-    children: [
-      Text(
-        text,
-        style: style.copyWith(
-          shadows: const [],
-          foreground: Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = strokeWidth
-            ..strokeJoin = StrokeJoin.round
-            ..color = const Color(0xE60B0F14),
-        ),
-      ),
-      Text(text, key: fillKey, style: style),
-    ],
-  );
-}
-
-/// Tells its child whether an enforcement warning is live (#446).
-///
-/// A wrapper rather than a flag threaded down, because the alert is a listenable
-/// the badge has no business subscribing to itself, and the badge is rebuilt often
-/// enough already.
-class _EnforcementEmphasis extends StatelessWidget {
-  const _EnforcementEmphasis({
-    required this.alert,
-    required this.dismissedHazardId,
-    required this.builder,
-  });
-
-  final ValueListenable<EnforcementAlert?>? alert;
-  final String? dismissedHazardId;
-  final Widget Function(bool emphasised) builder;
-
-  @override
-  Widget build(BuildContext context) {
-    final listenable = alert;
-    // No detector configured at all — most tests, and any build without the
-    // provider. Emphasis is then never applied rather than defaulted on.
-    if (listenable == null) return builder(false);
-    return ValueListenableBuilder<EnforcementAlert?>(
-      valueListenable: listenable,
-      builder: (context, value, _) => builder(
-        enforcementEmphasisApplies(
-          armed: value != null,
-          dismissed: value != null && value.hazard.id == dismissedHazardId,
-        ),
-      ),
-    );
-  }
-}
-
-class _PostedSpeedLimitBadge extends StatelessWidget {
-  const _PostedSpeedLimitBadge({
-    required this.status,
-    required this.outcome,
-    required this.limit,
-    required this.riderSpeedMetersPerSecond,
-    this.riderSpeedIsAgeing = false,
-    this.emphasised = false,
-  });
-
-  /// Enlarged for the approach to a speed camera (#446).
-  ///
-  /// This is the one thing allowed to change the surface's width, and it is worth
-  /// naming why: #142 fixed the *content* moving the width — a three-digit speed
-  /// widening the sign and shoving its left edge across the map — by making the
-  /// number give way inside a fixed 58px. That contract still holds. This is a
-  /// deliberate, bounded, whole-surface change with a reason a rider can see, not
-  /// a length of text leaking into a layout.
-  final bool emphasised;
-
-  final SpeedLimitDisplayStatus status;
-  final SpeedLimitLookupOutcome? outcome;
-  final PostedSpeedLimit? limit;
-  final double? riderSpeedMetersPerSecond;
-
-  /// True while the number is the last one observed rather than a current
-  /// reading. Shown dimmed so a glance can tell the two apart - a held number
-  /// presented as current is what #210 was about.
-  final bool riderSpeedIsAgeing;
-
-  @override
-  Widget build(BuildContext context) {
-    // Half again on a camera approach, and exactly 1 otherwise, so an ordinary
-    // ride gets byte-identical geometry to before (#446, #142).
-    final scale = emphasised ? enforcementEmphasisScale : 1.0;
-    final signDiameter = 58 * scale;
-    final reading = limit;
-    final known = status == SpeedLimitDisplayStatus.known && reading != null;
-    final value = known
-        ? reading.unlimited
-              ? '∞'
-              : '${reading.milesPerHour}'
-        : '–';
-    // The readout sits under a UK mph sign, so it stays in mph whatever the
-    // rider's distance-unit preference is. Two units under one sign would
-    // invite a dangerous misread.
-    final speed = riderSpeedMetersPerSecond;
-    final riderMilesPerHour = speed != null && speed.isFinite && speed >= 0
-        ? (speed * 2.236936).round()
-        : null;
-    final speedValue = riderMilesPerHour == null ? '–' : '$riderMilesPerHour';
-    final checkedAt = known
-        ? MaterialLocalizations.of(
-            context,
-          ).formatTimeOfDay(TimeOfDay.fromDateTime(reading.checkedAt.toLocal()))
-        : null;
-    final detail = known
-        ? reading.roadName == null
-              ? 'Checked $checkedAt · mapped · not live'
-              : '${reading.roadName} · checked $checkedAt · mapped · not live'
-        : switch (status) {
-            SpeedLimitDisplayStatus.checking => 'Checking mapped road',
-            // Named for the condition, and stated rather than left blank (#126).
-            SpeedLimitDisplayStatus.unconfirmedRoad => switch (outcome) {
-              SpeedLimitLookupOutcome.poorAccuracy => 'GPS accuracy too low',
-              SpeedLimitLookupOutcome.poorMatch => 'Road not confirmed',
-              // Enabled, first fix not answered yet.
-              _ => 'Finding your road',
-            },
-            _ => switch (outcome) {
-              SpeedLimitLookupOutcome.unsupportedRegion =>
-                'Great Britain and Isle of Man only',
-              SpeedLimitLookupOutcome.noTaggedLimit => 'No mapped limit',
-              _ => 'Limit unavailable',
-            },
-          };
-    final riderSpeedLabel = riderMilesPerHour == null
-        ? 'Your speed is unavailable.'
-        : 'You are riding at $riderMilesPerHour miles per hour by GPS.';
-    // Carries what the deleted caption used to say (#125): which number is the
-    // sign and which is the rider, that the limit is mapped rather than live,
-    // and how stale it is. Removing the caption moved this wording, it did not
-    // lose it.
-    final semanticLimit = reading?.unlimited == true
-        ? 'unrestricted'
-        : '${reading?.milesPerHour} miles per hour';
-    final semanticLabel = known
-        ? 'Mapped speed limit $semanticLimit'
-              '${reading.roadName == null ? '' : ' on ${reading.roadName}'}. '
-              'Looked up at $checkedAt. Mapped, not live. $riderSpeedLabel '
-              'Roadside signs apply.'
-        : 'Mapped speed limit unavailable: $detail. $riderSpeedLabel '
-              'Roadside signs apply.';
-    return Semantics(
-      key: const Key('posted-speed-limit-badge'),
-      container: true,
-      liveRegion: true,
-      label: semanticLabel,
-      excludeSemantics: true,
-      child: Tooltip(
-        message:
-            '$detail\n$riderSpeedLabel\n© OpenStreetMap contributors via Valhalla; temporary and variable limits may differ. Roadside signs apply.',
-        // Exactly the sign's own width, in every state (#142): the readout under
-        // it carries one to three digits or a dash, and at large text sizes a
-        // three-digit speed was wide enough to widen the whole surface and move
-        // its left edge across the map. The number gives way inside the sign's
-        // width instead, which is the contract every other variable-length
-        // surface in this band keeps.
-        child: SizedBox(
-          width: signDiameter,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: signDiameter,
-                height: signDiameter,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: known
-                        ? const Color(0xFFD71920)
-                        : const Color(0xFF8993A0),
-                    width: 6 * scale,
-                  ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x66000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: status == SpeedLimitDisplayStatus.checking
-                    ? const SizedBox.square(
-                        dimension: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          color: Color(0xFF30343B),
-                        ),
-                      )
-                    : Text(
-                        value,
-                        style: TextStyle(
-                          color: const Color(0xFF111111),
-                          fontSize: 26 * scale,
-                          height: 1,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 4),
-              _MapOverlayLabel(
-                speedValue,
-                fillKey: const Key('posted-speed-limit-rider-speed'),
-                strokeWidth: 4,
-                style: TextStyle(
-                  // Dimmed while the number is held rather than current, so a
-                  // glance can tell the difference without a caption to read
-                  // (#125 removed the caption; #210 is why the difference has to
-                  // be visible at all).
-                  color: riderSpeedIsAgeing
-                      ? const Color(0xFFFFFFFF).withValues(alpha: 0.55)
-                      : const Color(0xFFFFFFFF),
-                  // The rider's own speed grows with the sign: the pair is what
-                  // the report asked to be readable on the approach, and a
-                  // large limit beside a small speed invites reading one for
-                  // the other.
-                  fontSize: 26 * scale,
-                  height: 1,
-                  fontWeight: FontWeight.w900,
-                  shadows: _mapOverlayTextShadows,
-                ),
-              ),
-              // No caption (#125). A red-ringed UK sign over a plain number is
-              // already unambiguous, and nine-point text on a moving bike cost
-              // glance time without adding meaning. The wording it carried is
-              // not lost: [semanticLabel] and the tooltip above still say which
-              // number is which, where the limit came from, and how stale it is.
-            ],
-          ),
-        ),
       ),
     );
   }

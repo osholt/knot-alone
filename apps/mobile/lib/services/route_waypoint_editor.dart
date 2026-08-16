@@ -1,5 +1,5 @@
 import '../domain/imported_route.dart';
-import 'route_marker_plan.dart';
+import 'route_primary_path.dart';
 import 'route_reshape_planner.dart';
 
 /// Inserts a deliberate stop on the leg nearest [waypoint].
@@ -79,7 +79,7 @@ ImportedRoute _withWaypoints(
 
 List<RouteWaypoint> _editableWaypoints(ImportedRoute route) {
   if (route.waypoints.length >= 2) return route.waypoints;
-  final geometry = RouteMarkerPlanAnalyzer.primaryRiddenPath(route);
+  final geometry = routePrimaryPath(route);
   if (geometry.length < 2) return route.waypoints;
   return [
     RouteWaypoint(point: geometry.first, name: 'Start', symbol: 'Flag, Blue'),
@@ -93,7 +93,7 @@ List<RouteWaypoint> _editableWaypoints(ImportedRoute route) {
 
 /// Progress along the primary ridden geometry, used to keep edits ordered.
 double routeProgressForPoint(ImportedRoute route, GeoPoint point) {
-  final geometry = RouteMarkerPlanAnalyzer.primaryRiddenPath(route);
+  final geometry = routePrimaryPath(route);
   if (geometry.length < 2) return 0;
   var nearestProgress = 0.0;
   var nearestDistance = double.infinity;

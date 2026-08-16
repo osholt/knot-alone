@@ -14,7 +14,6 @@ import 'controllers/ride_invitation_link_controller.dart';
 import 'controllers/route_progress_display_controller.dart';
 import 'controllers/rider_profile_controller.dart';
 import 'controllers/shared_route_controller.dart';
-import 'controllers/speed_limit_display_controller.dart';
 import 'controllers/spoken_guidance_controller.dart';
 import 'controllers/test_control_controller.dart';
 import 'data/json_file_recorded_route_store.dart';
@@ -48,7 +47,6 @@ Future<void> main() async {
       mapStyleMode,
       rideCodePreference,
       sharedRoutes,
-      speedLimitDisplay,
       recordedRoutes,
       completedRideStore,
     ),
@@ -69,7 +67,6 @@ Future<void> main() async {
       MapStyleModeController.load(),
       RideCodePreferenceController.load(),
       SharedRouteController.load(),
-      SpeedLimitDisplayController.load(),
       JsonFileRecordedRouteStore.openDefault(),
       JsonFileCompletedRideStore.openDefault(),
     ).wait,
@@ -118,7 +115,6 @@ Future<void> main() async {
       rideCodePreference: rideCodePreference,
       riderProfile: riderProfile,
       sharedRoutes: sharedRoutes,
-      speedLimitDisplay: speedLimitDisplay,
       routeProgressDisplay: routeProgressDisplay,
       recordedRoutes: recordedRoutes,
       completedRides: completedRides,

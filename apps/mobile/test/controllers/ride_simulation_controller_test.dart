@@ -475,15 +475,6 @@ void main() {
         .singleWhere((rider) => rider.id == RideSimulationController.tecRiderId)
         .speedMetersPerSecond;
     expect(delayedTecSpeed, lessThan(normalTecSpeed));
-
-    await simulation.reportRoadworks();
-    expect(awareness.activeHazards.single.details, contains('Ride Lab'));
-    expect(
-      (awareness.activeHazards.single.position.longitude -
-              awareness.localLocation!.sample.position.longitude)
-          .abs(),
-      greaterThan(0.0001),
-    );
   });
 
   test('completion publishes stopped GPS fixes', () async {

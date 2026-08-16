@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ride_relay/controllers/foreground_location_controller.dart';
 import 'package:ride_relay/controllers/map_style_mode_controller.dart';
-import 'package:ride_relay/controllers/speed_limit_display_controller.dart';
 import 'package:ride_relay/domain/distance_unit.dart';
 import 'package:ride_relay/domain/rider_location.dart';
 import 'package:ride_relay/features/home/home_map_backdrop.dart';
@@ -11,12 +10,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   late MapStyleModeController mapStyleMode;
-  late SpeedLimitDisplayController speedLimitDisplay;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     mapStyleMode = await MapStyleModeController.load();
-    speedLimitDisplay = SpeedLimitDisplayController.inMemory();
   });
 
   Future<void> pump(
@@ -27,7 +24,6 @@ void main() {
       home: Scaffold(
         body: HomeMapBackdrop(
           mapStyleMode: mapStyleMode,
-          speedLimitDisplay: speedLimitDisplay,
           distanceUnit: DistanceUnit.kilometres,
           enableNativeServices: false,
           locationController: location,

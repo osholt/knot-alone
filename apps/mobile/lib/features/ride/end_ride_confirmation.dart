@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/ride_controller.dart';
-import 'marker_assistance_widgets.dart';
 
 /// The one confirmation for ending a ride, wherever it is reached from.
 ///
@@ -41,7 +40,6 @@ Future<bool> confirmEndRide(
   // Offering an action and then silently refusing it is worse than not
   // offering it; see [canEndRideForEveryone].
   if (!canEndRideForEveryone(controller)) return false;
-  final summary = controller.markingSummary;
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
@@ -56,8 +54,6 @@ Future<bool> confirmEndRide(
               isSolo: !controller.coordinationMode.isGroup,
             ),
           ),
-          const SizedBox(height: 14),
-          EndRideMarkingSummary(summary: summary),
         ],
       ),
       actions: [
