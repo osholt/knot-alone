@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import '../domain/imported_route.dart';
 import 'route_progress.dart';
 
-/// Route-wide information shown on the phone and CarPlay map (#413).
+/// Route-wide information shown on the phone map (#413).
 class RouteJourneyProgress {
   const RouteJourneyProgress({
     required this.remainingDistanceMeters,

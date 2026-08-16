@@ -35,3 +35,14 @@ participant trails, spoken road guidance, observer links, push scaffolding,
 diagnostics, simulation, and export. Much of the UI and data remains motorcycle
 specific. The backlog defines the evidence required before any capability is
 described as suitable for sailors.
+
+## Road and motorcycle surfaces removed during migration
+
+Phase 1 of [PLAN.md](../PLAN.md) removes the inherited road-navigation surfaces
+rather than renaming them. Removed so far:
+
+- **CarPlay and Android Auto** — the Dart projection bridge, the Swift CarPlay
+  scene/template, the Kotlin car app service, the `androidx.car.app`
+  dependencies, the CarPlay entitlements and scene manifest entry, and the
+  simulator helper. A projected chartplotter surface, if it is ever wanted, is a
+  new marine design rather than a revival of this code.

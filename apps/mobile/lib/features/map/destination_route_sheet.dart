@@ -362,7 +362,8 @@ extension on _DestinationHandoff {
   };
 
   String get detail => switch (this) {
-    _DestinationHandoff.rideRelay => 'Show and save the route in Tide and Seek.',
+    _DestinationHandoff.rideRelay =>
+      'Show and save the route in Tide and Seek.',
     _DestinationHandoff.calimoto =>
       'Generate GPX, then choose Calimoto in the system share sheet.',
     _DestinationHandoff.myRouteApp =>

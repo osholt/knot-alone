@@ -3701,7 +3701,7 @@ void main() {
         }
 
         // ETA stacks above the group overview in the bottom-left column, just
-        // as it does on CarPlay. Speed remains where it was at top-right.
+        // Speed remains where it was at top-right.
         final progress = rects['route-progress-panel-position']!;
         final miniMap = rects['group-mini-map']!;
         final speedLimit = rects['posted-speed-limit-position']!;

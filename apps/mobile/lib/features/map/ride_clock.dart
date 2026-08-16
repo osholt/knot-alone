@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 /// The time of day, drawn by the app (#452).
 ///
-/// > Show the time on the map in landscape mode and on CarPlay but don't use
+/// > Show the time on the map in landscape mode but don't use
 /// > Apple's built in widgets to do it.
 ///
 /// A helmet and gloves make a wrist watch useless and the phone is already in

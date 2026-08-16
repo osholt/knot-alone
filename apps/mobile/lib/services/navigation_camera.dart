@@ -82,7 +82,7 @@ const double navigationCameraViewportSettleZoomTolerance = 0.08;
 /// scale, pitch and bearing and compensate only for their viewport height.
 /// Publishing the commanded viewport keeps that calculation in one place —
 /// [NavigationCameraPlanner] — instead of maintaining a second collection of
-/// approximate CarPlay camera constants.
+/// approximate projected-display camera constants.
 class NavigationCameraViewport {
   const NavigationCameraViewport({
     required this.latitude,
@@ -107,13 +107,13 @@ class NavigationCameraViewport {
   final double sourceViewportHeightPixels;
   final double sourceViewportWidthPixels;
 
-  /// Exact phone anchors, projected so a differently shaped CarPlay screen can
+  /// Exact phone anchors, projected so a differently shaped screen can
   /// place the rider deliberately instead of inheriting a coincidental offset.
   final double riderViewportFraction;
   final double riderHorizontalViewportFraction;
 
   /// Route driving side independently of the phone's current orientation.
-  /// CarPlay is always landscape, even when its attached phone is portrait.
+  /// A projected display is always landscape, even when the phone is portrait.
   final bool leftHandTraffic;
 
   /// The exact day/night style selected for the phone map.

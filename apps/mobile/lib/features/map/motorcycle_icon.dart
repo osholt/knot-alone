@@ -265,7 +265,7 @@ const riderEmojiChoices = <String>[
 
 /// Returns an uppercase 1–3 letter/number identity, or null for automatic
 /// initials. Punctuation and control characters are deliberately excluded so
-/// the compact wire value is safe to parse on Flutter and CarPlay.
+/// the compact wire value is safe to parse on Flutter.
 String? normalizeCustomRiderInitials(String value) {
   final normalized = value.trim().toUpperCase();
   if (normalized.isEmpty) return null;

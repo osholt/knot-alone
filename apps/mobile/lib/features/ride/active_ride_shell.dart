@@ -52,8 +52,6 @@ import '../../relay/live_presence.dart';
 import '../../relay/native_nearby_transport.dart';
 import '../../relay/relay_engine.dart';
 import '../../relay/sqlite_relay_queue.dart';
-import '../../services/carplay_bridge.dart';
-import '../../services/carplay_tec_status.dart';
 import '../../services/geo_calculations.dart';
 import '../../services/spoken_audio_mode.dart';
 import '../../services/spoken_guidance_schedule.dart';
@@ -75,7 +73,6 @@ import '../../services/navigation_guidance.dart';
 import '../../services/route_decision_point_extractor.dart';
 import '../../services/ride_completion_detector.dart';
 import '../../services/route_progress.dart';
-import '../../services/route_journey_progress.dart';
 import '../../services/ride_membership.dart';
 import '../../services/ride_screen_awake.dart';
 import '../../controllers/ride_diagnostics_controller.dart';
@@ -1041,8 +1038,6 @@ class _ActiveRideShellState extends State<ActiveRideShell>
   final _mapNavigationPosition = ValueNotifier<MapNavigationPosition?>(null);
   final _mapOverlays = ValueNotifier<List<MapOverlayMarker>>(const []);
   final _riderTrails = ValueNotifier<List<MapOverlayTrace>>(const []);
-  final _carPlayRouteProgressTracker = RouteProgressTracker();
-  final _carPlayJourneyProgressTracker = RouteJourneyProgressTracker();
   final _trailSimplifier = const TrailDisplaySimplifier();
   final _leaderStatus = ValueNotifier<LeaderRideStatus?>(null);
 
@@ -1179,10 +1174,6 @@ class _ActiveRideShellState extends State<ActiveRideShell>
   /// than failing the ride: no camera warnings is a degraded ride, no ride is
   /// not.
   FixedSpeedCameraCatalogue? _fixedSpeedCameras;
-  CarPlayBridge? _carPlayBridge;
-  String? _carPlayMapStyleJson;
-  late final http.Client _carPlayRoutingClient;
-  late final DestinationRoutePlanner _carPlayDestinationPlanner;
   ForegroundLocationController? _locationController;
   MarkerAssistanceController? _markerAssistanceController;
   NearbyRelayController? _relayController;
@@ -1285,24 +1276,6 @@ class _ActiveRideShellState extends State<ActiveRideShell>
       distanceUnit: widget.distanceUnits.value,
     );
     _rejoinPlanner = _managedRejoinPlanner.planner;
-    final carPlayRouting = RoutingConfiguration.fromEnvironment();
-    _carPlayRoutingClient = http.Client();
-    _carPlayDestinationPlanner = DestinationRoutePlanner(
-      searchService: NominatimDestinationSearchService(
-        client: _carPlayRoutingClient,
-        baseUrl: carPlayRouting.geocodingBaseUrl,
-      ),
-      routingService: PreferenceAwareRoadRoutingService(
-        osrm: OsrmRoadRoutingService(
-          client: _carPlayRoutingClient,
-          baseUrl: carPlayRouting.routingBaseUrl,
-        ),
-        motorcycle: ValhallaMotorcycleRoutingService(
-          client: _carPlayRoutingClient,
-          routeUrl: carPlayRouting.motorcycleRoutingUrl,
-        ),
-      ),
-    );
     widget.rideController.addListener(_onRideControllerChanged);
     widget.sharedRoutes.addListener(_onSharedRoutesChanged);
     _capturePlannerLinkError();
@@ -1326,19 +1299,6 @@ class _ActiveRideShellState extends State<ActiveRideShell>
       _clearSharedRoutePending();
     }
     unawaited(_initialize());
-    _carPlayBridge = CarPlayBridge(
-      onEmergencyTriggered: _sendEmergencyMapAlert,
-      onLeaveRequested: _leaveRide,
-      onHazardReported: _reportHazardFromMap,
-      onTecRoleAnswered: _answerTecRoleRequestFromCarPlay,
-      onRideStartRequested: _startPreparedRideFromCarPlay,
-      onDestinationSearch: _searchCarPlayDestinations,
-      onDestinationSelected: _planCarPlayDestination,
-      onStateRequested: () async {
-        if (!mounted) return;
-        _updateMapOverlays(updateDerivedState: false);
-      },
-    );
   }
 
   /// A GPX file can arrive (via the platform's "Open in..." delivery) while
@@ -2346,7 +2306,7 @@ class _ActiveRideShellState extends State<ActiveRideShell>
     final visibleRiderLocations = _isSimulation
         // Ride Lab has an authenticated in-memory roster rather than relay
         // participants. Filtering its fixes through the empty real roster
-        // made every virtual rider disappear from TEC and CarPlay status.
+        // made every virtual rider disappear from the TEC status.
         ? List<RiderLocation>.unmodifiable(awareness.riderLocations)
         : liveView.renderedPositions;
     final activeRiderIds = _isSimulation
@@ -2591,27 +2551,9 @@ class _ActiveRideShellState extends State<ActiveRideShell>
       _tecGapTrendTracker.reset();
       _tecGapTrend.value = TecGapTrend.unknown;
     }
-    // Published after the leader status and the gap trend, not before: a
-    // snapshot built first would carry the previous frame's back-marker, so
-    // the head unit would always be one update behind the phone about the one
-    // thing the app is named after.
-    _publishCarPlaySnapshot(
-      awareness: awareness,
-      visibleRiderLocations: visibleRiderLocations,
-      activeRiderIds: activeRiderIds,
-    );
     _updateSharedRejoinTraces();
   }
 
-  /// Projects the ride onto CarPlay, including the back-marker.
-  ///
-  /// The TEC is resolved through [LeaderRideStatusCalculator.resolveTecTarget]
-  /// rather than read off the rider list, for the same reason every other
-  /// surface does: "nobody is TEC", "registered but never reported" and "last
-  /// fix too old to trust" are three different answers and a car screen must
-  /// not blur them into a missing row. [_leaderStatus] then adds the gap and
-  /// the trend, and is null for everyone who is not the leader — that means
-  /// this device has no gap to show, never that there is no TEC.
   /// Reads the bundled fixed-camera layer.
   ///
   /// Never throws at the caller. A build with the asset stripped, or a file
@@ -2627,216 +2569,6 @@ class _ActiveRideShellState extends State<ActiveRideShell>
       debugPrintStack(stackTrace: stackTrace);
       return _fixedSpeedCameras = FixedSpeedCameraCatalogue.empty;
     }
-  }
-
-  void _publishCarPlaySnapshot({
-    required SituationalAwarenessController awareness,
-    required List<RiderLocation> visibleRiderLocations,
-    required Set<String> activeRiderIds,
-  }) {
-    final bridge = _carPlayBridge;
-    if (bridge == null) return;
-    final session = widget.rideController.session;
-    final effectiveTecRiderIds = _effectiveTecRiderIds;
-    // Ride Lab drives a virtual roster and has no relayed requests to answer.
-    final pendingTecRequest = _isSimulation
-        ? null
-        : widget.rideController.pendingTecRoleRequestForLocalRider;
-    final tec = session == null
-        ? CarPlayTecStatus.absent
-        : CarPlayTecStatus.from(
-            target: const LeaderRideStatusCalculator().resolveTecTarget(
-              localRiderId: session.localRiderId,
-              riderLocations: visibleRiderLocations,
-              registeredTecRiderIds: effectiveTecRiderIds,
-              assignedTecRiderId: _assignedTecRiderId,
-              now: DateTime.now(),
-            ),
-            leaderStatus: _leaderStatus.value,
-            trend: _tecGapTrend.value,
-            distanceUnit: widget.distanceUnits.value,
-            now: DateTime.now(),
-          );
-    final navigationRoute = _rejoinNavigationRoute.value ?? _activeRoute;
-    final routeProgress = _carPlayRouteProgressTracker.update(
-      navigationRoute,
-      _mapPosition.value,
-    );
-    final selectedBasemap = BasemapConfiguration.fromEnvironment()
-        .forBrightness(
-          dark: widget.mapStyleMode.resolveDark(
-            MediaQuery.platformBrightnessOf(context),
-          ),
-          restrainedLightStyle:
-              widget.mapStyleMode.dayStyle == DayMapStyle.restrained,
-        );
-    final markerOverlay = _junctionMarkerOverlay.value;
-    final navigationPosition = _mapNavigationPosition.value;
-    final localSpeedIsAgeing =
-        navigationPosition != null &&
-        DateTime.now().difference(navigationPosition.recordedAt) >=
-            const Duration(seconds: 3);
-    final journeyProgress = widget.routeProgressDisplay?.enabled == false
-        ? null
-        : _carPlayJourneyProgressTracker.update(
-            route: navigationRoute,
-            geometry: routeProgress,
-            speedMetersPerSecond: localSpeedIsAgeing
-                ? null
-                : navigationPosition?.speedMetersPerSecond,
-            now: DateTime.now(),
-          );
-    final marker = markerOverlay == null
-        ? null
-        : CarPlayMarkerStatus(
-            stage: markerOverlay.stage.name,
-            title: switch (markerOverlay.stage) {
-              MapJunctionMarkerStage.waitingForRiders => 'Hold this junction',
-              MapJunctionMarkerStage.tecApproaching => 'TEC approaching',
-              MapJunctionMarkerStage.readyToRideOff => 'Ride off now',
-            },
-            detail: [
-              '${markerOverlay.ridersPassed}/${markerOverlay.ridersExpected} riders passed',
-              if (markerOverlay.tecDistanceMeters case final distance?)
-                'TEC ${MeasurementFormatter(widget.distanceUnits.value).distance(distance)} away',
-            ].join(' · '),
-            ridersPassed: markerOverlay.ridersPassed,
-            ridersExpected: markerOverlay.ridersExpected,
-            tecDistanceMeters: markerOverlay.tecDistanceMeters,
-          );
-    unawaited(
-      bridge.publish(
-        session: session,
-        riderLocations: visibleRiderLocations,
-        routeAlerts: awareness.routeAlerts
-            .where((alert) => activeRiderIds.contains(alert.riderId))
-            .toList(growable: false),
-        activeHazards: awareness.activeHazards,
-        route: navigationRoute,
-        routeName: navigationRoute?.name,
-        rideState: _projectedRideState,
-        followRider:
-            widget.rideController.rideStarted &&
-            !widget.rideController.rideEnded,
-        guidanceTitle: _projectedGuidanceTitle,
-        guidanceDetail: _projectedGuidanceDetail,
-        guidanceRoadName: _latestNavigationGuidance?.roadLabel,
-        guidanceDistanceMeters: _latestNavigationGuidance?.distanceMeters,
-        distanceUnit: widget.distanceUnits.value,
-        groupStatus: '${visibleRiderLocations.length} riders visible',
-        markerStatus: markerOverlay?.instruction,
-        marker: marker,
-        tec: tec,
-        effectiveTecRiderIds: effectiveTecRiderIds,
-        rideStart: _carPlayRideStart,
-        surfaceMode: widget.rideController.rideEnded
-            ? CarPlaySurfaceMode.endedRide
-            : widget.rideController.rideStarted
-            ? CarPlaySurfaceMode.activeRide
-            : CarPlaySurfaceMode.preRide,
-        canPlanRoute:
-            widget.rideController.isLocalRideLeader &&
-            !widget.rideController.rideStarted &&
-            !widget.rideController.rideEnded &&
-            !widget.rideController.busy,
-        basemap: selectedBasemap,
-        mapStyleJson: _carPlayMapStyleJson,
-        localPosition: _mapPosition.value,
-        localHeadingDegrees: navigationPosition?.headingDegrees,
-        localSpeedMetersPerSecond: navigationPosition?.speedMetersPerSecond,
-        localSpeedIsAgeing: localSpeedIsAgeing,
-        speedLimitEnabled:
-            widget.rideController.rideStarted &&
-            !widget.rideController.rideEnded &&
-            widget.speedLimitDisplay.enabled,
-        speedLimitStatus: widget.speedLimitDisplay.status.name,
-        speedLimitMilesPerHour: widget.speedLimitDisplay.limit?.milesPerHour,
-        speedLimitUnlimited: widget.speedLimitDisplay.limit?.unlimited ?? false,
-        routeProgress: routeProgress,
-        journeyProgress: journeyProgress,
-        tecRequest: pendingTecRequest == null
-            ? null
-            : CarPlayTecRequest(
-                requestId: pendingTecRequest.requestId,
-                leaderName: widget.rideController
-                    .participantFor(pendingTecRequest.leaderRiderId)
-                    ?.displayName,
-              ),
-      ),
-    );
-  }
-
-  /// Answers a leader's TEC request from the head unit (#128).
-  ///
-  /// The same call the phone's roster sheet makes, so the journal cannot tell
-  /// the two apart: accepting records the answer *and* this rider's own
-  /// `roleChanged`, and the reducer still admits an answer only from the rider
-  /// the request named. A stale alert — the request expired, was superseded, or
-  /// was already answered on the phone — is rejected there rather than here,
-  /// which is why this passes the request id straight through.
-  Future<void> _answerTecRoleRequestFromCarPlay(
-    String requestId,
-    bool accepted,
-  ) async {
-    if (_isSimulation) return;
-    await widget.rideController.respondToTecRoleRequest(
-      requestId: requestId,
-      accepted: accepted,
-    );
-    if (!mounted) return;
-    _updateMapOverlays(updateNavigationPosition: false);
-  }
-
-  Future<List<CarPlayDestination>> _searchCarPlayDestinations(
-    String query,
-  ) async {
-    final controller = widget.rideController;
-    if (!controller.isLocalRideLeader ||
-        controller.rideStarted ||
-        controller.rideEnded ||
-        controller.busy) {
-      throw const FormatException(
-        'Only the ride leader can plan a route before the ride starts.',
-      );
-    }
-    return [
-      for (final match in await _carPlayDestinationPlanner.searchService.search(
-        query,
-      ))
-        CarPlayDestination(label: match.label, point: match.point),
-    ];
-  }
-
-  Future<void> _planCarPlayDestination(
-    CarPlayDestination destination,
-    bool? groupRide,
-  ) async {
-    final controller = widget.rideController;
-    if (!controller.isLocalRideLeader ||
-        controller.rideStarted ||
-        controller.rideEnded ||
-        controller.busy) {
-      throw const FormatException(
-        'Only the ride leader can plan a route before the ride starts.',
-      );
-    }
-    final origin = _mapPosition.value ?? await _acquireCurrentPosition();
-    if (origin == null) {
-      throw const FormatException(
-        'Allow location access on the iPhone before planning from CarPlay.',
-      );
-    }
-    final plan = await _carPlayDestinationPlanner.planForReview(
-      origin: origin,
-      query: destination.label,
-      selectedDestination: DestinationMatch(
-        label: destination.label,
-        point: destination.point,
-      ),
-      distanceUnit: widget.distanceUnits.value,
-    );
-    await _handleRouteChanged(plan.route);
-    if (mounted) _updateMapOverlays(updateDerivedState: false);
   }
 
   /// Publishes the quick messages the ride map has to present, and returns the
@@ -4048,29 +3780,6 @@ class _ActiveRideShellState extends State<ActiveRideShell>
       onLeaveRide: _confirmLeaveRideFromMap,
       onRouteCommitted: _onRouteChanged,
       onNavigationGuidanceChanged: _onNavigationGuidanceChanged,
-      onNavigationViewportChanged: (viewport) {
-        final bridge = _carPlayBridge;
-        if (bridge != null) unawaited(bridge.publishViewport(viewport));
-      },
-      onMapStyleResolved: (styleJson) {
-        if (!mounted) return;
-        _carPlayMapStyleJson = styleJson;
-        final bridge = _carPlayBridge;
-        if (bridge == null) return;
-        final basemap = BasemapConfiguration.fromEnvironment().forBrightness(
-          dark: widget.mapStyleMode.resolveDark(
-            MediaQuery.platformBrightnessOf(context),
-          ),
-          restrainedLightStyle:
-              widget.mapStyleMode.dayStyle == DayMapStyle.restrained,
-        );
-        unawaited(
-          bridge.publishMapStyle(
-            styleJson: styleJson,
-            fallbackStyleUrl: basemap.styleUrl,
-          ),
-        );
-      },
       changeRouteRequestToken: _changeRouteRequestToken,
       onChangeRouteRequestHandled: _clearChangeRouteRequest,
       pendingSharedGpxFile: _pendingSharedGpxFile,
@@ -4340,123 +4049,29 @@ class _ActiveRideShellState extends State<ActiveRideShell>
     );
   }
 
-  String get _projectedRideState {
-    if (widget.rideController.rideEnded) return 'Ride ended';
-    if (widget.rideController.ridePaused) return 'Ride paused';
-    if (widget.rideController.rideStarted) return 'Ride in progress';
-    return 'Waiting for the ride leader to start';
-  }
-
-  /// Offers only the final pre-departure decision on CarPlay. Ride creation,
-  /// joining and route selection remain phone setup; this projection exists
-  /// only after that work is complete and only for the local leader.
-  CarPlayRideStart? get _carPlayRideStart {
-    final controller = widget.rideController;
-    final locationReady =
-        _isSimulation ||
-        !widget.enableNativeServices ||
-        (_locationController?.status.canSample ?? false);
-    return CarPlayRideStart.project(
-      hasSession: controller.session != null,
-      isLeader: controller.isLocalRideLeader,
-      rideStarted: controller.rideStarted,
-      rideEnded: controller.rideEnded,
-      busy: controller.busy,
-      locationReady: locationReady,
-      isGroup: controller.coordinationMode.isGroup,
-      hasTec: _effectiveTecRiderIds.isNotEmpty,
-      routeName: _activeRoute?.name,
-    );
-  }
-
-  /// Handles the confirmed native action. The snapshot that drew the button
-  /// may be stale, so leader, lifecycle, busy and location state are checked
-  /// again before the durable start event is recorded.
-  Future<void> _startPreparedRideFromCarPlay() async {
-    if (!mounted) return;
-    final controller = widget.rideController;
-    if (controller.session == null ||
-        !controller.isLocalRideLeader ||
-        controller.rideStarted ||
-        controller.rideEnded ||
-        controller.busy ||
-        _rideStartFlowInProgress) {
-      _updateMapOverlays(updateDerivedState: false);
-      return;
-    }
-    _rideStartFlowInProgress = true;
-    try {
-      final locationController = _locationController;
-      if (!_isSimulation &&
-          widget.enableNativeServices &&
-          (locationController == null ||
-              !locationController.status.canSample)) {
-        final added = _warnings.add(
-          'Open Tide and Seek on the iPhone and allow location access before '
-          'starting the ride from CarPlay.',
-        );
-        _updateMapOverlays(updateDerivedState: false);
-        if (added && mounted) setState(() {});
-        return;
-      }
-
-      _diagnostics?.recordNote('start ride accepted from CarPlay');
-      if (await _commitRideStart(source: 'CarPlay')) {
-        await _resumeLocationForActiveRide();
-      }
-    } finally {
-      _rideStartFlowInProgress = false;
-      if (mounted) _updateMapOverlays(updateDerivedState: false);
-    }
-  }
-
-  /// Records the one durable start transition for either surface and contains
-  /// storage/authentication failures. An uncaught Future error from a button
-  /// callback used to escape Flutter's UI path; CarPlay already caught its copy,
-  /// so the two surfaces behaved differently under the same failure.
-  Future<bool> _commitRideStart({required String source}) async {
+  /// Records the one durable start transition and contains
+  /// storage/authentication failures, so an uncaught Future error from a button
+  /// callback cannot escape Flutter's UI path.
+  Future<bool> _commitRideStart() async {
     _localRideStartInProgress = true;
     try {
       await widget.rideController.startRide();
       return true;
     } on Object catch (error, stackTrace) {
       _diagnostics?.recordNote(
-        'start ride failed from $source: ${error.runtimeType}: $error',
+        'start ride failed: ${error.runtimeType}: $error',
       );
       if (kDebugMode) {
-        debugPrint(
-          'Could not start the ride from $source: $error\n$stackTrace',
-        );
+        debugPrint('Could not start the ride: $error\n$stackTrace');
       }
-      final message = source == 'CarPlay'
-          ? 'CarPlay could not start the ride. Open Tide and Seek on the '
-                'iPhone and try again.'
-          : 'The ride could not start. Please try again.';
+      const message = 'The ride could not start. Please try again.';
       final added = _warnings.add(message);
       if (added && mounted) setState(() {});
-      if (source != 'CarPlay' && mounted) _showRideSnackBar(message);
+      if (mounted) _showRideSnackBar(message);
       return false;
     } finally {
       _localRideStartInProgress = false;
     }
-  }
-
-  /// Next instruction for the projected car surfaces.
-  ///
-  /// This is the same collapsed instruction the phone banner shows, so a
-  /// roundabout is announced once, with its exit and direction, rather than as
-  /// the engine's separate entry and exit steps. The car rows are plain text
-  /// with no symbol beside them, so they name the junction.
-  String? get _projectedGuidanceTitle =>
-      _latestNavigationGuidance?.instruction.standaloneText;
-
-  String? get _projectedGuidanceDetail {
-    final guidance = _latestNavigationGuidance;
-    if (guidance == null) return null;
-    final distance = MeasurementFormatter(
-      widget.distanceUnits.value,
-    ).distance(guidance.distanceMeters);
-    return '$distance · ${guidance.roadLabel}';
   }
 
   Color get _localBadgeColor {
@@ -4734,10 +4349,9 @@ class _ActiveRideShellState extends State<ActiveRideShell>
 
   Future<void> _confirmStartRide() async {
     // Recorded before the gate, not after (#441). The report is that this
-    // control "does nothing" with CarPlay connected, and no path in this file
-    // treats a CarPlay session differently — so the first thing to establish is
-    // whether the tap arrives at all, and if it does, which of the two early
-    // returns swallows it. An entry here and no `start decision` after it means
+    // control "does nothing", and no path in this file explains it — so the
+    // first thing to establish is whether the tap arrives at all, and if it
+    // does, which of the two early returns swallows it. An entry here and no `start decision` after it means
     // the gate; no entry at all means the tap never reached Dart.
     final controller = widget.rideController;
     _diagnostics?.recordNote(
@@ -4818,7 +4432,7 @@ class _ActiveRideShellState extends State<ActiveRideShell>
       }
       if (decision == _StartRideDecision.start) {
         if (!await _confirmStartWithoutTec()) return;
-        if (await _commitRideStart(source: 'phone')) {
+        if (await _commitRideStart()) {
           try {
             // The confirmation is an explicit user action and promises that
             // live sharing begins now, so it is the correct place to request
@@ -5699,8 +5313,6 @@ class _ActiveRideShellState extends State<ActiveRideShell>
     _junctionMarkerOverlay.dispose();
     _enforcementAlert.dispose();
     _rideCompletionSuggestion.dispose();
-    unawaited(_carPlayBridge?.dispose());
-    _carPlayRoutingClient.close();
     super.dispose();
   }
 }

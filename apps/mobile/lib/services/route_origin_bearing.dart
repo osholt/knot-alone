@@ -30,7 +30,7 @@ library;
 
 /// Below this, the heading is not trusted to describe the direction of travel.
 ///
-/// The same 3 m/s the stopped-speed readout (#445) and the CarPlay estimate
+/// The same 3 m/s the stopped-speed readout (#445)
 /// (#452) use. One idea, one number.
 const rejoinBearingMinimumSpeedMetersPerSecond = 3.0;
 

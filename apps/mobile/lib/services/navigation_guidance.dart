@@ -90,7 +90,7 @@ class ManeuverInstruction {
   /// because nothing else there says what it is.
   ///
   /// Used for the banner's accessibility label, which a rider who cannot see the
-  /// symbol depends on, and for the CarPlay and Android Auto rows, which are
+  /// symbol depends on, and for the projected instrument rows, which are
   /// plain text. Identical to [text] for every manoeuvre drawn from a glyph.
   final String standaloneText;
 
@@ -904,7 +904,7 @@ String _instructionText({
       // Beside the banner and the all-turns list is a drawn roundabout, so the
       // wording there leaves the junction to the symbol and states only what a
       // rider still needs: which exit, and which way it goes. Where no symbol
-      // is shown - a screen reader, CarPlay, Android Auto - it is named.
+      // is shown - a screen reader, any projected surface - it is named.
       if (ordinal != null && bucket != null) {
         return namesJunction
             ? 'Roundabout, $ordinal exit, $roundaboutLabel'

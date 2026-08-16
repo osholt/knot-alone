@@ -2,7 +2,7 @@
 ///
 /// ## What was wrong
 ///
-/// The CarPlay bridge sent `CPTravelEstimates(distanceRemaining:, timeRemaining: 0)`
+/// The projected bridge sent `CPTravelEstimates(distanceRemaining:, timeRemaining: 0)`
 /// — the distance was the point of #453 and the time was passed as zero because
 /// nothing needed it. Zero is not "unknown". `CPTravelEstimates.h` is explicit:
 ///

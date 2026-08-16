@@ -1,4 +1,3 @@
-import CarPlay
 import Flutter
 import NearbyConnections
 import UIKit
@@ -19,17 +18,12 @@ import UserNotifications
   private var plannerLinkChannel: FlutterMethodChannel?
   private var pendingPlannerLink: String?
   private var pendingRideInvitationLink: String?
-  private var carPlayChannel: FlutterMethodChannel?
-  private var latestCarPlaySnapshot: [String: Any]?
-  private var latestCarPlayViewport: [String: Any]?
-  private var latestCarPlayMapStyle: [String: Any]?
   private var pushChannel: FlutterMethodChannel?
   private var apnsToken: String?
   private var pendingPushTokenResult: FlutterResult?
   private var pendingOpenedPush: [String: String]?
   private var pushTokenTimeout: DispatchWorkItem?
   private var backgroundLocationPermissionBridge: BackgroundLocationPermissionBridge?
-  weak var carPlaySceneDelegate: CarPlaySceneDelegate?
 
   override func application(
     _ application: UIApplication,
@@ -166,44 +160,6 @@ import UserNotifications
     }
     self.pushChannel = pushChannel
 
-    let carPlayChannel = FlutterMethodChannel(
-      name: "me.osholt.ride_relay/carplay",
-      binaryMessenger: engineBridge.applicationRegistrar.messenger()
-    )
-    carPlayChannel.setMethodCallHandler { [weak self] call, result in
-      switch call.method {
-      case "updateSnapshot":
-        guard let value = call.arguments as? [String: Any] else {
-          result(FlutterError(code: "invalid_arguments", message: "Snapshot must be a map", details: nil))
-          return
-        }
-        self?.latestCarPlaySnapshot = value
-        if value["surfaceMode"] as? String != "activeRide" {
-          self?.latestCarPlayViewport = nil
-        }
-        self?.carPlaySceneDelegate?.apply(snapshot: value)
-        result(nil)
-      case "updateViewport":
-        guard let value = call.arguments as? [String: Any] else {
-          result(FlutterError(code: "invalid_arguments", message: "Viewport must be a map", details: nil))
-          return
-        }
-        self?.latestCarPlayViewport = value
-        self?.carPlaySceneDelegate?.apply(viewport: value)
-        result(nil)
-      case "updateMapStyle":
-        guard let value = call.arguments as? [String: Any] else {
-          result(FlutterError(code: "invalid_arguments", message: "Map style must be a map", details: nil))
-          return
-        }
-        self?.latestCarPlayMapStyle = value
-        self?.carPlaySceneDelegate?.apply(mapStyle: value)
-        result(nil)
-      default:
-        result(FlutterMethodNotImplemented)
-      }
-    }
-    self.carPlayChannel = carPlayChannel
   }
 
   private func requestPushPermission(result: @escaping FlutterResult) {
@@ -359,129 +315,6 @@ import UserNotifications
     ]
     pendingOpenedPush = value
     pushChannel?.invokeMethod("notificationOpened", arguments: value)
-  }
-
-  /// Called by CarPlaySceneDelegate once the CarPlay navigation scene is
-  /// ready. Applies whatever snapshot Dart already published - the CarPlay
-  /// scene can connect well after the ride screen's first publish.
-  func carPlayDidConnect(_ sceneDelegate: CarPlaySceneDelegate) {
-    carPlaySceneDelegate = sceneDelegate
-    if let mapStyle = latestCarPlayMapStyle {
-      sceneDelegate.apply(mapStyle: mapStyle)
-    }
-    if let snapshot = latestCarPlaySnapshot {
-      sceneDelegate.apply(snapshot: snapshot)
-    }
-    if let viewport = latestCarPlayViewport {
-      sceneDelegate.apply(viewport: viewport)
-    }
-    // A projected scene can open after a quiet/restored ride. Ask Dart for a
-    // current self-contained snapshot instead of relying on whichever native
-    // cache entry happened to be published first during app restoration.
-    carPlayChannel?.invokeMethod("requestState", arguments: nil)
-  }
-
-  func carPlayDidDisconnect(_ sceneDelegate: CarPlaySceneDelegate) {
-    if carPlaySceneDelegate === sceneDelegate {
-      carPlaySceneDelegate = nil
-    }
-  }
-
-  func triggerCarPlayEmergency() {
-    carPlayChannel?.invokeMethod("triggerEmergency", arguments: nil)
-  }
-
-  /// The head unit owns the confirmation sheet; Dart owns the actual departure
-  /// so journal, relay and restored-state handling remain identical to phone.
-  func leaveRideFromCarPlay() {
-    carPlayChannel?.invokeMethod("leaveRide", arguments: nil)
-  }
-
-  /// Requests the final lifecycle transition for a ride already configured on
-  /// the phone. Dart revalidates leadership, location readiness and lifecycle
-  /// state because the native snapshot may have become stale before the tap.
-  func startPreparedRideFromCarPlay() {
-    carPlayChannel?.invokeMethod("startPreparedRide", arguments: nil)
-  }
-
-  func searchCarPlayDestinations(
-    query: String,
-    completion: @escaping ([String: Any]) -> Void
-  ) {
-    carPlayChannel?.invokeMethod(
-      "searchDestinations",
-      arguments: ["query": query]
-    ) { value in
-      guard let response = value as? [String: Any] else {
-        completion([
-          "results": [],
-          "error": "Destination search is unavailable. Try again on the iPhone.",
-        ])
-        return
-      }
-      completion(response)
-    }
-  }
-
-  func planCarPlayDestination(
-    label: String,
-    latitude: Double,
-    longitude: Double,
-    groupRide: Bool?,
-    completion: @escaping (Bool, String?) -> Void
-  ) {
-    var arguments: [String: Any] = [
-      "label": label,
-      "latitude": latitude,
-      "longitude": longitude,
-    ]
-    if let groupRide { arguments["groupRide"] = groupRide }
-    carPlayChannel?.invokeMethod("planDestination", arguments: arguments) { value in
-      guard let response = value as? [String: Any] else {
-        completion(false, "Route planning is unavailable. Try again on the iPhone.")
-        return
-      }
-      completion(
-        (response["ok"] as? NSNumber)?.boolValue ?? false,
-        response["error"] as? String
-      )
-    }
-  }
-
-  func startFreeRoamFromCarPlay(
-    completion: @escaping (Bool, String?) -> Void
-  ) {
-    carPlayChannel?.invokeMethod("startFreeRoam", arguments: nil) { value in
-      guard let response = value as? [String: Any] else {
-        completion(false, "Free roam is unavailable. Try again on the iPhone.")
-        return
-      }
-      completion(
-        (response["ok"] as? NSNumber)?.boolValue ?? false,
-        response["error"] as? String
-      )
-    }
-  }
-
-  /// Reports one of the same first-hand hazards available on the phone map.
-  /// Dart validates the value against its rider-reportable allow-list before
-  /// adding the rider's location and publishing it to the group.
-  func reportCarPlayHazard(type: String) {
-    carPlayChannel?.invokeMethod(
-      "reportHazard",
-      arguments: ["type": type]
-    )
-  }
-
-  /// Relays the rider's answer to a leader's Sweeper request (#128).
-  /// Dart owns whether the answer is admissible - the reducer accepts one only
-  /// from the rider the request named, and rejects an expired or superseded
-  /// request - so this passes the id through untouched rather than deciding.
-  func answerCarPlayTecRoleRequest(requestID: String, accepted: Bool) {
-    carPlayChannel?.invokeMethod(
-      "answerTecRoleRequest",
-      arguments: ["requestId": requestID, "accepted": accepted]
-    )
   }
 
   /// Called from SceneDelegate when the OS hands this app a file URL (Open

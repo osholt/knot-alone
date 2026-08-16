@@ -444,7 +444,7 @@ void main() {
     final routing = _FakeRoadRoutingService();
     final planner = DestinationRoutePlanner(
       // A repeated text search would pick the wrong same-named place. The
-      // CarPlay row carries its coordinates so selection remains exact.
+      // Each row carries its coordinates so selection remains exact.
       searchService: const _FakeDestinationSearchService({
         'Chippenham, Wiltshire': [
           DestinationMatch(

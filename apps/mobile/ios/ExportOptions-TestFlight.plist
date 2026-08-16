@@ -7,7 +7,7 @@
   <key>provisioningProfiles</key>
   <dict>
     <key>dev.osholt.tideandseek</key>
-    <string>Tide and Seek CarPlay Navigation App Store</string>
+    <string>Tide and Seek App Store</string>
   </dict>
   <key>signingCertificate</key>
   <string>Apple Distribution</string>

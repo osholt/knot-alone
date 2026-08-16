@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ride_relay/services/guidance_time_remaining.dart';
 
@@ -73,35 +71,6 @@ void main() {
     test('the unavailable value is negative, not zero', () {
       // The documented way to render "--". Zero means arriving.
       expect(guidanceTimeRemainingUnavailable, lessThan(0));
-    });
-  });
-
-  group('the car actually uses it', () {
-    test('the bridge publishes an estimate', () {
-      final source = File(
-        'lib/services/carplay_bridge.dart',
-      ).readAsStringSync();
-
-      expect(source, contains('guidanceSecondsRemaining'));
-    });
-
-    test('Swift no longer sends a hard zero', () {
-      // The whole defect was one literal. Read as source because this line is
-      // only reachable from a head unit.
-      final source = File(
-        'ios/Runner/CarPlaySceneDelegate.swift',
-      ).readAsStringSync();
-
-      expect(
-        source,
-        contains('guidanceSecondsRemaining'),
-        reason: 'the car must use the computed estimate',
-      );
-      expect(
-        source,
-        isNot(contains('timeRemaining: 0')),
-        reason: 'zero tells CarPlay the rider is arriving now',
-      );
     });
   });
 }

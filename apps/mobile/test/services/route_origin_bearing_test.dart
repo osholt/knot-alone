@@ -26,7 +26,7 @@ void main() {
     });
 
     test('the floor is the one used everywhere else', () {
-      // Shared with the stopped-speed readout (#445) and the CarPlay estimate
+      // Shared with the stopped-speed readout (#445)
       // (#452). Two numbers for one idea is how they drift apart.
       expect(rejoinBearingMinimumSpeedMetersPerSecond, 3.0);
     });
