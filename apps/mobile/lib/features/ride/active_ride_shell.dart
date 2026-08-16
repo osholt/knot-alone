@@ -16,7 +16,6 @@ import '../../controllers/observer_access_controller.dart';
 import '../../controllers/pre_start_presence_controller.dart';
 import '../../controllers/ride_controller.dart';
 import '../../controllers/route_progress_display_controller.dart';
-import '../../controllers/road_rating_controller.dart';
 import '../../controllers/ride_push_notification_controller.dart';
 import '../../controllers/ride_simulation_controller.dart';
 import '../../controllers/rider_profile_controller.dart';
@@ -301,7 +300,6 @@ class ActiveRideShell extends StatefulWidget {
     this.screenWakeReassertInterval = const Duration(seconds: 15),
     this.pushTokenSource,
     this.pushRegistrationApi,
-    this.roadRatings,
     this.testControl,
     this.testControlRegistry,
     this.spokenGuidance,
@@ -344,10 +342,6 @@ class ActiveRideShell extends StatefulWidget {
   final Duration screenWakeReassertInterval;
   final PushTokenSource? pushTokenSource;
   final PushRegistrationApi? pushRegistrationApi;
-
-  /// Drives the end-of-ride catalogued-road rating card (#159). Null in a build
-  /// with no catalogue service configured, and the card is then never built.
-  final RoadRatingController? roadRatings;
 
   @override
   State<ActiveRideShell> createState() => _ActiveRideShellState();
@@ -3546,7 +3540,6 @@ class _ActiveRideShellState extends State<ActiveRideShell>
         nearbyRelayController: _relayController,
         internetRelayController: _internetRelayController,
         onRemoveRide: _removeEndedRide,
-        roadRatings: widget.roadRatings,
         relayCanCarryReopen: _relayCanCarryReopen,
         // The share on this screen omitted the recorded log entirely, so a rider
         // who ended the ride and pressed the obvious button lost it (#456).

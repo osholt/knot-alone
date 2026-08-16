@@ -46,3 +46,20 @@ rather than renaming them. Removed so far:
   dependencies, the CarPlay entitlements and scene manifest entry, and the
   simulator helper. A projected chartplotter surface, if it is ever wanted, is a
   new marine design rather than a revival of this code.
+- **Road ratings and motorcycle discovery** — the rating controller/store/client
+  and its end-of-ride card, the road-facts and discovery sheets, the
+  `MotorcycleDiscoveryCatalogue` map layers and suggestion queue, the 13.7 MB
+  `discovery_catalogue.geojson` asset, and the `tools/discovery` catalogue
+  pipeline (overlay build, enrichment, evidence index, publication, ratings).
+  The client no longer advertises the `road-ratings-v1` relay capability.
+
+  The marine equivalent — attributable harbour, marina, anchorage, hazard and
+  pilotage packs (P1, backlog #10) — needs licensed sources and different
+  categories, so it is a fresh build rather than a rename of this.
+
+  **Still present, deliberately:** the relay's own discovery endpoints,
+  `discovery_*` tables, and `0008_road_ratings` migration. They are the
+  submission/moderation/rate-limit plumbing the pilotage layer will need, so
+  they are left for backlog #10 to adopt or replace rather than deleted here.
+  `tools/discovery/generate_speed_cameras.py` and `generate_mini_roundabouts.py`
+  remain until their own surfaces are removed.

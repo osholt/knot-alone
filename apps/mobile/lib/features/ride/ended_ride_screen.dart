@@ -4,13 +4,11 @@ import '../../controllers/distance_unit_controller.dart';
 import '../../controllers/internet_relay_controller.dart';
 import '../../controllers/nearby_relay_controller.dart';
 import '../../controllers/ride_controller.dart';
-import '../../controllers/road_rating_controller.dart';
 import '../../services/basemap_configuration.dart';
 import '../../services/ride_summary_exporter.dart';
 import '../internet/internet_relay_status_card.dart';
 import '../nearby/relay_status_card.dart';
 import 'ride_recap_screen.dart';
-import 'road_rating_card.dart';
 
 class EndedRideScreen extends StatefulWidget {
   const EndedRideScreen({
@@ -21,7 +19,6 @@ class EndedRideScreen extends StatefulWidget {
     this.internetRelayController,
     this.summarySharer,
     this.onRemoveRide,
-    this.roadRatings,
     this.onSetAside,
     this.relayCanCarryReopen = true,
     this.diagnostics,
@@ -36,7 +33,6 @@ class EndedRideScreen extends StatefulWidget {
 
   /// Absent in a build with no catalogue service configured, and in tests that
   /// are not about ratings. When absent, no rating card is built at all.
-  final RoadRatingController? roadRatings;
 
   /// Leaves this screen without acting on the ride.
   ///
@@ -67,22 +63,6 @@ class _EndedRideScreenState extends State<EndedRideScreen> {
   @override
   void initState() {
     super.initState();
-    // After the first frame, never during it. Matching a track against the
-    // catalogue means loading and scanning it, and #165 was about exactly this
-    // screen taking too long to appear.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _prepareRatings());
-  }
-
-  Future<void> _prepareRatings() async {
-    final ratings = widget.roadRatings;
-    final session = widget.controller.session;
-    if (ratings == null || ratings.prepared || session == null) return;
-    final route = const RideSummaryExporter().traveledRoute(
-      session,
-      widget.controller.events,
-      generatedAt: DateTime.now(),
-    );
-    await ratings.prepare(riddenTrack: route?.paths.single.points ?? const []);
   }
 
   /// The way off this screen that gives nothing up (#207).
@@ -303,8 +283,6 @@ class _EndedRideScreenState extends State<EndedRideScreen> {
           InternetRelayStatusCard(controller: internet),
           const SizedBox(height: 18),
         ],
-        if (widget.roadRatings case final ratings?)
-          RoadRatingCard(controller: ratings),
         FilledButton.icon(
           onPressed: () => _shareSummary(context),
           icon: const Icon(Icons.ios_share),

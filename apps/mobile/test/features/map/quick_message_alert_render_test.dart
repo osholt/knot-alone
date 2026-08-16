@@ -52,8 +52,8 @@ const _renderKey = Key('quick-message-render-boundary');
 
 void main() {
   // Rasterising needs a real async gap, which lets the map's own
-  // `DiscoverySuggestionQueue.openDefault()` reach the shared-preferences
-  // plugin. An in-memory store is what a test has instead.
+  // shared-preferences reads reach the plugin. An in-memory store is what a
+  // test has instead.
   setUp(() => SharedPreferences.setMockInitialValues(const {}));
 
   setUpAll(() async {

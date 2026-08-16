@@ -13,7 +13,6 @@ import 'controllers/ride_controller.dart';
 import 'controllers/ride_invitation_link_controller.dart';
 import 'controllers/route_progress_display_controller.dart';
 import 'controllers/rider_profile_controller.dart';
-import 'controllers/road_rating_controller.dart';
 import 'controllers/shared_route_controller.dart';
 import 'controllers/speed_limit_display_controller.dart';
 import 'controllers/spoken_guidance_controller.dart';
@@ -51,10 +50,6 @@ Future<void> main() async {
       sharedRoutes,
       speedLimitDisplay,
       recordedRoutes,
-      // Null unless this build has a discovery catalogue endpoint compiled in, so
-      // the rating card never appears where an answer could not be delivered
-      // (#159).
-      roadRatings,
       completedRideStore,
     ),
     // Returns immediately without touching storage in a build that has no
@@ -76,7 +71,6 @@ Future<void> main() async {
       SharedRouteController.load(),
       SpeedLimitDisplayController.load(),
       JsonFileRecordedRouteStore.openDefault(),
-      RoadRatingController.openDefault(),
       JsonFileCompletedRideStore.openDefault(),
     ).wait,
     TestControlController.load(),
@@ -129,7 +123,6 @@ Future<void> main() async {
       recordedRoutes: recordedRoutes,
       completedRides: completedRides,
       rideInvitationLinks: rideInvitationLinks,
-      roadRatings: roadRatings,
       testControl: testControl,
       testControlRegistry: testControlRegistry,
       spokenGuidance: spokenGuidance,

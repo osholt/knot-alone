@@ -31,7 +31,6 @@ import '../../internet/plan_directory.dart';
 import '../../services/basemap_configuration.dart';
 import '../../services/basemap_status.dart';
 import '../../services/demo_route_loader.dart';
-import '../../services/discovery_suggestion_queue.dart';
 import '../../services/enforcement_alert_detector.dart';
 import 'ride_clock.dart';
 import '../../services/enforcement_alert_presentation.dart';
@@ -49,7 +48,6 @@ import '../../services/map_camera_command.dart';
 import '../../services/measurement_formatter.dart';
 import '../../services/navigation_guidance.dart';
 import '../../services/stopped_speed_reading.dart';
-import '../../services/motorcycle_discovery.dart';
 import '../../services/navigation_export.dart';
 import '../../services/navigation_camera.dart';
 import '../../services/navigation_heading.dart';
@@ -67,7 +65,6 @@ import '../../services/speed_limit.dart';
 import '../../services/stored_route_library.dart';
 import '../../services/trail_direction_arrows.dart';
 import 'destination_route_sheet.dart';
-import 'discovery_road_sheet.dart';
 import 'hazard_map_symbol.dart';
 import 'map_camera_guard.dart';
 import 'maneuver_list_screen.dart';
@@ -857,8 +854,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
   static const _plannedRouteArrowReserve = 120;
   static const _trailDirectionArrowSampler = TrailDirectionArrowSampler();
   static const _navigationGuidancePlanner = NavigationGuidancePlanner();
-  static const _discoveryLineSource = 'ride-relay-discovery-lines';
-  static const _discoveryPointSource = 'ride-relay-discovery-points';
 
   final MapControllerImpl _mapController = MapControllerImpl();
   final RouteProgressTracker _routeProgressTracker = RouteProgressTracker();
@@ -870,8 +865,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
   final Map<int, Offset> _mapPointerOrigins = {};
   late final http.Client _routingClient;
   late final RoadRoutingService _roadRoutingService;
-  late final Future<DiscoverySuggestionQueue> _suggestionQueue;
-  late final DiscoverySuggestionConfiguration _suggestionConfiguration;
   late final DestinationRoutePlanner _defaultDestinationRoutePlanner;
   late final RouteGeometryEnricher _defaultRouteGeometryEnricher;
   late final ImportedTrackMatcher _defaultImportedTrackMatcher;
@@ -1072,9 +1065,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
       const RouteProgressGeometry.empty();
   TileDownloadProgress? _downloadProgress;
   TileDownloadCancellationToken? _downloadCancellation;
-  MotorcycleDiscoveryCatalogue _discoveryCatalogue =
-      const MotorcycleDiscoveryCatalogue([]);
-  final Set<MotorcycleDiscoveryCategory> _enabledDiscoveryCategories = {};
 
   BasemapConfiguration get _basemap => widget.offlineTileCache.configuration;
 
@@ -1202,9 +1192,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
     _dismissedEnforcementAlertId = widget.dismissedEnforcementAlertId;
     _routeStartConnector = widget.initialRouteStartConnector;
     _routingClient = http.Client();
-    _suggestionQueue = DiscoverySuggestionQueue.openDefault();
-    _suggestionConfiguration =
-        DiscoverySuggestionConfiguration.fromEnvironment();
     final routingConfiguration = RoutingConfiguration.fromEnvironment();
     // Preferences the OSRM driving profile cannot express are sent to the same
     // Valhalla motorcycle service the web planner uses, by the same rule, so the
@@ -1264,7 +1251,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
         widget.junctionMarkerOverlay?.value?.isLocalMarker ?? false;
     _loadPersistedRoute();
     unawaited(_openPersonalRideHeatmap());
-    unawaited(_loadDiscoveryCatalogue());
     _maybeHandleChangeRouteRequest();
   }
 
@@ -1430,17 +1416,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
         _loadError = error;
         _loading = false;
       });
-    }
-  }
-
-  Future<void> _loadDiscoveryCatalogue() async {
-    try {
-      final catalogue = await MotorcycleDiscoveryCatalogue.loadAsset();
-      if (!mounted) return;
-      setState(() => _discoveryCatalogue = catalogue);
-      _scheduleMapLibreSync(overlays: true);
-    } on Object catch (error) {
-      if (kDebugMode) debugPrint('Could not load discovery catalogue: $error');
     }
   }
 
@@ -1642,10 +1617,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
                         child: Text('Load demo route'),
                       ),
                     ],
-                    const PopupMenuItem(
-                      value: _MapAction.discoveryLayers,
-                      child: Text('Motorcycle discovery layers'),
-                    ),
                     PopupMenuItem(
                       key: const Key('personal-rides-heatmap-toggle'),
                       value: _MapAction.personalRideHeatmap,
@@ -2726,57 +2697,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
                   )!.withValues(alpha: 0.16 + 0.24 * cell.weight),
                 ),
             ],
-          ),
-        if (_visibleDiscoveryFeatures.any((feature) => !feature.isPoint))
-          PolylineLayer(
-            polylines: _visibleDiscoveryFeatures
-                .where((feature) => !feature.isPoint)
-                .map(
-                  (feature) => Polyline(
-                    points: feature.points.map(_latLng).toList(growable: false),
-                    color: _discoveryColour(feature.category),
-                    strokeWidth: 4,
-                    // Opaque, to match the MapLibre casing (#133).
-                    borderColor: RouteTrailStyle.casing,
-                    borderStrokeWidth: 2,
-                    pattern:
-                        feature.category ==
-                            MotorcycleDiscoveryCategory.twistyHighlight
-                        ? StrokePattern.dashed(segments: const [8, 6])
-                        : const StrokePattern.solid(),
-                  ),
-                )
-                .toList(growable: false),
-          ),
-        if (_visibleDiscoveryFeatures.isNotEmpty)
-          MarkerLayer(
-            markers: _visibleDiscoveryFeatures
-                .map(
-                  (feature) => Marker(
-                    point: _latLng(feature.anchor),
-                    width: 40,
-                    height: 40,
-                    child: Semantics(
-                      button: true,
-                      label: '${feature.category.label}: ${feature.name}',
-                      child: GestureDetector(
-                        onTap: () => _showDiscoveryFeature(feature),
-                        child: Icon(
-                          feature.category ==
-                                  MotorcycleDiscoveryCategory.mountainPass
-                              ? Icons.terrain
-                              : Icons.route,
-                          color: _discoveryColour(feature.category),
-                          size: 30,
-                          shadows: const [
-                            Shadow(color: Color(0xFF10151C), blurRadius: 4),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                )
-                .toList(growable: false),
           ),
         // Actual travelled trails are drawn whether or not a route is loaded,
         // and the leader's trail sits under the remaining planned route so both
@@ -4352,52 +4272,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
           heatmapOpacity: 0.48,
         ),
       );
-      await controller.addGeoJsonSource(
-        _discoveryLineSource,
-        _discoveryLineGeoJson(),
-      );
-      // Opaque, both of them. These were the only geometry on the map whose
-      // casing was translucent and whose line was drawn at 90%, which left them
-      // the only lines with nothing solid behind them: 1.80:1 for the good-biking
-      // blue over the dark motorway fill, against 4.12:1 once the casing is
-      // opaque (#133). #107 already ruled that route geometry uses opaque colour
-      // over a casing rather than translucency; this is the last place that had
-      // not caught up.
-      await controller.addLineLayer(
-        _discoveryLineSource,
-        'ride-relay-discovery-line-casing',
-        const ml.LineLayerProperties(
-          lineColor: RouteTrailStyle.casingHex,
-          lineWidth: 7,
-          lineCap: 'round',
-          lineJoin: 'round',
-        ),
-        enableInteraction: false,
-      );
-      await controller.addLineLayer(
-        _discoveryLineSource,
-        'ride-relay-discovery-lines',
-        const ml.LineLayerProperties(
-          lineColor: ['get', 'color'],
-          lineWidth: 4,
-          lineCap: 'round',
-          lineJoin: 'round',
-        ),
-      );
-      await controller.addGeoJsonSource(
-        _discoveryPointSource,
-        _discoveryPointGeoJson(),
-      );
-      await controller.addCircleLayer(
-        _discoveryPointSource,
-        'ride-relay-discovery-points',
-        const ml.CircleLayerProperties(
-          circleRadius: 7,
-          circleColor: ['get', 'color'],
-          circleStrokeWidth: 3,
-          circleStrokeColor: '#10151C',
-        ),
-      );
       // Solid trails are drawn before the planned route so the leader's wider
       // trail reads as a corridor beneath it rather than hiding it.
       await controller.addGeoJsonSource(
@@ -4648,14 +4522,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
         _visiblePersonalHeatmap.toGeoJson(),
       );
       await controller.setGeoJsonSource(
-        _discoveryLineSource,
-        _discoveryLineGeoJson(),
-      );
-      await controller.setGeoJsonSource(
-        _discoveryPointSource,
-        _discoveryPointGeoJson(),
-      );
-      await controller.setGeoJsonSource(
         _remainingRouteSource,
         _remainingRouteGeoJson(),
       );
@@ -4728,14 +4594,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
         await controller.setGeoJsonSource(
           _personalHeatmapSource,
           _visiblePersonalHeatmap.toGeoJson(),
-        );
-        await controller.setGeoJsonSource(
-          _discoveryLineSource,
-          _discoveryLineGeoJson(),
-        );
-        await controller.setGeoJsonSource(
-          _discoveryPointSource,
-          _discoveryPointGeoJson(),
         );
         await controller.setGeoJsonSource(
           _riderTrailSource,
@@ -4891,48 +4749,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
     ),
   );
 
-  List<MotorcycleDiscoveryFeature> get _visibleDiscoveryFeatures =>
-      _discoveryCatalogue.visible(categories: _enabledDiscoveryCategories);
-
-  Map<String, dynamic> _discoveryLineGeoJson() => {
-    'type': 'FeatureCollection',
-    'features': [
-      for (final feature in _visibleDiscoveryFeatures.where(
-        (feature) => !feature.isPoint,
-      ))
-        {
-          'type': 'Feature',
-          'id': feature.id,
-          'properties': {
-            'name': feature.name,
-            'category': feature.category.apiValue,
-            'color': _hexColor(_discoveryColour(feature.category)),
-          },
-          'geometry': {
-            'type': 'LineString',
-            'coordinates': [
-              for (final point in feature.points)
-                [point.longitude, point.latitude],
-            ],
-          },
-        },
-    ],
-  };
-
-  Map<String, dynamic> _discoveryPointGeoJson() => MapGeoJson.points(
-    _visibleDiscoveryFeatures.map(
-      (feature) => MapGeoJsonPoint(
-        id: feature.id,
-        point: feature.anchor,
-        properties: {
-          'name': feature.name,
-          'category': feature.category.apiValue,
-          'color': _hexColor(_discoveryColour(feature.category)),
-        },
-      ),
-    ),
-  );
-
   Map<String, dynamic> _riderTrailGeoJson() => {
     'type': 'FeatureCollection',
     'features': [
@@ -5083,14 +4899,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
     String layerId,
     ml.Annotation? annotation,
   ) {
-    if (layerId == 'ride-relay-discovery-lines' ||
-        layerId == 'ride-relay-discovery-points') {
-      final feature = _discoveryCatalogue.features
-          .where((feature) => feature.id == id)
-          .firstOrNull;
-      if (feature != null) _showDiscoveryFeature(feature);
-      return;
-    }
     if (layerId == 'ride-relay-marker-plan-points') {
       final point = _markerPlan.points
           .where((item) => item.id == id)
@@ -5700,346 +5508,12 @@ class _RideMapScreenState extends State<RideMapScreen> {
     }
   }
 
-  Color _discoveryColour(MotorcycleDiscoveryCategory category) =>
-      switch (category) {
-        MotorcycleDiscoveryCategory.twistyHighlight => const Color(0xFFF97316),
-        MotorcycleDiscoveryCategory.mountainPass => const Color(0xFF0F9D8A),
-        MotorcycleDiscoveryCategory.goodBikingRoad => const Color(0xFF2583E9),
-      };
-
-  Future<void> _showDiscoveryLayersSheet() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setSheetState) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Motorcycle discovery layers',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Optional reviewed highlights. Off by default and never a safety endorsement.',
-                ),
-                const SizedBox(height: 8),
-                for (final category in MotorcycleDiscoveryCategory.values)
-                  CheckboxListTile(
-                    value: _enabledDiscoveryCategories.contains(category),
-                    secondary: Icon(
-                      category == MotorcycleDiscoveryCategory.mountainPass
-                          ? Icons.terrain
-                          : Icons.route,
-                      color: _discoveryColour(category),
-                    ),
-                    title: Text(category.label),
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (enabled) {
-                      setState(() {
-                        if (enabled ?? false) {
-                          _enabledDiscoveryCategories.add(category);
-                        } else {
-                          _enabledDiscoveryCategories.remove(category);
-                        }
-                      });
-                      setSheetState(() {});
-                      _scheduleMapLibreSync(overlays: true);
-                    },
-                  ),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(sheetContext).pop();
-                    unawaited(_showDiscoverySuggestionForm());
-                  },
-                  icon: const Icon(Icons.add_location_alt_outlined),
-                  label: const Text('Suggest an addition'),
-                ),
-                if (_suggestionConfiguration.apiOrigin != null)
-                  FutureBuilder<DiscoverySuggestionQueue>(
-                    future: _suggestionQueue,
-                    builder: (context, snapshot) {
-                      final count = snapshot.data?.drafts.length ?? 0;
-                      return TextButton.icon(
-                        onPressed: count == 0
-                            ? null
-                            : () {
-                                Navigator.of(sheetContext).pop();
-                                unawaited(_confirmSendDiscoverySuggestions());
-                              },
-                        icon: const Icon(Icons.outbox_outlined),
-                        label: Text(
-                          'Send $count queued suggestion${count == 1 ? '' : 's'}',
-                        ),
-                      );
-                    },
-                  ),
-                const Text(
-                  'Proof-of-concept data © OpenStreetMap contributors, ODbL. Check access, closures, weather and road conditions.',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showDiscoveryFeature(MotorcycleDiscoveryFeature feature) async {
-    await DiscoveryRoadSheet.show(
-      context,
-      feature: feature,
-      onAddToRoute: _routing
-          ? null
-          : () {
-              Navigator.of(context).pop();
-              unawaited(_addDiscoveryFeatureToRoute(feature));
-            },
-      onSuggestCorrection: () {
-        Navigator.of(context).pop();
-        unawaited(
-          _showDiscoverySuggestionForm(feature: feature, action: 'correct'),
-        );
-      },
-      onOpenLink: (url) => unawaited(
-        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
-      ),
-    );
-  }
-
-  Future<void> _addDiscoveryFeatureToRoute(
-    MotorcycleDiscoveryFeature feature,
-  ) async {
-    if (_routing) return;
-    final existing = _route;
-    final start =
-        existing?.paths.lastOrNull?.points.lastOrNull ?? _effectivePosition;
-    if (start == null) {
-      _showMessage(
-        'Load a route or enable location before adding this highlight.',
-      );
-      return;
-    }
-    setState(() => _routing = true);
-    try {
-      final extension = await _roadRoutingService.routeThrough([
-        start,
-        feature.anchor,
-      ], preferences: existing?.preferences);
-      final route = ImportedRoute(
-        id:
-            existing?.id ??
-            'discovery-${DateTime.now().microsecondsSinceEpoch}',
-        name: existing?.name ?? 'Route via ${feature.name}',
-        description: existing?.description,
-        importedAt: existing?.importedAt ?? DateTime.now().toUtc(),
-        sourceFileName: existing?.sourceFileName ?? 'motorcycle-discovery',
-        paths: [
-          ...?existing?.paths,
-          RoutePath(
-            kind: RoutePathKind.route,
-            name: feature.name,
-            points: extension.points,
-          ),
-        ],
-        waypoints: [
-          ...?existing?.waypoints,
-          RouteWaypoint(
-            point: feature.anchor,
-            name: feature.name,
-            description: '${feature.category.label}; ${feature.warning}',
-            symbol: 'Scenic Area',
-          ),
-        ],
-        preferences: existing?.preferences,
-        plannedDuration:
-            (existing?.plannedDuration ?? Duration.zero) + extension.duration,
-      );
-      await _reviewAndActivateRoute(route);
-    } on Object catch (error) {
-      _showMessage('Could not route via ${feature.name}: $error');
-    } finally {
-      if (mounted) setState(() => _routing = false);
-    }
-  }
-
-  Future<void> _showDiscoverySuggestionForm({
-    MotorcycleDiscoveryFeature? feature,
-    String action = 'add',
-  }) async {
-    final point =
-        feature?.anchor ??
-        _effectivePosition ??
-        _route?.paths.lastOrNull?.points.lastOrNull;
-    if (point == null) {
-      _showMessage(
-        'Enable location or load a route before placing a suggestion.',
-      );
-      return;
-    }
-    var category =
-        feature?.category ?? MotorcycleDiscoveryCategory.goodBikingRoad;
-    var selectedAction = action;
-    final name = TextEditingController(text: feature?.name ?? '');
-    final reason = TextEditingController();
-    final evidence = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(
-            feature == null ? 'Suggest an addition' : 'Suggest a map update',
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (feature != null)
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedAction,
-                    decoration: const InputDecoration(labelText: 'Change'),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'correct',
-                        child: Text('Correct entry'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'remove',
-                        child: Text('Report closed, restricted or unsafe'),
-                      ),
-                    ],
-                    onChanged: (value) => setDialogState(
-                      () => selectedAction = value ?? selectedAction,
-                    ),
-                  ),
-                DropdownButtonFormField<MotorcycleDiscoveryCategory>(
-                  initialValue: category,
-                  decoration: const InputDecoration(labelText: 'Category'),
-                  items: [
-                    for (final item in MotorcycleDiscoveryCategory.values)
-                      DropdownMenuItem(value: item, child: Text(item.label)),
-                  ],
-                  onChanged: (value) =>
-                      setDialogState(() => category = value ?? category),
-                ),
-                TextField(
-                  controller: name,
-                  maxLength: 120,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                ),
-                TextField(
-                  controller: reason,
-                  maxLength: 500,
-                  minLines: 3,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Reason or current condition',
-                  ),
-                ),
-                TextField(
-                  controller: evidence,
-                  keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    labelText: 'Evidence link (optional)',
-                  ),
-                ),
-                Text(
-                  'Location: ${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}\n'
-                  'Saved privately on this device until you explicitly send it. Not a safety endorsement.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (name.text.trim().isEmpty || reason.text.trim().length < 5) {
-                  _showMessage('Enter a name and a short reason.');
-                  return;
-                }
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: const Text('Save offline draft'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (confirmed != true) return;
-    final queue = await _suggestionQueue;
-    await queue.enqueue(
-      category: category,
-      action: selectedAction,
-      targetFeatureId: feature?.id,
-      name: name.text,
-      reason: reason.text,
-      evidenceUrl: evidence.text,
-      point: point,
-      geometryPoints: feature?.points,
-    );
-    _showMessage(
-      'Suggestion saved offline. It will only be sent when you choose Send queued suggestions.',
-    );
-  }
-
-  Future<void> _confirmSendDiscoverySuggestions() async {
-    final apiOrigin = _suggestionConfiguration.apiOrigin;
-    if (apiOrigin == null) return;
-    final queue = await _suggestionQueue;
-    if (queue.drafts.isEmpty || !mounted) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Send suggestions for review?'),
-        content: Text(
-          '${queue.drafts.length} private draft${queue.drafts.length == 1 ? '' : 's'} will be sent to the administrator queue. Nothing becomes public automatically.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep offline'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Send now'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      final sent = await queue.sendAfterConfirmation(
-        client: _routingClient,
-        apiOrigin: apiOrigin,
-      );
-      _showMessage(
-        sent == 0
-            ? 'Suggestions could not be sent and remain saved offline.'
-            : '$sent suggestion${sent == 1 ? '' : 's'} sent for administrator review.',
-      );
-    } on Object {
-      _showMessage('Suggestions could not be sent and remain saved offline.');
-    }
-  }
-
   Future<void> _handleMenuAction(_MapAction action) async {
     switch (action) {
       case _MapAction.importGpx:
         await _importGpx();
       case _MapAction.loadDemo:
         await _loadDemoRoute();
-      case _MapAction.discoveryLayers:
-        await _showDiscoveryLayersSheet();
       case _MapAction.personalRideHeatmap:
         await _togglePersonalRideHeatmap();
       case _MapAction.speedLimitDisplay:
@@ -6476,7 +5950,6 @@ class _RideMapScreenState extends State<RideMapScreen> {
 enum _MapAction {
   importGpx,
   loadDemo,
-  discoveryLayers,
   personalRideHeatmap,
   speedLimitDisplay,
   maneuverList,

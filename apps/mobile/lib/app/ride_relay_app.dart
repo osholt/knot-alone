@@ -10,7 +10,6 @@ import '../controllers/ride_controller.dart';
 import '../controllers/ride_invitation_link_controller.dart';
 import '../controllers/route_progress_display_controller.dart';
 import '../controllers/rider_profile_controller.dart';
-import '../controllers/road_rating_controller.dart';
 import '../controllers/shared_route_controller.dart';
 import '../controllers/ride_diagnostics_controller.dart';
 import '../controllers/speed_limit_display_controller.dart';
@@ -39,7 +38,6 @@ class RideRelayApp extends StatelessWidget {
     required this.completedRides,
     this.rideInvitationLinks,
     this.planDirectory,
-    this.roadRatings,
     this.testControl,
     this.testControlRegistry,
     this.spokenGuidance,
@@ -63,7 +61,6 @@ class RideRelayApp extends StatelessWidget {
   final PlanDirectory? planDirectory;
 
   /// Drives the end-of-ride catalogued-road rating card (#159).
-  final RoadRatingController? roadRatings;
 
   /// Both null unless this build carries the test-control define. The settings
   /// row and the registry hand-off are the only two places they are used.
@@ -160,7 +157,6 @@ class RideRelayApp extends StatelessWidget {
             speedLimitDisplay: speedLimitDisplay,
             routeProgressDisplay: routeProgressDisplay,
             completedRideStore: completedRides,
-            roadRatings: roadRatings,
             testControl: testControl,
             testControlRegistry: testControlRegistry,
             spokenGuidance: spokenGuidance,
