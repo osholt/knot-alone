@@ -1,0 +1,42 @@
+# Project-local tooling
+.tools/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+
+# Flutter and Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+build/
+coverage/
+
+# IDEs and operating systems
+.DS_Store
+.idea/
+*.iml
+.vscode/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+key.properties
+*.mobileprovision
+*.p12
+*.cer
+
+# Local test output
+test-results/
+
+# Regenerable marketing-video production inputs
+marketing/video/*-raw.mp4
+marketing/video/segment-*.mp4
+marketing/video/overlay-*.png
+marketing/video/end-card.png

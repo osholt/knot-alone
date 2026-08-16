@@ -1,0 +1,6 @@
+services:
+  caddy:
+    environment:
+      RIDE_RELAY_PREPRODUCTION_DOMAIN: ${RIDE_RELAY_PREPRODUCTION_DOMAIN:?set RIDE_RELAY_PREPRODUCTION_DOMAIN}
+    volumes:
+      - ./Caddyfile.preproduction:/etc/caddy/Caddyfile:ro

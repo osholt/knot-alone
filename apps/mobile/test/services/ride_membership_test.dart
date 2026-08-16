@@ -1,0 +1,281 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:ride_relay/domain/ride_event.dart';
+import 'package:ride_relay/domain/ride_role.dart';
+import 'package:ride_relay/domain/rider_color.dart';
+import 'package:ride_relay/features/map/motorcycle_icon.dart';
+import 'package:ride_relay/services/ride_event_authenticator.dart';
+import 'package:ride_relay/services/ride_membership.dart';
+
+void main() {
+  const secret = '0123456789abcdef0123456789abcdef';
+  final joinedAt = DateTime.utc(2026, 7, 22, 10);
+
+  test(
+    'membership transitions from joined to active, inactive and expired',
+    () {
+      final events = [
+        _event(
+          id: 'join-rider',
+          deviceId: 'rider-a',
+          type: RideEventType.riderJoined,
+          createdAt: joinedAt,
+          payload: const {
+            'displayName': 'Alex',
+            'role': 'rider',
+            'motorcycleStyle': 'adventure',
+            'riderColor': 'blue',
+          },
+          secret: secret,
+        ),
+        _event(
+          id: 'location-rider',
+          deviceId: 'rider-a',
+          type: RideEventType.riderLocationUpdated,
+          createdAt: joinedAt.add(const Duration(minutes: 1)),
+          payload: const {'location': {}},
+          secret: secret,
+        ),
+      ];
+
+      RideParticipant riderAt(DateTime now) => const RideMembershipReducer()
+          .fromEvents(
+            rideId: 'ride-a',
+            inviteSecret: secret,
+            events: events,
+            now: now,
+            localRiderId: 'leader',
+            localDisplayName: 'Lead',
+            localRole: RideRole.lead,
+            localJoinedAt: joinedAt,
+            localMotorcycleStyle: motorcycleIconStyleDefault,
+            localRiderColor: riderColorDefault,
+            rideStartedAt: joinedAt,
+            transportByEventId: const {
+              'location-rider': {RideTransportEvidence.internetRelay},
+            },
+          )
+          .singleWhere((participant) => participant.riderId == 'rider-a');
+
+      expect(
+        riderAt(joinedAt.add(const Duration(minutes: 2))).state,
+        RideMembershipState.active,
+      );
+      expect(
+        riderAt(joinedAt.add(const Duration(minutes: 4))).state,
+        RideMembershipState.inactive,
+      );
+      final expired = riderAt(joinedAt.add(const Duration(hours: 13)));
+      expect(expired.state, RideMembershipState.expired);
+      expect(expired.transportLabel, 'Internet relay');
+      expect(expired.isIncludedInLiveCount, isFalse);
+    },
+  );
+
+  test('leave and later rejoin converge by canonical rider identity', () {
+    final events = [
+      _event(
+        id: 'join-first',
+        deviceId: 'same-rider',
+        type: RideEventType.riderJoined,
+        createdAt: joinedAt,
+        payload: const {'displayName': 'Alex', 'role': 'rider'},
+        secret: secret,
+      ),
+      _event(
+        id: 'left',
+        deviceId: 'same-rider',
+        type: RideEventType.riderLeft,
+        createdAt: joinedAt.add(const Duration(minutes: 1)),
+        payload: const {'riderId': 'same-rider'},
+        secret: secret,
+      ),
+      _event(
+        id: 'join-again',
+        deviceId: 'same-rider',
+        type: RideEventType.riderJoined,
+        createdAt: joinedAt.add(const Duration(minutes: 2)),
+        payload: const {'displayName': 'Alex', 'role': 'rider'},
+        secret: secret,
+      ),
+    ];
+
+    final participants = const RideMembershipReducer().fromEvents(
+      rideId: 'ride-a',
+      inviteSecret: secret,
+      events: events.reversed,
+      now: joinedAt.add(const Duration(minutes: 2, seconds: 30)),
+      localRiderId: 'leader',
+      localDisplayName: 'Lead',
+      localRole: RideRole.lead,
+      localJoinedAt: joinedAt,
+      localMotorcycleStyle: motorcycleIconStyleDefault,
+      localRiderColor: riderColorDefault,
+      rideStartedAt: joinedAt,
+    );
+
+    expect(
+      participants.where((participant) => participant.riderId == 'same-rider'),
+      hasLength(1),
+    );
+    final rider = participants.singleWhere(
+      (participant) => participant.riderId == 'same-rider',
+    );
+    expect(rider.state, RideMembershipState.joined);
+    // One row, and the history is on it rather than lost or duplicated (#144).
+    expect(rider.leftAt, isNull);
+    expect(rider.hasLeft, isFalse);
+    expect(
+      rider.rejoinedAfterLeavingAt,
+      joinedAt.add(const Duration(minutes: 1)),
+    );
+    expect(rider.rejoinLabel, 'Rejoined after leaving at 10:01');
+    expect(rider.isIncludedInLiveCount, isTrue);
+  });
+
+  test('only one rider holds lead, whichever order the claims arrive', () {
+    // #284: "still 2 people can be leader at the same time, which allows either of
+    // them to end the ride for all". #241 restricted ending a ride for everyone to
+    // the leader, and endRide guards on it - but the guard asks only whether this
+    // phone believes it leads, so two believers both pass.
+    //
+    // The rule is latest claim wins, ties broken by rider id. The tiebreak is the
+    // part that matters here: ordering by arrival would let two phones that were
+    // offline together reach opposite conclusions, which relocates the bug rather
+    // than removing it.
+    final earlier = _event(
+      id: 'join-first-leader',
+      deviceId: 'rider-a',
+      type: RideEventType.riderJoined,
+      createdAt: joinedAt,
+      payload: const {
+        'displayName': 'Alex',
+        'role': 'lead',
+        'motorcycleStyle': 'adventure',
+        'riderColor': 'blue',
+      },
+      secret: secret,
+    );
+    final later = _event(
+      id: 'join-second-leader',
+      deviceId: 'rider-b',
+      type: RideEventType.riderJoined,
+      createdAt: joinedAt.add(const Duration(minutes: 5)),
+      payload: const {
+        'displayName': 'Blake',
+        'role': 'lead',
+        'motorcycleStyle': 'adventure',
+        'riderColor': 'green',
+      },
+      secret: secret,
+    );
+
+    List<RideParticipant> reduce(List<RideEvent> events) =>
+        const RideMembershipReducer().fromEvents(
+          rideId: 'ride-a',
+          inviteSecret: secret,
+          events: events,
+          now: joinedAt.add(const Duration(minutes: 6)),
+          localRiderId: 'observer',
+          localDisplayName: 'Observer',
+          localRole: RideRole.rider,
+          localJoinedAt: joinedAt,
+          localMotorcycleStyle: motorcycleIconStyleDefault,
+          localRiderColor: riderColorDefault,
+          rideStartedAt: joinedAt,
+        );
+
+    for (final ordering in [
+      [earlier, later],
+      [later, earlier],
+    ]) {
+      final participants = reduce(ordering);
+      final leaders = participants
+          .where((participant) => participant.role == RideRole.lead)
+          .toList();
+
+      expect(
+        leaders,
+        hasLength(1),
+        reason: 'two riders may not hold lead at once',
+      );
+      expect(
+        leaders.single.riderId,
+        'rider-b',
+        reason: 'the later claim wins, whichever order the events arrived in',
+      );
+      // Demoted, not removed: they are still in the ride, they just do not lead
+      // it, and saying so is what stops their phone offering leader-only actions.
+      final demoted = participants.firstWhere((p) => p.riderId == 'rider-a');
+      expect(demoted.role, RideRole.rider);
+      expect(demoted.hasLeft, isFalse);
+    }
+  });
+
+  test('a forged departure cannot remove a participant', () {
+    final joined = _event(
+      id: 'join',
+      deviceId: 'rider-a',
+      type: RideEventType.riderJoined,
+      createdAt: joinedAt,
+      payload: const {'displayName': 'Alex', 'role': 'rider'},
+      secret: secret,
+    );
+    final forged = RideEvent(
+      id: 'forged-left',
+      rideId: 'ride-a',
+      deviceId: 'rider-a',
+      type: RideEventType.riderLeft,
+      priority: EventPriority.important,
+      createdAt: joinedAt.add(const Duration(minutes: 1)),
+      payload: const {'riderId': 'rider-a'},
+      signature: '0' * 64,
+    );
+
+    final rider = const RideMembershipReducer()
+        .fromEvents(
+          rideId: 'ride-a',
+          inviteSecret: secret,
+          events: [joined, forged],
+          now: joinedAt.add(const Duration(minutes: 1)),
+          localRiderId: 'leader',
+          localDisplayName: 'Lead',
+          localRole: RideRole.lead,
+          localJoinedAt: joinedAt,
+          localMotorcycleStyle: motorcycleIconStyleDefault,
+          localRiderColor: riderColorDefault,
+        )
+        .singleWhere((participant) => participant.riderId == 'rider-a');
+
+    expect(rider.state, RideMembershipState.joined);
+  });
+}
+
+RideEvent _event({
+  required String id,
+  required String deviceId,
+  required RideEventType type,
+  required DateTime createdAt,
+  required Map<String, Object?> payload,
+  required String secret,
+}) {
+  final unsigned = RideEvent(
+    id: id,
+    rideId: 'ride-a',
+    deviceId: deviceId,
+    type: type,
+    priority: EventPriority.routine,
+    createdAt: createdAt,
+    payload: payload,
+    signature: '',
+  );
+  return RideEvent(
+    id: id,
+    rideId: 'ride-a',
+    deviceId: deviceId,
+    type: type,
+    priority: EventPriority.routine,
+    createdAt: createdAt,
+    payload: payload,
+    signature: RideEventAuthenticator.sign(unsigned, secret),
+  );
+}

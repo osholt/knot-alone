@@ -1,0 +1,498 @@
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from typing import Any, Literal
+
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
+
+
+class SyncRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    protocolVersion: Literal[1]
+    deviceId: str = Field(min_length=1, max_length=128)
+    cursor: str | None = Field(default=None, max_length=512)
+    events: list[dict[str, Any]]
+
+
+class SyncResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    protocolVersion: Literal[1] = 1
+    cursor: str
+    acceptedEventIds: list[str]
+    events: list[dict[str, Any]]
+
+
+class PresencePoint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+
+
+class PresenceLocationSample(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    position: PresencePoint
+    recordedAt: datetime
+    accuracyMeters: float = Field(ge=0, le=500)
+    speedMetersPerSecond: float | None = Field(default=None, ge=0, le=100)
+    headingDegrees: float | None = Field(default=None, ge=0, lt=360)
+
+
+class PresencePositionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    displayName: str = Field(min_length=1, max_length=80)
+    role: Literal["lead", "rider", "tailEndCharlie", "marker"]
+    motorcycleStyle: str = Field(min_length=1, max_length=40)
+    riderColor: str = Field(min_length=1, max_length=40)
+    sample: PresenceLocationSample
+
+
+class PresenceSyncRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    protocolVersion: Literal[1]
+    deviceId: str = Field(min_length=1, max_length=128)
+    position: PresencePositionRequest | None = None
+    clear: bool = False
+
+    @model_validator(mode="after")
+    def clear_cannot_publish(self) -> PresenceSyncRequest:
+        if self.clear and self.position is not None:
+            raise ValueError("A presence request cannot publish and clear together")
+        return self
+
+
+class PresencePositionResponse(PresencePositionRequest):
+    riderId: str
+    receivedAt: datetime
+    expiresAt: datetime
+
+    # False when the publishing build only advertised the legacy pre-start
+    # capability, so a peer can name the limitation instead of showing an
+    # unexplained gap once the ride starts.
+    livePresence: bool = False
+    clientProtocol: int = Field(default=1, ge=1, le=1000)
+
+
+class PresenceMemberResponse(BaseModel):
+    """One rider derived from durable membership events, with no cursor.
+
+    This is what lets a join reach the other devices even when their bulk event
+    batch is wedged or backed off.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    riderId: str = Field(min_length=1, max_length=128)
+    displayName: str = Field(min_length=1, max_length=80)
+    role: str = Field(min_length=1, max_length=40)
+    joinedAt: datetime
+    left: bool = False
+
+    # When the departure was recorded, so a caller can say *when* a rider left
+    # and can order that departure against a later rejoin without waiting for
+    # the bulk event batch (issue #144). Absent unless ``left`` is true;
+    # additive, so an older client simply ignores it.
+    leftAt: datetime | None = None
+
+
+class PresenceSyncResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    protocolVersion: Literal[1] = 1
+    ttlSeconds: int
+    positions: list[PresencePositionResponse]
+    phase: Literal["open", "started", "ended"] = "open"
+    members: list[PresenceMemberResponse] = Field(default_factory=list)
+
+    # The relay's own current time, alongside the arrival stamps it puts on every
+    # position. Two phones do not share a clock, so a peer's position can only be
+    # aged honestly against the clock that stamped its arrival. Additive: an older
+    # client ignores it and keeps using its own clock.
+    serverTime: datetime | None = None
+
+
+class PushPreferences(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    safety: bool = True
+    status: bool = True
+    administrative: bool = True
+
+
+class PushRegistrationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    platform: Literal["ios", "android"]
+    provider: Literal["apns", "fcm"]
+    token: str = Field(min_length=16, max_length=4096)
+    role: Literal["lead", "rider", "tailEndCharlie", "marker"]
+    preferences: PushPreferences = Field(default_factory=PushPreferences)
+
+    @model_validator(mode="after")
+    def provider_matches_platform(self) -> PushRegistrationRequest:
+        if self.platform == "ios" and self.provider != "apns":
+            raise ValueError("iOS registrations must use APNs")
+        if self.platform == "android" and self.provider != "fcm":
+            raise ValueError("Android registrations must use FCM")
+        return self
+
+
+class PushRegistrationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    installationId: str
+    platform: Literal["ios", "android"]
+    provider: Literal["apns", "fcm"]
+    role: Literal["lead", "rider", "tailEndCharlie", "marker"]
+    preferences: PushPreferences
+    registeredAt: datetime
+    updatedAt: datetime
+
+
+class RegisterJoinCodeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    rideId: str = Field(min_length=1, max_length=128)
+    inviteSecret: str = Field(min_length=16, max_length=512)
+    resolveToken: str = Field(min_length=16, max_length=128)
+
+
+class JoinCodeResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    rideId: str
+    rideCode: str
+    inviteSecret: str
+    resolveToken: str
+
+
+class CompatibilityResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    serverBuildCommit: str
+    serverProtocol: int
+    minimumClientProtocol: int
+    maximumClientProtocol: int
+    capabilities: list[str]
+    requiredCapabilities: list[str]
+    cacheSeconds: int
+    updateUrls: dict[str, str]
+
+
+class TrafficRoutePoint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    latitude: float = Field(ge=49.0, le=61.5)
+    longitude: float = Field(ge=-11.5, le=3.0)
+
+
+class TrafficAvoidArea(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    west: float = Field(ge=-11.5, le=3.0)
+    south: float = Field(ge=49.0, le=61.5)
+    east: float = Field(ge=-11.5, le=3.0)
+    north: float = Field(ge=49.0, le=61.5)
+
+    @model_validator(mode="after")
+    def bounds_are_ordered(self) -> TrafficAvoidArea:
+        if self.west >= self.east or self.south >= self.north:
+            raise ValueError("Avoid-area bounds must be ordered")
+        return self
+
+
+class TrafficRerouteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path: list[TrafficRoutePoint] = Field(min_length=2, max_length=1000)
+    avoidAreas: list[TrafficAvoidArea] = Field(min_length=1, max_length=10)
+    incidentIds: list[str] = Field(min_length=1, max_length=10)
+
+    @field_validator("incidentIds")
+    @classmethod
+    def incident_ids_are_bounded(cls, values: list[str]) -> list[str]:
+        cleaned = [value.strip() for value in values]
+        if any(not value or len(value) > 200 for value in cleaned):
+            raise ValueError("Incident IDs must contain 1 to 200 characters")
+        if len(set(cleaned)) != len(cleaned):
+            raise ValueError("Incident IDs must be unique")
+        return cleaned
+
+
+DiscoveryCategory = Literal[
+    "twisty_highlight",
+    "mountain_pass",
+    "good_biking_road",
+    "biker_stop",
+]
+
+
+class DiscoveryGeometry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["Point", "LineString"]
+    coordinates: Any
+
+    @model_validator(mode="after")
+    def validate_coordinates(self) -> DiscoveryGeometry:
+        points = [self.coordinates] if self.type == "Point" else self.coordinates
+        if not isinstance(points, list) or not points or len(points) > 200:
+            raise ValueError("Geometry must contain between 1 and 200 points")
+        if self.type == "LineString" and len(points) < 2:
+            raise ValueError("LineString geometry requires at least two points")
+        for point in points:
+            if (
+                not isinstance(point, list)
+                or len(point) != 2
+                or not all(isinstance(value, int | float) for value in point)
+                or not -180 <= point[0] <= 180
+                or not -90 <= point[1] <= 90
+            ):
+                raise ValueError("Invalid GeoJSON coordinate")
+        return self
+
+
+class DiscoverySuggestionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    clientSubmissionId: str = Field(min_length=1, max_length=128)
+    category: DiscoveryCategory
+    action: Literal["add", "correct", "remove"] = "add"
+    targetFeatureId: str | None = Field(default=None, min_length=1, max_length=128)
+    name: str = Field(min_length=1, max_length=120)
+    reason: str = Field(min_length=5, max_length=500)
+    evidenceUrl: AnyHttpUrl | None = None
+    geometry: DiscoveryGeometry
+    createdAt: datetime
+
+    @model_validator(mode="after")
+    def require_target_for_revision(self) -> DiscoverySuggestionRequest:
+        if self.action != "add" and not self.targetFeatureId:
+            raise ValueError("Corrections and removals require a target feature")
+        return self
+
+
+class DiscoveryModerationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["approve", "reject", "request_changes", "supersede"]
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class RoadRatingRequest(BaseModel):
+    """One anonymous rider verdict on a catalogued road (#159).
+
+    This is the whole of it. ``extra="forbid"`` is load-bearing, not tidiness: it
+    means the relay structurally cannot accept a rider ID, device ID, ride ID,
+    installation ID, position or client timestamp, however a future client is
+    written. A build that tried to attach one gets HTTP 400 instead of quietly
+    handing the relay something it could attribute.
+
+    There is no ``createdAt`` for the same reason. A client-supplied time of
+    rating is a correlation handle against the ride journal, so the relay records
+    only the day it received the answer.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    featureId: str = Field(min_length=1, max_length=128)
+
+    # The stable re-match key across OSM extracts. Optional because the
+    # catalogue's own IDs are content hashes that move with each extract, and an
+    # older published asset may not carry one.
+    sourceFeatureId: str | None = Field(default=None, min_length=1, max_length=128)
+    category: DiscoveryCategory
+    verdict: Literal["worth_including", "not_worth_including"]
+    catalogueVersion: str = Field(
+        min_length=1,
+        max_length=64,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+    )
+
+
+class CreatePlanRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = Field(default=None, max_length=200)
+    gpx: str = Field(min_length=1)
+
+
+class CreatePlanResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: str
+    expiresAt: str
+
+
+class GetPlanResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: str
+    name: str | None
+    gpx: str
+    createdAt: str
+    expiresAt: str
+
+
+class CreateObserverGrantRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: str = Field(min_length=1, max_length=80)
+    durationMinutes: int = Field(ge=30, le=24 * 60)
+    consentConfirmed: Literal[True]
+    scope: Literal["rider", "group"] = "rider"
+    groupDisclosureConfirmed: Literal[True] | None = None
+
+    @model_validator(mode="after")
+    def group_scope_requires_disclosure(self) -> CreateObserverGrantRequest:
+        if self.scope == "group" and self.groupDisclosureConfirmed is not True:
+            raise ValueError("Group observer access requires group disclosure")
+        if self.scope == "rider" and self.groupDisclosureConfirmed is not None:
+            raise ValueError("Personal observer access has no group disclosure")
+        return self
+
+
+class ObserverGrantResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    label: str
+    scope: Literal["rider", "group"] = "rider"
+    createdAt: datetime
+    expiresAt: datetime
+    revokedAt: datetime | None
+
+
+class CreateObserverGrantResponse(ObserverGrantResponse):
+    managementToken: str
+    publisherToken: str
+    observerToken: str
+
+
+class ObserverPosition(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    accuracyMeters: float = Field(ge=0, le=500)
+    recordedAt: datetime
+
+    @field_validator("recordedAt")
+    @classmethod
+    def recorded_at_requires_timezone(cls, value: datetime) -> datetime:
+        return _aware_utc(value)
+
+
+class PublishObserverAssistance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["assistance", "emergencyStop"]
+    reportedAt: datetime
+
+    @field_validator("reportedAt")
+    @classmethod
+    def reported_at_requires_timezone(cls, value: datetime) -> datetime:
+        return _aware_utc(value)
+
+
+class PublishObserverGroupParticipant(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    displayName: str = Field(min_length=1, max_length=80)
+    role: Literal["lead", "tailEndCharlie", "marker", "rider"]
+    color: str = Field(pattern=r"^#[0-9A-Fa-f]{6}$")
+    position: ObserverPosition | None
+
+
+class ObserverRoutePoint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+
+
+class ObserverRoute(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=80)
+    points: list[ObserverRoutePoint] = Field(min_length=2, max_length=500)
+
+
+class PublishObserverSnapshotRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scope: Literal["rider", "group"] = "rider"
+    subjectName: str = Field(min_length=1, max_length=80)
+    snapshotGeneratedAt: datetime
+    rideStatus: Literal["waiting", "active", "paused", "ended"]
+    statusUpdatedAt: datetime
+    position: ObserverPosition | None
+    participants: list[PublishObserverGroupParticipant] = Field(
+        default_factory=list,
+        max_length=50,
+    )
+    route: ObserverRoute | None = None
+    assistanceUpdatedAt: datetime
+    assistance: PublishObserverAssistance | None
+
+    @field_validator(
+        "snapshotGeneratedAt",
+        "statusUpdatedAt",
+        "assistanceUpdatedAt",
+    )
+    @classmethod
+    def timestamps_require_timezone(cls, value: datetime) -> datetime:
+        return _aware_utc(value)
+
+    @model_validator(mode="after")
+    def scope_matches_payload(self) -> PublishObserverSnapshotRequest:
+        if self.scope == "rider":
+            if self.participants or self.route is not None:
+                raise ValueError("Personal observer snapshots cannot contain group data")
+        elif self.position is not None or self.assistance is not None:
+            raise ValueError("Group observer snapshots cannot contain personal-only state")
+        return self
+
+
+class ObserverAssistance(PublishObserverAssistance):
+    label: str
+
+
+class ObserverGroupParticipant(PublishObserverGroupParticipant):
+    freshness: Literal["unavailable", "fresh", "delayed", "offline"]
+
+
+class ObserverSnapshotResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    protocolVersion: Literal[1, 2] = 1
+    scope: Literal["rider", "group"] = "rider"
+    label: str
+    subjectName: str | None
+    rideStatus: Literal["waiting", "active", "paused", "ended"]
+    statusUpdatedAt: datetime | None
+    freshness: Literal["unavailable", "fresh", "delayed", "offline"]
+    serverTime: datetime
+    expiresAt: datetime
+    position: ObserverPosition | None
+    participants: list[ObserverGroupParticipant] = Field(default_factory=list)
+    route: ObserverRoute | None = None
+    assistance: ObserverAssistance | None
+
+
+def _aware_utc(value: datetime) -> datetime:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError("Timestamp timezone is required")
+    return value.astimezone(UTC)

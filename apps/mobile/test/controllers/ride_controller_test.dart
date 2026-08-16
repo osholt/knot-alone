@@ -1,0 +1,1720 @@
+import 'dart:math';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:ride_relay/controllers/ride_controller.dart';
+import 'package:ride_relay/data/in_memory_event_store.dart';
+import 'package:ride_relay/data/in_memory_session_store.dart';
+import 'package:ride_relay/domain/quick_message.dart';
+import 'package:ride_relay/domain/completed_ride_store.dart';
+import 'package:ride_relay/domain/marker_assistance.dart';
+import 'package:ride_relay/domain/geo_point.dart';
+import 'package:ride_relay/domain/imported_route.dart' as route_domain;
+import 'package:ride_relay/domain/ride_event.dart';
+import 'package:ride_relay/domain/ride_coordination_mode.dart';
+import 'package:ride_relay/domain/ride_role.dart';
+import 'package:ride_relay/domain/ride_join_payload.dart';
+import 'package:ride_relay/domain/ride_session.dart';
+import 'package:ride_relay/internet/internet_relay_client.dart';
+import 'package:ride_relay/relay/live_presence.dart';
+import 'package:ride_relay/domain/rider_location.dart';
+import 'package:ride_relay/services/nearby_bridge.dart';
+import 'package:ride_relay/services/received_quick_message.dart';
+import 'package:ride_relay/services/ride_event_authenticator.dart';
+import 'package:ride_relay/services/ride_lifecycle.dart';
+import 'package:ride_relay/services/rider_contact_share.dart';
+import 'package:ride_relay/services/situation_event_factory.dart';
+
+void main() {
+  late InMemoryEventStore eventStore;
+  late InMemorySessionStore sessionStore;
+  late RideController controller;
+  late _InMemoryRideCodeDirectory rideCodes;
+  late InMemoryCompletedRideStore completedRideStore;
+  late int id;
+
+  setUp(() async {
+    eventStore = InMemoryEventStore();
+    sessionStore = InMemorySessionStore();
+    rideCodes = _InMemoryRideCodeDirectory();
+    completedRideStore = InMemoryCompletedRideStore();
+    id = 0;
+    controller = RideController(
+      eventStore,
+      sessionStore,
+      const _FakeNearbyBridge(),
+      clock: () => DateTime.utc(2026, 7, 16, 12),
+      idFactory: () => 'id-${(id++).toString().padLeft(3, '0')}',
+      random: Random(42),
+      rideCodeDirectory: rideCodes,
+      completedRideStore: completedRideStore,
+    );
+    await controller.initialize();
+  });
+
+  tearDown(() => controller.dispose());
+
+  test('new ride is persisted with lead role and a signed event', () async {
+    await controller.createRide('Oliver');
+
+    expect(controller.session?.role, RideRole.lead);
+    expect(controller.session?.displayName, 'Oliver');
+    expect(controller.session?.rideCode, matches(RegExp(r'^\d{6}$')));
+    expect(controller.events, hasLength(1));
+    expect(controller.events.single.type, RideEventType.rideCreated);
+    expect(controller.events.single.signature, hasLength(64));
+    expect(controller.rideStarted, isFalse);
+
+    final restored = await sessionStore.load();
+    expect(restored?.rideId, controller.session?.rideId);
+  });
+
+  test('ride coordination mode is persisted and published', () async {
+    await controller.createRide(
+      'Oliver',
+      coordinationMode: RideCoordinationMode.keepTogether,
+    );
+
+    expect(
+      controller.session?.coordinationMode,
+      RideCoordinationMode.keepTogether,
+    );
+    expect(controller.coordinationMode, RideCoordinationMode.keepTogether);
+    expect(
+      controller.events.single.payload['coordinationMode'],
+      RideCoordinationMode.keepTogether.name,
+    );
+  });
+
+  test(
+    'a long ride does not re-project membership for coordinate-only updates',
+    () async {
+      await controller.createRide('Oliver');
+      await controller.startRide();
+      final session = controller.session!;
+      final startedAt = controller.rideStartedAt!;
+
+      // A realistic two-hour journal. Before the cache, every foreground GPS
+      // fix made RideMembershipReducer authenticate, sort and walk all 12,000
+      // positions again.
+      for (var index = 0; index < 12000; index += 1) {
+        final recordedAt = startedAt.add(Duration(milliseconds: index * 600));
+        final location = RiderLocation(
+          riderId: session.localRiderId,
+          displayName: session.displayName,
+          role: session.role,
+          sample: LocationSample(
+            position: GeoPoint(
+              latitude: 51.46 + index * 0.00001,
+              longitude: -2.5,
+            ),
+            recordedAt: recordedAt,
+            accuracyMeters: 5,
+          ),
+          receivedAt: recordedAt,
+        );
+        final event = _signedEvent(
+          session: session,
+          id: 'long-location-$index',
+          type: RideEventType.riderLocationUpdated,
+          createdAt: recordedAt,
+          payload: {'location': location.toJson()},
+        );
+        expect(controller.ingestStoredEvent(event), isTrue);
+      }
+
+      LiveRiderPresence presenceAt(int index) {
+        final recordedAt = startedAt.add(Duration(seconds: index));
+        return LiveRiderPresence(
+          riderId: session.localRiderId,
+          displayName: session.displayName,
+          role: session.role,
+          freshness: PresenceFreshness.live,
+          sources: const {LivePresenceSource.localDevice},
+          isLocal: true,
+          knownSince: session.joinedAt,
+          location: RiderLocation(
+            riderId: session.localRiderId,
+            displayName: session.displayName,
+            role: session.role,
+            sample: LocationSample(
+              position: GeoPoint(
+                latitude: 51.5 + index * 0.00001,
+                longitude: -2.5,
+              ),
+              recordedAt: recordedAt,
+              accuracyMeters: 5,
+            ),
+            receivedAt: recordedAt,
+          ),
+          age: Duration.zero,
+          contactAt: recordedAt,
+        );
+      }
+
+      controller.observeLivePresence([presenceAt(0)]);
+      expect(controller.liveView.renderedPositions, hasLength(1));
+      final projections = controller.debugMembershipProjectionCount;
+
+      for (var index = 1; index <= 1000; index += 1) {
+        controller.observeLivePresence([presenceAt(index)]);
+        expect(
+          controller.liveView.renderedPositions.single.sample.position.latitude,
+          closeTo(51.5 + index * 0.00001, 1e-9),
+        );
+      }
+
+      expect(controller.debugMembershipProjectionCount, projections);
+      controller.refreshMembershipFreshness();
+      controller.liveView;
+      expect(controller.debugMembershipProjectionCount, projections + 1);
+    },
+  );
+
+  test('leader start is signed, durable, idempotent and restored', () async {
+    await controller.createRide('Oliver');
+
+    await controller.startRide();
+    await controller.startRide();
+
+    final startEvents = controller.events
+        .where((event) => event.type == RideEventType.rideStarted)
+        .toList();
+    expect(startEvents, hasLength(1));
+    expect(
+      startEvents.single.payload['leaderRiderId'],
+      controller.session!.localRiderId,
+    );
+    expect(startEvents.single.signature, hasLength(64));
+    expect(controller.rideStartedAt, DateTime.utc(2026, 7, 16, 12));
+
+    final restored = RideController(
+      eventStore,
+      sessionStore,
+      const _FakeNearbyBridge(),
+      clock: () => DateTime.utc(2026, 7, 16, 13),
+      idFactory: () => 'restored-start-id',
+      random: Random(9),
+      rideCodeDirectory: rideCodes,
+    );
+    await restored.initialize();
+    expect(restored.rideStarted, isTrue);
+    expect(restored.rideStartedAt, controller.rideStartedAt);
+    restored.dispose();
+  });
+
+  test('leader route publish and clear are signed durable revisions', () async {
+    await controller.createRide('Oliver');
+    final route = route_domain.ImportedRoute(
+      id: 'route-a',
+      name: 'Coast route',
+      importedAt: DateTime.utc(2026, 7, 16),
+      sourceFileName: 'coast.gpx',
+      paths: const [
+        route_domain.RoutePath(
+          kind: route_domain.RoutePathKind.track,
+          points: [
+            route_domain.GeoPoint(latitude: 51.4, longitude: -2.6),
+            route_domain.GeoPoint(latitude: 51.5, longitude: -2.5),
+          ],
+        ),
+      ],
+      waypoints: const [],
+    );
+
+    await controller.publishRoute(route);
+
+    expect(controller.authoritativeRoute?.name, 'Coast route');
+    expect(controller.authoritativeRouteState.revisionNumber, 1);
+    expect(controller.events.last.type, RideEventType.routeRevisionPublished);
+    expect(controller.events.last.signature, hasLength(64));
+
+    await controller.clearRoute();
+
+    expect(controller.authoritativeRouteState.hasDecision, isTrue);
+    expect(controller.authoritativeRoute, isNull);
+    expect(controller.authoritativeRouteState.revisionNumber, 2);
+    expect(controller.events.last.type, RideEventType.routeCleared);
+  });
+
+  test('a non-leader cannot publish or clear the group route', () async {
+    await controller.createRide('Oliver');
+    await controller.setRole(RideRole.rider);
+    final route = route_domain.ImportedRoute(
+      id: 'route-a',
+      name: 'Wrong route',
+      importedAt: DateTime.utc(2026, 7, 16),
+      sourceFileName: 'wrong.gpx',
+      paths: const [
+        route_domain.RoutePath(
+          kind: route_domain.RoutePathKind.track,
+          points: [route_domain.GeoPoint(latitude: 51.4, longitude: -2.6)],
+        ),
+      ],
+      waypoints: const [],
+    );
+
+    await controller.publishRoute(route);
+    expect(controller.authoritativeRoute, isNull);
+    expect(controller.errorMessage, contains('Only the ride leader'));
+
+    controller.clearError();
+    await controller.clearRoute();
+    expect(controller.authoritativeRouteState.hasDecision, isFalse);
+    expect(controller.errorMessage, contains('Only the ride leader'));
+  });
+
+  test('a non-leader cannot start the ride', () async {
+    await controller.createRide('Oliver');
+    await controller.setRole(RideRole.rider);
+
+    await controller.startRide();
+
+    expect(controller.rideStarted, isFalse);
+    expect(controller.errorMessage, contains('Only the ride leader'));
+    expect(
+      controller.events.where(
+        (event) => event.type == RideEventType.rideStarted,
+      ),
+      isEmpty,
+    );
+  });
+
+  test(
+    'offline leader handover and duplicate starts converge deterministically',
+    () async {
+      await controller.createRide('Oliver');
+      final session = controller.session!;
+      final followerSession = RideSession(
+        rideId: session.rideId,
+        rideCode: session.rideCode,
+        inviteSecret: session.inviteSecret,
+        joinToken: session.joinToken,
+        localRiderId: 'follower',
+        displayName: 'Alex',
+        role: RideRole.rider,
+        joinedAt: DateTime.utc(2026, 7, 16, 12, 1),
+      );
+      await eventStore.append(
+        _signedEvent(
+          session: followerSession,
+          id: 'join-follower',
+          type: RideEventType.riderJoined,
+          createdAt: DateTime.utc(2026, 7, 16, 12, 1),
+          payload: const {'displayName': 'Alex', 'role': 'rider'},
+        ),
+      );
+      await eventStore.append(
+        _signedEvent(
+          session: followerSession,
+          id: 'promote-follower',
+          type: RideEventType.roleChanged,
+          createdAt: DateTime.utc(2026, 7, 16, 12, 2),
+          payload: const {'role': 'lead'},
+        ),
+      );
+      for (final id in ['start-z', 'start-a']) {
+        await eventStore.append(
+          _signedEvent(
+            session: followerSession,
+            id: id,
+            type: RideEventType.rideStarted,
+            createdAt: DateTime.utc(2026, 7, 16, 12, 3),
+            payload: const {
+              'leaderRiderId': 'follower',
+              'leaderDisplayName': 'Alex',
+            },
+          ),
+        );
+      }
+
+      await controller.reloadEvents();
+
+      expect(controller.rideStarted, isTrue);
+      expect(controller.rideStartedAt, DateTime.utc(2026, 7, 16, 12, 3));
+      expect(controller.participants, hasLength(2));
+      expect(
+        controller.participants
+            .singleWhere((participant) => participant.riderId == 'follower')
+            .role,
+        RideRole.lead,
+      );
+    },
+  );
+
+  test('simulation ride is explicitly tagged and restartable', () async {
+    await controller.createSimulationRide(riderCount: 30);
+
+    final firstRideId = controller.session!.rideId;
+    expect(controller.session?.isSimulation, isTrue);
+    expect(controller.session?.simulationRiderCount, 30);
+    expect(controller.session?.displayName, 'Demo Lead');
+    expect(controller.events.first.payload['simulation'], isTrue);
+    expect(controller.events, hasLength(1));
+    expect(controller.rideStarted, isFalse);
+
+    await controller.startRide();
+
+    expect(controller.events.last.type, RideEventType.rideStarted);
+    expect(controller.rideStarted, isTrue);
+
+    await controller.restartSimulationRide(riderCount: 12);
+
+    expect(controller.session?.isSimulation, isTrue);
+    expect(controller.session?.simulationRiderCount, 12);
+    expect(controller.session?.rideId, isNot(firstRideId));
+    expect(await eventStore.eventsForRide(firstRideId), isEmpty);
+    expect(controller.rideStarted, isFalse);
+  });
+
+  test('invalid join code is rejected without creating a session', () async {
+    await controller.joinRide('123', 'Oliver');
+
+    expect(controller.hasActiveRide, isFalse);
+    expect(controller.errorMessage, contains('six-digit'));
+  });
+
+  test('six-digit ride code resolves the leader ride credentials', () async {
+    await controller.createRide('Lead');
+    final leaderSession = controller.session!;
+    await controller.publishRideCode();
+
+    final follower = RideController(
+      InMemoryEventStore(),
+      InMemorySessionStore(),
+      const _FakeNearbyBridge(),
+      clock: () => DateTime.utc(2026, 7, 16, 12),
+      idFactory: () => 'follower-id',
+      random: Random(7),
+      rideCodeDirectory: rideCodes,
+    );
+    await follower.initialize();
+    await follower.joinRide(leaderSession.rideCode, 'Follower');
+
+    expect(follower.session?.rideId, leaderSession.rideId);
+    expect(follower.session?.inviteSecret, leaderSession.inviteSecret);
+    follower.dispose();
+  });
+
+  test('ride code joins the leader ride with its relay secret', () async {
+    await controller.createRide('Lead');
+    final leaderSession = controller.session!;
+    await controller.publishRideCode();
+
+    final follower = RideController(
+      InMemoryEventStore(),
+      InMemorySessionStore(),
+      const _FakeNearbyBridge(),
+      clock: () => DateTime.utc(2026, 7, 16, 12),
+      idFactory: () => 'follower-id',
+      random: Random(7),
+      rideCodeDirectory: rideCodes,
+    );
+    await follower.initialize();
+    await follower.joinRide(leaderSession.rideCode, 'Follower');
+
+    expect(follower.session?.rideId, leaderSession.rideId);
+    expect(follower.session?.rideCode, leaderSession.rideCode);
+    expect(follower.session?.inviteSecret, leaderSession.inviteSecret);
+    expect(follower.session?.role, RideRole.rider);
+    expect(
+      SituationEventFactory.verify(
+        follower.events.single,
+        leaderSession.inviteSecret,
+      ),
+      isTrue,
+    );
+    follower.dispose();
+  });
+
+  test(
+    'joining rider receives the ride join token for future re-sharing',
+    () async {
+      await controller.createRide('Lead');
+      final leaderSession = controller.session!;
+      await controller.publishRideCode();
+
+      final follower = RideController(
+        InMemoryEventStore(),
+        InMemorySessionStore(),
+        const _FakeNearbyBridge(),
+        clock: () => DateTime.utc(2026, 7, 16, 12),
+        idFactory: () => 'follower-id',
+        random: Random(7),
+        rideCodeDirectory: rideCodes,
+      );
+      await follower.initialize();
+      await follower.joinRide(leaderSession.rideCode, 'Follower');
+
+      expect(follower.session?.joinToken, leaderSession.joinToken);
+      follower.dispose();
+    },
+  );
+
+  test(
+    'ride code share text carries the six digits and a paired invite',
+    () async {
+      await controller.createRide('Lead');
+      final leaderSession = controller.session!;
+
+      expect(
+        controller.rideCodeShareText,
+        contains('ride code ${leaderSession.rideCode} in the'),
+      );
+      expect(
+        controller.rideCodeShareText,
+        contains('${leaderSession.rideCode}#${leaderSession.joinToken}'),
+      );
+    },
+  );
+
+  test('non-numeric ride code is rejected before lookup', () async {
+    await controller.joinRide('ABC234', 'Oliver');
+
+    expect(controller.hasActiveRide, isFalse);
+    expect(controller.errorMessage, contains('six-digit'));
+  });
+
+  test('quick messages are durable, prioritised directed events', () async {
+    await controller.createRide('Oliver');
+    await controller.sendQuickMessage(
+      QuickMessage.emergencyStop,
+      recipientRiderIds: const ['lead', 'tec', 'lead'],
+    );
+
+    final pending = await eventStore.pendingEvents(controller.session!.rideId);
+    final message = pending.last;
+    expect(message.type, RideEventType.statusMessage);
+    expect(message.priority, EventPriority.critical);
+    expect(message.payload['message'], 'emergencyStop');
+    expect(message.payload['recipientRiderIds'], const ['lead', 'tec']);
+  });
+
+  test('a quick message carries who raised it and where they were', () async {
+    // #151: "Bill needs fuel" is not actionable without "1.2 miles back", and a
+    // recipient may not have the sender in their roster yet.
+    await controller.createRide('Bill');
+    await controller.sendQuickMessage(
+      QuickMessage.fuel,
+      position: const GeoPoint(latitude: 53.1, longitude: -1.02),
+    );
+
+    final raised = controller.events.last;
+    expect(raised.payload['senderDisplayName'], 'Bill');
+    expect(raised.payload['position'], const {
+      'latitude': 53.1,
+      'longitude': -1.02,
+    });
+    // Group-visible: the dashboard grid addresses nobody in particular.
+    expect(raised.payload.containsKey('recipientRiderIds'), isFalse);
+  });
+
+  test(
+    'acknowledging a quick message is recorded once, for its sender',
+    () async {
+      await controller.createRide('Ana');
+      final session = controller.session!;
+      // A message from another rider, signed with the ride's own invite secret,
+      // exactly as one arrives over either transport.
+      final unsigned = RideEvent(
+        id: 'bill-fuel',
+        rideId: session.rideId,
+        deviceId: 'bill',
+        type: RideEventType.statusMessage,
+        priority: EventPriority.routine,
+        createdAt: DateTime.utc(2026, 7, 16, 11, 59),
+        expiresAt: DateTime.utc(2026, 7, 16, 13),
+        payload: const {
+          'message': 'fuel',
+          'label': 'Need fuel',
+          'senderDisplayName': 'Bill',
+        },
+        signature: '',
+      );
+      await eventStore.append(
+        RideEvent(
+          id: unsigned.id,
+          rideId: unsigned.rideId,
+          deviceId: unsigned.deviceId,
+          type: unsigned.type,
+          priority: unsigned.priority,
+          createdAt: unsigned.createdAt,
+          expiresAt: unsigned.expiresAt,
+          payload: unsigned.payload,
+          signature: RideEventAuthenticator.sign(
+            unsigned,
+            session.inviteSecret,
+          ),
+        ),
+      );
+      await controller.reloadEvents();
+
+      final received = controller.quickMessages.single;
+      expect(received.headline, 'Bill needs fuel');
+      expect(received.isAcknowledged, isFalse);
+
+      await controller.acknowledgeQuickMessage(received);
+      final acknowledgement = controller.events.last;
+      expect(
+        ReceivedQuickMessageReducer.isAcknowledgement(acknowledgement),
+        isTrue,
+      );
+      expect(acknowledgement.payload['recipientRiderIds'], const ['bill']);
+      expect(acknowledgement.payload['label'], 'Seen: Need fuel');
+
+      // Folded onto the message, and never recorded twice.
+      final folded = controller.quickMessages.single;
+      expect(folded.isAcknowledged, isTrue);
+      expect(folded.acknowledgedBy(session.localRiderId), isTrue);
+      expect(folded.firstAcknowledgement?.displayName, 'Ana');
+      final before = controller.events.length;
+      await controller.acknowledgeQuickMessage(folded);
+      expect(controller.events.length, before);
+    },
+  );
+
+  test(
+    'leader can pause and resume the shared ride without stopping GPS',
+    () async {
+      await controller.createRide('Oliver');
+      await controller.startRide();
+
+      await controller.pauseRide();
+      expect(controller.ridePaused, isTrue);
+      expect(controller.events.last.type, RideEventType.ridePaused);
+
+      await controller.resumeRide();
+      expect(controller.ridePaused, isFalse);
+      expect(controller.events.last.type, RideEventType.rideResumed);
+    },
+  );
+
+  test('marker counts each rider once', () async {
+    await controller.createRide('Oliver');
+    await controller.startRide();
+    await controller.startMarker();
+    await controller.recordMarkerPass('rider-a');
+    await controller.recordMarkerPass('rider-a');
+    await controller.recordMarkerPass('rider-b');
+
+    expect(controller.markerPassCount, 2);
+    expect(
+      controller.events.where(
+        (event) => event.type == RideEventType.markerPass,
+      ),
+      hasLength(2),
+    );
+  });
+
+  test('non-drop-off rides cannot start junction marker mode', () async {
+    await controller.createRide(
+      'Oliver',
+      coordinationMode: RideCoordinationMode.keepTogether,
+    );
+    await controller.startRide();
+
+    await controller.startMarker();
+
+    expect(controller.markerActive, isFalse);
+    expect(
+      controller.errorMessage,
+      contains('only available in Second-bike drop-off rides'),
+    );
+  });
+
+  test('marker uniqueness is scoped to each marker session', () async {
+    await controller.createRide('Oliver');
+    await controller.startRide();
+    await controller.startMarker();
+    await controller.recordMarkerPass('rider-a');
+    await controller.endMarker();
+    await controller.startMarker();
+    await controller.recordMarkerPass('rider-a');
+
+    expect(controller.markerPassCount, 1);
+    expect(controller.markingSummary.sessions, hasLength(2));
+    expect(
+      controller.events.where(
+        (event) => event.type == RideEventType.markerPass,
+      ),
+      hasLength(2),
+    );
+  });
+
+  test('restoring an active marker preserves the previous lead role', () async {
+    await controller.createRide('Oliver');
+    await controller.startRide();
+    await controller.startMarker();
+
+    final restored = RideController(
+      eventStore,
+      sessionStore,
+      const _FakeNearbyBridge(),
+      clock: () => DateTime.utc(2026, 7, 16, 12),
+      idFactory: () => 'restored-id',
+      random: Random(9),
+    );
+    await restored.initialize();
+    expect(restored.markerActive, isTrue);
+
+    await restored.endMarker();
+
+    expect(restored.session?.role, RideRole.lead);
+    restored.dispose();
+  });
+
+  test(
+    'another device marker session does not change local marker state',
+    () async {
+      await controller.createRide('Oliver');
+      await eventStore.append(
+        RideEvent(
+          id: 'remote-marker',
+          rideId: controller.session!.rideId,
+          deviceId: 'remote-device',
+          type: RideEventType.markerStarted,
+          priority: EventPriority.important,
+          createdAt: DateTime.utc(2026, 7, 16, 12),
+          payload: const {
+            'markerSessionId': 'remote-session',
+            'mode': 'manual',
+          },
+          signature: 'relay-test',
+        ),
+      );
+      await controller.reloadEvents();
+
+      expect(controller.markerActive, isFalse);
+      expect(controller.markingSummary.sessions, isEmpty);
+    },
+  );
+
+  test(
+    'authenticated TEC evidence is reflected in marker statistics',
+    () async {
+      await controller.createRide('Oliver');
+      await controller.startRide();
+      await controller.startMarker();
+      await _appendLocationEvidence(
+        eventStore: eventStore,
+        controller: controller,
+        riderId: 'tec',
+        role: RideRole.tailEndCharlie,
+        eventId: 'location-event',
+      );
+      await controller.recordMarkerPass(
+        'tec',
+        evidenceEventId: 'location-event',
+        riderRole: RideRole.tailEndCharlie,
+        observedAt: DateTime.utc(2026, 7, 16, 12),
+      );
+
+      expect(controller.verifiedMarkerPassCount, 1);
+      expect(controller.tecPassedCurrentMarker, isTrue);
+    },
+  );
+
+  test('ride-ended event persists the marking summary', () async {
+    await controller.createRide('Oliver');
+    await controller.startRide();
+    final rideId = controller.session!.rideId;
+    await controller.startMarker();
+    await _appendLocationEvidence(
+      eventStore: eventStore,
+      controller: controller,
+      riderId: 'rider-a',
+      role: RideRole.rider,
+      eventId: 'location-event',
+    );
+    await controller.recordMarkerPass(
+      'rider-a',
+      evidenceEventId: 'location-event',
+      riderRole: RideRole.rider,
+    );
+
+    await controller.endRide();
+
+    final events = await eventStore.eventsForRide(rideId);
+    final ended = events.singleWhere(
+      (event) => event.type == RideEventType.rideEnded,
+    );
+    final summary = RideMarkingSummary.fromJson(
+      Map<String, Object?>.from(ended.payload['markingSummary']! as Map),
+    );
+    expect(summary.sessions, hasLength(1));
+    expect(summary.sessions.single.completed, isTrue);
+    expect(summary.verifiedPassCount, 1);
+    expect(controller.hasActiveRide, isTrue);
+    expect(controller.rideEnded, isTrue);
+    expect((await sessionStore.load())?.rideId, rideId);
+  });
+
+  test('ending a real ride creates a secret-free local archive', () async {
+    await controller.createRide('Oliver', rideName: 'Peak District');
+    final inviteSecret = controller.session!.inviteSecret;
+    final joinToken = controller.session!.joinToken;
+    await controller.startRide();
+
+    await controller.endRide();
+
+    final archived = (await completedRideStore.list()).single;
+    expect(archived.title, 'Peak District');
+    expect(archived.localRole, RideRole.lead);
+    expect(archived.endedAt, DateTime.utc(2026, 7, 16, 12));
+    expect(archived.toJson().toString(), isNot(contains(inviteSecret)));
+    expect(archived.toJson().toString(), isNot(contains(joinToken)));
+  });
+
+  test('ended ride is removed only after explicit clearing', () async {
+    await controller.createRide('Oliver');
+    final rideId = controller.session!.rideId;
+    await controller.endRide();
+
+    await controller.clearEndedRide();
+
+    expect(controller.hasActiveRide, isFalse);
+    expect(await sessionStore.load(), isNull);
+    expect(await eventStore.eventsForRide(rideId), isEmpty);
+  });
+
+  test('stepping away from an ended ride keeps all of its data', () async {
+    await controller.createRide('Oliver');
+    final rideId = controller.session!.rideId;
+    await controller.endRide();
+
+    controller.setEndedRideAside();
+
+    // The ride stops owning the screen without giving anything up (#207).
+    expect(controller.endedRideSetAside, isTrue);
+    expect(controller.hasActiveRide, isTrue);
+    expect(controller.rideEnded, isTrue);
+    expect(await sessionStore.load(), isNotNull);
+    expect(await eventStore.eventsForRide(rideId), isNotEmpty);
+
+    controller.reopenEndedRide();
+
+    expect(controller.endedRideSetAside, isFalse);
+    expect(controller.session?.rideId, rideId);
+  });
+
+  test(
+    'creating after a set-aside ended ride starts with clean state',
+    () async {
+      await controller.createRide('Oliver', rideName: 'First ride');
+      final endedRideId = controller.session!.rideId;
+      await controller.endRide();
+      controller.setEndedRideAside();
+
+      await controller.createRide('Oliver', rideName: 'Second ride');
+
+      expect(controller.session?.rideId, isNot(endedRideId));
+      expect(controller.session?.rideName, 'Second ride');
+      expect(controller.rideEnded, isFalse);
+      expect(controller.endedRideSetAside, isFalse);
+      expect(
+        controller.events.map((event) => event.rideId),
+        everyElement(controller.session!.rideId),
+      );
+      expect(await eventStore.eventsForRide(endedRideId), isEmpty);
+      expect((await completedRideStore.list()).single.title, 'First ride');
+    },
+  );
+
+  test('creating cannot replace a ride which has not ended', () async {
+    await controller.createRide('Oliver', rideName: 'Current ride');
+    final rideId = controller.session!.rideId;
+
+    await controller.createRide('Oliver', rideName: 'Replacement');
+
+    expect(controller.session?.rideId, rideId);
+    expect(controller.session?.rideName, 'Current ride');
+    expect(
+      controller.errorMessage,
+      'Finish or leave your current ride before creating another.',
+    );
+  });
+
+  test('joining cannot replace a ride which has not ended', () async {
+    await controller.createRide('Oliver', rideName: 'Current ride');
+    final current = controller.session!;
+
+    await controller.joinRideFromInvitation(
+      const RideJoinPayload(
+        rideId: 'another-ride',
+        rideCode: '654321',
+        inviteSecret: 'another-ride-secret-0123456789',
+        joinToken: 'another-join-token-0123456789',
+      ),
+      'Oliver',
+    );
+
+    expect(controller.session?.rideId, current.rideId);
+    expect(
+      controller.errorMessage,
+      'Finish or leave your current ride before joining another.',
+    );
+  });
+
+  test('a set-aside ride cannot outlive the ride it refers to', () async {
+    await controller.createRide('Oliver');
+    await controller.endRide();
+    controller.setEndedRideAside();
+
+    await controller.clearEndedRide();
+
+    expect(controller.endedRideSetAside, isFalse);
+    expect(controller.hasActiveRide, isFalse);
+  });
+
+  test('a running ride cannot be set aside', () async {
+    await controller.createRide('Oliver');
+    await controller.startRide();
+
+    controller.setEndedRideAside();
+
+    expect(controller.endedRideSetAside, isFalse);
+  });
+
+  // #206/#207. The journal is append-only, so un-ending a ride is a later event
+  // and not a deletion. The later of the pair decides, exactly as ridePaused and
+  // rideResumed already decide whether the group is stopped.
+  group('a leader can un-end a ride', () {
+    test('reopening puts the ride back to running', () async {
+      await controller.createRide('Oliver');
+      await controller.startRide();
+      await controller.endRide();
+      expect(controller.rideEnded, isTrue);
+
+      expect(await controller.reopenRide(), RideReopenOutcome.reopened);
+
+      expect(controller.rideEnded, isFalse);
+      expect(controller.rideStarted, isTrue);
+      expect(controller.ridePhase, RidePhase.started);
+      // Nothing was removed: both events are still in the journal.
+      expect(
+        controller.events.map((event) => event.type),
+        containsAll([RideEventType.rideEnded, RideEventType.rideReopened]),
+      );
+      expect(controller.events.last.signature, hasLength(64));
+    });
+
+    test('ending again after a reopen ends the ride again', () async {
+      await controller.createRide('Oliver');
+      await controller.startRide();
+      await controller.endRide();
+      await controller.reopenRide();
+
+      await controller.endRide();
+
+      expect(controller.rideEnded, isTrue);
+    });
+
+    test('a rider who is not the leader cannot reopen', () async {
+      await controller.createRide('Oliver');
+      await controller.endRide();
+      await controller.setRole(RideRole.rider);
+
+      expect(await controller.reopenRide(), RideReopenOutcome.notLeader);
+      expect(controller.rideEnded, isTrue);
+    });
+
+    test('a running ride has nothing to reopen', () async {
+      await controller.createRide('Oliver');
+      await controller.startRide();
+
+      expect(await controller.reopenRide(), RideReopenOutcome.notEnded);
+    });
+
+    test('a relay that cannot carry the reopen records nothing', () async {
+      await controller.createRide('Oliver');
+      await controller.endRide();
+      final eventCount = controller.events.length;
+
+      expect(
+        await controller.reopenRide(relayCanCarryReopen: false),
+        RideReopenOutcome.relayUnsupported,
+      );
+
+      // Not recorded locally either: a leader back on the map while the group
+      // still sees a finished ride is worse than being told it is unavailable.
+      expect(controller.events, hasLength(eventCount));
+      expect(controller.rideEnded, isTrue);
+    });
+
+    test('past the recovery window there is nothing left to reopen', () async {
+      var now = DateTime.utc(2026, 7, 28, 8);
+      var seedId = 0;
+      final aged = RideController(
+        eventStore,
+        sessionStore,
+        const _FakeNearbyBridge(),
+        clock: () => now,
+        idFactory: () => 'aged-${seedId++}',
+        random: Random(3),
+        rideCodeDirectory: rideCodes,
+        completedRideStore: completedRideStore,
+      );
+      await aged.initialize();
+      await aged.createRide('Oliver');
+      await aged.endRide();
+
+      now = now
+          .add(RideController.endedRideRecoveryWindow)
+          .add(const Duration(minutes: 1));
+
+      expect(await aged.reopenRide(), RideReopenOutcome.windowExpired);
+      aged.dispose();
+    });
+
+    test('a reopened ride is no longer scheduled for deletion', () async {
+      var now = DateTime.utc(2026, 7, 28, 8);
+      var seedId = 0;
+      final controllerWithClock = RideController(
+        eventStore,
+        sessionStore,
+        const _FakeNearbyBridge(),
+        clock: () => now,
+        idFactory: () => 'reopen-${seedId++}',
+        random: Random(4),
+        rideCodeDirectory: rideCodes,
+        completedRideStore: completedRideStore,
+      );
+      await controllerWithClock.initialize();
+      await controllerWithClock.createRide('Oliver');
+      final rideId = controllerWithClock.session!.rideId;
+      await controllerWithClock.endRide();
+      await controllerWithClock.reopenRide();
+      controllerWithClock.dispose();
+
+      // The retention timer keys off the end; reopening has to call it off, or a
+      // running ride deletes itself out from under the group.
+      now = now
+          .add(RideController.endedRideRecoveryWindow)
+          .add(const Duration(minutes: 1));
+      final restored = RideController(
+        eventStore,
+        sessionStore,
+        const _FakeNearbyBridge(),
+        clock: () => now,
+        idFactory: () => 'restored-${seedId++}',
+        random: Random(5),
+        rideCodeDirectory: rideCodes,
+        completedRideStore: completedRideStore,
+      );
+      await restored.initialize();
+
+      expect(restored.hasActiveRide, isTrue);
+      expect(restored.rideEnded, isFalse);
+      expect(await eventStore.eventsForRide(rideId), isNotEmpty);
+      restored.dispose();
+    });
+  });
+
+  test('expired ended ride data is deleted when the app is reopened', () async {
+    var now = DateTime.utc(2026, 7, 16, 12);
+    var seedId = 0;
+    final seed = RideController(
+      eventStore,
+      sessionStore,
+      const _FakeNearbyBridge(),
+      clock: () => now,
+      idFactory: () => 'retention-${seedId++}',
+      random: Random(1),
+      rideCodeDirectory: rideCodes,
+    );
+    await seed.initialize();
+    await seed.createRide('Oliver');
+    final rideId = seed.session!.rideId;
+    await seed.endRide();
+    seed.dispose();
+
+    now = now
+        .add(RideController.endedRideRecoveryWindow)
+        .add(const Duration(seconds: 1));
+    final reopened = RideController(
+      eventStore,
+      sessionStore,
+      const _FakeNearbyBridge(),
+      clock: () => now,
+      idFactory: () => 'reopened-${seedId++}',
+      random: Random(2),
+      rideCodeDirectory: rideCodes,
+    );
+    await reopened.initialize();
+
+    expect(reopened.hasActiveRide, isFalse);
+    expect(await sessionStore.load(), isNull);
+    expect(await eventStore.eventsForRide(rideId), isEmpty);
+    reopened.dispose();
+  });
+
+  test(
+    'leaving records a signed departure before clearing the session',
+    () async {
+      await controller.createRide('Oliver');
+      final rideId = controller.session!.rideId;
+      RideEvent? published;
+
+      await controller.leaveRide(
+        publishDeparture: (departure) async => published = departure,
+      );
+
+      expect(controller.hasActiveRide, isFalse);
+      expect(await sessionStore.load(), isNull);
+      final retained = await eventStore.eventsForRide(rideId);
+      expect(retained.last.type, RideEventType.riderLeft);
+      expect(retained.last.payload['riderId'], retained.last.deviceId);
+      expect(published?.id, retained.last.id);
+      expect(published?.signature, hasLength(64));
+    },
+  );
+
+  test('explicit ICE share carries no recipient filter', () async {
+    await controller.createRide('Oliver');
+    await controller.shareEmergencyInfo(
+      contactName: 'Sam',
+      contactPhone: '+44 7700 900111',
+      medicalNotes: 'Type 1 diabetic',
+      recipientRiderIds: const [],
+    );
+
+    final shared = controller.events.singleWhere(
+      (event) => event.type == RideEventType.iceInfoShared,
+    );
+    expect(shared.payload.containsKey('recipientRiderIds'), isFalse);
+    expect(controller.sentIceShares.single.toWholeGroup, isTrue);
+    expect(controller.sentIceShares.single.viewedAt, isNull);
+  });
+
+  test('default-share-with-leader carries a recipient filter', () async {
+    await controller.createRide('Oliver');
+    await controller.shareEmergencyInfo(
+      contactName: 'Sam',
+      contactPhone: '+44 7700 900111',
+      medicalNotes: '',
+      recipientRiderIds: const ['leader-device'],
+    );
+
+    final shared = controller.events.singleWhere(
+      (event) => event.type == RideEventType.iceInfoShared,
+    );
+    expect(shared.payload['recipientRiderIds'], ['leader-device']);
+    expect(controller.sentIceShares.single.toWholeGroup, isFalse);
+  });
+
+  test('a scanned invitation joins with the relay unreachable', () async {
+    // #279: every other join path ends in RideCodeDirectory.resolve, an HTTPS
+    // call, so a group with no signal cannot form a ride at all - which is the
+    // situation this product is for. The directory here throws on any call, so
+    // this asserts the absence of a network round trip rather than assuming it.
+    final offline = RideController(
+      eventStore,
+      sessionStore,
+      const _FakeNearbyBridge(),
+      clock: () => DateTime.utc(2026, 8, 1, 9),
+      idFactory: () => 'offline-${id++}',
+      random: Random(7),
+      rideCodeDirectory: _UnreachableRideCodeDirectory(),
+      completedRideStore: completedRideStore,
+    );
+    addTearDown(offline.dispose);
+
+    const invitation = RideJoinPayload(
+      rideId: 'ride-from-qr',
+      rideCode: '135627',
+      inviteSecret: '0123456789abcdef0123456789abcdef',
+      joinToken: 'resolve-token-0123456789',
+    );
+
+    await offline.joinRideFromInvitation(invitation, 'Scanned rider');
+
+    expect(offline.errorMessage, isNull, reason: 'the join must succeed');
+    final session = offline.session;
+    expect(session, isNotNull);
+    expect(session!.rideId, 'ride-from-qr');
+    expect(session.rideCode, '135627');
+    // The credentials that make authenticated transport possible have to arrive
+    // intact, or the rider is in a session that looks joined and can talk to
+    // nobody.
+    expect(session.inviteSecret, invitation.inviteSecret);
+    expect(session.joinToken, invitation.joinToken);
+    expect(session.role, RideRole.rider);
+    expect(session.displayName, 'Scanned rider');
+
+    // And it is a real join, not just a stored session: the roster has to show
+    // this rider, which means the riderJoined event was recorded.
+    expect(
+      offline.participants.map((participant) => participant.displayName),
+      contains('Scanned rider'),
+    );
+  });
+
+  test('the ride names who ended it', () async {
+    // #283: a tester whose ride the leader ended read it as a crash. Naming the
+    // person is the difference between "something broke" and "the leader stopped
+    // the ride", and it comes from the journal so a phone that was offline or has
+    // restarted since can still say it.
+    await controller.createRide('Leader');
+    await controller.startRide();
+
+    expect(
+      controller.rideEndedBy,
+      isNull,
+      reason: 'a running ride has nobody who ended it',
+    );
+
+    await controller.endRide();
+
+    final endedBy = controller.rideEndedBy;
+    expect(endedBy, isNotNull);
+    expect(endedBy!.isLocalRider, isTrue);
+    expect(endedBy.displayName, 'Leader');
+  });
+
+  test('received ICE shares include broadcasts and shares addressed to me, '
+      'not shares addressed elsewhere', () async {
+    await controller.createRide('Oliver');
+    final rideId = controller.session!.rideId;
+    final myId = controller.session!.localRiderId;
+
+    await eventStore.append(
+      RideEvent(
+        id: 'broadcast-share',
+        rideId: rideId,
+        deviceId: 'remote-device-a',
+        type: RideEventType.iceInfoShared,
+        priority: EventPriority.critical,
+        createdAt: DateTime.utc(2026, 7, 16, 12),
+        payload: const {
+          'contactName': 'Alex',
+          'contactPhone': '+44 7700 900222',
+          'medicalNotes': '',
+          'sharedByDisplayName': 'Remote A',
+        },
+        signature: 'relay-test',
+      ),
+    );
+    await eventStore.append(
+      RideEvent(
+        id: 'addressed-to-me',
+        rideId: rideId,
+        deviceId: 'remote-device-b',
+        type: RideEventType.iceInfoShared,
+        priority: EventPriority.critical,
+        createdAt: DateTime.utc(2026, 7, 16, 12),
+        payload: {
+          'contactName': 'Jo',
+          'contactPhone': '+44 7700 900333',
+          'medicalNotes': '',
+          'sharedByDisplayName': 'Remote B',
+          'recipientRiderIds': [myId],
+        },
+        signature: 'relay-test',
+      ),
+    );
+    await eventStore.append(
+      RideEvent(
+        id: 'addressed-elsewhere',
+        rideId: rideId,
+        deviceId: 'remote-device-c',
+        type: RideEventType.iceInfoShared,
+        priority: EventPriority.critical,
+        createdAt: DateTime.utc(2026, 7, 16, 12),
+        payload: const {
+          'contactName': 'Chris',
+          'contactPhone': '+44 7700 900444',
+          'medicalNotes': '',
+          'sharedByDisplayName': 'Remote C',
+          'recipientRiderIds': ['someone-else'],
+        },
+        signature: 'relay-test',
+      ),
+    );
+    await controller.reloadEvents();
+
+    final receivedIds = controller.receivedIceShares
+        .map((share) => share.eventId)
+        .toSet();
+    expect(receivedIds, {'broadcast-share', 'addressed-to-me'});
+  });
+
+  test('viewing a share records exactly one view event, however many times '
+      "it's opened", () async {
+    await controller.createRide('Oliver');
+    final rideId = controller.session!.rideId;
+    final myId = controller.session!.localRiderId;
+
+    await eventStore.append(
+      RideEvent(
+        id: 'their-share',
+        rideId: rideId,
+        deviceId: 'remote-device',
+        type: RideEventType.iceInfoShared,
+        priority: EventPriority.critical,
+        createdAt: DateTime.utc(2026, 7, 16, 12),
+        payload: const {
+          'contactName': 'Alex',
+          'contactPhone': '+44 7700 900222',
+          'medicalNotes': '',
+          'sharedByDisplayName': 'Remote',
+        },
+        signature: 'relay-test',
+      ),
+    );
+    await controller.reloadEvents();
+
+    await controller.markIceInfoViewed('their-share');
+    await controller.markIceInfoViewed('their-share');
+
+    final views = controller.events.where(
+      (event) => event.type == RideEventType.iceInfoViewed,
+    );
+    expect(views, hasLength(1));
+    expect(views.single.deviceId, myId);
+  });
+
+  test("a received view event updates the sharer's own share with who saw it "
+      'and when', () async {
+    await controller.createRide('Oliver');
+    final rideId = controller.session!.rideId;
+
+    await controller.shareEmergencyInfo(
+      contactName: 'Sam',
+      contactPhone: '+44 7700 900111',
+      medicalNotes: '',
+      recipientRiderIds: const [],
+    );
+    final sharedEventId = controller.events
+        .singleWhere((event) => event.type == RideEventType.iceInfoShared)
+        .id;
+    expect(controller.sentIceShares.single.viewedAt, isNull);
+
+    await eventStore.append(
+      RideEvent(
+        id: 'their-view',
+        rideId: rideId,
+        deviceId: 'remote-device',
+        type: RideEventType.iceInfoViewed,
+        priority: EventPriority.routine,
+        createdAt: DateTime.utc(2026, 7, 16, 13),
+        payload: {'sharedEventId': sharedEventId},
+        signature: 'relay-test',
+      ),
+    );
+    await controller.reloadEvents();
+
+    final sent = controller.sentIceShares.single;
+    expect(sent.viewedAt, DateTime.utc(2026, 7, 16, 13));
+    expect(sent.viewedByRiderId, 'remote-device');
+  });
+
+  test('ending the ride purges unused received ICE shares, keeps used and '
+      'self-sent ones', () async {
+    await controller.createRide('Oliver');
+    final rideId = controller.session!.rideId;
+    final myId = controller.session!.localRiderId;
+
+    await eventStore.append(
+      RideEvent(
+        id: 'unused-share',
+        rideId: rideId,
+        deviceId: 'remote-device-a',
+        type: RideEventType.iceInfoShared,
+        priority: EventPriority.critical,
+        createdAt: DateTime.utc(2026, 7, 16, 12),
+        payload: const {
+          'contactName': 'Alex',
+          'contactPhone': '+44 7700 900222',
+          'medicalNotes': '',
+          'sharedByDisplayName': 'Remote A',
+        },
+        signature: 'relay-test',
+      ),
+    );
+    await eventStore.append(
+      RideEvent(
+        id: 'used-share',
+        rideId: rideId,
+        deviceId: 'remote-device-b',
+        type: RideEventType.iceInfoShared,
+        priority: EventPriority.critical,
+        createdAt: DateTime.utc(2026, 7, 16, 12),
+        payload: {
+          'contactName': 'Jo',
+          'contactPhone': '+44 7700 900333',
+          'medicalNotes': '',
+          'sharedByDisplayName': 'Remote B',
+          'recipientRiderIds': [myId],
+        },
+        signature: 'relay-test',
+      ),
+    );
+    await controller.reloadEvents();
+    controller.markIceShareUsed('used-share');
+
+    await controller.shareEmergencyInfo(
+      contactName: 'Own contact',
+      contactPhone: '+44 7700 900555',
+      medicalNotes: '',
+      recipientRiderIds: const [],
+    );
+    final ownShareId = controller.events
+        .singleWhere(
+          (event) =>
+              event.type == RideEventType.iceInfoShared &&
+              event.deviceId == myId,
+        )
+        .id;
+
+    await controller.endRide();
+
+    final remainingIds = (await eventStore.eventsForRide(rideId))
+        .where((event) => event.type == RideEventType.iceInfoShared)
+        .map((event) => event.id)
+        .toSet();
+    expect(remainingIds, {'used-share', ownShareId});
+  });
+
+  group("sharing a rider's own number (#188)", () {
+    /// Signs a peer's share with the live ride secret, because the reducer
+    /// verifies: an unauthenticated event must never be able to plant a number.
+    Future<void> appendPeerShare({
+      required String eventId,
+      required String riderId,
+      required String phone,
+      List<String>? recipientRiderIds,
+      DateTime? createdAt,
+    }) async {
+      final session = controller.session!;
+      final unsigned = RideEvent(
+        id: eventId,
+        rideId: session.rideId,
+        deviceId: riderId,
+        type: RideEventType.riderContactShared,
+        priority: EventPriority.important,
+        createdAt: createdAt ?? DateTime.utc(2026, 7, 16, 11, 55),
+        payload: {
+          'contact': {
+            'riderId': riderId,
+            'displayName': riderId,
+            'phone': phone,
+            'sharedByRole': RideRole.lead.name,
+          },
+          'recipientRiderIds': ?recipientRiderIds,
+        },
+        signature: '',
+      );
+      await eventStore.append(
+        RideEvent(
+          id: unsigned.id,
+          rideId: unsigned.rideId,
+          deviceId: unsigned.deviceId,
+          type: unsigned.type,
+          priority: unsigned.priority,
+          createdAt: unsigned.createdAt,
+          payload: unsigned.payload,
+          signature: RideEventAuthenticator.sign(
+            unsigned,
+            session.inviteSecret,
+          ),
+        ),
+      );
+      await controller.reloadEvents();
+    }
+
+    test('an ordinary rider addresses it to the leader and TEC and to nobody '
+        'else, and it is a separate event from ICE', () async {
+      await controller.createRide('Oliver');
+
+      final shared = await controller.shareOwnContactNumber(
+        phoneNumber: '+44 7700 900321',
+        recipients: const RiderContactRecipients.addressed(['leader', 'tec']),
+      );
+
+      expect(shared, isTrue);
+      final event = controller.events.singleWhere(
+        (event) => event.type == RideEventType.riderContactShared,
+      );
+      expect(event.payload['recipientRiderIds'], ['leader', 'tec']);
+      expect((event.payload['contact'] as Map)['phone'], '+44 7700 900321');
+      // The number never travels as an ICE share, which carries next of kin.
+      expect(
+        controller.events.where(
+          (event) => event.type == RideEventType.iceInfoShared,
+        ),
+        isEmpty,
+      );
+      expect(controller.hasSharedOwnContactNumber, isTrue);
+    });
+
+    test('records nothing when there is nobody to address, or the number is '
+        'not dialable', () async {
+      await controller.createRide('Oliver');
+
+      expect(
+        await controller.shareOwnContactNumber(
+          phoneNumber: '+44 7700 900321',
+          recipients: const RiderContactRecipients.addressed([]),
+        ),
+        isFalse,
+      );
+      expect(
+        await controller.shareOwnContactNumber(
+          phoneNumber: 'tel:+447700900321',
+          recipients: const RiderContactRecipients.addressed(['leader']),
+        ),
+        isFalse,
+      );
+      expect(
+        controller.events.where(
+          (event) => event.type == RideEventType.riderContactShared,
+        ),
+        isEmpty,
+      );
+      expect(controller.hasSharedOwnContactNumber, isFalse);
+    });
+
+    test("a share addressed elsewhere never reaches this rider's contact "
+        'list', () async {
+      await controller.createRide('Oliver');
+      final myId = controller.session!.localRiderId;
+
+      await appendPeerShare(
+        eventId: 'addressed-to-me',
+        riderId: 'leader-device',
+        phone: '+44 7700 900111',
+        recipientRiderIds: [myId],
+      );
+      await appendPeerShare(
+        eventId: 'addressed-elsewhere',
+        riderId: 'other-device',
+        phone: '+44 7700 900222',
+        recipientRiderIds: const ['somebody-else'],
+      );
+      await appendPeerShare(
+        eventId: 'ride-wide',
+        riderId: 'tec-device',
+        phone: '+44 7700 900333',
+        recipientRiderIds: null,
+      );
+
+      final contacts = controller.receivedRiderContacts;
+      expect(contacts.keys.toSet(), {'leader-device', 'tec-device'});
+      expect(contacts['leader-device']!.phoneNumber, '+44 7700 900111');
+      // The number of a rider who addressed somebody else is not merely
+      // hidden - it is not in the model any surface reads.
+      expect(
+        contacts.values.map((contact) => contact.phoneNumber),
+        isNot(contains('+44 7700 900222')),
+      );
+    });
+
+    test('ending the ride purges an unused shared number and keeps a dialled '
+        'one, exactly as ICE is treated', () async {
+      await controller.createRide('Oliver');
+      final rideId = controller.session!.rideId;
+      final myId = controller.session!.localRiderId;
+
+      await appendPeerShare(
+        eventId: 'unused-number',
+        riderId: 'leader-device',
+        phone: '+44 7700 900111',
+        recipientRiderIds: [myId],
+      );
+      await appendPeerShare(
+        eventId: 'dialled-number',
+        riderId: 'tec-device',
+        phone: '+44 7700 900222',
+        recipientRiderIds: [myId],
+      );
+      controller.markRiderContactUsed('dialled-number');
+      await controller.shareOwnContactNumber(
+        phoneNumber: '+44 7700 900999',
+        recipients: const RiderContactRecipients.addressed(['leader-device']),
+      );
+
+      await controller.endRide();
+
+      final remaining = await eventStore.eventsForRide(rideId);
+      final remainingContactIds = remaining
+          .where((event) => event.type == RideEventType.riderContactShared)
+          .map((event) => event.id)
+          .toSet();
+      // The dialled one and this rider's own outbound share survive; the unused
+      // one is gone from storage, not merely filtered out of a getter.
+      expect(remainingContactIds, contains('dialled-number'));
+      expect(remainingContactIds, isNot(contains('unused-number')));
+      expect(
+        remaining
+            .where((event) => event.type == RideEventType.riderContactShared)
+            .any((event) => event.deviceId == myId),
+        isTrue,
+      );
+      // And nothing is offered to dial once the ride has ended, whatever
+      // survives in the journal.
+      expect(controller.receivedRiderContacts, isEmpty);
+    });
+
+    test('an unsigned share can never plant a number', () async {
+      await controller.createRide('Oliver');
+      final session = controller.session!;
+
+      await eventStore.append(
+        RideEvent(
+          id: 'forged',
+          rideId: session.rideId,
+          deviceId: 'mallory',
+          type: RideEventType.riderContactShared,
+          priority: EventPriority.important,
+          createdAt: DateTime.utc(2026, 7, 16, 11, 55),
+          payload: {
+            'contact': const {
+              'riderId': 'mallory',
+              'displayName': 'Mallory',
+              'phone': '+44 7700 900444',
+            },
+            'recipientRiderIds': [session.localRiderId],
+          },
+          signature: 'f' * 64,
+        ),
+      );
+      await controller.reloadEvents();
+
+      expect(controller.receivedRiderContacts, isEmpty);
+    });
+  });
+}
+
+Future<void> _appendLocationEvidence({
+  required InMemoryEventStore eventStore,
+  required RideController controller,
+  required String riderId,
+  required RideRole role,
+  required String eventId,
+}) async {
+  final session = controller.session!;
+  final now = DateTime.utc(2026, 7, 16, 12);
+  final remoteSession = RideSession(
+    rideId: session.rideId,
+    rideCode: session.rideCode,
+    inviteSecret: session.inviteSecret,
+    joinToken: session.joinToken,
+    localRiderId: riderId,
+    displayName: riderId,
+    role: role,
+    joinedAt: now,
+  );
+  final location = RiderLocation(
+    riderId: riderId,
+    displayName: riderId,
+    role: role,
+    sample: LocationSample(
+      position: const GeoPoint(latitude: 51, longitude: -1),
+      recordedAt: now,
+      accuracyMeters: 4,
+    ),
+    receivedAt: now,
+  );
+  final event =
+      SituationEventFactory(
+        session: remoteSession,
+        clock: () => now,
+        idFactory: () => eventId,
+      ).create(
+        type: RideEventType.riderLocationUpdated,
+        payload: {'location': location.toJson()},
+      );
+  await eventStore.append(event);
+  await controller.reloadEvents();
+}
+
+RideEvent _signedEvent({
+  required RideSession session,
+  required String id,
+  required RideEventType type,
+  required DateTime createdAt,
+  required Map<String, Object?> payload,
+}) {
+  final unsigned = RideEvent(
+    id: id,
+    rideId: session.rideId,
+    deviceId: session.localRiderId,
+    type: type,
+    priority: EventPriority.important,
+    createdAt: createdAt,
+    payload: payload,
+    signature: '',
+  );
+  return RideEvent(
+    id: unsigned.id,
+    rideId: unsigned.rideId,
+    deviceId: unsigned.deviceId,
+    type: unsigned.type,
+    priority: unsigned.priority,
+    createdAt: unsigned.createdAt,
+    payload: unsigned.payload,
+    signature: SituationEventFactory.sign(unsigned, session.inviteSecret),
+  );
+}
+
+class _FakeNearbyBridge extends NearbyBridge {
+  const _FakeNearbyBridge();
+
+  @override
+  Future<NearbyCapabilities> capabilities() async => const NearbyCapabilities(
+    platform: 'test',
+    nativeBridgeReady: true,
+    nearbyApiLinked: false,
+    status: 'phase0',
+  );
+}
+
+/// Refuses every lookup, so a test that joins through it is proving the join made
+/// no network call rather than merely not noticing one (#279).
+class _UnreachableRideCodeDirectory implements RideCodeDirectory {
+  @override
+  Future<void> register(RideSession session) async =>
+      throw StateError('the relay must not be reached');
+
+  @override
+  Future<RideCodeCredentials> resolve(String rideCode, {String? joinToken}) =>
+      throw StateError('the relay must not be reached');
+
+  @override
+  void close() {}
+}
+
+class _InMemoryRideCodeDirectory implements RideCodeDirectory {
+  final _credentials = <String, RideCodeCredentials>{};
+
+  @override
+  Future<void> register(RideSession session) async {
+    final existing = _credentials[session.rideCode];
+    if (existing != null && existing.rideId != session.rideId) {
+      throw const RideCodeDirectoryException(
+        'Ride code is already in use.',
+        codeConflict: true,
+      );
+    }
+    _credentials[session.rideCode] = RideCodeCredentials(
+      rideId: session.rideId,
+      rideCode: session.rideCode,
+      inviteSecret: session.inviteSecret,
+      joinToken: session.joinToken,
+    );
+  }
+
+  @override
+  Future<RideCodeCredentials> resolve(
+    String rideCode, {
+    String? joinToken,
+  }) async {
+    final credentials = _credentials[rideCode];
+    if (credentials == null) {
+      throw const RideCodeDirectoryException('That ride code is not active.');
+    }
+    return credentials;
+  }
+
+  @override
+  void close() {}
+}

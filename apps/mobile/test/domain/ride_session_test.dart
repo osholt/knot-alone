@@ -1,0 +1,113 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:ride_relay/domain/ride_coordination_mode.dart';
+import 'package:ride_relay/domain/ride_role.dart';
+import 'package:ride_relay/domain/ride_session.dart';
+import 'package:ride_relay/features/map/motorcycle_icon.dart';
+
+void main() {
+  final session = RideSession(
+    rideId: 'ride',
+    rideCode: 'SIM123',
+    inviteSecret: 'secret',
+    joinToken: 'aTokenWithPlentyOfEntropy',
+    localRiderId: 'lead',
+    displayName: 'Demo Lead',
+    role: RideRole.lead,
+    joinedAt: DateTime.utc(2026, 7, 17),
+    isSimulation: true,
+  );
+
+  test('simulation marker survives session persistence', () {
+    expect(RideSession.fromJson(session.toJson()).isSimulation, isTrue);
+  });
+
+  test(
+    'simulation rider count persists and legacy sessions use five riders',
+    () {
+      final configured = RideSession(
+        rideId: 'ride',
+        rideCode: 'SIM123',
+        inviteSecret: 'secret',
+        joinToken: 'aTokenWithPlentyOfEntropy',
+        localRiderId: 'lead',
+        displayName: 'Demo Lead',
+        role: RideRole.lead,
+        joinedAt: DateTime.utc(2026, 7, 17),
+        isSimulation: true,
+        simulationRiderCount: 30,
+      );
+      expect(
+        RideSession.fromJson(configured.toJson()).simulationRiderCount,
+        30,
+      );
+
+      final legacy = session.toJson()..remove('simulationRiderCount');
+      expect(
+        RideSession.fromJson(legacy).simulationRiderCount,
+        RideSession.defaultSimulationRiderCount,
+      );
+    },
+  );
+
+  test('legacy sessions default to live rides', () {
+    final json = session.toJson()..remove('isSimulation');
+    expect(RideSession.fromJson(json).isSimulation, isFalse);
+  });
+
+  test('coordination mode persists and old rides keep drop-off behaviour', () {
+    final solo = RideSession(
+      rideId: 'ride',
+      rideCode: 'SIM123',
+      inviteSecret: 'secret',
+      joinToken: 'aTokenWithPlentyOfEntropy',
+      localRiderId: 'lead',
+      displayName: 'Demo Lead',
+      role: RideRole.lead,
+      joinedAt: DateTime.utc(2026, 7, 17),
+      coordinationMode: RideCoordinationMode.solo,
+    );
+    expect(
+      RideSession.fromJson(solo.toJson()).coordinationMode,
+      RideCoordinationMode.solo,
+    );
+
+    final legacy = solo.toJson()..remove('coordinationMode');
+    expect(
+      RideSession.fromJson(legacy).coordinationMode,
+      RideCoordinationMode.secondBikeDropOff,
+    );
+  });
+
+  test(
+    'rider symbol survives session persistence and old sessions use a bike',
+    () {
+      final custom = RideSession(
+        rideId: 'ride',
+        rideCode: 'SIM123',
+        inviteSecret: 'secret',
+        joinToken: 'aTokenWithPlentyOfEntropy',
+        localRiderId: 'lead',
+        displayName: 'Demo Lead',
+        role: RideRole.lead,
+        joinedAt: DateTime.utc(2026, 7, 17),
+        riderSymbol: const RiderSymbol.initials(),
+      );
+      expect(
+        RideSession.fromJson(custom.toJson()).riderSymbol,
+        const RiderSymbol.initials(),
+      );
+
+      final legacy = custom.toJson()..remove('riderSymbol');
+      expect(RideSession.fromJson(legacy).riderSymbol, riderSymbolDefault);
+    },
+  );
+
+  test(
+    'a session persisted before join tokens existed gets a fresh one instead of crashing',
+    () {
+      final json = session.toJson()..remove('joinToken');
+      final restored = RideSession.fromJson(json);
+      expect(restored.joinToken.length, greaterThanOrEqualTo(16));
+    },
+  );
+}

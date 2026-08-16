@@ -1,0 +1,122 @@
+name: Server CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SERVER_DIR: apps/server
+
+jobs:
+  quality:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ${{ env.SERVER_DIR }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          working-directory: ${{ env.SERVER_DIR }}
+          python-version: '3.12'
+          enable-cache: true
+      - run: uv sync --frozen --extra dev
+      - name: Audit Python dependencies
+        # The relay itself is an editable local package, not a PyPI dependency.
+        # Vulnerabilities still fail the command; only that local package is skipped.
+        run: uv run pip-audit --skip-editable
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run ruff format --check ../../tools/discovery ../../tools/tester_notify
+      - run: uv run ruff check ../../tools/discovery ../../tools/tester_notify
+      - run: cd ../.. && python3 -m unittest discover -s tools/discovery/tests -v
+      - run: cd ../.. && python3 -m unittest discover -s tools/tester_notify/tests -v
+      - run: uv run pytest --cov=ride_relay_server --cov-report=term-missing --cov-fail-under=80
+
+  postgres-migration:
+    name: PostgreSQL migration smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: ride_relay
+          POSTGRES_USER: ride_relay
+          POSTGRES_PASSWORD: ci-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ride_relay -d ride_relay"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: ${{ env.SERVER_DIR }}
+    env:
+      RIDE_RELAY_DATABASE_URL: postgresql+psycopg://ride_relay:ci-only-password@127.0.0.1:5432/ride_relay
+      RIDE_RELAY_DATA_ENCRYPTION_KEY: BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc
+      RIDE_RELAY_CURSOR_SIGNING_KEY: CwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCws
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          working-directory: ${{ env.SERVER_DIR }}
+          python-version: '3.12'
+          enable-cache: true
+      - run: uv sync --frozen --no-dev
+      - run: uv run alembic upgrade head
+      - run: uv run python -c "from sqlalchemy import create_engine, inspect; from ride_relay_server.config import get_settings; assert {'rides', 'ride_events', 'ride_members', 'idempotency_replays', 'ride_plans', 'discovery_suggestions', 'discovery_moderation_events', 'discovery_features', 'discovery_road_ratings'} <= set(inspect(create_engine(get_settings().database_url)).get_table_names())"
+
+  container:
+    name: Container build
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: docker build --tag ride-relay-server:ci apps/server
+      - name: Validate tailnet deployment
+        env:
+          POSTGRES_PASSWORD: ci-only-password
+          RIDE_RELAY_CURSOR_SIGNING_KEY: CwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCws
+          RIDE_RELAY_DATA_ENCRYPTION_KEY: BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc
+          RIDE_RELAY_DOMAIN: ride-relay.example.ts.net
+        run: >-
+          docker compose
+          --file deploy/compose.yaml
+          --file deploy/compose.tailnet.yaml
+          config --quiet
+      - name: Validate isolated pre-production deployment
+        env:
+          POSTGRES_PASSWORD: production-ci-only-password
+          RIDE_RELAY_CURSOR_SIGNING_KEY: CwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCws
+          RIDE_RELAY_DATA_ENCRYPTION_KEY: BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc
+          RIDE_RELAY_DOMAIN: relay.example.com
+          RIDE_RELAY_PREPRODUCTION_DOMAIN: preprod-relay.example.com
+          PREPRODUCTION_POSTGRES_PASSWORD: preproduction-ci-only-password
+          PREPRODUCTION_RIDE_RELAY_CURSOR_SIGNING_KEY: DQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0
+          PREPRODUCTION_RIDE_RELAY_DATA_ENCRYPTION_KEY: Dg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4
+        run: |
+          docker compose --file deploy/compose.preproduction.yaml config --quiet
+          docker compose \
+            --file deploy/compose.yaml \
+            --file deploy/compose.preproduction-proxy.yaml \
+            config --quiet
+          docker run --rm \
+            --env RIDE_RELAY_DOMAIN \
+            --env RIDE_RELAY_PREPRODUCTION_DOMAIN \
+            --volume "$PWD/deploy/Caddyfile.preproduction:/etc/caddy/Caddyfile:ro" \
+            caddy:2.11.4-alpine \
+            caddy validate --config /etc/caddy/Caddyfile

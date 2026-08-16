@@ -1,0 +1,238 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:ride_relay/services/gpx_parser.dart';
+
+void main() {
+  const parser = GpxParser();
+
+  test('parses GPX 1.1 tracks, route points, waypoints, and metadata', () {
+    final route = parser.parse(
+      _bytes('''
+        <gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+          <metadata><name>Mixed route</name><desc>Saturday</desc></metadata>
+          <wpt lat="53.3" lon="-1.6"><name>Fuel</name><sym>Fuel</sym></wpt>
+          <trk><name>Main track</name>
+            <trkseg>
+              <trkpt lat="53.1" lon="-1.4"><ele>200</ele><time>2026-07-16T09:00:00Z</time></trkpt>
+              <trkpt lat="53.2" lon="-1.5" />
+            </trkseg>
+          </trk>
+          <rte><name>Diversion</name><rtept lat="53.4" lon="-1.7" /></rte>
+        </gpx>
+      '''),
+      routeId: 'route-1',
+      sourceFileName: 'mixed.gpx',
+      importedAt: DateTime.utc(2026, 7, 16),
+    );
+
+    expect(route.name, 'Mixed route');
+    expect(route.description, 'Saturday');
+    expect(route.paths, hasLength(2));
+    expect(route.pathPointCount, 3);
+    expect(route.paths.first.points.first.elevationMeters, 200);
+    expect(route.paths.first.points.first.recordedAt, isNotNull);
+    expect(route.waypoints.single.name, 'Fuel');
+  });
+
+  test('rejects invalid coordinates and excessive point counts', () {
+    expect(
+      () => parser.parse(
+        _bytes('<gpx><wpt lat="91" lon="0" /></gpx>'),
+        routeId: 'bad',
+        sourceFileName: 'bad.gpx',
+        importedAt: DateTime.utc(2026),
+      ),
+      throwsA(isA<GpxFormatException>()),
+    );
+
+    const limitedParser = GpxParser(maximumPoints: 1);
+    expect(
+      () => limitedParser.parse(
+        _bytes(
+          '<gpx><rte><rtept lat="1" lon="1"/><rtept lat="2" lon="2"/></rte></gpx>',
+        ),
+        routeId: 'large',
+        sourceFileName: 'large.gpx',
+        importedAt: DateTime.utc(2026),
+      ),
+      throwsA(isA<GpxFormatException>()),
+    );
+  });
+
+  test('recognises a planner-calculated track as a road route', () {
+    final route = parser.parse(
+      _bytes('''
+        <gpx version="1.1"
+             xmlns="http://www.topografix.com/GPX/1/1"
+             xmlns:tec="https://knot-alone.invalid/gpx/1">
+          <trk>
+            <extensions><tec:road-route>true</tec:road-route></extensions>
+            <trkseg>
+              <trkpt lat="53.1" lon="-1.4" />
+              <trkpt lat="53.2" lon="-1.5" />
+            </trkseg>
+          </trk>
+        </gpx>
+      '''),
+      routeId: 'planned',
+      sourceFileName: 'planned.gpx',
+      importedAt: DateTime.utc(2026, 7, 23),
+    );
+
+    expect(route.paths.single.kind.name, 'route');
+  });
+
+  test('imports reviewed marker decisions from the web planner', () {
+    final route = parser.parse(
+      _bytes('''
+        <gpx version="1.1"
+             xmlns="http://www.topografix.com/GPX/1/1"
+             xmlns:tec="https://knot-alone.invalid/gpx/1">
+          <metadata><extensions><tec:marker-review>
+            <tec:rejected id="old-maneuver" lat="51.1000000" lon="-2.1000000"
+              label="Turn right marker" />
+            <tec:added id="geometry-4" lat="51.1500000" lon="-2.1500000"
+              label="Missed junction" />
+          </tec:marker-review></extensions></metadata>
+          <trk><trkseg>
+            <trkpt lat="51.0" lon="-2.0" />
+            <trkpt lat="51.2" lon="-2.2" />
+          </trkseg></trk>
+        </gpx>
+      '''),
+      routeId: 'reviewed',
+      sourceFileName: 'reviewed.gpx',
+      importedAt: DateTime.utc(2026, 7, 29),
+    );
+
+    expect(route.markerReview.rejected.single.id, 'old-maneuver');
+    expect(route.markerReview.rejected.single.label, 'Turn right marker');
+    expect(route.markerReview.added.single.id, 'geometry-4');
+    expect(route.markerReview.added.single.position.latitude, 51.15);
+  });
+
+  test('preserves Scenic soft points without importing duplicate routes', () {
+    final route = parser.parse(
+      _bytes('''
+        <gpx version="1.1"
+             creator="Scenic Motorcycle Navigation App"
+             xmlns="http://www.topografix.com/GPX/1/1"
+             xmlns:trp="http://www.garmin.com/xmlschemas/TripExtensions/v1"
+             xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+          <wpt lat="51.0" lon="-2.0"><name>Start</name></wpt>
+          <rte><name>Plain</name>
+            <rtept lat="51.0" lon="-2.0"/>
+            <rtept lat="51.1" lon="-2.1"/>
+            <rtept lat="51.2" lon="-2.2"/>
+          </rte>
+          <rte><name>Garmin Trip</name>
+            <rtept lat="51.0" lon="-2.0">
+              <extensions><trp:ViaPoint/></extensions>
+            </rtept>
+            <rtept lat="51.1" lon="-2.1">
+              <name>Via 1</name>
+              <extensions><trp:ShapingPoint/></extensions>
+            </rtept>
+            <rtept lat="51.2" lon="-2.2">
+              <extensions><trp:ViaPoint/></extensions>
+            </rtept>
+          </rte>
+          <rte><name>Garmin RoutePoint</name>
+            <rtept lat="51.0" lon="-2.0">
+              <extensions><gpxx:RoutePointExtension>
+                <gpxx:rpt lat="51.1" lon="-2.1"/>
+              </gpxx:RoutePointExtension></extensions>
+            </rtept>
+            <rtept lat="51.2" lon="-2.2"/>
+          </rte>
+          <trk><name>Calculated track</name><trkseg>
+            <trkpt lat="51.0" lon="-2.0"/>
+            <trkpt lat="51.2" lon="-2.2"/>
+          </trkseg></trk>
+        </gpx>
+      '''),
+      routeId: 'scenic',
+      sourceFileName: 'scenic.gpx',
+      importedAt: DateTime.utc(2026, 7, 24),
+    );
+
+    expect(route.paths, hasLength(2));
+    expect(
+      route.paths.where((path) => path.kind.name == 'route').single.name,
+      'Garmin Trip',
+    );
+    expect(
+      route.waypoints.where((waypoint) => waypoint.symbol == 'Shaping point'),
+      hasLength(1),
+    );
+    expect(
+      route.waypoints
+          .where((waypoint) => waypoint.symbol == 'Shaping point')
+          .single
+          .name,
+      'Via 1',
+    );
+  });
+
+  test('expands Garmin RoutePoint extension shaping points in order', () {
+    final route = parser.parse(
+      _bytes('''
+        <gpx version="1.1"
+             xmlns="http://www.topografix.com/GPX/1/1"
+             xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+          <rte><name>Garmin route</name>
+            <rtept lat="51.0" lon="-2.0">
+              <extensions><gpxx:RoutePointExtension>
+                <gpxx:rpt lat="51.1" lon="-2.1"/>
+                <gpxx:rpt lat="51.2" lon="-2.2"/>
+              </gpxx:RoutePointExtension></extensions>
+            </rtept>
+            <rtept lat="51.3" lon="-2.3"/>
+          </rte>
+        </gpx>
+      '''),
+      routeId: 'garmin',
+      sourceFileName: 'garmin.gpx',
+      importedAt: DateTime.utc(2026, 7, 24),
+    );
+
+    expect(route.paths.single.points.map((point) => point.latitude), [
+      51.0,
+      51.1,
+      51.2,
+      51.3,
+    ]);
+    expect(
+      route.waypoints.where((waypoint) => waypoint.symbol == 'Shaping point'),
+      hasLength(2),
+    );
+  });
+
+  test('bundled demo is valid GPX geometry', () {
+    final bytes = File('assets/demo_route.gpx').readAsBytesSync();
+    final route = parser.parse(
+      bytes,
+      routeId: 'demo',
+      sourceFileName: 'demo_route.gpx',
+      importedAt: DateTime.utc(2026),
+    );
+
+    expect(route.name, "King's Oak Academy to Cross Hands Hotel");
+    expect(route.pathPointCount, greaterThan(450));
+    expect(route.waypoints, hasLength(3));
+    expect(route.paths.single.kind.name, 'track');
+    expect(
+      route.paths.single.points.first.latitude,
+      closeTo(51.462674, 0.00001),
+    );
+    expect(
+      route.paths.single.points.last.latitude,
+      closeTo(51.528729, 0.00001),
+    );
+  });
+}
+
+Uint8List _bytes(String value) => Uint8List.fromList(utf8.encode(value));

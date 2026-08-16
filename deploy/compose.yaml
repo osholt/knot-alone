@@ -1,0 +1,125 @@
+name: ride-relay
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ride_relay
+      POSTGRES_USER: ride_relay
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U ride_relay -d ride_relay]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  server:
+    build:
+      context: ../apps/server
+      args:
+        RIDE_RELAY_BUILD_COMMIT: ${RIDE_RELAY_BUILD_COMMIT:-unknown}
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment: &server-environment
+      RIDE_RELAY_ENVIRONMENT: production
+      RIDE_RELAY_DATABASE_URL: postgresql+psycopg://ride_relay:${POSTGRES_PASSWORD}@db:5432/ride_relay
+      RIDE_RELAY_DATA_ENCRYPTION_KEY: ${RIDE_RELAY_DATA_ENCRYPTION_KEY:?set RIDE_RELAY_DATA_ENCRYPTION_KEY}
+      RIDE_RELAY_CURSOR_SIGNING_KEY: ${RIDE_RELAY_CURSOR_SIGNING_KEY:?set RIDE_RELAY_CURSOR_SIGNING_KEY}
+      RIDE_RELAY_APNS_TEAM_ID: ${RIDE_RELAY_APNS_TEAM_ID:-}
+      RIDE_RELAY_APNS_KEY_ID: ${RIDE_RELAY_APNS_KEY_ID:-}
+      RIDE_RELAY_APNS_BUNDLE_ID: ${RIDE_RELAY_APNS_BUNDLE_ID:-}
+      RIDE_RELAY_APNS_PRIVATE_KEY_BASE64: ${RIDE_RELAY_APNS_PRIVATE_KEY_BASE64:-}
+      RIDE_RELAY_APNS_SANDBOX: ${RIDE_RELAY_APNS_SANDBOX:-false}
+      RIDE_RELAY_FCM_PROJECT_ID: ${RIDE_RELAY_FCM_PROJECT_ID:-}
+      RIDE_RELAY_FCM_CLIENT_EMAIL: ${RIDE_RELAY_FCM_CLIENT_EMAIL:-}
+      RIDE_RELAY_FCM_PRIVATE_KEY_BASE64: ${RIDE_RELAY_FCM_PRIVATE_KEY_BASE64:-}
+      RIDE_RELAY_PUSH_DELIVERY_TIMEOUT_SECONDS: ${RIDE_RELAY_PUSH_DELIVERY_TIMEOUT_SECONDS:-8}
+      RIDE_RELAY_DISCOVERY_ADMIN_TOKEN: ${RIDE_RELAY_DISCOVERY_ADMIN_TOKEN:-}
+      RIDE_RELAY_DISCOVERY_ADMIN_NAME: ${RIDE_RELAY_DISCOVERY_ADMIN_NAME:-discovery-admin}
+      RIDE_RELAY_DISCOVERY_ALLOWED_ORIGINS: '${RIDE_RELAY_DISCOVERY_ALLOWED_ORIGINS:-["https://knot-alone.invalid","https://www.knot-alone.invalid"]}'
+      RIDE_RELAY_TRUSTED_HOSTS: '["${RIDE_RELAY_DOMAIN}","127.0.0.1","localhost"]'
+      RIDE_RELAY_FORWARDED_ALLOW_IPS: '*'
+      RIDE_RELAY_AUTO_CREATE_SCHEMA: 'false'
+      RIDE_RELAY_RIDE_RETENTION_HOURS: ${RIDE_RELAY_RIDE_RETENTION_HOURS:-72}
+      RIDE_RELAY_ENDED_RIDE_GRACE_HOURS: ${RIDE_RELAY_ENDED_RIDE_GRACE_HOURS:-24}
+      RIDE_RELAY_JOIN_CODE_LOOKUP_RATE_LIMIT_REQUESTS: ${RIDE_RELAY_JOIN_CODE_LOOKUP_RATE_LIMIT_REQUESTS:-30}
+      RIDE_RELAY_JOIN_CODE_LOOKUP_RATE_LIMIT_WINDOW_SECONDS: ${RIDE_RELAY_JOIN_CODE_LOOKUP_RATE_LIMIT_WINDOW_SECONDS:-60}
+      RIDE_RELAY_JOIN_CODE_GLOBAL_RATE_LIMIT_REQUESTS: ${RIDE_RELAY_JOIN_CODE_GLOBAL_RATE_LIMIT_REQUESTS:-20}
+      RIDE_RELAY_MAXIMUM_ACTIVE_RIDES: ${RIDE_RELAY_MAXIMUM_ACTIVE_RIDES:-100}
+      RIDE_RELAY_MAXIMUM_EVENTS_PER_RIDE: ${RIDE_RELAY_MAXIMUM_EVENTS_PER_RIDE:-5000}
+      RIDE_RELAY_MAXIMUM_STORED_BYTES_PER_RIDE: ${RIDE_RELAY_MAXIMUM_STORED_BYTES_PER_RIDE:-26214400}
+      RIDE_RELAY_MAXIMUM_REPLAYS_PER_RIDE: ${RIDE_RELAY_MAXIMUM_REPLAYS_PER_RIDE:-5000}
+      RIDE_RELAY_MAXIMUM_REPLAY_BYTES_PER_RIDE: ${RIDE_RELAY_MAXIMUM_REPLAY_BYTES_PER_RIDE:-26214400}
+      RIDE_RELAY_TOMTOM_TRAFFIC_API_KEY: ${RIDE_RELAY_TOMTOM_TRAFFIC_API_KEY:-}
+      RIDE_RELAY_TRAFFIC_PROVIDER_TIMEOUT_SECONDS: ${RIDE_RELAY_TRAFFIC_PROVIDER_TIMEOUT_SECONDS:-8}
+      RIDE_RELAY_TRAFFIC_INCIDENT_CACHE_SECONDS: ${RIDE_RELAY_TRAFFIC_INCIDENT_CACHE_SECONDS:-60}
+      RIDE_RELAY_TRAFFIC_INCIDENT_RATE_LIMIT_REQUESTS: ${RIDE_RELAY_TRAFFIC_INCIDENT_RATE_LIMIT_REQUESTS:-60}
+      RIDE_RELAY_TRAFFIC_INCIDENT_RATE_LIMIT_WINDOW_SECONDS: ${RIDE_RELAY_TRAFFIC_INCIDENT_RATE_LIMIT_WINDOW_SECONDS:-60}
+      RIDE_RELAY_TRAFFIC_INCIDENT_MAXIMUM_RESPONSE_BYTES: ${RIDE_RELAY_TRAFFIC_INCIDENT_MAXIMUM_RESPONSE_BYTES:-524288}
+      RIDE_RELAY_OBSERVER_READ_RATE_LIMIT_REQUESTS: ${RIDE_RELAY_OBSERVER_READ_RATE_LIMIT_REQUESTS:-120}
+      RIDE_RELAY_OBSERVER_READ_RATE_LIMIT_WINDOW_SECONDS: ${RIDE_RELAY_OBSERVER_READ_RATE_LIMIT_WINDOW_SECONDS:-60}
+      RIDE_RELAY_OBSERVER_IP_ABUSE_RATE_LIMIT_REQUESTS: ${RIDE_RELAY_OBSERVER_IP_ABUSE_RATE_LIMIT_REQUESTS:-5000}
+      RIDE_RELAY_OBSERVER_CREATE_RATE_LIMIT_REQUESTS: ${RIDE_RELAY_OBSERVER_CREATE_RATE_LIMIT_REQUESTS:-10}
+      RIDE_RELAY_OBSERVER_CREATE_IP_ABUSE_RATE_LIMIT_REQUESTS: ${RIDE_RELAY_OBSERVER_CREATE_IP_ABUSE_RATE_LIMIT_REQUESTS:-500}
+      RIDE_RELAY_OBSERVER_CREATE_RATE_LIMIT_WINDOW_SECONDS: ${RIDE_RELAY_OBSERVER_CREATE_RATE_LIMIT_WINDOW_SECONDS:-3600}
+      RIDE_RELAY_MAXIMUM_OBSERVER_GRANTS_PER_RIDE: ${RIDE_RELAY_MAXIMUM_OBSERVER_GRANTS_PER_RIDE:-50}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  cleanup:
+    build:
+      context: ../apps/server
+      args:
+        RIDE_RELAY_BUILD_COMMIT: ${RIDE_RELAY_BUILD_COMMIT:-unknown}
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment: *server-environment
+    command:
+      - sh
+      - -c
+      - while true; do .venv/bin/ride-relay-cleanup; sleep 3600; done
+    healthcheck:
+      disable: true
+    depends_on:
+      server:
+        condition: service_healthy
+
+  martin:
+    image: ghcr.io/maplibre/martin:1.11.0
+    restart: unless-stopped
+    profiles: [maps]
+    command: [/data]
+    volumes:
+      - ./maps/data:/data:ro
+
+  caddy:
+    image: caddy:2.11.4-alpine
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+      - 443:443/udp
+    environment:
+      RIDE_RELAY_DOMAIN: ${RIDE_RELAY_DOMAIN:?set RIDE_RELAY_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./maps/styles:/srv/maps/styles:ro
+      - ../apps/planner:/srv/planner:ro
+      - ../apps/website:/srv/website:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - server
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:
