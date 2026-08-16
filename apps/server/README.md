@@ -1,6 +1,6 @@
-# Knot Alone server
+# Tide and Seek server
 
-The online store-and-forward service for Knot Alone. It implements the mobile
+The online store-and-forward service for Tide and Seek. It implements the mobile
 `events:sync` contract with automatic first-use ride claiming, encrypted event
 storage, authenticated opaque cursors, idempotent batches, bounded pagination,
 rate limits and automatic retention.

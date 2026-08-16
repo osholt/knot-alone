@@ -66,7 +66,7 @@ void main() {
     await controller.reloadEvents();
   }
 
-  group('a leader asking a rider to be Knot Alone', () {
+  group('a leader asking a rider to be the Sweeper', () {
     test('records a signed, addressed request the rider can answer', () async {
       await controller.createRide('Lead');
       await addRider('bill', 'Bill');

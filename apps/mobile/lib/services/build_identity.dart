@@ -133,7 +133,7 @@ class BuildIdentity {
   /// the internal-testing invitation see the internal release here; testers who
   /// have not see the public listing and must accept the invitation first.
   static const playListingUrl =
-      'https://play.google.com/store/apps/details?id=dev.osholt.knotalone';
+      'https://play.google.com/store/apps/details?id=dev.osholt.tideandseek';
 
   /// The closed-testing opt-in page for the Android package.
   ///
@@ -142,7 +142,7 @@ class BuildIdentity {
   /// store listing is the wrong destination for a closed-track build. This page
   /// both enrols the account and links straight through to the install/update.
   static const playClosedTestingOptInUrl =
-      'https://play.google.com/apps/testing/dev.osholt.knotalone';
+      'https://play.google.com/apps/testing/dev.osholt.tideandseek';
 
   /// TestFlight's own landing page. A build-specific TestFlight invitation link
   /// can only be issued from App Store Connect, so it is supplied per build
@@ -200,7 +200,7 @@ class BuildIdentity {
 
   /// A single line a tester can copy into a bug report.
   String get bugReportLine =>
-      'Knot Alone ${reportsVersion ? '$appVersion+$appBuild' : 'unstamped build (version not reported)'} · '
+      'Tide and Seek ${reportsVersion ? '$appVersion+$appBuild' : 'unstamped build (version not reported)'} · '
       '${track.label} · ${platform.name}';
 
   bool get hasRelayEndpoint => relayHost.isNotEmpty;
@@ -235,7 +235,7 @@ class BuildIdentity {
       'Open Google Play, then Manage apps & device → Updates available. '
           'Play can take a few minutes to show a new internal-testing build.',
     TargetPlatform.iOS =>
-      'Open TestFlight and pull to refresh, then choose Update for Knot Alone.',
+      'Open TestFlight and pull to refresh, then choose Update for Tide and Seek.',
     _ => 'Reinstall the build from the channel it was distributed on.',
   };
 

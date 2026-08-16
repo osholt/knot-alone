@@ -176,7 +176,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     mapViewController?.apply(mapStyle: mapStyle)
   }
 
-  /// Raises, and takes down, the leader's "will you be Knot Alone?"
+  /// Raises, and takes down, the leader's "will you be Sweeper?"
   /// question (#128).
   ///
   /// A two-action alert is the whole interaction: the role is a request the
@@ -216,8 +216,8 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     }
     let alert = CPAlertTemplate(
       titleVariants: [
-        request["title"] as? String ?? "Be Knot Alone?",
-        "Be Knot Alone?",
+        request["title"] as? String ?? "Be the Sweeper?",
+        "Be the Sweeper?",
         "Ride at the back?",
       ],
       actions: [

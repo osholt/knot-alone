@@ -203,7 +203,7 @@ class RideSimulationController extends ChangeNotifier {
           ? '${_markerRiderSubject()} $_markerRiderPresentVerb holding the junction while riders pass '
                 '($ridersPassedMarker/$ridersExpectedToPass).'
           : 'Riders are through. ${_markerRiderSubject()} $_markerRiderPresentVerb waiting for '
-                'Knot Alone.',
+                'Sweeper.',
     SimulationMarkerPhase.tecApproaching =>
       '${ridersPassedMarker < ridersExpectedToPass ? 'Traffic is still clearing. ' : 'All riders are through. '}TEC is approaching — '
           '${_markerRiderSubject().toLowerCase()} should get ready to ride off.',

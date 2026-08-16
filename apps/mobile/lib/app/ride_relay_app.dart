@@ -195,7 +195,7 @@ class RideRelayApp extends StatelessWidget {
     final links = rideInvitationLinks;
 
     return MaterialApp(
-      title: 'Knot Alone',
+      title: 'Tide and Seek',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

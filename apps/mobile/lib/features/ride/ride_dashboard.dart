@@ -58,7 +58,7 @@ class RideDashboard extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Knot Alone'),
+        title: const Text('Tide and Seek'),
         backgroundColor: Colors.transparent,
       ),
       body: AnimatedBuilder(
@@ -572,7 +572,7 @@ class _RideCodeCard extends StatelessWidget {
                         onPressed: () => SharePlus.instance.share(
                           ShareParams(
                             text: controller.rideCodeShareText,
-                            subject: 'Join my Knot Alone group',
+                            subject: 'Join my Tide and Seek group',
                           ),
                         ),
                         icon: const Icon(Icons.ios_share),
@@ -697,11 +697,11 @@ class _EventRow extends StatelessWidget {
       RideEventType.rideReopened => 'Ride reopened by the leader',
       RideEventType.iceInfoShared => 'Emergency contact shared',
       RideEventType.iceInfoViewed => 'Emergency contact viewed',
-      RideEventType.tecRoleRequested => 'Knot Alone requested',
+      RideEventType.tecRoleRequested => 'Sweeper requested',
       RideEventType.tecRoleResponded =>
         event.payload['accepted'] == true
-            ? 'Knot Alone accepted'
-            : 'Knot Alone declined',
+            ? 'Sweeper accepted'
+            : 'Sweeper declined',
       RideEventType.rejoinRouteShared =>
         (event.payload['share'] as Map?)?['cleared'] == true
             ? 'Rejoin route cleared'

@@ -31,7 +31,7 @@ class ObserverAccessConfiguration {
   factory ObserverAccessConfiguration.fromEnvironment() {
     const webValue = String.fromEnvironment(
       'OBSERVER_WEB_BASE_URL',
-      defaultValue: 'https://relay.knot-alone.invalid/observer.html',
+      defaultValue: 'https://relay.tideandseek.invalid/observer.html',
     );
     return ObserverAccessConfiguration(
       relay: InternetRelayConfiguration.fromEnvironment(),

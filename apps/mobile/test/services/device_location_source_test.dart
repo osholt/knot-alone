@@ -123,7 +123,7 @@ void main() {
 
       expect(access.backgroundCapable, isFalse);
       expect(started.backgroundCapable, isFalse);
-      expect(started.message, contains('Knot Alone is visible'));
+      expect(started.message, contains('Tide and Seek is visible'));
       await source.dispose();
       await platform.dispose();
     },

@@ -34,7 +34,7 @@ fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 # body is therefore the only way to know an action happened. An earlier version
 # of this script checked curl's exit code alone and cheerfully reported
 # "previous ride ended" and then the *previous* ride's code, for an end refused
-# because the local rider was Knot Alone rather than the leader.
+# because the local rider was the Sweeper rather than the leader.
 must() { # description, then the call output
   local what="$1" out="$2"
   local err
@@ -76,7 +76,7 @@ done
 # wrong thing entirely.
 #
 # `end` is leader-only - RideController throws "Only the ride leader can end the
-# ride" for anyone else - so a phone holding a ride as Knot Alone or marker
+# ride" for anyone else - so a phone holding a ride as the Sweeper or marker
 # needs `leave` instead. Both are attempted, errors ignored, and the create below
 # is the real check.
 clear_ride() {

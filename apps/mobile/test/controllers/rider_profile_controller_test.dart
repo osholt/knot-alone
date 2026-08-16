@@ -81,7 +81,7 @@ void main() {
       );
 
       await profile.save(
-        displayName: 'Knot Alone',
+        displayName: 'Sweeper',
         motorcycleStyle: MotorcycleIconStyle.fullTourer,
         riderSymbol: symbol,
         riderColor: RiderColor.purple,

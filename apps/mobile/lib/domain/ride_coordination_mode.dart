@@ -1,11 +1,11 @@
-/// How a ride uses Knot Alone's group-coordination features.
+/// How a ride uses Tide and Seek's group-coordination features.
 enum RideCoordinationMode {
   /// One rider, with route recording and navigation but no join code or group
   /// controls.
   solo,
 
   /// The classic second-bike drop-off system: junction marker prompts, marker
-  /// passes and Knot Alone statistics are enabled.
+  /// passes and Tide and Seek statistics are enabled.
   secondBikeDropOff,
 
   /// Riders stay together as one group, without junction drop-off prompts.
@@ -30,7 +30,7 @@ enum RideCoordinationMode {
       'Navigation and ride recording for just you. No join code or group '
           'controls; you can still share a private watcher link.',
     RideCoordinationMode.secondBikeDropOff =>
-      'Use junction drop-offs, marker prompts and Knot Alone tracking.',
+      'Use junction drop-offs, marker prompts and Tide and Seek tracking.',
     RideCoordinationMode.keepTogether =>
       'Ride as one group without junction drop-offs or marker prompts.',
   };

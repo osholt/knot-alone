@@ -1,6 +1,6 @@
 FLUTTER ?= flutter
 MOBILE_DIR := apps/mobile
-RIDE_RELAY_API_BASE_URL ?= https://relay.knot-alone.invalid/api
+RIDE_RELAY_API_BASE_URL ?= https://relay.tideandseek.invalid/api
 IOS_SIMULATOR_LOCATION ?= 51.457750,-2.462319
 IOS_SIMULATOR_DEVICE ?= $(shell xcrun simctl list devices booted | awk -F '[()]' '/Booted/ { print $$2; exit }')
 

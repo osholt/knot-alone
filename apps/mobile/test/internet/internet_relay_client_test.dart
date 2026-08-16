@@ -266,7 +266,7 @@ void main() {
 
       expect(result.disposition, RelayCompatibilityDisposition.updateRequired);
       expect(result.canSynchronize, isFalse);
-      expect(result.updateUri, Uri.parse('https://knot-alone.invalid/update'));
+      expect(result.updateUri, Uri.parse('https://tideandseek.invalid/update'));
       client.close();
     });
 
@@ -484,7 +484,7 @@ void main() {
           isA<RideCodeDirectoryException>().having(
             (error) => error.message,
             'message',
-            contains('Update Knot Alone'),
+            contains('Update Tide and Seek'),
           ),
         ),
       );
@@ -512,9 +512,9 @@ http.Response _compatibilityResponse({int minimumClientProtocol = 1}) =>
         'requiredCapabilities': <String>[],
         'cacheSeconds': 300,
         'updateUrls': {
-          'default': 'https://knot-alone.invalid/update',
-          'iOS': 'https://knot-alone.invalid/update',
-          'android': 'https://knot-alone.invalid/update',
+          'default': 'https://tideandseek.invalid/update',
+          'iOS': 'https://tideandseek.invalid/update',
+          'android': 'https://tideandseek.invalid/update',
         },
       }),
       200,

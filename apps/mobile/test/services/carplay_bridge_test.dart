@@ -204,14 +204,14 @@ void main() {
       rideStart: const CarPlayRideStart(
         enabled: true,
         detail: 'Friday route. Recording, sharing and navigation will start.',
-        warning: 'No Knot Alone is assigned.',
+        warning: 'No Sweeper is assigned.',
       ),
     );
 
     expect((received!.arguments as Map)['rideStart'], {
       'enabled': true,
       'detail': 'Friday route. Recording, sharing and navigation will start.',
-      'warning': 'No Knot Alone is assigned.',
+      'warning': 'No Sweeper is assigned.',
       'unavailableReason': null,
     });
   });
@@ -255,7 +255,7 @@ void main() {
     expect(solo.warning, isNull);
 
     final groupWithoutTec = project(isGroup: true)!;
-    expect(groupWithoutTec.warning, contains('No Knot Alone'));
+    expect(groupWithoutTec.warning, contains('No Sweeper'));
     expect(project(isGroup: true, hasTec: true)!.warning, isNull);
   });
 
@@ -587,7 +587,7 @@ void main() {
       riderLocations: const [],
       routeAlerts: const [],
       activeHazards: const [],
-      markerStatus: 'Wait for Knot Alone.',
+      markerStatus: 'Wait for Sweeper.',
       marker: const CarPlayMarkerStatus(
         stage: 'tecApproaching',
         title: 'TEC approaching',
@@ -719,7 +719,7 @@ void main() {
   // both carry RideRole.tailEndCharlie in the journal. The phone map already
   // resolves that to one back-marker; a head unit showing two is telling the
   // leader the group has two backs.
-  test('marks only the effective back-marker as Knot Alone', () async {
+  test('marks only the effective back-marker as Sweeper', () async {
     MethodCall? received;
     messenger.setMockMethodCallHandler(channel, (call) async {
       received = call;
@@ -753,7 +753,7 @@ void main() {
       for (final rider in riders.cast<Map>()) rider['label']: rider,
     };
     expect(byName['Dave']!['isTec'], isTrue);
-    expect(byName['Dave']!['role'], 'Knot Alone');
+    expect(byName['Dave']!['role'], 'Sweeper');
     expect(byName['Bill']!['isTec'], isFalse);
     expect(byName['Bill']!['role'], 'Rider');
   });
@@ -793,7 +793,7 @@ void main() {
     );
 
     final riders = (received!.arguments as Map)['riders'] as List;
-    expect((riders.single as Map)['role'], 'Knot Alone');
+    expect((riders.single as Map)['role'], 'Sweeper');
     expect((riders.single as Map)['isTec'], isFalse);
   });
 
@@ -874,7 +874,7 @@ void main() {
 
     final request = (calls[1].arguments as Map)['tecRequest'] as Map;
     expect(request['requestId'], 'req-1');
-    expect(request['title'], 'Be Knot Alone?');
+    expect(request['title'], 'Be the Sweeper?');
     expect(
       request['message'],
       'Sam has asked you to ride at the back and keep the group together.',

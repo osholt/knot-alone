@@ -21,7 +21,7 @@ class LeaderOffCourseAlert {
   final double? distanceFromRouteMeters;
 }
 
-/// Whether a ride has a Knot Alone, and how usable that TEC's position
+/// Whether a ride has a Sweeper, and how usable that TEC's position
 /// is. The app is named after the back-marker role, so "nobody is TEC" is a
 /// different safety situation from "the TEC has not reported a position yet",
 /// and the two must never be conflated.
@@ -29,7 +29,7 @@ class LeaderOffCourseAlert {
 /// Consumers must branch on this rather than infer a state from a null name,
 /// distance or age.
 enum TecAvailability {
-  /// No rider holds the Knot Alone role. Every distance-to-TEC surface
+  /// No rider holds the Sweeper role. Every distance-to-TEC surface
   /// is hidden rather than shown empty, dashed or zeroed, and features that
   /// target the TEC (for example rejoin routing for a massively off-course
   /// rider) must fall back to the ride leader instead of a null target.
@@ -57,7 +57,7 @@ enum TecAvailability {
   tracking,
 }
 
-/// Who the Knot Alone is, how usable their position is, and their last
+/// Who the Sweeper is, how usable their position is, and their last
 /// known fix.
 ///
 /// Resolved once by [LeaderRideStatusCalculator.resolveTecTarget] so the
@@ -127,7 +127,7 @@ class LeaderRideStatus {
   final Duration? tecLocationAge;
   final List<LeaderOffCourseAlert> offCourseAlerts;
 
-  /// Whether any rider is Knot Alone. False means the ride has no
+  /// Whether any rider is the Sweeper. False means the ride has no
   /// back-marker at all: hide the TEC surfaces and fall back to the leader.
   bool get hasRegisteredTec => tecAvailability != TecAvailability.none;
 }
@@ -292,7 +292,7 @@ class LeaderRideStatusCalculator {
     );
   }
 
-  /// Resolves the Knot Alone once, by the rules every TEC surface and
+  /// Resolves the Sweeper once, by the rules every TEC surface and
   /// every TEC-targeting feature shares.
   ///
   /// [registeredTecRiderIds] is the authoritative membership record, which is

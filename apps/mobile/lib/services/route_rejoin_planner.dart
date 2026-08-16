@@ -909,7 +909,7 @@ class RouteRejoinPlanner {
     final destination = switch (target) {
       RouteRejoinTarget.plannedRoute => 'Advisory rejoin route of $length.',
       RouteRejoinTarget.tailEndCharlie =>
-        'Advisory route of $length back to the route and on to Knot Alone, '
+        'Advisory route of $length back to the route and on to the Sweeper, '
             'who is behind the leader. It updates as they move.',
       // Deliberately does not claim there is no TEC: the leader is also used
       // when a TEC's own fix cannot be trusted to be behind the leader.

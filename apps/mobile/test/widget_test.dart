@@ -597,7 +597,7 @@ void main() {
     await tester.tap(find.byKey(const Key('start-without-route-button')));
     await tester.pumpAndSettle();
 
-    // This solo ride has no Knot Alone, so the safety warning stands
+    // This solo ride has no Sweeper, so the safety warning stands
     // between the confirmation and the start. Its own behaviour is covered by
     // ride_start_tec_warning_test.dart.
     expect(controller.rideStarted, isFalse);

@@ -155,7 +155,7 @@ class GeolocatorDeviceLocationPlatform implements DeviceLocationPlatform {
       foregroundNotificationConfig: const ForegroundNotificationConfig(
         notificationTitle: 'Sharing your position with your ride',
         notificationText:
-            'Knot Alone is recording your ride and keeping the group '
+            'Tide and Seek is recording your ride and keeping the group '
             'up to date. This stops when the ride ends.',
         notificationChannelName: 'Active ride',
         setOngoing: true,
@@ -259,7 +259,7 @@ class DeviceLocationSource {
         state: DeviceLocationState.sampling,
         message: inspected.backgroundCapable
             ? 'Sharing your position for this ride, including in the background.'
-            : 'Sharing while Knot Alone is visible. Allow “Always” '
+            : 'Sharing while Tide and Seek is visible. Allow “Always” '
                   'location access to keep sharing with another app in front.',
         lastSample: _status.lastSample,
         backgroundCapable: inspected.backgroundCapable,
@@ -272,7 +272,7 @@ class DeviceLocationSource {
           state: DeviceLocationState.sampling,
           message: _status.backgroundCapable
               ? 'Location is active for this ride, including in the background.'
-              : 'Location is active only while Knot Alone is visible.',
+              : 'Location is active only while Tide and Seek is visible.',
           lastSample: sample,
           backgroundCapable: _status.backgroundCapable,
         ),
@@ -367,7 +367,7 @@ class DeviceLocationSource {
                 state: DeviceLocationState.sampling,
                 message: permission == DeviceLocationPermission.always
                     ? 'Location is active for this ride, including in the background.'
-                    : 'Location is active only while Knot Alone is visible.',
+                    : 'Location is active only while Tide and Seek is visible.',
                 lastSample: _status.lastSample,
                 backgroundCapable:
                     permission == DeviceLocationPermission.always,

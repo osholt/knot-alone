@@ -5,7 +5,7 @@ void main() {
   test('accepts the production planner URL and normalises its code', () {
     expect(
       planCodeFromPlannerLink(
-        'https://knot-alone.invalid/planner.html?code=7f3k9qrt',
+        'https://tideandseek.invalid/planner.html?code=7f3k9qrt',
       ),
       '7F3K9QRT',
     );
@@ -14,7 +14,7 @@ void main() {
   test('rejects other origins, paths, fragments and ambiguous codes', () {
     expect(
       planCodeFromPlannerLink(
-        'http://knot-alone.invalid/planner.html?code=7F3K9QRT',
+        'http://tideandseek.invalid/planner.html?code=7F3K9QRT',
       ),
       isNull,
     );
@@ -25,24 +25,24 @@ void main() {
       isNull,
     );
     expect(
-      planCodeFromPlannerLink('https://knot-alone.invalid/?code=7F3K9QRT'),
+      planCodeFromPlannerLink('https://tideandseek.invalid/?code=7F3K9QRT'),
       isNull,
     );
     expect(
       planCodeFromPlannerLink(
-        'https://knot-alone.invalid/planner.html?code=7F3K9QRT#route',
+        'https://tideandseek.invalid/planner.html?code=7F3K9QRT#route',
       ),
       isNull,
     );
     expect(
       planCodeFromPlannerLink(
-        'https://knot-alone.invalid/planner.html?code=AAAA&code=BBBB',
+        'https://tideandseek.invalid/planner.html?code=AAAA&code=BBBB',
       ),
       isNull,
     );
     expect(
       planCodeFromPlannerLink(
-        'https://knot-alone.invalid/planner.html?code=bad-code',
+        'https://tideandseek.invalid/planner.html?code=bad-code',
       ),
       isNull,
     );

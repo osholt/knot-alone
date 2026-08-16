@@ -26,7 +26,7 @@ enum RideEventType {
 
   // Appended, never reordered: an older build recognises a type by name and
   // skips the ones it does not know (see `relay_event_compatibility.dart`).
-  /// The ride leader asks a named rider to take the Knot Alone role
+  /// The ride leader asks a named rider to take the Sweeper role
   /// (issue #128 part 1). A request, not an assignment: the role only changes
   /// when the target answers.
   tecRoleRequested,

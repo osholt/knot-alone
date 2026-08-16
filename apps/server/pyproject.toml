@@ -1,7 +1,7 @@
 [project]
 name = "ride-relay-server"
 version = "0.1.0"
-description = "Privacy-bounded internet relay for Knot Alone"
+description = "Privacy-bounded internet relay for Tide and Seek"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "name": "Knot Alone observer",
+  "name": "Tide and Seek observer",
   "metadata": {
     "tec:purpose": "Observer map. Deliberately low-contrast so rider markers dominate.",
     "tec:sources": "Vector tiles proxied by the relay under /maps/basemap and /maps/fonts, so an observer's viewport is never disclosed to a third-party CDN.",

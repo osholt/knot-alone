@@ -73,7 +73,7 @@ class MapStyleRepository {
        _ownsClient = client == null;
 
   static const fallbackStyle =
-      '{"version":8,"name":"Knot Alone offline fallback","sources":{},'
+      '{"version":8,"name":"Tide and Seek offline fallback","sources":{},'
       '"layers":[{"id":"background","type":"background",'
       '"paint":{"background-color":"#111820"}}]}';
 

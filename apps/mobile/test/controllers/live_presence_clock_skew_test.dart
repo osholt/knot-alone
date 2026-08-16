@@ -314,7 +314,7 @@ class _Relay {
           'capabilities': RelayProtocolCapabilities.current.toList(),
           'requiredCapabilities': <String>[],
           'cacheSeconds': 300,
-          'updateUrls': {'default': 'https://knot-alone.invalid'},
+          'updateUrls': {'default': 'https://tideandseek.invalid'},
         }),
         200,
         headers: {'content-type': 'application/json'},

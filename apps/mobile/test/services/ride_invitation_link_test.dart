@@ -11,7 +11,7 @@ void main() {
     final uri = Uri.parse(value);
 
     expect(uri.scheme, 'https');
-    expect(uri.host, 'knot-alone.invalid');
+    expect(uri.host, 'tideandseek.invalid');
     expect(uri.path, '/join.html');
     expect(uri.hasQuery, isFalse);
     expect(Uri.decodeComponent(uri.fragment), '$code#$token');
@@ -34,7 +34,7 @@ void main() {
   test('rejects capability material outside the exact private fragment', () {
     expect(
       rideInvitationFromLink(
-        'https://knot-alone.invalid/join.html?token=$token#$code',
+        'https://tideandseek.invalid/join.html?token=$token#$code',
       ),
       isNull,
     );
@@ -44,12 +44,12 @@ void main() {
     );
     expect(
       rideInvitationFromLink(
-        'https://knot-alone.invalid/join.html#open-$code%23$token',
+        'https://tideandseek.invalid/join.html#open-$code%23$token',
       ),
       isNull,
     );
     expect(
-      rideInvitationFromLink('https://knot-alone.invalid/join.html#$code'),
+      rideInvitationFromLink('https://tideandseek.invalid/join.html#$code'),
       isNull,
     );
   });

@@ -290,7 +290,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const Key('roster-rider-bill')),
-        matching: find.textContaining('Knot Alone'),
+        matching: find.textContaining('Sweeper'),
       ),
       findsOneWidget,
     );

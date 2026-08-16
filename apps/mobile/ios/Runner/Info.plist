@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Knot Alone</string>
+	<string>Tide and Seek</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -66,17 +66,17 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Knot Alone uses nearby connections to exchange ride safety updates when mobile coverage is unavailable.</string>
+	<string>Tide and Seek uses nearby connections to exchange ride safety updates when mobile coverage is unavailable.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_90AAE9C4995F._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Knot Alone uses nearby devices and local networks to keep your ride group coordinated.</string>
+	<string>Tide and Seek uses nearby devices and local networks to keep your ride group coordinated.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Knot Alone uses your location during an active ride to share your position with your group, provide navigation, and warn about route deviations. You can pause or stop location sharing at any time.</string>
+	<string>Tide and Seek uses your location during an active ride to share your position with your group, provide navigation, and warn about route deviations. You can pause or stop location sharing at any time.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Knot Alone uses your location during an active ride to show your group position, keep the group informed of where you are, and warn about route deviations. During a ride it keeps doing this while you use another navigation app or the screen is off, and stops as soon as the ride ends.</string>
+	<string>Tide and Seek uses your location during an active ride to show your group position, keep the group informed of where you are, and warn about route deviations. During a ride it keeps doing this while you use another navigation app or the screen is off, and stops as soon as the ride ends.</string>
 	<!--
 	  Location is a background mode because the group has to be able to see a
 	  rider whose phone is in a pocket or showing another navigation app. Without

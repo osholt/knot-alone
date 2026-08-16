@@ -22,7 +22,7 @@ void main() {
     'warm refresh replaces a malformed notice with a later valid link',
     () async {
       final source = _QueuedSource([
-        'https://knot-alone.invalid/join.html#bad',
+        'https://tideandseek.invalid/join.html#bad',
       ]);
       final controller = await RideInvitationLinkController.load(
         source: source,

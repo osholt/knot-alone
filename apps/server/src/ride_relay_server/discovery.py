@@ -241,7 +241,7 @@ def _publish_approved_revision(
             geometry_json=suggestion.geometry_json,
             status="active",
             confidence="community-reviewed",
-            source_name="Knot Alone approved submission",
+            source_name="Tide and Seek approved submission",
             source_feature_id=suggestion.id,
             source_url=suggestion.evidence_url,
             warning=PUBLIC_WARNING,

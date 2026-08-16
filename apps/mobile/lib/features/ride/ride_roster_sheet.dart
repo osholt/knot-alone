@@ -247,16 +247,16 @@ class _RideRosterSheetState extends State<RideRosterSheet> {
     if (!mounted) return;
     final message = switch (outcome) {
       TecRoleRequestOutcome.sent =>
-        'Asked ${participant.displayName} to be Knot Alone. They have to '
+        'Asked ${participant.displayName} to be the Sweeper. They have to '
             'accept before the back is covered.',
       TecRoleRequestOutcome.relayUnsupported =>
         PresenceLimitation.tecAssignmentUnsupportedByService.message,
       TecRoleRequestOutcome.notLeader =>
-        'Only the current ride leader can ask a rider to be Knot Alone.',
+        'Only the current ride leader can ask a rider to be the Sweeper.',
       TecRoleRequestOutcome.invalidTarget =>
         '${participant.displayName} is no longer in the ride.',
       TecRoleRequestOutcome.alreadyTailEndCharlie =>
-        '${participant.displayName} is already Knot Alone.',
+        '${participant.displayName} is already the Sweeper.',
       TecRoleRequestOutcome.failed =>
         widget.controller.errorMessage ??
             'That request could not be saved. Please try again.',
@@ -337,8 +337,8 @@ class _MissingLeaderNotice extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   const Text(
-                    'The leader has left. Nobody is setting the pace, Knot '
-                    'Alone has no line to follow, and route changes '
+                    'The leader has left. Nobody is setting the pace, the '
+                    'Sweeper has no line to follow, and route changes '
                     'cannot be published until somebody takes the lead.',
                     style: TextStyle(color: Color(0xFFE4D6D2), height: 1.35),
                   ),
@@ -385,7 +385,7 @@ class _MissingTecNotice extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
                   Text(
-                    'No Knot Alone',
+                    'No Sweeper',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                   SizedBox(height: 3),
@@ -510,7 +510,7 @@ class _ParticipantTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final role = participant.riderId == effectiveTecRiderId
-        ? 'Knot Alone'
+        ? 'Sweeper'
         : participant.role == RideRole.tailEndCharlie &&
               effectiveTecRiderId != null
         ? 'Rider · previous TEC selection superseded'
@@ -596,7 +596,7 @@ class _ParticipantTile extends StatelessWidget {
 
   static String _roleLabel(RideRole role) => switch (role) {
     RideRole.lead => 'Lead',
-    RideRole.tailEndCharlie => 'Knot Alone',
+    RideRole.tailEndCharlie => 'Sweeper',
     RideRole.marker => 'Marker',
     RideRole.rider => 'Rider',
   };

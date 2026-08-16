@@ -20,7 +20,7 @@ import 'package:ride_relay/services/nearby_bridge.dart';
 import 'package:ride_relay/services/ride_event_authenticator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Starting a ride with no Knot Alone silently removes the safety role
+/// Starting a ride with no Sweeper silently removes the safety role
 /// the app is named after, so the leader is warned before the ride starts
 /// rather than after.
 void main() {
@@ -58,7 +58,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('no-tec-warning')), findsOneWidget);
-    expect(find.text('No Knot Alone'), findsOneWidget);
+    expect(find.text('No Sweeper'), findsOneWidget);
     expect(find.textContaining('no back-marker'), findsOneWidget);
     expect(find.textContaining('no distance to the back'), findsOneWidget);
     expect(find.textContaining('falls a long way behind'), findsOneWidget);

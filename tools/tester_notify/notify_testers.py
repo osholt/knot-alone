@@ -41,7 +41,7 @@ from dataclasses import dataclass
 from email.message import EmailMessage
 from pathlib import Path
 
-PACKAGE_NAME = "dev.osholt.knotalone"
+PACKAGE_NAME = "dev.osholt.tideandseek"
 
 # Must stay identical to DistributionTrack's labels in
 # apps/mobile/lib/services/build_identity.dart: the mail tells a tester what
@@ -127,7 +127,7 @@ class Decision:
 
 def render_subject(context: ReleaseContext) -> str:
     build = f"{context.app_version} ({context.build_number})"
-    return f"Knot Alone {build} is on {context.track_label}"
+    return f"Tide and Seek {build} is on {context.track_label}"
 
 
 def render_body(context: ReleaseContext) -> str:
@@ -137,7 +137,7 @@ def render_body(context: ReleaseContext) -> str:
     ]
     build = f"{context.app_version} (build {context.build_number})"
     lines = [
-        f"Knot Alone {build} is now on {context.track_label}.",
+        f"Tide and Seek {build} is now on {context.track_label}.",
         "",
         f"  App version    {context.app_version}",
         f"  Build number   {context.build_number}  (the Google Play version code)",
@@ -157,7 +157,7 @@ def render_body(context: ReleaseContext) -> str:
         "     pull to refresh under Manage apps & device > Updates available.",
         "",
         "CONFIRM YOU ARE ON THIS BUILD",
-        '  Open Knot Alone, tap the gear icon, then "About & build".',
+        '  Open Tide and Seek, tap the gear icon, then "About & build".',
         "  It must show:",
         f"     App version         {context.app_version}",
         f"     Build number        {context.build_number}",
@@ -175,7 +175,7 @@ def render_body(context: ReleaseContext) -> str:
             "Full tester guide: " + context.doc_url("tester-update-guide.md"),
             f"Build produced by: {context.run_url}",
             "",
-            "You are receiving this because you are on the Knot Alone",
+            "You are receiving this because you are on the Tide and Seek",
             "closed tester list. Tell the maintainer if you want to leave it.",
         ]
     )
@@ -391,7 +391,7 @@ def main(
     ]
     if blank:
         # An empty dart-define or a skipped identity step would otherwise mail
-        # testers "Knot Alone  (build )".
+        # testers "Tide and Seek  (build )".
         stream.write(
             "::error::Tester notification not sent: no value for " + ", ".join(blank) + ".\n"
         )

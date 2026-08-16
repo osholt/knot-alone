@@ -51,7 +51,7 @@ class TestControlSection extends StatelessWidget {
               'nothing is being served and nothing can reach this phone.\n\n'
               'Set a token of at least '
               '${TestControlController.minimumTokenLength} characters in the iOS '
-              'Settings app under Knot Alone → Field test control, or turn '
+              'Settings app under Tide and Seek → Field test control, or turn '
               'the switch off.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: const Color(0xFFF6E6BE),
@@ -97,7 +97,7 @@ class TestControlSection extends StatelessWidget {
                 'The screen is being kept awake.\n\n'
                 'Emergency actions, phone numbers and emergency-contact details '
                 'can never be reached this way.\n\n'
-                'Turn this off in the iOS Settings app under Knot Alone '
+                'Turn this off in the iOS Settings app under Tide and Seek '
                 '→ Field test control.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: const Color(0xFFFFD3DB),

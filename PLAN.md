@@ -1,8 +1,8 @@
-# Knot Alone — Product Requirements and Delivery Plan
+# Tide and Seek — Product Requirements and Delivery Plan
 
 Status: concept scaffold
 
-Working title: **Knot Alone**
+Name: **Tide and Seek**
 
 Platforms: iOS and Android
 Initial users: UK coastal yacht sailors, primarily solo or small crews

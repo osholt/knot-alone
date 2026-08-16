@@ -9,7 +9,7 @@ void main() {
     appBuild: '137',
     track: DistributionTrack.playInternal,
     platform: TargetPlatform.android,
-    relayHost: 'relay.knot-alone.invalid',
+    relayHost: 'relay.tideandseek.invalid',
   );
 
   Widget wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
@@ -28,7 +28,7 @@ void main() {
     expect(find.text('1.0.1'), findsOneWidget);
     expect(find.text('137'), findsOneWidget);
     expect(find.text('Play internal testing'), findsOneWidget);
-    expect(find.text('relay.knot-alone.invalid'), findsOneWidget);
+    expect(find.text('relay.tideandseek.invalid'), findsOneWidget);
     expect(find.byKey(const Key('about-last-relay-sync')), findsOneWidget);
     expect(find.textContaining('30 min ago'), findsOneWidget);
   });
@@ -106,7 +106,7 @@ void main() {
       appBuild: '137',
       track: DistributionTrack.playClosedAlpha,
       platform: TargetPlatform.android,
-      relayHost: 'relay.knot-alone.invalid',
+      relayHost: 'relay.tideandseek.invalid',
     );
     await tester.pumpWidget(
       wrap(

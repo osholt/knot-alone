@@ -428,7 +428,7 @@ class _SpokenVoiceSettingState extends State<_SpokenVoiceSetting> {
     builder: (dialogContext) => AlertDialog(
       title: const Text('Add a more natural iPhone voice'),
       content: const Text(
-        'Knot Alone can use Enhanced and Premium Apple speech voices '
+        'Tide and Seek can use Enhanced and Premium Apple speech voices '
         'after they are downloaded.\n\n'
         '1. Open iPhone Settings.\n'
         '2. Go to Accessibility → Read & Speak → Voices.\n'
@@ -806,7 +806,7 @@ class _AboutBuildTile extends StatelessWidget {
 
 Future<void> _openLegalPage(BuildContext context, String page) async {
   final opened = await launchUrl(
-    Uri.https('knot-alone.invalid', '/$page'),
+    Uri.https('tideandseek.invalid', '/$page'),
     mode: LaunchMode.externalApplication,
   );
   if (!opened && context.mounted) {

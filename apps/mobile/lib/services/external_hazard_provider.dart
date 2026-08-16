@@ -133,7 +133,7 @@ class UnconfiguredExternalHazardProvider implements ExternalHazardProvider {
 ///
 /// Waze exposes no client-side read API for its crowd reports, and the partner
 /// programme that does return a feed is limited to government agencies and road
-/// operators. Knot Alone applied and is not eligible, so there is no
+/// operators. Tide and Seek applied and is not eligible, so there is no
 /// lawful route to this data and the provider stays permanently unavailable
 /// rather than pretending to be unconfigured.
 class WazeReadHazardProvider extends UnavailableExternalHazardProvider {
@@ -142,7 +142,7 @@ class WazeReadHazardProvider extends UnavailableExternalHazardProvider {
         id: 'waze-read',
         displayName: 'Waze reports',
         reason:
-            'Knot Alone is not eligible for the Waze partner feed, and '
+            'Tide and Seek is not eligible for the Waze partner feed, and '
             'Waze has no other read API.',
       );
 }

@@ -53,7 +53,7 @@ void main() {
     test('a log with no ride code is still offered', () async {
       await store.write(
         rideId: 'ride-1',
-        text: 'Knot Alone · ride diagnostics',
+        text: 'Tide and Seek · ride diagnostics',
       );
 
       final log = await store.latest();
@@ -180,7 +180,7 @@ void main() {
 /// store reads the ride code and the written-at back out of that header.
 String _log(String rideCode, {DateTime? at}) {
   final written = (at ?? DateTime.utc(2026, 8, 12, 18)).toIso8601String();
-  return 'Knot Alone · ride diagnostics\n'
+  return 'Tide and Seek · ride diagnostics\n'
       'Ride:  $rideCode\n'
       'Build: 1.0.1+51\n'
       'Written: $written\n'

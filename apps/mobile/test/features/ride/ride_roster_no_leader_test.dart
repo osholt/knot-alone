@@ -83,7 +83,7 @@ void main() {
     expect(find.text('This ride has no leader'), findsOneWidget);
     // States the consequences rather than only the fact.
     expect(find.textContaining('setting the pace'), findsOneWidget);
-    expect(find.textContaining('Knot Alone has no line'), findsOneWidget);
+    expect(find.textContaining('Sweeper has no line'), findsOneWidget);
     expect(find.textContaining('route changes'), findsOneWidget);
   });
 

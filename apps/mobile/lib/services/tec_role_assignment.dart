@@ -3,7 +3,7 @@ import '../domain/ride_role.dart';
 import 'ride_event_authenticator.dart';
 import 'ride_lifecycle.dart';
 
-/// Where one leader-issued Knot Alone request has got to.
+/// Where one leader-issued Sweeper request has got to.
 ///
 /// The app is named after the back-marker role, so the leader must be able to
 /// tell "I have asked someone" from "someone is actually watching the back".
@@ -36,7 +36,7 @@ enum TecRoleAssignmentStatus {
   targetLeft,
 }
 
-/// One leader-issued request for the Knot Alone role.
+/// One leader-issued request for the Sweeper role.
 class TecRoleAssignment {
   const TecRoleAssignment({
     required this.requestId,
@@ -74,7 +74,7 @@ class TecRoleAssignment {
     TecRoleAssignmentStatus.pending =>
       'Asked $targetDisplayName — waiting for them to accept',
     TecRoleAssignmentStatus.accepted =>
-      '$targetDisplayName accepted Knot Alone',
+      '$targetDisplayName accepted the Sweeper role',
     TecRoleAssignmentStatus.declined => '$targetDisplayName declined',
     TecRoleAssignmentStatus.expired =>
       '$targetDisplayName never answered, so nobody is covering the back',
@@ -112,7 +112,7 @@ class TecRoleAssignmentPolicy {
   final Duration requestExpiresAfter;
 }
 
-/// Every leader-issued Knot Alone request in this ride, reconciled.
+/// Every leader-issued Sweeper request in this ride, reconciled.
 class TecRoleAssignmentState {
   const TecRoleAssignmentState({this.assignments = const []});
 
@@ -136,7 +136,7 @@ class TecRoleAssignmentState {
   TecRoleAssignment? get acceptedAssignment =>
       assignments.where((assignment) => assignment.isAccepted).lastOrNull;
 
-  /// The rider the leader's own record says is Knot Alone.
+  /// The rider the leader's own record says is the Sweeper.
   ///
   /// This is the deterministic tie-break when two riders hold the role at once:
   /// pass it to [LeaderRideStatusCalculator.resolveTecTarget] and the most

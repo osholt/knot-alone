@@ -6,7 +6,7 @@ enum MapStyleMode { system, light, dark, sunriseSunset }
 /// Which palette to use when the map resolves to daytime/light mode.
 ///
 /// Both choices use the same OpenFreeMap Liberty data. [restrained] applies
-/// Knot Alone's quieter road-first repaint; [original] leaves the
+/// Tide and Seek's quieter road-first repaint; [original] leaves the
 /// provider style unchanged (#489).
 enum DayMapStyle { restrained, original }
 

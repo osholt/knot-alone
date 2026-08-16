@@ -20,7 +20,7 @@ String joinInviteText(String rideCode, String joinToken) =>
   var searchable = pastedText;
   if (uri != null &&
       uri.scheme == 'https' &&
-      uri.host.toLowerCase() == 'knot-alone.invalid' &&
+      uri.host.toLowerCase() == 'tideandseek.invalid' &&
       uri.path == '/join.html' &&
       uri.hasFragment) {
     try {

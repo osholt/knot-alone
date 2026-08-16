@@ -227,7 +227,7 @@ class RideSummaryExporter {
       distanceUnit,
     ).distance(summary.totalDistanceMeters);
     final buffer = StringBuffer()
-      ..writeln('Knot Alone summary · ${summary.rideCode}')
+      ..writeln('Tide and Seek summary · ${summary.rideCode}')
       ..writeln('Rider: ${summary.displayName}')
       ..writeln('Riders on this ride: ${summary.riderCount}')
       ..writeln('Started: ${summary.startedAt.toLocal().toIso8601String()}')
@@ -464,7 +464,7 @@ class SystemRideSummarySharer implements RideSummarySharer {
     await SharePlus.instance.share(
       ShareParams(
         title: 'Ride summary ${summary.rideCode}',
-        subject: 'Knot Alone summary ${summary.rideCode}',
+        subject: 'Tide and Seek summary ${summary.rideCode}',
         text: exporter.toPlainText(summary, distanceUnit: distanceUnit),
         files: [
           XFile.fromData(

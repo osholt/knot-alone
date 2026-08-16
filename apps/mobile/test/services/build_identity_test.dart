@@ -192,7 +192,7 @@ void main() {
       track: DistributionTrack.playInternal,
       platform: platform,
       builtAt: builtAt,
-      relayHost: 'relay.knot-alone.invalid',
+      relayHost: 'relay.tideandseek.invalid',
       testerBuildLifetime: const Duration(days: 14),
     );
 
@@ -241,7 +241,7 @@ void main() {
       expect(uri.scheme, 'https');
       expect(uri.host, 'play.google.com');
       expect(uri.path, '/store/apps/details');
-      expect(uri.queryParameters['id'], 'dev.osholt.knotalone');
+      expect(uri.queryParameters['id'], 'dev.osholt.tideandseek');
     });
 
     test('a closed-track build points at the closed-testing opt-in page', () {
@@ -259,7 +259,7 @@ void main() {
 
         expect(uri.scheme, 'https');
         expect(uri.host, 'play.google.com');
-        expect(uri.path, '/apps/testing/dev.osholt.knotalone');
+        expect(uri.path, '/apps/testing/dev.osholt.tideandseek');
         expect(uri.toString(), BuildIdentity.playClosedTestingOptInUrl);
       }
     });
@@ -319,7 +319,7 @@ void main() {
       expect(subject.versionLabel, '1.0.1 (build 123)');
       expect(
         subject.bugReportLine,
-        'Knot Alone 1.0.1+123 · Play internal testing · android',
+        'Tide and Seek 1.0.1+123 · Play internal testing · android',
       );
     });
   });

@@ -1,6 +1,6 @@
 # Source Baseline
 
-Knot Alone was scaffolded from `osholt/tailendcharlie` at commit
+Tide and Seek was scaffolded from `osholt/tailendcharlie` at commit
 `5a90c59da54416a5fb8da67cf45960691543d5b7` (Tail End Charlie `origin/main`,
 2026-08-15).
 
@@ -22,9 +22,9 @@ Deliberately not copied:
 
 Safety changes made at scaffold time:
 
-- the public brand is `Knot Alone`;
-- provisional development IDs use `dev.osholt.knotalone`;
-- copied domains use `knot-alone.invalid` / `relay.knot-alone.invalid`; and
+- the public brand is `Tide and Seek`;
+- provisional development IDs use `dev.osholt.tideandseek`;
+- copied domains use `tideandseek.invalid` / `relay.tideandseek.invalid`; and
 - no GitHub secret, provider key, signing key, or production endpoint is present.
 
 ## Inherited capabilities, not yet product claims

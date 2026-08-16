@@ -51,7 +51,7 @@ void main() {
     );
 
     expect(status.headline, 'TEC · waiting');
-    expect(status.detail, 'Knot Alone · waiting for location');
+    expect(status.detail, 'Sweeper · waiting for location');
     expect(status.distanceMeters, isNull);
   });
 

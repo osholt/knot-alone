@@ -26,7 +26,7 @@ class AndroidAutoCompanionTest {
                 "riders" to listOf(
                     mapOf(
                         "label" to "TEC",
-                        "role" to "Knot Alone",
+                        "role" to "Sweeper",
                         "needsAttention" to true,
                     ),
                 ),

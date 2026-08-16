@@ -69,7 +69,7 @@ void main() {
     double? bearingAfter = 100,
     String headingChange = '+90.0° (clockwise, to the right)',
   }) => [
-    'Knot Alone · turn detail',
+    'Tide and Seek · turn detail',
     'Instruction:      Take the 2nd exit',
     'Shown as:         $shownAs (roundabout)',
     'Engine type:      roundabout',

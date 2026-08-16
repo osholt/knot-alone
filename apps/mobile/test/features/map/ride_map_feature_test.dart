@@ -1217,7 +1217,7 @@ void main() {
 
     expect(find.byKey(const Key('leader-tec-gap')), findsNothing);
     expect(find.textContaining('waiting for location'), findsNothing);
-    expect(find.textContaining('Knot Alone'), findsNothing);
+    expect(find.textContaining('Sweeper'), findsNothing);
 
     // Assigning a TEC mid-ride brings the surface back without a restart.
     leaderStatus.value = const LeaderRideStatus(

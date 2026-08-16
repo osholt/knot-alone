@@ -1,9 +1,9 @@
-# Knot Alone
+# Tide and Seek
 
-**Working title:** Knot Alone
+**Name:** Tide and Seek
 **Status:** product scaffold; inherited functionality is not yet suitable for navigation at sea
 
-Knot Alone is a solo-first sailing companion with optional, account-free crew
+Tide and Seek is a solo-first sailing companion with optional, account-free crew
 sharing. It combines offline nautical-chart context, passage and track views,
 pilotage/discovery information, tides, currents, weather and wind, while a
 six-digit code lets everyone aboard share the same temporary voyage state.

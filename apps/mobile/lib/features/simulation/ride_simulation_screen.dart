@@ -302,7 +302,7 @@ class _SimulationControls extends StatelessWidget {
             SwitchListTile.adaptive(
               key: const Key('simulation-tec-delay'),
               contentPadding: EdgeInsets.zero,
-              title: const Text('Delay Knot Alone'),
+              title: const Text('Delay Sweeper'),
               subtitle: const Text('Increases the lead-to-TEC gap'),
               value: controller.tecDelayed,
               onChanged: controller.setTecDelayed,

@@ -448,7 +448,7 @@ presentableQuickMessageAlerts({
   );
 }
 
-/// Riders holding the Knot Alone role right now.
+/// Riders holding the Sweeper role right now.
 ///
 /// Resolved from the reconciled membership model rather than a location
 /// snapshot, so a TEC who has joined but not yet reported a position still
@@ -4392,7 +4392,7 @@ class _ActiveRideShellState extends State<ActiveRideShell>
           (locationController == null ||
               !locationController.status.canSample)) {
         final added = _warnings.add(
-          'Open Knot Alone on the iPhone and allow location access before '
+          'Open Tide and Seek on the iPhone and allow location access before '
           'starting the ride from CarPlay.',
         );
         _updateMapOverlays(updateDerivedState: false);
@@ -4429,7 +4429,7 @@ class _ActiveRideShellState extends State<ActiveRideShell>
         );
       }
       final message = source == 'CarPlay'
-          ? 'CarPlay could not start the ride. Open Knot Alone on the '
+          ? 'CarPlay could not start the ride. Open Tide and Seek on the '
                 'iPhone and try again.'
           : 'The ride could not start. Please try again.';
       final added = _warnings.add(message);
@@ -4647,7 +4647,7 @@ class _ActiveRideShellState extends State<ActiveRideShell>
     final recipients = _ownContactRecipients;
     if (recipients.isEmpty) {
       _showRideSnackBar(
-        'Nobody is holding the leader or Knot Alone role yet, so there '
+        'Nobody is holding the leader or the Sweeper role yet, so there '
         'is nobody to give your number to. Nothing has been shared.',
       );
       return;
@@ -4662,7 +4662,7 @@ class _ActiveRideShellState extends State<ActiveRideShell>
           ? (recipients.toRideGroup
                 ? 'Your number is now available to this ride, for this ride '
                       'only.'
-                : 'Your number has gone to the leader and Knot Alone, and '
+                : 'Your number has gone to the leader and the Sweeper, and '
                       'to nobody else.')
           : 'Your number was not shared. '
                     '${widget.rideController.errorMessage ?? ''}'
@@ -4858,9 +4858,9 @@ class _ActiveRideShellState extends State<ActiveRideShell>
       builder: (dialogContext) => AlertDialog(
         key: const Key('no-tec-warning'),
         icon: const Icon(Icons.warning_amber_rounded, color: Color(0xFFFFC857)),
-        title: const Text('No Knot Alone'),
+        title: const Text('No Sweeper'),
         content: const Text(
-          'Nobody in this ride holds the Knot Alone role, so starting '
+          'Nobody in this ride holds the Sweeper role, so starting '
           'now means:\n\n'
           '· no back-marker to confirm the group is complete\n'
           '· no distance to the back of the group for you\n'
@@ -4949,7 +4949,7 @@ class _ActiveRideShellState extends State<ActiveRideShell>
     ownPhoneNumberShared: widget.rideController.hasSharedOwnContactNumber,
     ownPhoneNumberRecipientLabel: _ownContactRecipients.toRideGroup
         ? 'this ride'
-        : 'the leader and Knot Alone',
+        : 'the leader and the Sweeper',
     onShareOwnPhoneNumber: () => unawaited(_shareOwnPhoneNumber()),
     ridePaused: widget.rideController.ridePaused,
     canToggleRidePause:
@@ -5211,9 +5211,9 @@ class _ActiveRideShellState extends State<ActiveRideShell>
             Icons.shield_moon_outlined,
             color: Color(0xFFB58CFF),
           ),
-          title: const Text('Be Knot Alone?'),
+          title: const Text('Be the Sweeper?'),
           content: const Text(
-            'The ride leader has asked you to ride at the back as Knot Alone.\n\n'
+            'The ride leader has asked you to ride at the back as the Sweeper.\n\n'
             'It means you are the back-marker: the group is complete when you '
             'are there, the leader sees the distance back to you, and a rider '
             'who falls a long way behind is routed to you.\n\n'
@@ -5374,7 +5374,7 @@ class _ActiveRideShellState extends State<ActiveRideShell>
     final riders = <String>[];
     String labelFor(String name, RideRole role) => switch (role) {
       RideRole.lead => '$name (Lead)',
-      RideRole.tailEndCharlie => '$name (Knot Alone)',
+      RideRole.tailEndCharlie => '$name (Sweeper)',
       _ => name,
     };
     riders.add(labelFor(session.displayName, session.role));
@@ -5389,7 +5389,7 @@ class _ActiveRideShellState extends State<ActiveRideShell>
         }
       }
     }
-    final title = session.rideName ?? 'Knot Alone ride';
+    final title = session.rideName ?? 'Tide and Seek ride';
     final text = [
       title,
       'Ride code: ${session.rideCode}',

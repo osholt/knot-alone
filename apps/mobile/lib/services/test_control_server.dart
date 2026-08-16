@@ -231,7 +231,7 @@ class TestControlServer {
     // completing proves nothing about whether the action happened.
     //
     // This bit exists because of a real false success. Driving a live ride where
-    // the local rider was Knot Alone, `POST /v1/ride/end` and then
+    // the local rider was the Sweeper, `POST /v1/ride/end` and then
     // `POST /v1/ride` both answered 200, and the second answered with the *old*
     // ride: `endRide` had thrown "Only the ride leader can end the ride", `_run`
     // had swallowed it, and the create then no-opped. An automated field test

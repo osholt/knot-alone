@@ -87,7 +87,7 @@ class RenderingTest(unittest.TestCase):
 
         self.assertEqual(
             email.subject,
-            "Knot Alone 1.0.1 (31) is on Play closed testing (alpha)",
+            "Tide and Seek 1.0.1 (31) is on Play closed testing (alpha)",
         )
         for required in [
             "1.0.1",
@@ -97,7 +97,7 @@ class RenderingTest(unittest.TestCase):
             "Play closed testing (alpha)",
             "ce39e51",
             "https://github.com/osholt/tailendcharlie/commit/ce39e51",
-            "https://play.google.com/apps/testing/dev.osholt.knotalone",
+            "https://play.google.com/apps/testing/dev.osholt.tideandseek",
             "About & build",
             "Distribution track  Play closed testing (alpha)",
             "WHAT CHANGED since build 28 (commit 67853ec)",
@@ -139,17 +139,17 @@ class SafetyTest(unittest.TestCase):
 
     def test_refuses_a_relay_url(self) -> None:
         with self.assertRaises(UnsafeContentError):
-            assert_safe("update at https://relay.knot-alone.invalid/api/v1/x")
+            assert_safe("update at https://relay.tideandseek.invalid/api/v1/x")
 
     def test_refuses_plaintext_and_credential_bearing_links(self) -> None:
         with self.assertRaises(UnsafeContentError):
-            assert_safe("http://play.google.com/apps/testing/dev.osholt.knotalone")
+            assert_safe("http://play.google.com/apps/testing/dev.osholt.tideandseek")
         with self.assertRaises(UnsafeContentError):
             assert_safe("https://user:pass@github.com/osholt/tailendcharlie")
 
     def test_a_relay_url_smuggled_through_the_changelog_is_caught(self) -> None:
         with self.assertRaises(UnsafeContentError):
-            render_email(context(changes=("- see https://relay.knot-alone.invalid/api",)))
+            render_email(context(changes=("- see https://relay.tideandseek.invalid/api",)))
 
     def test_masks_the_group_address(self) -> None:
         self.assertEqual(

@@ -148,7 +148,7 @@ class CarPlayBridge {
   /// validating it, attaching the current fix and publishing the event.
   final Future<void> Function(HazardType type)? onHazardReported;
 
-  /// The rider's answer to a leader's Knot Alone request, given on the
+  /// The rider's answer to a leader's Sweeper request, given on the
   /// head unit (#128).
   final Future<void> Function(String requestId, bool accepted)?
   onTecRoleAnswered;
@@ -751,7 +751,7 @@ class CarPlayRideStart {
           ? 'No route selected. Recording and group location sharing will start.'
           : '$routeName. Recording, sharing and navigation will start.',
       warning: isGroup && !hasTec
-          ? 'No Knot Alone is assigned. The group can still start, but '
+          ? 'No Sweeper is assigned. The group can still start, but '
                 'nobody is explicitly covering the back.'
           : null,
       unavailableReason: locationReady

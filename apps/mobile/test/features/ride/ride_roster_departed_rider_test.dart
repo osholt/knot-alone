@@ -116,7 +116,7 @@ void main() {
     // Bill was last known to be.
     expect(find.byKey(const Key('roster-rider-bill')), findsOneWidget);
     expect(
-      find.textContaining('Knot Alone · Left the ride at 14:32'),
+      find.textContaining('Sweeper · Left the ride at 14:32'),
       findsOneWidget,
     );
     expect(

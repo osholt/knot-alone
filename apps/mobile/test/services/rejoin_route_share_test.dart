@@ -519,7 +519,7 @@ void main() {
       expect(decoded.distanceMeters, 4200);
       expect(decoded.duration, const Duration(minutes: 6));
       expect(decoded.breadcrumb, hasLength(5));
-      expect(decoded.mapLabel, contains('Knot Alone'));
+      expect(decoded.mapLabel, contains('Sweeper'));
       // Coordinates are relayed to five decimal places, about 1.1 m: fine
       // enough to draw, and deliberately coarser than a rider's own fix.
       expect(decoded.breadcrumb.first.latitude, closeTo(51.5, 0.00002));

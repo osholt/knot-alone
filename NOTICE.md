@@ -1,6 +1,6 @@
 # Attribution
 
-Knot Alone is a derivative of
+Tide and Seek is a derivative of
 [Tail End Charlie](https://github.com/osholt/tailendcharlie), scaffolded from
 commit `5a90c59da54416a5fb8da67cf45960691543d5b7`.
 

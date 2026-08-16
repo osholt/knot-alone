@@ -19,7 +19,7 @@ enum NavigationTarget {
   harleyDavidson,
 }
 
-/// The amount of route information Knot Alone can transfer to an external
+/// The amount of route information Tide and Seek can transfer to an external
 /// navigation target. A receiving app may still change a GPX route on import.
 enum NavigationRouteTransfer { fullGpx, sampledWaypoints, destinationOnly }
 
@@ -197,7 +197,7 @@ class SystemGpxShareGateway implements GpxShareGateway {
     await SharePlus.instance.share(
       ShareParams(
         title: 'Export ${route.name}',
-        subject: 'Knot Alone route: ${route.name}',
+        subject: 'Tide and Seek route: ${route.name}',
         text: _shareInstruction(target),
         files: [
           XFile.fromData(
@@ -213,10 +213,10 @@ class SystemGpxShareGateway implements GpxShareGateway {
   }
 
   static String _shareInstruction(NavigationTarget target) => switch (target) {
-    NavigationTarget.shareGpx => 'GPX 1.1 route exported from Knot Alone.',
+    NavigationTarget.shareGpx => 'GPX 1.1 route exported from Tide and Seek.',
     _ =>
       'Choose ${target.label} in the share sheet if it is installed. '
-          'Knot Alone cannot preselect another app.',
+          'Tide and Seek cannot preselect another app.',
   };
 }
 

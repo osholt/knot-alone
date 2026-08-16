@@ -42,7 +42,7 @@ import '../internet/internet_relay_client.dart';
 typedef Clock = DateTime Function();
 typedef IdFactory = String Function();
 
-/// Why a leader's Knot Alone request did or did not go out.
+/// Why a leader's Sweeper request did or did not go out.
 ///
 /// Every value other than [sent] is something the leader is told in words: the
 /// one outcome this feature must never have is appearing to have asked somebody
@@ -658,7 +658,7 @@ class RideController extends ChangeNotifier {
   String get rideCodeShareText {
     final activeSession = _requireSession();
     final name = activeSession.rideName;
-    final group = name == null ? 'my Knot Alone group' : '"$name"';
+    final group = name == null ? 'my Tide and Seek group' : '"$name"';
     final invite = joinInviteText(
       activeSession.rideCode,
       activeSession.joinToken,
@@ -667,7 +667,7 @@ class RideController extends ChangeNotifier {
       activeSession.rideCode,
       activeSession.joinToken,
     );
-    return 'Join $group in Knot Alone: $link\n\n'
+    return 'Join $group in Tide and Seek: $link\n\n'
         'Enter ride code ${activeSession.rideCode} in the app, or paste this '
         'private invite: $invite.';
   }
@@ -995,7 +995,7 @@ class RideController extends ChangeNotifier {
   }
 
   // ---------------------------------------------------------------------------
-  // Issue #128 part 1 - a leader can ask a named rider to be Knot Alone.
+  // Issue #128 part 1 - a leader can ask a named rider to be the Sweeper.
   //
   // Deliberately a request, not an assignment. Roles stay self-selected: the
   // target's acceptance records their own `roleChanged`, so the membership
@@ -1046,7 +1046,7 @@ class RideController extends ChangeNotifier {
   bool get rideHasNoLeader =>
       rideStarted && !rideEnded && leaderRiderId == null;
 
-  /// Asks [targetRiderId] to take the Knot Alone role.
+  /// Asks [targetRiderId] to take the Sweeper role.
   ///
   /// [relayCanCarryRequest] is the negotiated `tec-role-assignment-v1`
   /// capability. When it is false nothing is recorded at all: a request that

@@ -10,7 +10,7 @@ import 'package:ride_relay/services/relay_traffic_reroute_provider.dart';
 
 void main() {
   final configuration = InternetRelayConfiguration(
-    baseUri: Uri.parse('https://relay.knot-alone.invalid/api'),
+    baseUri: Uri.parse('https://relay.tideandseek.invalid/api'),
   );
   final now = DateTime.utc(2026, 7, 24, 20);
   final route = ImportedRoute(

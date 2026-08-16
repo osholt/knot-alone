@@ -206,7 +206,7 @@ class GpxParser {
   }
 }
 
-/// Reads the preferences a Knot Alone route was planned with.
+/// Reads the preferences a Tide and Seek route was planned with.
 ///
 /// Absent for a file from any other tool, which is the honest answer: nothing
 /// is assumed about a route whose planner never recorded one.

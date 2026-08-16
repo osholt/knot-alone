@@ -73,7 +73,7 @@ class SharedRejoinRoute {
   /// Leader-facing label for the breadcrumb on the map.
   String get mapLabel => switch (target) {
     RouteRejoinTarget.tailEndCharlie =>
-      '$displayName rejoining, then on to Knot Alone',
+      '$displayName rejoining, then on to the Sweeper',
     RouteRejoinTarget.leader => '$displayName rejoining, then on to you',
     RouteRejoinTarget.plannedRoute || null => '$displayName rejoin route',
   };

@@ -4,7 +4,7 @@ extension RideRoleLabel on RideRole {
   String get label => switch (this) {
     RideRole.lead => 'Lead',
     RideRole.rider => 'Rider',
-    RideRole.tailEndCharlie => 'Knot Alone',
+    RideRole.tailEndCharlie => 'Sweeper',
     RideRole.marker => 'Marker',
   };
 }

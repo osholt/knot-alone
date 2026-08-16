@@ -54,7 +54,7 @@
     <uses-permission android:name="androidx.car.app.NAVIGATION_TEMPLATES" />
 
     <application
-        android:label="Knot Alone"
+        android:label="Tide and Seek"
         android:name="${applicationName}"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher">
@@ -67,7 +67,7 @@
         <service
             android:name=".TailEndCharlieCarAppService"
             android:exported="true"
-            android:label="Knot Alone"
+            android:label="Tide and Seek"
             android:icon="@mipmap/ic_launcher">
             <intent-filter>
                 <action android:name="androidx.car.app.CarAppService" />
@@ -111,7 +111,7 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data
                     android:scheme="https"
-                    android:host="knot-alone.invalid"
+                    android:host="tideandseek.invalid"
                     android:path="/planner.html" />
             </intent-filter>
             <intent-filter android:autoVerify="true">
@@ -120,7 +120,7 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data
                     android:scheme="https"
-                    android:host="knot-alone.invalid"
+                    android:host="tideandseek.invalid"
                     android:path="/join.html" />
             </intent-filter>
             <!-- Opening a .gpx file (Files, a browser download, Mail) with a

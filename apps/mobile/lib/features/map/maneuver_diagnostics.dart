@@ -53,7 +53,7 @@ String maneuverDiagnosticsReport(
       direction.isStated ? direction.label : 'unstated';
 
   final lines = <String>[
-    'Knot Alone · turn detail${position == null ? '' : ' $position'}',
+    'Tide and Seek · turn detail${position == null ? '' : ' $position'}',
     'Instruction:      ${instruction.standaloneText}',
     'Shown as:         ${label(instruction.direction)} (${instruction.kind.name})',
     'Engine type:      ${maneuver.type}',

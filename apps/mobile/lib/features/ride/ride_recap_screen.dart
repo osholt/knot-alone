@@ -148,7 +148,7 @@ class _RideRecapScreenState extends State<RideRecapScreen> {
           'ride-relay-${widget.summary.rideCode.toLowerCase()}-recap.png';
       await SharePlus.instance.share(
         ShareParams(
-          text: 'Knot Alone ride recap · ${widget.summary.rideCode}',
+          text: 'Tide and Seek ride recap · ${widget.summary.rideCode}',
           files: [XFile.fromData(bytes, mimeType: 'image/png', name: fileName)],
           fileNameOverrides: [fileName],
         ),

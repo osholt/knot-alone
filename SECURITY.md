@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Knot Alone has not reached a public release. Only the latest `main` branch is
+Tide and Seek has not reached a public release. Only the latest `main` branch is
 currently maintained.
 
 ## Reporting a vulnerability

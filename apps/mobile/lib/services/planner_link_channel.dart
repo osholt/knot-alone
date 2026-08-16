@@ -29,7 +29,7 @@ String? planCodeFromPlannerLink(String value) {
   final uri = Uri.tryParse(value);
   if (uri == null ||
       uri.scheme != 'https' ||
-      uri.host.toLowerCase() != 'knot-alone.invalid' ||
+      uri.host.toLowerCase() != 'tideandseek.invalid' ||
       uri.path != '/planner.html' ||
       uri.userInfo.isNotEmpty ||
       uri.hasFragment) {

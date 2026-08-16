@@ -1509,7 +1509,7 @@ class _ShareCodeStep extends StatelessWidget {
                   onPressed: () => SharePlus.instance.share(
                     ShareParams(
                       text: controller.rideCodeShareText,
-                      subject: 'Join my Knot Alone group',
+                      subject: 'Join my Tide and Seek group',
                     ),
                   ),
                   icon: const Icon(Icons.ios_share),

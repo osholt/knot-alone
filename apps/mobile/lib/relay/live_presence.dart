@@ -303,11 +303,11 @@ enum PresenceLimitationKind {
   /// flowing.
   uploadQuarantined,
 
-  /// The ride service cannot carry a leader-issued Knot Alone request, so
+  /// The ride service cannot carry a leader-issued Sweeper request, so
   /// the role has to be taken by the rider themselves.
   tecAssignmentUnsupportedByService,
 
-  /// A named rider's app cannot read a leader-issued Knot Alone request.
+  /// A named rider's app cannot read a leader-issued Sweeper request.
   tecAssignmentUnsupportedByPeer,
 
   /// The ride service cannot carry a rider's rejoin route to the leader.
@@ -400,7 +400,7 @@ class PresenceLimitation {
   static const clientUpdateRequired = PresenceLimitation(
     kind: PresenceLimitationKind.clientUpdateRequired,
     message:
-        'Update Knot Alone: this build is older than the ride service '
+        'Update Tide and Seek: this build is older than the ride service '
         'supports, so live rider positions are unavailable.',
   );
 
@@ -441,7 +441,7 @@ class PresenceLimitation {
   static const tecAssignmentUnsupportedByService = PresenceLimitation(
     kind: PresenceLimitationKind.tecAssignmentUnsupportedByService,
     message:
-        'The ride service is too old to pass on a Knot Alone request, so '
+        'The ride service is too old to pass on a Sweeper request, so '
         'nobody has been asked. The rider has to set the role themselves on '
         'their own Ride tab.',
   );
@@ -457,7 +457,7 @@ class PresenceLimitation {
     riderId: riderId,
     riderDisplayName: displayName,
     message:
-        "$displayName's app is older — they will not see a Knot Alone "
+        "$displayName's app is older — they will not see a Sweeper "
         'request until they update. Ask them to set the role themselves.',
   );
 

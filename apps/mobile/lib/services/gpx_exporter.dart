@@ -12,10 +12,10 @@ class GpxExporter {
       'gpx',
       attributes: {
         'version': '1.1',
-        'creator': 'Knot Alone',
+        'creator': 'Tide and Seek',
         'xmlns': 'http://www.topografix.com/GPX/1/1',
         if (route.preferences != null || route.markerReview.isNotEmpty)
-          'xmlns:tec': 'https://knot-alone.invalid/gpx/1',
+          'xmlns:tec': 'https://tideandseek.invalid/gpx/1',
       },
       nest: () {
         builder.element(

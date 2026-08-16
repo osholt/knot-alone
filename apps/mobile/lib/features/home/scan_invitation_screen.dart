@@ -148,7 +148,7 @@ class _CameraUnavailable extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               denied
-                  ? 'Camera access is off for Knot Alone'
+                  ? 'Camera access is off for Tide and Seek'
                   : 'The camera is not available',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium,

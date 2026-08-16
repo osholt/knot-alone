@@ -41,7 +41,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     appBar: AppBar(
       automaticallyImplyLeading: false,
       title: const Text(
-        'Set up Knot Alone',
+        'Set up Tide and Seek',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -112,7 +112,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 16),
       const Text(
-        'Knot Alone coordinates a private riding group with a shared '
+        'Tide and Seek coordinates a private riding group with a shared '
         'roster, route and safety alerts. Ride events are kept on your phone '
         'first, then relayed by the internet or nearby devices when available.',
         style: TextStyle(color: Color(0xFFBCC5D0), height: 1.5, fontSize: 17),
@@ -208,7 +208,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 14),
       const Text(
-        'Lead and Knot Alone use reserved role colours during a ride.',
+        'Lead and Sweeper use reserved role colours during a ride.',
         style: TextStyle(color: Color(0xFF7F8A98), fontSize: 12),
       ),
     ],
@@ -273,7 +273,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       const SizedBox(height: 10),
       const _InfoCard(
         icon: Icons.flag_outlined,
-        title: 'Knot Alone',
+        title: 'Sweeper',
         body:
             'Closes the group and helps identify riders who may have dropped back.',
       ),

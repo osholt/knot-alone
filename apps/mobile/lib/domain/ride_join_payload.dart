@@ -60,7 +60,7 @@ class RideJoinPayload {
     final parts = raw.trim().split(_separator);
     if (parts.length != 5 || parts.first != scheme) {
       throw const FormatException(
-        'That code is not a Knot Alone ride invitation.',
+        'That code is not a Tide and Seek ride invitation.',
       );
     }
     final [_, rideCode, rideId, inviteSecret, joinToken] = parts;

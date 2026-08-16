@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Brings up Apple's CarPlay simulator and, optionally, installs and launches
-# Knot Alone on it.
+# Tide and Seek on it.
 #
 # Usage:
 #   tools/carplay-simulator.sh                     # bring the CarPlay display up
@@ -9,7 +9,7 @@
 #   tools/carplay-simulator.sh --recreate          # discard and rebuild the device first
 #
 # Environment:
-#   CARPLAY_SIM_NAME     device name to use          (default "Knot Alone CarPlay")
+#   CARPLAY_SIM_NAME     device name to use          (default "Tide and Seek CarPlay")
 #   CARPLAY_SIM_TYPE     simctl device type          (default iPhone-15-Pro)
 #   CARPLAY_SIM_RUNTIME  simctl runtime              (default the newest installed iOS)
 #
@@ -36,7 +36,7 @@
 # external display pixels instead.
 set -euo pipefail
 
-DEVICE_NAME="${CARPLAY_SIM_NAME:-Knot Alone CarPlay}"
+DEVICE_NAME="${CARPLAY_SIM_NAME:-Tide and Seek CarPlay}"
 # iPhone 15 Pro exists in the iOS 17.5 runtime deliberately selected below.
 # iPhone 17 Pro requires iOS 26 and makes `--recreate` fail with
 # "Incompatible device" after selecting the CarPlay-safe runtime.

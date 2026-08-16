@@ -45,7 +45,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "dev.osholt.knotalone"
+        applicationId = "dev.osholt.tideandseek"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 26

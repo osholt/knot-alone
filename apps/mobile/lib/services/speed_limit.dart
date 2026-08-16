@@ -545,7 +545,7 @@ class ValhallaSpeedLimitProvider
     'accept': 'application/json',
     'content-type': 'application/json',
     'user-agent': 'TailEndCharlie/0.1 speed-limit-display',
-    'x-client-id': 'knot-alone.invalid',
+    'x-client-id': 'tideandseek.invalid',
   };
 
   /// Asks `locate` for every road near a stationary fix and picks the one the

@@ -34,7 +34,7 @@ class SystemCompletedRideSharer implements CompletedRideSharer {
       distanceUnit,
     ).distance(ride.totalDistanceMeters);
     final text = [
-      'Knot Alone ride · ${ride.title}',
+      'Tide and Seek ride · ${ride.title}',
       'Ride code: ${ride.rideCode}',
       'Rider: ${ride.localDisplayName} (${ride.localRole.name})',
       'Started: ${ride.startedAt.toLocal().toIso8601String()}',
@@ -67,7 +67,7 @@ class SystemCompletedRideSharer implements CompletedRideSharer {
     await SharePlus.instance.share(
       ShareParams(
         title: 'Export ${ride.title}',
-        subject: 'Knot Alone GPX: ${ride.title}',
+        subject: 'Tide and Seek GPX: ${ride.title}',
         text:
             'Choose Files, Downloads or a GPX-compatible app in the share sheet.',
         files: [

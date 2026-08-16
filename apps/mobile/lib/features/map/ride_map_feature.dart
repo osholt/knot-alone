@@ -3758,7 +3758,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       if (acquired == null && _effectivePosition == null) {
         _showMessage(
           'Could not get your position. Check Location Services and '
-          'Knot Alone location access.',
+          'Tide and Seek location access.',
         );
         return;
       }
@@ -6948,7 +6948,7 @@ class _WaitingForLeaderRoutePrompt extends StatelessWidget {
 /// locates nobody (#173).
 @visibleForTesting
 String emergencyMessageBody(GeoPoint? position) {
-  const opening = 'Knot Alone: I have stopped and need assistance.';
+  const opening = 'Tide and Seek: I have stopped and need assistance.';
   if (position == null) {
     return '$opening I do not have a GPS position to send.';
   }
@@ -10154,7 +10154,7 @@ class _TecGapCard extends StatelessWidget {
     // never reported a position is never dressed up as a fresh or merely stale
     // one, and no state borrows an age it does not have.
     final formatter = MeasurementFormatter(distanceUnit);
-    final name = status.tecName ?? 'Knot Alone';
+    final name = status.tecName ?? 'Sweeper';
     final distance = status.distanceToTecMeters;
     final eta = status.estimatedTimeToTec;
     final age = status.tecLocationAge;

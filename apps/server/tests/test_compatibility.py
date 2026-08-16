@@ -36,9 +36,9 @@ def test_compatibility_document_advertises_protocol_and_capabilities(client) -> 
         "requiredCapabilities": [],
         "cacheSeconds": 300,
         "updateUrls": {
-            "default": "https://knot-alone.invalid",
-            "iOS": "https://knot-alone.invalid",
-            "android": "https://knot-alone.invalid",
+            "default": "https://tideandseek.invalid",
+            "iOS": "https://tideandseek.invalid",
+            "android": "https://tideandseek.invalid",
         },
     }
 

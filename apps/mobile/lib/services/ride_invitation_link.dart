@@ -54,18 +54,18 @@ String rideInvitationUrl(String rideCode, String joinToken) {
     throw const FormatException('Cannot create an invalid ride invitation.');
   }
   return Uri.https(
-    'knot-alone.invalid',
+    'tideandseek.invalid',
     rideInvitationPath,
   ).replace(fragment: invitation).toString();
 }
 
-/// Parses a Knot Alone invitation link without ever logging its fragment.
+/// Parses a Tide and Seek invitation link without ever logging its fragment.
 RideInvitationLink? rideInvitationFromLink(String value) {
   if (value.length > 2048) return null;
   final uri = Uri.tryParse(value);
   if (uri == null ||
       uri.scheme != 'https' ||
-      uri.host.toLowerCase() != 'knot-alone.invalid' ||
+      uri.host.toLowerCase() != 'tideandseek.invalid' ||
       uri.path != rideInvitationPath ||
       uri.userInfo.isNotEmpty ||
       uri.hasPort ||

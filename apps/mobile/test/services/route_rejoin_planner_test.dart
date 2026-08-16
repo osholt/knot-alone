@@ -431,7 +431,7 @@ void main() {
 
       expect(plan.severity, RouteRejoinSeverity.massivelyOffRoute);
       expect(plan.target, RouteRejoinTarget.tailEndCharlie);
-      expect(plan.guidance, contains('Knot Alone'));
+      expect(plan.guidance, contains('Sweeper'));
       expect(plan.guidance, contains('stays behind the leader'));
       // Rejoin point behind the leader, and the TEC is the final waypoint.
       expect(

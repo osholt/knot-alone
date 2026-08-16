@@ -1,6 +1,6 @@
 # Contributing
 
-Knot Alone is at an early, safety-sensitive stage. Small, testable changes are
+Tide and Seek is at an early, safety-sensitive stage. Small, testable changes are
 preferred over broad feature additions.
 
 ## Development workflow

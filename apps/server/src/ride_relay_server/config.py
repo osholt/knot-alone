@@ -51,8 +51,8 @@ class Settings(BaseSettings):
     discovery_rejected_retention_days: int = Field(default=90, ge=7, le=365)
     discovery_allowed_origins: list[str] = Field(
         default_factory=lambda: [
-            "https://knot-alone.invalid",
-            "https://www.knot-alone.invalid",
+            "https://tideandseek.invalid",
+            "https://www.tideandseek.invalid",
         ]
     )
     maximum_request_bytes: int = Field(default=64 * 1024, ge=1024, le=1024 * 1024)
@@ -93,7 +93,7 @@ class Settings(BaseSettings):
             "observer-access-v1",
             "traffic-incidents-v1",
             "traffic-reroutes-v1",
-            # A leader asking a named rider to be Knot Alone, and that
+            # A leader asking a named rider to be the Sweeper, and that
             # rider's answer. Both are ordinary journal events; the capability
             # exists so a client can name the limitation instead of appearing to
             # have asked somebody who was never asked.
@@ -120,9 +120,9 @@ class Settings(BaseSettings):
     )
     required_capabilities: list[str] = Field(default_factory=list)
     compatibility_cache_seconds: int = Field(default=300, ge=30, le=3600)
-    update_url: str = "https://knot-alone.invalid"
-    ios_update_url: str = "https://knot-alone.invalid"
-    android_update_url: str = "https://knot-alone.invalid"
+    update_url: str = "https://tideandseek.invalid"
+    ios_update_url: str = "https://tideandseek.invalid"
+    android_update_url: str = "https://tideandseek.invalid"
     plan_retention_days: int = Field(default=30, ge=1, le=365)
     maximum_plan_bytes: int = Field(
         default=11 * 1024 * 1024,

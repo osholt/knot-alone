@@ -67,7 +67,7 @@ void main() {
       _bytes('''
         <gpx version="1.1"
              xmlns="http://www.topografix.com/GPX/1/1"
-             xmlns:tec="https://knot-alone.invalid/gpx/1">
+             xmlns:tec="https://tideandseek.invalid/gpx/1">
           <trk>
             <extensions><tec:road-route>true</tec:road-route></extensions>
             <trkseg>
@@ -90,7 +90,7 @@ void main() {
       _bytes('''
         <gpx version="1.1"
              xmlns="http://www.topografix.com/GPX/1/1"
-             xmlns:tec="https://knot-alone.invalid/gpx/1">
+             xmlns:tec="https://tideandseek.invalid/gpx/1">
           <metadata><extensions><tec:marker-review>
             <tec:rejected id="old-maneuver" lat="51.1000000" lon="-2.1000000"
               label="Turn right marker" />

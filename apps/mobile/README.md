@@ -1,4 +1,4 @@
-# Knot Alone mobile app
+# Tide and Seek mobile app
 
 The shared Flutter client and native iOS/Android shells. Run all commands in
 this directory unless using the repository `Makefile`.

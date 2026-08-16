@@ -31,7 +31,7 @@ class CarPlayTecStatus {
     this.distanceUnit = DistanceUnit.miles,
   });
 
-  /// Nobody is Knot Alone, and no surface should imply otherwise.
+  /// Nobody is the Sweeper, and no surface should imply otherwise.
   static const CarPlayTecStatus absent = CarPlayTecStatus(
     availability: TecAvailability.none,
   );
@@ -118,7 +118,7 @@ class CarPlayTecStatus {
     TecAvailability.tracking => _trackingDetail,
   };
 
-  String get _displayName => name ?? 'Knot Alone';
+  String get _displayName => name ?? 'Sweeper';
 
   String get _trackingHeadline {
     final distance = distanceMeters;
@@ -164,7 +164,7 @@ class CarPlayTecStatus {
   };
 }
 
-/// An unanswered leader request for the Knot Alone role, addressed to
+/// An unanswered leader request for the Sweeper role, addressed to
 /// this rider, projected for the head unit (#128).
 ///
 /// The role is a request the target answers, never a silent assignment: a rider
@@ -184,7 +184,7 @@ class CarPlayTecRequest {
 
   /// Deliberately says what the role *is*, not just its initials. A rider who
   /// has never held it is exactly the rider most likely to be asked.
-  String get title => 'Be Knot Alone?';
+  String get title => 'Be the Sweeper?';
 
   String get message => leaderName == null
       ? 'The ride leader has asked you to ride at the back and keep the group '

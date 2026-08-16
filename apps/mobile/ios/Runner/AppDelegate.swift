@@ -473,7 +473,7 @@ import UserNotifications
     )
   }
 
-  /// Relays the rider's answer to a leader's Knot Alone request (#128).
+  /// Relays the rider's answer to a leader's Sweeper request (#128).
   /// Dart owns whether the answer is admissible - the reducer accepts one only
   /// from the rider the request named, and rejects an expired or superseded
   /// request - so this passes the id through untouched rather than deciding.
@@ -501,7 +501,7 @@ import UserNotifications
   func handleIncomingAppLink(url: URL) {
     guard
       url.scheme == "https",
-      url.host?.lowercased() == "knot-alone.invalid",
+      url.host?.lowercased() == "tideandseek.invalid",
       url.absoluteString.count <= 2048
     else { return }
     switch url.path {
@@ -589,7 +589,7 @@ extension AppDelegate: FlutterStreamHandler {
 extension AppDelegate: DiscovererDelegate {
   func discoverer(_ discoverer: Discoverer, didFind endpointID: EndpointID, with context: Data) {
     guard !connectedPeers.contains(endpointID), pendingPeers.insert(endpointID).inserted else { return }
-    discoverer.requestConnection(to: endpointID, using: Data("Knot Alone".utf8)) { [weak self] error in
+    discoverer.requestConnection(to: endpointID, using: Data("Tide and Seek".utf8)) { [weak self] error in
       if let error {
         self?.pendingPeers.remove(endpointID)
         self?.emitStatus("searching", message: "Connection request failed: \(error.localizedDescription)")

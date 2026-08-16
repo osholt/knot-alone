@@ -106,7 +106,7 @@ class _EmergencyInfoSheetState extends State<EmergencyInfoSheet> {
         const Text(
           'Optional, and blank unless you type it - the app never reads it from '
           'your SIM or your contacts. Once a ride is running you can offer it '
-          'to the ride leader and Knot Alone from the Ride page, so they '
+          'to the ride leader and the Sweeper from the Ride page, so they '
           'can ring you if you stop. Nobody gets it until you send it, and it '
           'is cleared from their phone when the ride ends.',
           style: TextStyle(color: Color(0xFF98A3B1)),

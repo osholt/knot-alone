@@ -107,7 +107,7 @@ void main() {
       ),
       client: MockClient((request) async {
         final body = jsonDecode(request.body) as Map<String, Object?>;
-        expect(request.headers['x-client-id'], 'knot-alone.invalid');
+        expect(request.headers['x-client-id'], 'tideandseek.invalid');
         if (request.url.path.endsWith('locate')) {
           locateRequests.add(body);
           return http.Response(locate ?? '[]', 200);

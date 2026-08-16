@@ -64,7 +64,7 @@ class BasemapConfiguration {
   final String cacheNamespace;
   final bool persistentCachingAllowed;
 
-  /// Whether the default Liberty day style receives Knot Alone's
+  /// Whether the default Liberty day style receives Tide and Seek's
   /// quieter road-first repaint. False preserves the provider's original
   /// daytime palette. Custom styles are never repainted either way (#489).
   final bool restrainedLightStyle;

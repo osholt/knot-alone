@@ -1,8 +1,8 @@
-# Knot Alone — Codex Instructions
+# Tide and Seek — Codex Instructions
 
 ## Project overview
 
-Knot Alone is a solo-first, offline-first sailing companion with optional
+Tide and Seek is a solo-first, offline-first sailing companion with optional
 account-free crew sharing for iOS and Android. It is derived from Tail End
 Charlie's Flutter client, Swift/Kotlin transport bridges, FastAPI/PostgreSQL
 relay, and CI.

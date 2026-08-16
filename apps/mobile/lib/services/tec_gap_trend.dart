@@ -6,7 +6,7 @@ import '../domain/geo_point.dart';
 import 'geo_calculations.dart';
 import 'leader_ride_status.dart' show TecAvailability;
 
-/// Which way the gap to the Knot Alone is going.
+/// Which way the gap to the Sweeper is going.
 ///
 /// Requested from the field, with the reasoning:
 ///

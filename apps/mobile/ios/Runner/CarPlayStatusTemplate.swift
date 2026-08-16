@@ -5,7 +5,7 @@ import UIKit
 /// projected snapshot used by Android Auto.
 enum CarPlayStatusTemplate {
   static func makeTemplate() -> CPListTemplate {
-    let template = CPListTemplate(title: "Knot Alone", sections: [])
+    let template = CPListTemplate(title: "Tide and Seek", sections: [])
     template.trailingNavigationBarButtons = [emergencyButton()]
     return template
   }
@@ -60,7 +60,7 @@ enum CarPlayStatusTemplate {
     if let tec = snapshot["tec"] as? [String: Any] {
       items.append(
         CPListItem(
-          text: "Knot Alone",
+          text: "Sweeper",
           detailText: tec["detail"] as? String
         )
       )
@@ -94,7 +94,7 @@ enum CarPlayStatusTemplate {
     }
 
     if items.isEmpty {
-      items = [CPListItem(text: "Knot Alone", detailText: "Waiting for ride data…")]
+      items = [CPListItem(text: "Tide and Seek", detailText: "Waiting for ride data…")]
     }
 
     template.updateSections([CPListSection(items: items)])
