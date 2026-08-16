@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/data/shared_preferences_session_store.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_secret_store.dart';
-import 'package:ride_relay/domain/ride_session.dart';
+import 'package:tide_and_seek/data/shared_preferences_session_store.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_secret_store.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

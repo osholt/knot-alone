@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/services/ride_event_authenticator.dart';
-import 'package:ride_relay/services/ride_route_reducer.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/services/ride_route_reducer.dart';
 
 void main() {
   const secret = '0123456789abcdef0123456789abcdef';

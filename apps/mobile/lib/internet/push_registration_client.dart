@@ -147,7 +147,7 @@ class HttpPushRegistrationClient implements PushRegistrationApi {
     'accept': 'application/json',
     'authorization': 'Bearer ${_rideBearerToken(session)}',
     'content-type': 'application/json',
-    'x-ride-relay-device': session.localRiderId,
+    'x-tide-and-seek-device': session.localRiderId,
     ..._clientDescriptor.headers,
   };
 

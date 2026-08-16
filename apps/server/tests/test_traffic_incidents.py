@@ -7,8 +7,8 @@ import httpx
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from ride_relay_server.app import create_app
-from ride_relay_server.traffic import TomTomOrbisTrafficProvider
+from tide_and_seek_server.app import create_app
+from tide_and_seek_server.traffic import TomTomOrbisTrafficProvider
 
 
 class _FakeTrafficProvider:

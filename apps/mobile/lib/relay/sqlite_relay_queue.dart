@@ -21,7 +21,7 @@ class SqliteRelayQueue implements RelayQueueStore {
   Future<Database> _open() async {
     final databasePath = await getDatabasesPath();
     final database = await openDatabase(
-      path.join(databasePath, 'ride_relay_transport_v1.db'),
+      path.join(databasePath, 'tide_and_seek_transport_v1.db'),
       version: 1,
       onCreate: (db, _) async {
         await db.execute('''

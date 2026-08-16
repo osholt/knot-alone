@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/ride_coordination_mode.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/domain/ride_coordination_mode.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
 
 void main() {
   final session = RideSession(

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/services/road_routing.dart';
-import 'package:ride_relay/services/route_reshape_planner.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/services/road_routing.dart';
+import 'package:tide_and_seek/services/route_reshape_planner.dart';
 
 void main() {
   test('a dragged point is assigned to the named-stop leg it shapes', () {

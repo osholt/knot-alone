@@ -93,3 +93,23 @@ rather than renaming them. Removed so far:
 
   A marine hazard layer is P1 pilotage work (backlog #10) with licensed sources
   and different categories — a fresh build, not a rename of this.
+
+## Identifiers that do not follow the product name
+
+The `ride_relay` package rename deliberately stopped at these. They are opaque
+identifiers whose value is stability, not branding, and moving them would be a
+silent protocol or data break rather than a rename:
+
+| Identifier | Where | Why it is pinned |
+|---|---|---|
+| `ride-relay-internet-token-v1` | mobile + server HMAC domain separation | Changing it invalidates every relay bearer token. A golden-vector test in `apps/server/tests/test_sync.py` guards it, and it caught this during the rename. |
+| `me.osholt.ride_relay.relay.v1` | nearby peer discovery service id | Peers must agree; a change partitions old and new installs. |
+| `rideRelayNamespace` | MapLibre offline region metadata | Orphans already-downloaded offline regions. |
+| `ride_relay_v1.db` | on-device SQLite journal | Orphans the local voyage journal. |
+| `ride_relay_invite_secret_v1_`, `ride_relay_observer_grants_v1_`, `ride_relay_observer_assistance_v1_` | keychain / secure storage prefixes | Orphans stored invite secrets and observer grants. |
+
+Each carries its own `v1`. Change one only as a deliberate, versioned migration.
+
+Deployment-facing names *were* renamed and need config updated in step: the
+`TIDE_AND_SEEK_*` environment variables, the `tide_and_seek_*` Prometheus metric
+names, and the default database URL. `deploy/` was updated in the same commit.

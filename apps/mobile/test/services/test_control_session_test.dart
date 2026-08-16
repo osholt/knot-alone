@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/ride_controller.dart';
-import 'package:ride_relay/controllers/test_control_controller.dart';
-import 'package:ride_relay/data/in_memory_event_store.dart';
-import 'package:ride_relay/data/in_memory_session_store.dart';
-import 'package:ride_relay/domain/completed_ride_store.dart';
-import 'package:ride_relay/services/nearby_bridge.dart';
-import 'package:ride_relay/services/test_control_registry.dart';
-import 'package:ride_relay/services/test_control_server.dart';
-import 'package:ride_relay/services/ride_screen_awake.dart';
-import 'package:ride_relay/services/test_control_configuration.dart';
-import 'package:ride_relay/services/test_control_session.dart';
+import 'package:tide_and_seek/controllers/ride_controller.dart';
+import 'package:tide_and_seek/controllers/test_control_controller.dart';
+import 'package:tide_and_seek/data/in_memory_event_store.dart';
+import 'package:tide_and_seek/data/in_memory_session_store.dart';
+import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/services/nearby_bridge.dart';
+import 'package:tide_and_seek/services/test_control_registry.dart';
+import 'package:tide_and_seek/services/test_control_server.dart';
+import 'package:tide_and_seek/services/ride_screen_awake.dart';
+import 'package:tide_and_seek/services/test_control_configuration.dart';
+import 'package:tide_and_seek/services/test_control_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Regression cover for the two things that made a two-phone run impossible to
@@ -19,7 +19,7 @@ void main() {
 
   final withoutDefine = TestControlConfiguration.enabled
       ? null
-      : 'needs --dart-define=RIDE_RELAY_TEST_CONTROL=true';
+      : 'needs --dart-define=TIDE_AND_SEEK_TEST_CONTROL=true';
 
   group('idle clock', () {
     late TestControlController control;

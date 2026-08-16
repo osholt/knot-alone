@@ -8,10 +8,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ride_relay_server.app import create_app
-from ride_relay_server.models import ObserverGrant
-from ride_relay_server.observer import get_managed_observer_grant
-from ride_relay_server.service import RelayServiceError
+from tide_and_seek_server.app import create_app
+from tide_and_seek_server.models import ObserverGrant
+from tide_and_seek_server.observer import get_managed_observer_grant
+from tide_and_seek_server.service import RelayServiceError
 
 from .conftest import event, ride_token, sync_request
 
@@ -41,7 +41,7 @@ def _create_grant(
             "authorization": f"Bearer {ride_token(ride_id, SECRET)}",
             # Deliberately irrelevant: the relay must not use this spoofable
             # group header to select observer data or grant ownership.
-            "x-ride-relay-device": device_header,
+            "x-tide-and-seek-device": device_header,
         },
         json={
             "label": "Home contact",
@@ -349,7 +349,7 @@ def test_management_secret_reviews_and_revokes_all_access(client) -> None:
         f"/api/v1/observer-grants/{grant['id']}/management",
         headers={
             "authorization": f"Bearer {ride_token(ride_id, SECRET)}",
-            "x-ride-relay-device": "rider-a",
+            "x-tide-and-seek-device": "rider-a",
         },
     )
     assert spoofed.status_code == 404

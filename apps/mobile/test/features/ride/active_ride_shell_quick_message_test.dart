@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/domain/quick_message.dart';
-import 'package:ride_relay/features/ride/active_ride_shell.dart';
-import 'package:ride_relay/services/received_quick_message.dart';
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/domain/quick_message.dart';
+import 'package:tide_and_seek/features/ride/active_ride_shell.dart';
+import 'package:tide_and_seek/services/received_quick_message.dart';
 
 /// The shell's half of #151: given the journal's admissible quick messages plus
 /// whatever this phone knows about where everybody is, what does the ride map

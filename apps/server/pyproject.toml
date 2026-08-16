@@ -1,5 +1,5 @@
 [project]
-name = "ride-relay-server"
+name = "tide-and-seek-server"
 version = "0.1.0"
 description = "Privacy-bounded internet relay for Tide and Seek"
 readme = "README.md"
@@ -26,15 +26,15 @@ dev = [
 ]
 
 [project.scripts]
-ride-relay-server = "ride_relay_server.__main__:main"
-ride-relay-cleanup = "ride_relay_server.cleanup:main"
+tide-and-seek-server = "tide_and_seek_server.__main__:main"
+tide-and-seek-cleanup = "tide_and_seek_server.cleanup:main"
 
 [build-system]
 requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ride_relay_server"]
+packages = ["src/tide_and_seek_server"]
 
 [tool.pytest.ini_options]
 addopts = "-q --strict-markers"

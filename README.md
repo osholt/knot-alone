@@ -53,7 +53,7 @@ docs/                        Product, architecture, source, and backlog notes
 
 ## Local verification
 
-The inherited internal Dart/Python names remain `ride_relay` for now.
+The inherited internal Dart/Python names remain `tide_and_seek` for now.
 
 ```bash
 cd apps/mobile

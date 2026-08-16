@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/services/map_geojson.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/services/map_geojson.dart';
 
 void main() {
   test(

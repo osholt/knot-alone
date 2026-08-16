@@ -4,10 +4,10 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/internet/internet_relay_client.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/internet/internet_relay_client.dart';
 
 void main() {
   group('HttpInternetRelayClient', () {
@@ -350,7 +350,7 @@ void main() {
         });
         expect(requests.last.method, 'GET');
         expect(
-          requests.last.headers.containsKey('x-ride-relay-join-token'),
+          requests.last.headers.containsKey('x-tide-and-seek-join-token'),
           isFalse,
         );
         directory.close();
@@ -385,7 +385,7 @@ void main() {
       await directory.resolve('123456', joinToken: 'pastedTokenValue123456');
 
       expect(
-        requests.last.headers['x-ride-relay-join-token'],
+        requests.last.headers['x-tide-and-seek-join-token'],
         'pastedTokenValue123456',
       );
       directory.close();

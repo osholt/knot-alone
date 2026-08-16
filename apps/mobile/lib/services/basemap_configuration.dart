@@ -18,24 +18,24 @@ class BasemapConfiguration {
 
   factory BasemapConfiguration.fromEnvironment() => BasemapConfiguration(
     styleUrl: const String.fromEnvironment(
-      'RIDE_RELAY_MAP_STYLE_URL',
+      'TIDE_AND_SEEK_MAP_STYLE_URL',
       defaultValue: defaultLightStyleUrl,
     ),
     darkStyleUrl: const String.fromEnvironment(
-      'RIDE_RELAY_MAP_STYLE_URL_DARK',
+      'TIDE_AND_SEEK_MAP_STYLE_URL_DARK',
       defaultValue: defaultDarkStyleUrl,
     ),
-    urlTemplate: const String.fromEnvironment('RIDE_RELAY_TILE_URL'),
+    urlTemplate: const String.fromEnvironment('TIDE_AND_SEEK_TILE_URL'),
     attribution: const String.fromEnvironment(
-      'RIDE_RELAY_TILE_ATTRIBUTION',
+      'TIDE_AND_SEEK_TILE_ATTRIBUTION',
       defaultValue: 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
     ),
     cacheNamespace: const String.fromEnvironment(
-      'RIDE_RELAY_TILE_CACHE_NAMESPACE',
+      'TIDE_AND_SEEK_TILE_CACHE_NAMESPACE',
       defaultValue: defaultCacheNamespace,
     ),
     persistentCachingAllowed: const bool.fromEnvironment(
-      'RIDE_RELAY_TILE_CACHE_ALLOWED',
+      'TIDE_AND_SEEK_TILE_CACHE_ALLOWED',
       // Approved by the project owner for the default provider, so caching is on
       // unless a build deliberately turns it off. It defaulted to false while the
       // licence question was open, and that default was itself a bug on an
@@ -45,7 +45,7 @@ class BasemapConfiguration {
       defaultValue: true,
     ),
     maximumNativeZoom: const int.fromEnvironment(
-      'RIDE_RELAY_TILE_MAX_ZOOM',
+      'TIDE_AND_SEEK_TILE_MAX_ZOOM',
       defaultValue: 18,
     ),
   );

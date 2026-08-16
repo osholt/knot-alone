@@ -6,7 +6,7 @@ from .config import get_settings
 def main() -> None:
     settings = get_settings()
     uvicorn.run(
-        "ride_relay_server.app:default_app",
+        "tide_and_seek_server.app:default_app",
         factory=True,
         host="0.0.0.0",  # noqa: S104
         port=8080,

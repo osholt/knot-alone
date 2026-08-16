@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/features/ride/active_ride_shell.dart';
+import 'package:tide_and_seek/features/ride/active_ride_shell.dart';
 
 void main() {
   testWidgets('the leader Leave flow offers end for everyone directly', (

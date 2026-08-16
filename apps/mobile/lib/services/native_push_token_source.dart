@@ -18,15 +18,15 @@ class NativePushConfiguration {
 
   factory NativePushConfiguration.fromEnvironment() =>
       const NativePushConfiguration(
-        enabled: bool.fromEnvironment('RIDE_RELAY_PUSH_ENABLED'),
-        apiKey: String.fromEnvironment('RIDE_RELAY_FIREBASE_API_KEY'),
-        projectId: String.fromEnvironment('RIDE_RELAY_FIREBASE_PROJECT_ID'),
+        enabled: bool.fromEnvironment('TIDE_AND_SEEK_PUSH_ENABLED'),
+        apiKey: String.fromEnvironment('TIDE_AND_SEEK_FIREBASE_API_KEY'),
+        projectId: String.fromEnvironment('TIDE_AND_SEEK_FIREBASE_PROJECT_ID'),
         messagingSenderId: String.fromEnvironment(
-          'RIDE_RELAY_FIREBASE_MESSAGING_SENDER_ID',
+          'TIDE_AND_SEEK_FIREBASE_MESSAGING_SENDER_ID',
         ),
-        iosAppId: String.fromEnvironment('RIDE_RELAY_FIREBASE_IOS_APP_ID'),
+        iosAppId: String.fromEnvironment('TIDE_AND_SEEK_FIREBASE_IOS_APP_ID'),
         androidAppId: String.fromEnvironment(
-          'RIDE_RELAY_FIREBASE_ANDROID_APP_ID',
+          'TIDE_AND_SEEK_FIREBASE_ANDROID_APP_ID',
         ),
       );
 
@@ -68,7 +68,7 @@ class NativePushTokenSource implements PushTokenSource {
     this.channel = const MethodChannel(_channelName),
   });
 
-  static const _channelName = 'me.osholt.ride_relay/push';
+  static const _channelName = 'me.osholt.tide_and_seek/push';
 
   final NativePushConfiguration configuration;
   final MethodChannel channel;

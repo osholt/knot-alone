@@ -1,4 +1,4 @@
-{$RIDE_RELAY_DOMAIN} {
+{$TIDE_AND_SEEK_DOMAIN} {
 	encode zstd gzip
 
 	@metrics path /metrics
@@ -55,7 +55,7 @@
 	# proxied rather than fetched direct, and why the build segment must be
 	# present even though its value is ignored upstream.
 	handle_path /maps/basemap/* {
-		rewrite * /planet/{$RIDE_RELAY_BASEMAP_VERSION:20260726_080001_pt}{path}
+		rewrite * /planet/{$TIDE_AND_SEEK_BASEMAP_VERSION:20260726_080001_pt}{path}
 		reverse_proxy https://tiles.openfreemap.org {
 			header_up Host tiles.openfreemap.org
 		}
@@ -93,7 +93,7 @@
 	respond 404
 }
 
-{$RIDE_RELAY_PREPRODUCTION_DOMAIN} {
+{$TIDE_AND_SEEK_PREPRODUCTION_DOMAIN} {
 	encode zstd gzip
 	header X-Robots-Tag "noindex, nofollow"
 
@@ -147,7 +147,7 @@
 	}
 
 	handle_path /maps/basemap/* {
-		rewrite * /planet/{$RIDE_RELAY_BASEMAP_VERSION:20260726_080001_pt}{path}
+		rewrite * /planet/{$TIDE_AND_SEEK_BASEMAP_VERSION:20260726_080001_pt}{path}
 		reverse_proxy https://tiles.openfreemap.org {
 			header_up Host tiles.openfreemap.org
 		}

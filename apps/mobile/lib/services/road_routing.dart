@@ -21,13 +21,13 @@ class RoutingConfiguration {
   factory RoutingConfiguration.fromEnvironment() => RoutingConfiguration(
     routingBaseUrl: Uri.parse(
       const String.fromEnvironment(
-        'RIDE_RELAY_ROUTING_URL',
+        'TIDE_AND_SEEK_ROUTING_URL',
         defaultValue: 'https://router.project-osrm.org',
       ),
     ),
     geocodingBaseUrl: Uri.parse(
       const String.fromEnvironment(
-        'RIDE_RELAY_GEOCODING_URL',
+        'TIDE_AND_SEEK_GEOCODING_URL',
         defaultValue: 'https://nominatim.openstreetmap.org',
       ),
     ),
@@ -36,7 +36,7 @@ class RoutingConfiguration {
     // the same engine the same question.
     motorcycleRoutingUrl: Uri.parse(
       const String.fromEnvironment(
-        'RIDE_RELAY_MOTORCYCLE_ROUTING_URL',
+        'TIDE_AND_SEEK_MOTORCYCLE_ROUTING_URL',
         defaultValue: 'https://valhalla1.openstreetmap.de/route',
       ),
     ),
@@ -1180,7 +1180,7 @@ class DestinationRoutePlanner {
           '${_durationLabel(roadRoute.duration)}. '
           '${preferences.summary}',
       importedAt: _clock().toUtc(),
-      sourceFileName: 'ride-relay-destination-$id.gpx',
+      sourceFileName: 'tide-and-seek-destination-$id.gpx',
       paths: [
         RoutePath(
           kind: RoutePathKind.track,

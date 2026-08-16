@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/distance_unit.dart';
-import 'package:ride_relay/services/measurement_formatter.dart';
+import 'package:tide_and_seek/domain/distance_unit.dart';
+import 'package:tide_and_seek/services/measurement_formatter.dart';
 
 void main() {
   test('formats metric and imperial distance and speed', () {

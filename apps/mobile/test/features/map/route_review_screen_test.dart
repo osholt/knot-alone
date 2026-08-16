@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/distance_unit.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/features/map/route_review_screen.dart';
-import 'package:ride_relay/services/basemap_configuration.dart';
-import 'package:ride_relay/services/biker_place_catalogue.dart';
-import 'package:ride_relay/services/route_reshape_planner.dart';
+import 'package:tide_and_seek/domain/distance_unit.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/features/map/route_review_screen.dart';
+import 'package:tide_and_seek/services/basemap_configuration.dart';
+import 'package:tide_and_seek/services/biker_place_catalogue.dart';
+import 'package:tide_and_seek/services/route_reshape_planner.dart';
 
 void main() {
   test('warns when recalculation materially changes the route', () {

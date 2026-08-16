@@ -40,7 +40,7 @@ import UserNotifications
       messenger: engineBridge.applicationRegistrar.messenger()
     )
     let channel = FlutterMethodChannel(
-      name: "me.osholt.ride_relay/nearby",
+      name: "me.osholt.tide_and_seek/nearby",
       binaryMessenger: engineBridge.applicationRegistrar.messenger()
     )
     channel.setMethodCallHandler { call, result in
@@ -93,14 +93,14 @@ import UserNotifications
     nearbyChannel = channel
 
     let eventChannel = FlutterEventChannel(
-      name: "me.osholt.ride_relay/nearby_events",
+      name: "me.osholt.tide_and_seek/nearby_events",
       binaryMessenger: engineBridge.applicationRegistrar.messenger()
     )
     eventChannel.setStreamHandler(self)
     nearbyEventChannel = eventChannel
 
     let gpxChannel = FlutterMethodChannel(
-      name: "me.osholt.ride_relay/gpx_import",
+      name: "me.osholt.tide_and_seek/gpx_import",
       binaryMessenger: engineBridge.applicationRegistrar.messenger()
     )
     gpxChannel.setMethodCallHandler { [weak self] call, result in
@@ -121,7 +121,7 @@ import UserNotifications
     gpxImportChannel = gpxChannel
 
     let plannerChannel = FlutterMethodChannel(
-      name: "me.osholt.ride_relay/planner_link",
+      name: "me.osholt.tide_and_seek/planner_link",
       binaryMessenger: engineBridge.applicationRegistrar.messenger()
     )
     plannerChannel.setMethodCallHandler { [weak self] call, result in
@@ -141,7 +141,7 @@ import UserNotifications
     plannerLinkChannel = plannerChannel
 
     let pushChannel = FlutterMethodChannel(
-      name: "me.osholt.ride_relay/push",
+      name: "me.osholt.tide_and_seek/push",
       binaryMessenger: engineBridge.applicationRegistrar.messenger()
     )
     pushChannel.setMethodCallHandler { [weak self] call, result in

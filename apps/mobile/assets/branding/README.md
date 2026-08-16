@@ -1,6 +1,6 @@
 # Tide and Seek app icon
 
-`ride-relay-app-icon-master.png` is the opaque, square master for the Ride
+`tide-and-seek-app-icon-master.png` is the opaque, square master for the Ride
 Relay launcher icon. Derivative iOS and Android sizes are checked into their
 respective platform asset folders.
 

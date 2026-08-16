@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/completed_rides_controller.dart';
-import 'package:ride_relay/controllers/distance_unit_controller.dart';
-import 'package:ride_relay/domain/completed_ride.dart';
-import 'package:ride_relay/domain/completed_ride_store.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/features/ride/previous_rides_screen.dart';
-import 'package:ride_relay/services/stored_route_library.dart';
-import 'package:ride_relay/services/trail_direction_arrows.dart';
+import 'package:tide_and_seek/controllers/completed_rides_controller.dart';
+import 'package:tide_and_seek/controllers/distance_unit_controller.dart';
+import 'package:tide_and_seek/domain/completed_ride.dart';
+import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/features/ride/previous_rides_screen.dart';
+import 'package:tide_and_seek/services/stored_route_library.dart';
+import 'package:tide_and_seek/services/trail_direction_arrows.dart';
 
 void main() {
   test('archived map bounds include sparse and self-crossing geometry', () {

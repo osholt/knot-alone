@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/app/ride_invitation_link_gate.dart';
-import 'package:ride_relay/controllers/ride_code_preference_controller.dart';
-import 'package:ride_relay/controllers/ride_controller.dart';
-import 'package:ride_relay/controllers/ride_invitation_link_controller.dart';
-import 'package:ride_relay/controllers/rider_profile_controller.dart';
-import 'package:ride_relay/data/in_memory_event_store.dart';
-import 'package:ride_relay/data/in_memory_session_store.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/internet/internet_relay_client.dart';
-import 'package:ride_relay/services/nearby_bridge.dart';
-import 'package:ride_relay/services/ride_invitation_link.dart';
+import 'package:tide_and_seek/app/ride_invitation_link_gate.dart';
+import 'package:tide_and_seek/controllers/ride_code_preference_controller.dart';
+import 'package:tide_and_seek/controllers/ride_controller.dart';
+import 'package:tide_and_seek/controllers/ride_invitation_link_controller.dart';
+import 'package:tide_and_seek/controllers/rider_profile_controller.dart';
+import 'package:tide_and_seek/data/in_memory_event_store.dart';
+import 'package:tide_and_seek/data/in_memory_session_store.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/internet/internet_relay_client.dart';
+import 'package:tide_and_seek/services/nearby_bridge.dart';
+import 'package:tide_and_seek/services/ride_invitation_link.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

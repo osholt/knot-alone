@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/ride_diagnostics_recorder.dart';
-import 'package:ride_relay/services/ride_diagnostics_transition.dart';
+import 'package:tide_and_seek/services/ride_diagnostics_recorder.dart';
+import 'package:tide_and_seek/services/ride_diagnostics_transition.dart';
 
 void main() {
   group('the switch is followed whenever it moves (#457)', () {

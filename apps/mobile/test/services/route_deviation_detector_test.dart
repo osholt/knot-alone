@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/domain/rider_location.dart';
-import 'package:ride_relay/domain/route_alert.dart';
-import 'package:ride_relay/services/geo_calculations.dart';
-import 'package:ride_relay/services/route_deviation_detector.dart';
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/domain/route_alert.dart';
+import 'package:tide_and_seek/services/geo_calculations.dart';
+import 'package:tide_and_seek/services/route_deviation_detector.dart';
 
 void main() {
   final route = [

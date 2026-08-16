@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/map_camera_command.dart';
+import 'package:tide_and_seek/services/map_camera_command.dart';
 
 void main() {
   // #359: MapLibre's mbgl::LatLng constructor throws on a coordinate that is

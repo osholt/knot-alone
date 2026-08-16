@@ -12,8 +12,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from ride_relay_server.app import create_app
-from ride_relay_server.config import Settings
+from tide_and_seek_server.app import create_app
+from tide_and_seek_server.config import Settings
 
 
 def _key(byte: int) -> str:
@@ -100,7 +100,7 @@ def sync_request(
         "authorization": f"Bearer {token or ride_token(ride_id, secret)}",
         "content-type": "application/json",
         "idempotency-key": f"rr1-{digest}",
-        "x-ride-relay-device": device_id,
+        "x-tide-and-seek-device": device_id,
     }
     if client_protocol is not None:
         headers["x-tailendcharlie-protocol"] = str(client_protocol)

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/ride_diagnostics_controller.dart';
-import 'package:ride_relay/features/settings/ride_diagnostics_section.dart';
-import 'package:ride_relay/services/ride_diagnostics_configuration.dart';
+import 'package:tide_and_seek/controllers/ride_diagnostics_controller.dart';
+import 'package:tide_and_seek/features/settings/ride_diagnostics_section.dart';
+import 'package:tide_and_seek/services/ride_diagnostics_configuration.dart';
 
 void main() {
   Future<void> pumpSection(
@@ -28,7 +28,7 @@ void main() {
       });
     },
     skip: RideDiagnosticsConfiguration.enabled
-        ? 'asserts the define-off build; run without RIDE_RELAY_RIDE_DIAGNOSTICS'
+        ? 'asserts the define-off build; run without TIDE_AND_SEEK_RIDE_DIAGNOSTICS'
         : null,
   );
 
@@ -70,6 +70,6 @@ void main() {
     },
     skip: RideDiagnosticsConfiguration.enabled
         ? null
-        : 'asserts the instrumented build; run with RIDE_RELAY_RIDE_DIAGNOSTICS',
+        : 'asserts the instrumented build; run with TIDE_AND_SEEK_RIDE_DIAGNOSTICS',
   );
 }

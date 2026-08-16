@@ -1,7 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/data/secure_observer_grant_store.dart';
-import 'package:ride_relay/internet/observer_access_client.dart';
+import 'package:tide_and_seek/data/secure_observer_grant_store.dart';
+import 'package:tide_and_seek/internet/observer_access_client.dart';
 
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));

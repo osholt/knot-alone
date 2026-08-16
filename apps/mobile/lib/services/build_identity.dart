@@ -91,7 +91,7 @@ class BuildIdentity {
   factory BuildIdentity.fromEnvironment({TargetPlatform? platform}) {
     final resolvedPlatform = platform ?? defaultTargetPlatform;
     const overriddenUpdateUrl = String.fromEnvironment(
-      'RIDE_RELAY_TESTER_UPDATE_URL',
+      'TIDE_AND_SEEK_TESTER_UPDATE_URL',
     );
     // Read the version through the relay descriptor rather than re-reading the
     // dart-defines here. Two independent reads with two different fallbacks is
@@ -106,23 +106,23 @@ class BuildIdentity {
       track: track,
       platform: resolvedPlatform,
       builtAt: _parseTimestamp(
-        const String.fromEnvironment('RIDE_RELAY_BUILD_TIMESTAMP'),
+        const String.fromEnvironment('TIDE_AND_SEEK_BUILD_TIMESTAMP'),
       ),
       relayHost: _hostOf(
-        const String.fromEnvironment('RIDE_RELAY_API_BASE_URL'),
+        const String.fromEnvironment('TIDE_AND_SEEK_API_BASE_URL'),
       ),
       updateUri: overriddenUpdateUrl.trim().isEmpty
           ? defaultUpdateUriFor(resolvedPlatform, track)
           : _secureUri(overriddenUpdateUrl),
       testerNotesUri: _secureUri(
         const String.fromEnvironment(
-          'RIDE_RELAY_TESTER_NOTES_URL',
+          'TIDE_AND_SEEK_TESTER_NOTES_URL',
           defaultValue: defaultTesterNotesUrl,
         ),
       ),
       testerBuildLifetime: Duration(
         days: const int.fromEnvironment(
-          'RIDE_RELAY_TESTER_BUILD_LIFETIME_DAYS',
+          'TIDE_AND_SEEK_TESTER_BUILD_LIFETIME_DAYS',
           defaultValue: 14,
         ).clamp(1, 365),
       ),
@@ -146,7 +146,7 @@ class BuildIdentity {
 
   /// TestFlight's own landing page. A build-specific TestFlight invitation link
   /// can only be issued from App Store Connect, so it is supplied per build
-  /// through `RIDE_RELAY_TESTER_UPDATE_URL` when one exists.
+  /// through `TIDE_AND_SEEK_TESTER_UPDATE_URL` when one exists.
   static const testFlightUrl = 'https://testflight.apple.com/';
 
   static const defaultTesterNotesUrl =

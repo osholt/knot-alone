@@ -163,30 +163,30 @@ def create_app(
     )
     registry = CollectorRegistry()
     sync_requests = Counter(
-        "ride_relay_sync_requests_total",
+        "tide_and_seek_sync_requests_total",
         "Internet relay synchronization requests",
         ("outcome",),
         registry=registry,
     )
     sync_duration = Histogram(
-        "ride_relay_sync_duration_seconds",
+        "tide_and_seek_sync_duration_seconds",
         "Internet relay synchronization duration",
         registry=registry,
     )
     join_code_requests = Counter(
-        "ride_relay_join_code_requests_total",
+        "tide_and_seek_join_code_requests_total",
         "Six-digit ride-code lookup requests",
         ("outcome",),
         registry=registry,
     )
     plan_requests = Counter(
-        "ride_relay_plan_requests_total",
+        "tide_and_seek_plan_requests_total",
         "Pre-ride GPX plan requests",
         ("outcome",),
         registry=registry,
     )
     push_deliveries = Counter(
-        "ride_relay_push_deliveries_total",
+        "tide_and_seek_push_deliveries_total",
         "Best-effort push delivery outcomes without recipient or payload labels",
         ("outcome",),
         registry=registry,
@@ -633,7 +633,7 @@ def create_app(
             return compatibility_error
         if len(ride_code) != 6 or not ride_code.isascii() or not ride_code.isdecimal():
             raise RelayServiceError(400, "Ride code must be six digits")
-        resolve_token = request.headers.get("x-ride-relay-join-token") or None
+        resolve_token = request.headers.get("x-tide-and-seek-join-token") or None
         if limited := join_code_rate_limit(request):
             return limited
         if resolve_token is None:
@@ -887,7 +887,7 @@ def create_app(
         expected_key = f"rr1-{base64url(sha256(body))}"
         if not hmac.compare_digest(idempotency_key, expected_key):
             raise RelayServiceError(400, "Idempotency key does not match request")
-        device_header = request.headers.get("x-ride-relay-device", "")
+        device_header = request.headers.get("x-tide-and-seek-device", "")
 
         client_ip = request.client.host if request.client is not None else "unknown"
         retry_after = limiter.check(f"ip:{client_ip}")
@@ -963,7 +963,7 @@ def create_app(
             ride_id=ride_id,
             bearer_token=_ride_bearer(request),
             installation_id=installation_id,
-            device_header=request.headers.get("x-ride-relay-device", ""),
+            device_header=request.headers.get("x-tide-and-seek-device", ""),
             request=payload,
         )
         return registration_json(registration)
@@ -984,7 +984,7 @@ def create_app(
             ride_id=ride_id,
             bearer_token=_ride_bearer(request),
             installation_id=installation_id,
-            device_header=request.headers.get("x-ride-relay-device", ""),
+            device_header=request.headers.get("x-tide-and-seek-device", ""),
         )
         return Response(status_code=204)
 
@@ -1051,7 +1051,7 @@ def create_app(
             session,
             ride_id=ride_id,
             bearer_token=bearer_token,
-            device_header=request.headers.get("x-ride-relay-device", ""),
+            device_header=request.headers.get("x-tide-and-seek-device", ""),
             request=payload,
             live_presence=live_presence,
             client_protocol=request_protocol,

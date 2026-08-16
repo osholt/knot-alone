@@ -14,15 +14,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/route_store.dart';
-import 'package:ride_relay/features/map/ride_map.dart';
-import 'package:ride_relay/features/map/ride_map_feature.dart';
-import 'package:ride_relay/services/basemap_configuration.dart';
-import 'package:ride_relay/services/gpx_import_source.dart';
-import 'package:ride_relay/services/offline_tile_cache.dart';
-import 'package:ride_relay/services/route_importer.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/route_store.dart';
+import 'package:tide_and_seek/features/map/ride_map.dart';
+import 'package:tide_and_seek/features/map/ride_map_feature.dart';
+import 'package:tide_and_seek/services/basemap_configuration.dart';
+import 'package:tide_and_seek/services/gpx_import_source.dart';
+import 'package:tide_and_seek/services/offline_tile_cache.dart';
+import 'package:tide_and_seek/services/route_importer.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

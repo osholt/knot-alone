@@ -9,9 +9,9 @@ import 'peer_transport.dart';
 /// on the physical-device matrix in `docs/nearby-relay.md`.
 class NativeNearbyTransport implements PeerTransport {
   NativeNearbyTransport([
-    this._methodChannel = const MethodChannel('me.osholt.ride_relay/nearby'),
+    this._methodChannel = const MethodChannel('me.osholt.tide_and_seek/nearby'),
     this._eventChannel = const EventChannel(
-      'me.osholt.ride_relay/nearby_events',
+      'me.osholt.tide_and_seek/nearby_events',
     ),
   ]);
 

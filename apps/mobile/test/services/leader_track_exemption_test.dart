@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/services/leader_track_exemption.dart';
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/services/leader_track_exemption.dart';
 
 void main() {
   final leaderTrack = [

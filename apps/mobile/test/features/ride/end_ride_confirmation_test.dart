@@ -1,14 +1,14 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/ride_controller.dart';
-import 'package:ride_relay/data/in_memory_event_store.dart';
-import 'package:ride_relay/data/in_memory_session_store.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/features/ride/end_ride_confirmation.dart';
-import 'package:ride_relay/internet/internet_relay_client.dart';
-import 'package:ride_relay/services/nearby_bridge.dart';
+import 'package:tide_and_seek/controllers/ride_controller.dart';
+import 'package:tide_and_seek/data/in_memory_event_store.dart';
+import 'package:tide_and_seek/data/in_memory_session_store.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/features/ride/end_ride_confirmation.dart';
+import 'package:tide_and_seek/internet/internet_relay_client.dart';
+import 'package:tide_and_seek/services/nearby_bridge.dart';
 
 /// Ending a ride stops the group, not just this phone, and it was reachable two
 /// ways with a different dialog behind each (#306: "every destructive or safety

@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/completed_ride.dart';
-import 'package:ride_relay/domain/completed_ride_store.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/domain/recorded_route_store.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/services/stored_route_library.dart';
+import 'package:tide_and_seek/domain/completed_ride.dart';
+import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/domain/recorded_route_store.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/services/stored_route_library.dart';
 
 void main() {
   test('recorded routes and previous rides are both offered', () async {

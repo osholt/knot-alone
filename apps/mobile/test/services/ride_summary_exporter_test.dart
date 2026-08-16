@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/domain/rider_location.dart';
-import 'package:ride_relay/services/ride_event_authenticator.dart';
-import 'package:ride_relay/services/ride_summary_exporter.dart';
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/services/ride_summary_exporter.dart';
 
 void main() {
   test('summarizes complete and active marker sessions deterministically', () {
@@ -64,7 +64,7 @@ void main() {
     );
     expect(exporter.toCsv(summary), contains('"duration_seconds"'));
     expect(exporter.toCsv(summary), contains('"300","3","true"'));
-    expect(exporter.fileName(summary), 'ride-relay-abc123-summary.csv');
+    expect(exporter.fileName(summary), 'tide-and-seek-abc123-summary.csv');
   });
 
   test("counts distinct riders and totals the local rider's distance", () {

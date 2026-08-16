@@ -4,9 +4,9 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/services/road_routing.dart';
-import 'package:ride_relay/services/route_geometry_enricher.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/services/road_routing.dart';
+import 'package:tide_and_seek/services/route_geometry_enricher.dart';
 
 import 'osrm_maneuver_fixtures.dart';
 

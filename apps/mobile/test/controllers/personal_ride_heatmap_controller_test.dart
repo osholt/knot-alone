@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/completed_rides_controller.dart';
-import 'package:ride_relay/controllers/personal_ride_heatmap_controller.dart';
-import 'package:ride_relay/domain/completed_ride.dart';
-import 'package:ride_relay/domain/completed_ride_store.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/domain/ride_role.dart';
+import 'package:tide_and_seek/controllers/completed_rides_controller.dart';
+import 'package:tide_and_seek/controllers/personal_ride_heatmap_controller.dart';
+import 'package:tide_and_seek/domain/completed_ride.dart';
+import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

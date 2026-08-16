@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/domain/imported_route.dart' as route_domain;
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/domain/rider_color.dart';
-import 'package:ride_relay/domain/rider_location.dart';
-import 'package:ride_relay/features/map/motorcycle_icon.dart';
-import 'package:ride_relay/features/ride/active_ride_shell.dart';
-import 'package:ride_relay/services/ride_membership.dart';
-import 'package:ride_relay/services/rider_contact_share.dart';
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/domain/imported_route.dart' as route_domain;
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/rider_color.dart';
+import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/features/ride/active_ride_shell.dart';
+import 'package:tide_and_seek/services/ride_membership.dart';
+import 'package:tide_and_seek/services/rider_contact_share.dart';
 
 void main() {
   test('observer snapshot uses only the local device GPS sample', () {

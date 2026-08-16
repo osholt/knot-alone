@@ -6,9 +6,9 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:ride_relay/features/map/route_trail_style.dart';
-import 'package:ride_relay/services/basemap_configuration.dart';
-import 'package:ride_relay/services/map_style_repository.dart';
+import 'package:tide_and_seek/features/map/route_trail_style.dart';
+import 'package:tide_and_seek/services/basemap_configuration.dart';
+import 'package:tide_and_seek/services/map_style_repository.dart';
 
 /// A `#rrggbb` paint string as an opaque colour, so the palette can be measured
 /// where it is actually declared rather than restated as `Color` literals.
@@ -36,7 +36,7 @@ void main() {
   late Directory directory;
 
   setUp(() async {
-    directory = await Directory.systemTemp.createTemp('ride-relay-style-test');
+    directory = await Directory.systemTemp.createTemp('tide-and-seek-style-test');
   });
 
   tearDown(() async {
@@ -845,7 +845,7 @@ final _minimalStyle = jsonEncode({
 });
 
 const _configuration = BasemapConfiguration(
-  styleUrl: 'https://maps.example.test/styles/ride-relay.json',
+  styleUrl: 'https://maps.example.test/styles/tide-and-seek.json',
   attribution: '© OpenStreetMap contributors',
   cacheNamespace: 'open-map-v1',
   persistentCachingAllowed: true,

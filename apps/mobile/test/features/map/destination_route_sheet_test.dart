@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/route_preferences.dart';
-import 'package:ride_relay/features/map/destination_route_sheet.dart';
+import 'package:tide_and_seek/domain/route_preferences.dart';
+import 'package:tide_and_seek/features/map/destination_route_sheet.dart';
 
 void main() {
   testWidgets('collects a destination and offers motorcycle app handoff', (

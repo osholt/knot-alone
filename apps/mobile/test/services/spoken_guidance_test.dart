@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:ride_relay/services/spoken_guidance.dart';
+import 'package:tide_and_seek/services/spoken_guidance.dart';
 
 /// The engine is behind an interface so these decisions - what to say, when, and
 /// how often - can be tested without a platform channel. They are the part that

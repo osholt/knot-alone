@@ -1,10 +1,10 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/features/map/maneuver_symbol.dart';
-import 'package:ride_relay/services/navigation_guidance.dart';
-import 'package:ride_relay/services/roundabout_exit_bucket.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/features/map/maneuver_symbol.dart';
+import 'package:tide_and_seek/services/navigation_guidance.dart';
+import 'package:tide_and_seek/services/roundabout_exit_bucket.dart';
 
 /// Every manoeuvre type the routing engine documents, plus one it does not, so
 /// an unrecognised type still produces an instruction that matches its symbol.

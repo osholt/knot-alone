@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/quick_message.dart';
-import 'package:ride_relay/features/ride/ride_dashboard.dart';
+import 'package:tide_and_seek/domain/quick_message.dart';
+import 'package:tide_and_seek/features/ride/ride_dashboard.dart';
 
 void main() {
   testWidgets('dashboard help action uses the shell-owned local send path', (

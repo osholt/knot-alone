@@ -16,8 +16,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-import 'package:ride_relay/services/natural_voice_pack.dart';
-import 'package:ride_relay/services/neural_spoken_guidance.dart';
+import 'package:tide_and_seek/services/natural_voice_pack.dart';
+import 'package:tide_and_seek/services/neural_spoken_guidance.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

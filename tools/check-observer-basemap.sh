@@ -11,7 +11,7 @@
 #   tools/check-observer-basemap.sh https://relay.example.com
 #
 # Run it after deploying, and again whenever you change
-# RIDE_RELAY_BASEMAP_VERSION. Exits non-zero on the first real failure so it can
+# TIDE_AND_SEEK_BASEMAP_VERSION. Exits non-zero on the first real failure so it can
 # gate a deploy.
 set -uo pipefail
 
@@ -39,8 +39,8 @@ echo "Checking observer basemap at $origin"
 
 # 1. The style must be served and be a real MapLibre style, not Caddy's 404 body.
 echo "- style"
-style_body="$(curl -sS --max-time 20 "$origin/maps/styles/ride-relay.json" 2>/dev/null)"
-style_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$origin/maps/styles/ride-relay.json" 2>/dev/null)"
+style_body="$(curl -sS --max-time 20 "$origin/maps/styles/tide-and-seek.json" 2>/dev/null)"
+style_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$origin/maps/styles/tide-and-seek.json" 2>/dev/null)"
 if [ "$style_code" != "200" ]; then
   fail "style returned HTTP $style_code (this is the #281 symptom)"
 else
@@ -61,7 +61,7 @@ else
   esac
   # The observer served from the marketing site reads this cross-origin.
   if ! curl -sS -D- -o /dev/null --max-time 20 -H 'Origin: https://example.invalid' \
-    "$origin/maps/styles/ride-relay.json" 2>/dev/null \
+    "$origin/maps/styles/tide-and-seek.json" 2>/dev/null \
     | grep -qi '^access-control-allow-origin'; then
     fail "style sends no Access-Control-Allow-Origin, so an observer served
         from a different origin cannot load it"
@@ -82,7 +82,7 @@ if [ "$tile_code" != "200" ]; then
 elif [ "$tile_bytes" -lt 1000 ]; then
   fail "tile is $tile_bytes bytes. An empty 200 means the upstream path is a
         component short - check the /maps/basemap rewrite still inserts a build
-        segment, and that RIDE_RELAY_BASEMAP_VERSION is not empty."
+        segment, and that TIDE_AND_SEEK_BASEMAP_VERSION is not empty."
 else
   echo "  ok: $tile_bytes bytes"
 fi

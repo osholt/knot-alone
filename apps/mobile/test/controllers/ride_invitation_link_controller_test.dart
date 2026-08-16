@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/ride_invitation_link_controller.dart';
-import 'package:ride_relay/services/ride_invitation_link.dart';
+import 'package:tide_and_seek/controllers/ride_invitation_link_controller.dart';
+import 'package:tide_and_seek/services/ride_invitation_link.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

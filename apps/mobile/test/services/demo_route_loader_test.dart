@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/demo_route_loader.dart';
-import 'package:ride_relay/services/navigation_guidance.dart';
+import 'package:tide_and_seek/services/demo_route_loader.dart';
+import 'package:tide_and_seek/services/navigation_guidance.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

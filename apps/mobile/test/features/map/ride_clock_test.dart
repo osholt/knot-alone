@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/features/map/ride_clock.dart';
+import 'package:tide_and_seek/features/map/ride_clock.dart';
 
 void main() {
   group('the clock ticks on the minute, not the second (#452)', () {

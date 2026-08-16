@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/spoken_audio_mode.dart';
+import 'package:tide_and_seek/services/spoken_audio_mode.dart';
 
 void main() {
   group('silencing navigation must never silence safety (#415)', () {

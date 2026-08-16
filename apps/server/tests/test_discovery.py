@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from ride_relay_server.app import create_app
+from tide_and_seek_server.app import create_app
 
 
 @contextmanager

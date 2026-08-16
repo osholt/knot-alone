@@ -9,7 +9,7 @@ second mail would be duplicate noise.
 
 Safety, in order of importance:
 
-* It never guesses a recipient. With `RIDE_RELAY_ANDROID_TESTER_GROUP` unset the
+* It never guesses a recipient. With `TIDE_AND_SEEK_ANDROID_TESTER_GROUP` unset the
   run renders the mail into the job summary and sends nothing.
 * It never fails a release. Every configuration and delivery outcome exits 0
   with a visible annotation; the caller also runs it `continue-on-error`.
@@ -268,13 +268,13 @@ def decide(mode: str, recipient: str, missing_settings: Sequence[str]) -> Decisi
         return Decision(
             "dry-run",
             "no tester group is configured. Set the "
-            "RIDE_RELAY_ANDROID_TESTER_GROUP repository variable to send this "
+            "TIDE_AND_SEEK_ANDROID_TESTER_GROUP repository variable to send this "
             "mail; until then every run renders it here and sends nothing.",
         )
     if not is_single_address(recipient):
         return Decision(
             "skip",
-            "RIDE_RELAY_ANDROID_TESTER_GROUP is not a single plain address. "
+            "TIDE_AND_SEEK_ANDROID_TESTER_GROUP is not a single plain address. "
             "Set it to one group address; this tool will not split a list or "
             "risk a header it did not build. Nothing was sent.",
         )
@@ -320,7 +320,7 @@ def summary_markdown(
             "",
             f"- Status: **{status}**",
             f"- Why: {decision.reason}",
-            f"- Recipient variable: `RIDE_RELAY_ANDROID_TESTER_GROUP` = {destination} (masked)",
+            f"- Recipient variable: `TIDE_AND_SEEK_ANDROID_TESTER_GROUP` = {destination} (masked)",
             "",
             "### Subject",
             "",

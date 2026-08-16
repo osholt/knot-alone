@@ -9,10 +9,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import event as sqlalchemy_event
 from sqlalchemy import func, select
 
-from ride_relay_server.app import create_app
-from ride_relay_server.models import Ride, StoredEvent
-from ride_relay_server.rate_limit import SlidingWindowRateLimiter
-from ride_relay_server.service import purge_expired
+from tide_and_seek_server.app import create_app
+from tide_and_seek_server.models import Ride, StoredEvent
+from tide_and_seek_server.rate_limit import SlidingWindowRateLimiter
+from tide_and_seek_server.service import purge_expired
 
 from .conftest import ride_token
 
@@ -24,7 +24,7 @@ def test_health_and_metrics_do_not_require_ride_credentials(client) -> None:
     assert client.get("/health/ready").json() == {"status": "ready"}
     metrics = client.get("/metrics")
     assert metrics.status_code == 200
-    assert "ride_relay_sync_requests_total" in metrics.text
+    assert "tide_and_seek_sync_requests_total" in metrics.text
 
 
 def test_rejects_21_event_batch(client, synchronize, make_event) -> None:
@@ -52,7 +52,7 @@ def test_device_header_must_match_body(client, synchronize) -> None:
             "authorization": f"Bearer {ride_token(ride_id, SECRET)}",
             "content-type": "application/json",
             "idempotency-key": f"rr1-{digest}",
-            "x-ride-relay-device": "header-device",
+            "x-tide-and-seek-device": "header-device",
         },
     )
     assert response.status_code == 400
@@ -71,7 +71,7 @@ def test_streamed_body_limit_cannot_be_bypassed_by_content_length(client) -> Non
             "content-length": "1",
             "content-type": "application/json",
             "idempotency-key": f"rr1-{digest}",
-            "x-ride-relay-device": "device-a",
+            "x-tide-and-seek-device": "device-a",
         },
     )
 

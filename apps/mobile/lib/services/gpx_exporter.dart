@@ -140,7 +140,7 @@ class GpxExporter {
         .toLowerCase()
         .replaceAll(RegExp('[^a-z0-9]+'), '-')
         .replaceAll(RegExp(r'^-+|-+$'), '');
-    return '${slug.isEmpty ? 'ride-relay-route' : slug}.gpx';
+    return '${slug.isEmpty ? 'tide-and-seek-route' : slug}.gpx';
   }
 
   static Map<String, String> _coordinates(GeoPoint point) => {

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/completed_ride.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/completed_ride.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
 
 void main() {
   test('completed ride round-trips summary and route geometry', () {

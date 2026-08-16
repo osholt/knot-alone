@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/features/map/navigation_export_sheet.dart';
-import 'package:ride_relay/services/navigation_export.dart';
+import 'package:tide_and_seek/features/map/navigation_export_sheet.dart';
+import 'package:tide_and_seek/services/navigation_export.dart';
 
 void main() {
   testWidgets('labels direct and GPX-share handoffs honestly', (tester) async {

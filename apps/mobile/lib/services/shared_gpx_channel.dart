@@ -11,7 +11,7 @@ import 'gpx_import_source.dart';
 class SharedGpxChannel {
   const SharedGpxChannel();
 
-  static const _channel = MethodChannel('me.osholt.ride_relay/gpx_import');
+  static const _channel = MethodChannel('me.osholt.tide_and_seek/gpx_import');
 
   Future<PickedGpxFile?> consumePending() async {
     try {

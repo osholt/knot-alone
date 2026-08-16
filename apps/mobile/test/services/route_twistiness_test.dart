@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/services/route_twistiness.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/services/route_twistiness.dart';
 
 /// The same geometry and the same expected numbers as
 /// `apps/website/planner-core.test.mjs`. These fixtures exist so the app cannot

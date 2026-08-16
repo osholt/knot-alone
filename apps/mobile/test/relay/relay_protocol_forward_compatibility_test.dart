@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/relay/relay_protocol.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/relay/relay_protocol.dart';
 
 /// The nearby transport had the same defect as the internet one: a single event
 /// type from a newer peer made the whole authenticated frame decode fail, so

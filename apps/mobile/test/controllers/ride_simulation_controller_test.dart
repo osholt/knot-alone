@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/ride_simulation_controller.dart';
-import 'package:ride_relay/controllers/situational_awareness_controller.dart';
-import 'package:ride_relay/data/in_memory_event_store.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/domain/route_alert.dart';
-import 'package:ride_relay/services/ride_completion_detector.dart';
+import 'package:tide_and_seek/controllers/ride_simulation_controller.dart';
+import 'package:tide_and_seek/controllers/situational_awareness_controller.dart';
+import 'package:tide_and_seek/data/in_memory_event_store.dart';
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/route_alert.dart';
+import 'package:tide_and_seek/services/ride_completion_detector.dart';
 
 void main() {
   late InMemoryEventStore store;

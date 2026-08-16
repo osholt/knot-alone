@@ -31,7 +31,7 @@ val dartDefines =
         .toMap()
 
 android {
-    namespace = "me.osholt.ride_relay"
+    namespace = "me.osholt.tide_and_seek"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -53,31 +53,31 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         if (
-            dartDefines["RIDE_RELAY_PUSH_ENABLED"] == "true" &&
-            !dartDefines["RIDE_RELAY_FIREBASE_API_KEY"].isNullOrEmpty() &&
-            !dartDefines["RIDE_RELAY_FIREBASE_PROJECT_ID"].isNullOrEmpty() &&
-            !dartDefines["RIDE_RELAY_FIREBASE_MESSAGING_SENDER_ID"].isNullOrEmpty() &&
-            !dartDefines["RIDE_RELAY_FIREBASE_ANDROID_APP_ID"].isNullOrEmpty()
+            dartDefines["TIDE_AND_SEEK_PUSH_ENABLED"] == "true" &&
+            !dartDefines["TIDE_AND_SEEK_FIREBASE_API_KEY"].isNullOrEmpty() &&
+            !dartDefines["TIDE_AND_SEEK_FIREBASE_PROJECT_ID"].isNullOrEmpty() &&
+            !dartDefines["TIDE_AND_SEEK_FIREBASE_MESSAGING_SENDER_ID"].isNullOrEmpty() &&
+            !dartDefines["TIDE_AND_SEEK_FIREBASE_ANDROID_APP_ID"].isNullOrEmpty()
         ) {
             resValue(
                 "string",
                 "google_api_key",
-                dartDefines.getValue("RIDE_RELAY_FIREBASE_API_KEY"),
+                dartDefines.getValue("TIDE_AND_SEEK_FIREBASE_API_KEY"),
             )
             resValue(
                 "string",
                 "project_id",
-                dartDefines.getValue("RIDE_RELAY_FIREBASE_PROJECT_ID"),
+                dartDefines.getValue("TIDE_AND_SEEK_FIREBASE_PROJECT_ID"),
             )
             resValue(
                 "string",
                 "gcm_defaultSenderId",
-                dartDefines.getValue("RIDE_RELAY_FIREBASE_MESSAGING_SENDER_ID"),
+                dartDefines.getValue("TIDE_AND_SEEK_FIREBASE_MESSAGING_SENDER_ID"),
             )
             resValue(
                 "string",
                 "google_app_id",
-                dartDefines.getValue("RIDE_RELAY_FIREBASE_ANDROID_APP_ID"),
+                dartDefines.getValue("TIDE_AND_SEEK_FIREBASE_ANDROID_APP_ID"),
             )
         }
     }

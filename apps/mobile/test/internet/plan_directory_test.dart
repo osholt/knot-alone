@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:ride_relay/internet/internet_relay_client.dart';
-import 'package:ride_relay/internet/plan_directory.dart';
+import 'package:tide_and_seek/internet/internet_relay_client.dart';
+import 'package:tide_and_seek/internet/plan_directory.dart';
 
 void main() {
   group('HttpPlanDirectory', () {

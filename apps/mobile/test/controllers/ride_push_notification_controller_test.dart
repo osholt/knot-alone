@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/ride_push_notification_controller.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/internet/push_registration_client.dart';
+import 'package:tide_and_seek/controllers/ride_push_notification_controller.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/internet/push_registration_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

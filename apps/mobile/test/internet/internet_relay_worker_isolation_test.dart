@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/data/in_memory_event_store.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/internet/internet_cursor_store.dart';
-import 'package:ride_relay/internet/internet_relay_client.dart';
-import 'package:ride_relay/internet/internet_relay_worker.dart';
-import 'package:ride_relay/relay/live_presence.dart';
-import 'package:ride_relay/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/data/in_memory_event_store.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/internet/internet_cursor_store.dart';
+import 'package:tide_and_seek/internet/internet_relay_client.dart';
+import 'package:tide_and_seek/internet/internet_relay_worker.dart';
+import 'package:tide_and_seek/relay/live_presence.dart';
+import 'package:tide_and_seek/services/ride_event_authenticator.dart';
 
 /// Upload and download share one relay request, so a refused upload used to
 /// discard the download that would have carried a join or a position. Because

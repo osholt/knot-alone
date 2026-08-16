@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/features/settings/about_build_sheet.dart';
-import 'package:ride_relay/internet/internet_relay_client.dart';
-import 'package:ride_relay/services/build_identity.dart';
+import 'package:tide_and_seek/features/settings/about_build_sheet.dart';
+import 'package:tide_and_seek/internet/internet_relay_client.dart';
+import 'package:tide_and_seek/services/build_identity.dart';
 
 void main() {
   group('BuildIdentity.fromEnvironment', () {
@@ -21,10 +21,10 @@ void main() {
       // The field report was a build 28 artefact whose app claimed 1.0.1+22,
       // because both this class and the relay descriptor fell back to a
       // plausible-looking constant. An unstamped build must now say it does not
-      // know. `flutter test --dart-define=RIDE_RELAY_APP_VERSION=9.9.9
-      // --dart-define=RIDE_RELAY_APP_BUILD=4242` proves the stamped path.
-      const stampedVersion = String.fromEnvironment('RIDE_RELAY_APP_VERSION');
-      const stampedBuild = String.fromEnvironment('RIDE_RELAY_APP_BUILD');
+      // know. `flutter test --dart-define=TIDE_AND_SEEK_APP_VERSION=9.9.9
+      // --dart-define=TIDE_AND_SEEK_APP_BUILD=4242` proves the stamped path.
+      const stampedVersion = String.fromEnvironment('TIDE_AND_SEEK_APP_VERSION');
+      const stampedBuild = String.fromEnvironment('TIDE_AND_SEEK_APP_BUILD');
       final identity = BuildIdentity.fromEnvironment();
 
       expect(
@@ -50,7 +50,7 @@ void main() {
     // unstamped run (plain `flutter test`); exercised by the command in
     // docs/android-internal-testing.md, which passes the same dart-defines the
     // release workflows pass.
-    const stampedBuild = String.fromEnvironment('RIDE_RELAY_APP_BUILD');
+    const stampedBuild = String.fromEnvironment('TIDE_AND_SEEK_APP_BUILD');
     test(
       'a stamped build reports the stamped identity to the app and the relay',
       () {
@@ -61,11 +61,11 @@ void main() {
         expect(headers['x-tailendcharlie-app-build'], stampedBuild);
         expect(
           identity.appVersion,
-          const String.fromEnvironment('RIDE_RELAY_APP_VERSION'),
+          const String.fromEnvironment('TIDE_AND_SEEK_APP_VERSION'),
         );
         expect(
           headers['x-tailendcharlie-app-version'],
-          const String.fromEnvironment('RIDE_RELAY_APP_VERSION'),
+          const String.fromEnvironment('TIDE_AND_SEEK_APP_VERSION'),
         );
         debugPrint(
           'stamped build identity: ${identity.bugReportLine} · '
@@ -73,14 +73,14 @@ void main() {
         );
       },
       skip: stampedBuild.isEmpty
-          ? 'Pass --dart-define=RIDE_RELAY_APP_BUILD=... to exercise the '
+          ? 'Pass --dart-define=TIDE_AND_SEEK_APP_BUILD=... to exercise the '
                 'stamped release path.'
           : false,
     );
 
     test('defaults an unstamped build to the local track', () {
       const stampedTrack = String.fromEnvironment(
-        'RIDE_RELAY_DISTRIBUTION_TRACK',
+        'TIDE_AND_SEEK_DISTRIBUTION_TRACK',
       );
       final identity = BuildIdentity.fromEnvironment();
 
@@ -95,10 +95,10 @@ void main() {
     // The track equivalent of the guarded build-number proof above, and the
     // answer to defect 2 of #122: a build promoted to `alpha` must not tell its
     // testers they are on internal testing. Skipped on an unstamped run;
-    // exercised by `flutter test --dart-define=RIDE_RELAY_DISTRIBUTION_TRACK=
+    // exercised by `flutter test --dart-define=TIDE_AND_SEEK_DISTRIBUTION_TRACK=
     // alpha ...`, the command in docs/android-internal-testing.md.
     const stampedTrack = String.fromEnvironment(
-      'RIDE_RELAY_DISTRIBUTION_TRACK',
+      'TIDE_AND_SEEK_DISTRIBUTION_TRACK',
     );
     testWidgets(
       'a stamped track reaches the About screen and the relay headers',

@@ -157,7 +157,7 @@ class MapStyleRepository {
   Future<String> _downloadAndNormalize() async {
     final styleUri = Uri.parse(configuration.styleUrl);
     final request = http.Request('GET', styleUri)
-      ..headers['User-Agent'] = 'me.osholt.ride_relay';
+      ..headers['User-Agent'] = 'me.osholt.tide_and_seek';
     final response = await _client
         .send(request)
         .timeout(const Duration(seconds: 5));

@@ -1,27 +1,27 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/ride_controller.dart';
-import 'package:ride_relay/data/in_memory_event_store.dart';
-import 'package:ride_relay/data/in_memory_session_store.dart';
-import 'package:ride_relay/domain/quick_message.dart';
-import 'package:ride_relay/domain/completed_ride_store.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/domain/imported_route.dart' as route_domain;
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/domain/ride_coordination_mode.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_join_payload.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/internet/internet_relay_client.dart';
-import 'package:ride_relay/relay/live_presence.dart';
-import 'package:ride_relay/domain/rider_location.dart';
-import 'package:ride_relay/services/nearby_bridge.dart';
-import 'package:ride_relay/services/received_quick_message.dart';
-import 'package:ride_relay/services/ride_event_authenticator.dart';
-import 'package:ride_relay/services/ride_lifecycle.dart';
-import 'package:ride_relay/services/rider_contact_share.dart';
-import 'package:ride_relay/services/situation_event_factory.dart';
+import 'package:tide_and_seek/controllers/ride_controller.dart';
+import 'package:tide_and_seek/data/in_memory_event_store.dart';
+import 'package:tide_and_seek/data/in_memory_session_store.dart';
+import 'package:tide_and_seek/domain/quick_message.dart';
+import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/domain/imported_route.dart' as route_domain;
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/ride_coordination_mode.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_join_payload.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/internet/internet_relay_client.dart';
+import 'package:tide_and_seek/relay/live_presence.dart';
+import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/services/nearby_bridge.dart';
+import 'package:tide_and_seek/services/received_quick_message.dart';
+import 'package:tide_and_seek/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/services/ride_lifecycle.dart';
+import 'package:tide_and_seek/services/rider_contact_share.dart';
+import 'package:tide_and_seek/services/situation_event_factory.dart';
 
 void main() {
   late InMemoryEventStore eventStore;

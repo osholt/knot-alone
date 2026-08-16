@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/spoken_guidance_controller.dart';
-import 'package:ride_relay/services/spoken_audio_mode.dart';
-import 'package:ride_relay/services/spoken_guidance.dart';
+import 'package:tide_and_seek/controllers/spoken_guidance_controller.dart';
+import 'package:tide_and_seek/services/spoken_audio_mode.dart';
+import 'package:tide_and_seek/services/spoken_guidance.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

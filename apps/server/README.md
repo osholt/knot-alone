@@ -31,7 +31,7 @@ the privacy boundary, deployment order, threat model and evidence gate.
 ```bash
 uv sync --extra dev
 uv run alembic upgrade head
-uv run ride-relay-server
+uv run tide-and-seek-server
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .
@@ -39,7 +39,7 @@ uv run ruff format --check .
 
 Configuration is documented in `.env.example`. Production requires PostgreSQL,
 two independently generated 32-byte keys, TLS termination and a scheduled
-`ride-relay-cleanup` invocation.
+`tide-and-seek-cleanup` invocation.
 
 ## Moderated motorcycle discovery data
 
@@ -49,7 +49,7 @@ catalogue. `GET /api/v1/discovery/features` requires a viewport no larger than
 10° × 10° and returns approved GeoJSON only.
 
 The `/api/v1/admin/discovery/*` queue and moderation endpoints require
-`Authorization: Bearer <RIDE_RELAY_DISCOVERY_ADMIN_TOKEN>`. Leave that setting
+`Authorization: Bearer <TIDE_AND_SEEK_DISCOVERY_ADMIN_TOKEN>`. Leave that setting
 unset to disable moderation completely. Approved revisions retain their audit
 provenance; rejected and superseded private submissions are removed after the
 configured retention period. The static website's `admin-suggestions.html`
@@ -62,7 +62,7 @@ in memory only.
 Orbis traffic incidents. The mobile app sends a route viewport, not a ride code,
 rider identity, or GPS sample. The relay validates and rate-limits the viewport,
 caches a normalized result briefly, and keeps the provider credential
-server-side in `RIDE_RELAY_TOMTOM_TRAFFIC_API_KEY`.
+server-side in `TIDE_AND_SEEK_TOMTOM_TRAFFIC_API_KEY`.
 
 `POST /api/v1/traffic/reroutes` accepts a bounded remaining-route polyline and
 up to ten compact incident avoid rectangles. It asks TomTom Orbis Routing for

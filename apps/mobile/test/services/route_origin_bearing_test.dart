@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/route_origin_bearing.dart';
+import 'package:tide_and_seek/services/route_origin_bearing.dart';
 
 void main() {
   group('the reroute is told which way the rider is pointing (#444)', () {

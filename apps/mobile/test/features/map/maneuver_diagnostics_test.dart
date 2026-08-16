@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/features/map/maneuver_diagnostics.dart';
-import 'package:ride_relay/services/navigation_guidance.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/features/map/maneuver_diagnostics.dart';
+import 'package:tide_and_seek/services/navigation_guidance.dart';
 
 /// #302 and #301 are both blocked on the same missing thing: the raw manoeuvre
 /// data for a junction that came out wrong. This is the readout that unblocks

@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/domain/imported_route.dart' as route_domain;
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/rider_location.dart';
-import 'package:ride_relay/services/ride_completion_detector.dart';
-import 'package:ride_relay/services/route_progress.dart';
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/domain/imported_route.dart' as route_domain;
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/services/ride_completion_detector.dart';
+import 'package:tide_and_seek/services/route_progress.dart';
 
 void main() {
   const detector = RideCompletionDetector();

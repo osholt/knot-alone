@@ -6,7 +6,7 @@
 // Together they told a rider nothing, which is the defect.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/ride_connectivity_summary.dart';
+import 'package:tide_and_seek/services/ride_connectivity_summary.dart';
 
 void main() {
   final now = DateTime.utc(2026, 7, 27, 18);

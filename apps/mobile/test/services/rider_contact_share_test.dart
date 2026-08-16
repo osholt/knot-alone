@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/services/ride_event_authenticator.dart';
-import 'package:ride_relay/services/rider_contact_share.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/services/rider_contact_share.dart';
 
 /// Issue #188. A rider's **own** number reaches the people who might have to
 /// ring them, and nobody else; it is never mistaken for the ICE contact; and it

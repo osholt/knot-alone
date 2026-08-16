@@ -12,8 +12,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/services/road_routing.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/services/road_routing.dart';
 
 /// Ordered geometry for a fixture route, as `[longitude, latitude]` pairs.
 typedef Coordinates = List<List<double>>;

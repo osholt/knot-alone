@@ -1,6 +1,6 @@
 FLUTTER ?= flutter
 MOBILE_DIR := apps/mobile
-RIDE_RELAY_API_BASE_URL ?= https://relay.tideandseek.invalid/api
+TIDE_AND_SEEK_API_BASE_URL ?= https://relay.tideandseek.invalid/api
 IOS_SIMULATOR_LOCATION ?= 51.457750,-2.462319
 IOS_SIMULATOR_DEVICE ?= $(shell xcrun simctl list devices booted | awk -F '[()]' '/Booted/ { print $$2; exit }')
 
@@ -29,4 +29,4 @@ ios-simulator:
 	@test -n "$(IOS_SIMULATOR_DEVICE)" || (echo "No booted iOS Simulator found." >&2; exit 1)
 	xcrun simctl location "$(IOS_SIMULATOR_DEVICE)" set "$(IOS_SIMULATOR_LOCATION)"
 	cd $(MOBILE_DIR) && $(FLUTTER) run -d "$(IOS_SIMULATOR_DEVICE)" \
-		--dart-define=RIDE_RELAY_API_BASE_URL="$(RIDE_RELAY_API_BASE_URL)"
+		--dart-define=TIDE_AND_SEEK_API_BASE_URL="$(TIDE_AND_SEEK_API_BASE_URL)"

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/distance_unit.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/features/ride/ride_recap_card.dart';
-import 'package:ride_relay/services/ride_summary_exporter.dart';
+import 'package:tide_and_seek/domain/distance_unit.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/features/ride/ride_recap_card.dart';
+import 'package:tide_and_seek/services/ride_summary_exporter.dart';
 
 void main() {
   testWidgets('renders headline stats', (tester) async {

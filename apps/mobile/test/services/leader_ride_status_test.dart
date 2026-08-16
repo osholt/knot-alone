@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/rider_location.dart';
-import 'package:ride_relay/domain/route_alert.dart';
-import 'package:ride_relay/services/leader_ride_status.dart';
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/domain/route_alert.dart';
+import 'package:tide_and_seek/services/leader_ride_status.dart';
 
 void main() {
   final now = DateTime.utc(2026, 7, 17, 10);

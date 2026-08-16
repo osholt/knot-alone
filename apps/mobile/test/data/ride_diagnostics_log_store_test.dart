@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/data/ride_diagnostics_log_store.dart';
+import 'package:tide_and_seek/data/ride_diagnostics_log_store.dart';
 
 void main() {
   late Directory directory;

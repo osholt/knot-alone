@@ -1,16 +1,16 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/rider_color.dart';
-import 'package:ride_relay/domain/rider_location.dart';
-import 'package:ride_relay/features/map/motorcycle_icon.dart';
-import 'package:ride_relay/relay/live_presence.dart';
-import 'package:ride_relay/services/position_report_policy.dart';
-import 'package:ride_relay/services/ride_event_authenticator.dart';
-import 'package:ride_relay/services/ride_membership.dart';
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/rider_color.dart';
+import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/relay/live_presence.dart';
+import 'package:tide_and_seek/services/position_report_policy.dart';
+import 'package:tide_and_seek/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/services/ride_membership.dart';
 
 /// The #166 guarantee that #27 and #144 must survive: a rider who has stopped
 /// moving is still there.

@@ -20,9 +20,9 @@ library;
 class RideDiagnosticsConfiguration {
   const RideDiagnosticsConfiguration._();
 
-  /// Compiled in only with `--dart-define=RIDE_RELAY_RIDE_DIAGNOSTICS=true`.
+  /// Compiled in only with `--dart-define=TIDE_AND_SEEK_RIDE_DIAGNOSTICS=true`.
   static const bool enabled = bool.fromEnvironment(
-    'RIDE_RELAY_RIDE_DIAGNOSTICS',
+    'TIDE_AND_SEEK_RIDE_DIAGNOSTICS',
   );
 
   /// Bound on entries held in memory.

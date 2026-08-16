@@ -1,4 +1,4 @@
-name: ride_relay
+name: tide_and_seek
 description: "Offline-first solo sailing and optional crew coordination for iOS and Android."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.

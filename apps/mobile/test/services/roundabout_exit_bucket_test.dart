@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/navigation_guidance.dart';
-import 'package:ride_relay/services/roundabout_exit_bucket.dart';
+import 'package:tide_and_seek/services/navigation_guidance.dart';
+import 'package:tide_and_seek/services/roundabout_exit_bucket.dart';
 
 void main() {
   group('a roundabout exit is left, straight on, right or back (#427)', () {

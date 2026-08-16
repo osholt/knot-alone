@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/services/trail_direction_arrows.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/services/trail_direction_arrows.dart';
 
 void main() {
   test('samples arrows by distance instead of GPS point density', () {

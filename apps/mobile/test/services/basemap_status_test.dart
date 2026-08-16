@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:ride_relay/services/basemap_status.dart';
-import 'package:ride_relay/services/map_style_repository.dart';
+import 'package:tide_and_seek/services/basemap_status.dart';
+import 'package:tide_and_seek/services/map_style_repository.dart';
 
 /// The three faults behind #281 all drew the same picture — a dot and a trail
 /// on a dark background — so the only thing that separates them is what the app

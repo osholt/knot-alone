@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/app/ride_relay_app.dart';
-import 'package:ride_relay/controllers/completed_rides_controller.dart';
-import 'package:ride_relay/controllers/distance_unit_controller.dart';
-import 'package:ride_relay/controllers/map_style_mode_controller.dart';
-import 'package:ride_relay/controllers/ride_code_preference_controller.dart';
-import 'package:ride_relay/controllers/ride_controller.dart';
-import 'package:ride_relay/controllers/rider_profile_controller.dart';
-import 'package:ride_relay/controllers/shared_route_controller.dart';
-import 'package:ride_relay/data/in_memory_event_store.dart';
-import 'package:ride_relay/data/in_memory_session_store.dart';
-import 'package:ride_relay/domain/completed_ride_store.dart';
-import 'package:ride_relay/domain/recorded_route_store.dart';
-import 'package:ride_relay/features/map/ride_map.dart';
-import 'package:ride_relay/services/leader_ride_status.dart';
-import 'package:ride_relay/services/nearby_bridge.dart';
+import 'package:tide_and_seek/app/tide_and_seek_app.dart';
+import 'package:tide_and_seek/controllers/completed_rides_controller.dart';
+import 'package:tide_and_seek/controllers/distance_unit_controller.dart';
+import 'package:tide_and_seek/controllers/map_style_mode_controller.dart';
+import 'package:tide_and_seek/controllers/ride_code_preference_controller.dart';
+import 'package:tide_and_seek/controllers/ride_controller.dart';
+import 'package:tide_and_seek/controllers/rider_profile_controller.dart';
+import 'package:tide_and_seek/controllers/shared_route_controller.dart';
+import 'package:tide_and_seek/data/in_memory_event_store.dart';
+import 'package:tide_and_seek/data/in_memory_session_store.dart';
+import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/domain/recorded_route_store.dart';
+import 'package:tide_and_seek/features/map/ride_map.dart';
+import 'package:tide_and_seek/services/leader_ride_status.dart';
+import 'package:tide_and_seek/services/nearby_bridge.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Its own file on purpose.
@@ -176,7 +176,7 @@ late RideCodePreferenceController _rideCodePreference;
 late CompletedRidesController _completedRides;
 final _recordedRoutes = InMemoryRecordedRouteStore();
 
-RideRelayApp _app(RideController controller) => RideRelayApp(
+TideAndSeekApp _app(RideController controller) => TideAndSeekApp(
   controller: controller,
   distanceUnits: DistanceUnitController.forLocale(const Locale('en', 'GB')),
   mapStyleMode: _mapStyleMode,

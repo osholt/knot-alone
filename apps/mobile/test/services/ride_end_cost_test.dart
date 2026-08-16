@@ -16,17 +16,17 @@
 // The full profile harness is integration_test/ride_end_profile_test.dart.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/domain/rider_location.dart';
-import 'package:ride_relay/services/ride_event_authenticator.dart';
-import 'package:ride_relay/services/ride_lifecycle.dart';
-import 'package:ride_relay/services/ride_route_reducer.dart';
-import 'package:ride_relay/services/ride_summary_exporter.dart';
-import 'package:ride_relay/services/trail_display_simplifier.dart';
-import 'package:ride_relay/domain/imported_route.dart' as route_domain;
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/services/ride_lifecycle.dart';
+import 'package:tide_and_seek/services/ride_route_reducer.dart';
+import 'package:tide_and_seek/services/ride_summary_exporter.dart';
+import 'package:tide_and_seek/services/trail_display_simplifier.dart';
+import 'package:tide_and_seek/domain/imported_route.dart' as route_domain;
 
 void main() {
   final session = RideSession(

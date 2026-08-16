@@ -87,7 +87,7 @@ class InternetRelayStatusCard extends StatelessWidget {
 
   String _detail(InternetRelayStatus status) {
     if (status.phase == InternetRelayPhase.unconfigured) {
-      return 'Set RIDE_RELAY_API_BASE_URL · no server traffic';
+      return 'Set TIDE_AND_SEEK_API_BASE_URL · no server traffic';
     }
     final nextAttempt = status.nextAttemptAt;
     if (nextAttempt != null) {

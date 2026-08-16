@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/spoken_guidance_controller.dart';
-import 'package:ride_relay/services/spoken_guidance.dart';
+import 'package:tide_and_seek/controllers/spoken_guidance_controller.dart';
+import 'package:tide_and_seek/services/spoken_guidance.dart';
 
 /// Records what it was asked to say, so a test can tell silence from speech.
 class _RecordingEngine implements SpokenGuidanceEngine {

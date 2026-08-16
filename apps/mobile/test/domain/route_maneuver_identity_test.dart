@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/imported_route.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
 
 void main() {
   RouteManeuver maneuver({

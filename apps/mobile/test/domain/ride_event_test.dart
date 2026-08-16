@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
 
 void main() {
   test('ride events survive JSON round trips', () {

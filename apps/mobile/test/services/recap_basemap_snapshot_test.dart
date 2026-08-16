@@ -13,7 +13,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/recap_basemap_snapshot.dart';
+import 'package:tide_and_seek/services/recap_basemap_snapshot.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

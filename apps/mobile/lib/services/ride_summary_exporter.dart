@@ -287,10 +287,10 @@ class RideSummaryExporter {
   }
 
   String fileName(RideSummary summary) =>
-      'ride-relay-${summary.rideCode.toLowerCase()}-summary.csv';
+      'tide-and-seek-${summary.rideCode.toLowerCase()}-summary.csv';
 
   String trailFileName(RideSummary summary) =>
-      'ride-relay-${summary.rideCode.toLowerCase()}-trail.gpx';
+      'tide-and-seek-${summary.rideCode.toLowerCase()}-trail.gpx';
 
   static List<RideEvent> _sorted(Iterable<RideEvent> events) =>
       events.toList(growable: false)..sort((left, right) {

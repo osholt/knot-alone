@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/stopped_speed_reading.dart';
+import 'package:tide_and_seek/services/stopped_speed_reading.dart';
 
 void main() {
   group('a stopped bike reads zero, a lost one reads nothing (#445)', () {

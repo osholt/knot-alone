@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/services/ride_event_authenticator.dart';
 
 void main() {
   test('canonically signs the complete envelope and rejects tampering', () {

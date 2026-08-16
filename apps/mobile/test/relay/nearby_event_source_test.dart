@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/data/in_memory_event_store.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/relay/nearby_event_source.dart';
+import 'package:tide_and_seek/data/in_memory_event_store.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/relay/nearby_event_source.dart';
 
 void main() {
   test(

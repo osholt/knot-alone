@@ -1,12 +1,12 @@
 services:
   tailscale:
     image: tailscale/tailscale:v1.98.9
-    hostname: ${RIDE_RELAY_TAILSCALE_HOSTNAME:-ride-relay}
+    hostname: ${TIDE_AND_SEEK_TAILSCALE_HOSTNAME:-tide-and-seek}
     restart: unless-stopped
     environment:
       TS_AUTHKEY: ${TS_AUTHKEY:-}
       TS_AUTH_ONCE: "true"
-      TS_HOSTNAME: ${RIDE_RELAY_TAILSCALE_HOSTNAME:-ride-relay}
+      TS_HOSTNAME: ${TIDE_AND_SEEK_TAILSCALE_HOSTNAME:-tide-and-seek}
       TS_SERVE_CONFIG: /config/serve.json
       TS_STATE_DIR: /var/lib/tailscale
       TS_USERSPACE: "true"

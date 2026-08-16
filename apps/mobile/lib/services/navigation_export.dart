@@ -294,7 +294,7 @@ class RouteNavigationLinks {
       'll': _coordinate(points.last),
       'navigate': 'yes',
       'vehicle_type': 'motorcycle',
-      'utm_source': 'ride_relay',
+      'utm_source': 'tide_and_seek',
     });
   }
 

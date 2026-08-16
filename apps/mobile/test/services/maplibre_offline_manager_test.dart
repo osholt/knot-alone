@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/services/basemap_configuration.dart';
-import 'package:ride_relay/services/maplibre_offline_manager.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/services/basemap_configuration.dart';
+import 'package:tide_and_seek/services/maplibre_offline_manager.dart';
 
 void main() {
   const configuration = BasemapConfiguration(
-    styleUrl: 'https://maps.example.test/styles/ride-relay/style.json',
+    styleUrl: 'https://maps.example.test/styles/tide-and-seek/style.json',
     attribution: '© OpenStreetMap contributors',
     cacheNamespace: 'open-map-v1',
     persistentCachingAllowed: true,
@@ -49,7 +49,7 @@ void main() {
     final api = _FakeOfflineApi()..storedRegions.add(_region(1, 'open-map-v1'));
     final manager = MapLibreOfflineManager(
       configuration: const BasemapConfiguration(
-        styleUrl: 'https://maps.example.test/styles/ride-relay/style.json',
+        styleUrl: 'https://maps.example.test/styles/tide-and-seek/style.json',
         attribution: '© OpenStreetMap contributors',
         cacheNamespace: 'open-map-v1',
         persistentCachingAllowed: false,

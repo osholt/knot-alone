@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/ride_screen_awake.dart';
+import 'package:tide_and_seek/services/ride_screen_awake.dart';
 
 void main() {
   testWidgets(

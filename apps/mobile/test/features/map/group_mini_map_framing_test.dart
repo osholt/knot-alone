@@ -12,8 +12,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/imported_route.dart' show GeoPoint;
-import 'package:ride_relay/features/map/group_mini_map_framing.dart';
+import 'package:tide_and_seek/domain/imported_route.dart' show GeoPoint;
+import 'package:tide_and_seek/features/map/group_mini_map_framing.dart';
 
 void main() {
   // The portrait mini-map is 150 x 104 with 20/20 and 24/16 padding.

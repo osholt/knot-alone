@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/rider_profile_controller.dart';
-import 'package:ride_relay/domain/rider_color.dart';
-import 'package:ride_relay/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/controllers/rider_profile_controller.dart';
+import 'package:tide_and_seek/domain/rider_color.dart';
+import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

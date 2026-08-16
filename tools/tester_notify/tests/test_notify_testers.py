@@ -164,7 +164,7 @@ class ConfigurationTest(unittest.TestCase):
         decision = decide("auto", "", ())
 
         self.assertEqual(decision.action, "dry-run")
-        self.assertIn("RIDE_RELAY_ANDROID_TESTER_GROUP", decision.reason)
+        self.assertIn("TIDE_AND_SEEK_ANDROID_TESTER_GROUP", decision.reason)
 
     def test_dry_run_mode_wins_over_full_configuration(self) -> None:
         self.assertEqual(decide("dry-run", RECIPIENT, ()).action, "dry-run")
@@ -237,7 +237,7 @@ class MainTest(unittest.TestCase):
         self.assertEqual(self.sent, [])
         self.assertIn("Rendered only, not sent", rendered)
         self.assertIn("Play closed testing (alpha)", rendered)
-        self.assertIn("RIDE_RELAY_ANDROID_TESTER_GROUP", rendered)
+        self.assertIn("TIDE_AND_SEEK_ANDROID_TESTER_GROUP", rendered)
         self.assertIn("::notice::", self.out.getvalue())
 
     def test_missing_credentials_skip_visibly_and_keep_the_release_green(

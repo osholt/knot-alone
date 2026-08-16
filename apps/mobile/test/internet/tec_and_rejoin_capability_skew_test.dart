@@ -5,18 +5,18 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:ride_relay/data/in_memory_event_store.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/internet/internet_cursor_store.dart';
-import 'package:ride_relay/internet/internet_relay_client.dart';
-import 'package:ride_relay/internet/internet_relay_worker.dart';
-import 'package:ride_relay/relay/live_presence.dart';
-import 'package:ride_relay/relay/relay_event_compatibility.dart';
-import 'package:ride_relay/relay/relay_protocol.dart';
-import 'package:ride_relay/relay/relay_queue.dart';
-import 'package:ride_relay/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/data/in_memory_event_store.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/internet/internet_cursor_store.dart';
+import 'package:tide_and_seek/internet/internet_relay_client.dart';
+import 'package:tide_and_seek/internet/internet_relay_worker.dart';
+import 'package:tide_and_seek/relay/live_presence.dart';
+import 'package:tide_and_seek/relay/relay_event_compatibility.dart';
+import 'package:tide_and_seek/relay/relay_protocol.dart';
+import 'package:tide_and_seek/relay/relay_queue.dart';
+import 'package:tide_and_seek/services/ride_event_authenticator.dart';
 
 /// Issue #128, both skew directions. Mixed tester builds are the normal case:
 /// an older peer or relay must produce a **named** limitation, never a feature

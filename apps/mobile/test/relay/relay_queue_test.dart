@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/relay/in_memory_relay_queue.dart';
-import 'package:ride_relay/relay/relay_queue.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/relay/in_memory_relay_queue.dart';
+import 'package:tide_and_seek/relay/relay_queue.dart';
 
 void main() {
   final now = DateTime.utc(2026, 7, 16, 12);

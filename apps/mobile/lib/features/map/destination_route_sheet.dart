@@ -343,26 +343,26 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
   }
 }
 
-enum _DestinationHandoff { rideRelay, calimoto, myRouteApp, googleMaps }
+enum _DestinationHandoff { tideAndSeek, calimoto, myRouteApp, googleMaps }
 
 _DestinationHandoff _handoffFromTarget(NavigationTarget? target) =>
     switch (target) {
       NavigationTarget.calimoto => _DestinationHandoff.calimoto,
       NavigationTarget.myRouteApp => _DestinationHandoff.myRouteApp,
       NavigationTarget.googleMaps => _DestinationHandoff.googleMaps,
-      _ => _DestinationHandoff.rideRelay,
+      _ => _DestinationHandoff.tideAndSeek,
     };
 
 extension on _DestinationHandoff {
   String get label => switch (this) {
-    _DestinationHandoff.rideRelay => 'Tide and Seek',
+    _DestinationHandoff.tideAndSeek => 'Tide and Seek',
     _DestinationHandoff.calimoto => 'Calimoto',
     _DestinationHandoff.myRouteApp => 'MyRoute-app',
     _DestinationHandoff.googleMaps => 'Google Maps',
   };
 
   String get detail => switch (this) {
-    _DestinationHandoff.rideRelay =>
+    _DestinationHandoff.tideAndSeek =>
       'Show and save the route in Tide and Seek.',
     _DestinationHandoff.calimoto =>
       'Generate GPX, then choose Calimoto in the system share sheet.',
@@ -373,7 +373,7 @@ extension on _DestinationHandoff {
   };
 
   NavigationTarget? get target => switch (this) {
-    _DestinationHandoff.rideRelay => null,
+    _DestinationHandoff.tideAndSeek => null,
     _DestinationHandoff.calimoto => NavigationTarget.calimoto,
     _DestinationHandoff.myRouteApp => NavigationTarget.myRouteApp,
     _DestinationHandoff.googleMaps => NavigationTarget.googleMaps,

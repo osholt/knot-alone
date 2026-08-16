@@ -27,7 +27,7 @@ abstract interface class IncomingRideInvitationLinkSource {
 class RideInvitationLinkChannel implements IncomingRideInvitationLinkSource {
   const RideInvitationLinkChannel();
 
-  static const _channel = MethodChannel('me.osholt.ride_relay/planner_link');
+  static const _channel = MethodChannel('me.osholt.tide_and_seek/planner_link');
 
   @override
   Future<String?> consumePending() async {

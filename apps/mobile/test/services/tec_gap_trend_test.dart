@@ -10,10 +10,10 @@
 // distinction.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/services/leader_ride_status.dart'
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/services/leader_ride_status.dart'
     show TecAvailability;
-import 'package:ride_relay/services/tec_gap_trend.dart';
+import 'package:tide_and_seek/services/tec_gap_trend.dart';
 
 void main() {
   final start = DateTime.utc(2026, 7, 28, 10);

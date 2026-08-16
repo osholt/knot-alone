@@ -792,16 +792,16 @@ class RideMapScreen extends StatefulWidget {
 }
 
 class _RideMapScreenState extends State<RideMapScreen> {
-  static const _personalHeatmapSource = 'ride-relay-personal-heatmap';
-  static const _personalHeatmapLayer = 'ride-relay-personal-heatmap-layer';
-  static const _remainingRouteSource = 'ride-relay-route-remaining';
-  static const _riderTrailSource = 'ride-relay-rider-trails';
+  static const _personalHeatmapSource = 'tide-and-seek-personal-heatmap';
+  static const _personalHeatmapLayer = 'tide-and-seek-personal-heatmap-layer';
+  static const _remainingRouteSource = 'tide-and-seek-route-remaining';
+  static const _riderTrailSource = 'tide-and-seek-rider-trails';
   static const _casingHex = RouteTrailStyle.casingHex;
-  static const _trailDirectionArrowSource = 'ride-relay-trail-direction-arrows';
-  static const _waypointSource = 'ride-relay-waypoints';
-  static const _positionSource = 'ride-relay-position';
-  static const _overlaySource = 'ride-relay-overlays';
-  static const _trailDirectionArrowImage = 'ride-relay-trail-direction-arrow';
+  static const _trailDirectionArrowSource = 'tide-and-seek-trail-direction-arrows';
+  static const _waypointSource = 'tide-and-seek-waypoints';
+  static const _positionSource = 'tide-and-seek-position';
+  static const _overlaySource = 'tide-and-seek-overlays';
+  static const _trailDirectionArrowImage = 'tide-and-seek-trail-direction-arrow';
 
   /// How many of the direction arrows the planned route may claim before the
   /// live cues take the rest. Half the budget: enough to read the route's
@@ -1884,7 +1884,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       final rideMenu = showRideMenu
           ? FloatingActionButton.small(
               key: const Key('ride-menu-button'),
-              heroTag: 'ride-relay-menu',
+              heroTag: 'tide-and-seek-menu',
               tooltip: 'Ride actions',
               onPressed: widget.onOpenRideMenu,
               backgroundColor: const Color(0xE6252E39),
@@ -1931,7 +1931,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
           : FloatingActionButton.extended(
               key: const Key('emergency-alert-button'),
               extendedPadding: actionPadding,
-              heroTag: 'ride-relay-emergency-alert',
+              heroTag: 'tide-and-seek-emergency-alert',
               tooltip: 'Alert leader and TEC',
               onPressed: _emergencyAlertSending ? null : _triggerEmergencyAlert,
               backgroundColor: const Color(0xFFD9304F),
@@ -1967,7 +1967,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
           ? FloatingActionButton.extended(
               key: const Key('leave-ride-button'),
               extendedPadding: actionPadding,
-              heroTag: 'ride-relay-leave',
+              heroTag: 'tide-and-seek-leave',
               tooltip: 'Stop sharing and leave this ride',
               onPressed: widget.onLeaveRide,
               backgroundColor: const Color(0xFF545F6E),
@@ -2059,7 +2059,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
               // with them put two heroes of the same tag on screen whenever this
               // control was up, which is most of a ride now that it is the way
               // into the navigation viewport (#141).
-              heroTag: 'ride-relay-follow-me',
+              heroTag: 'tide-and-seek-follow-me',
               tooltip: 'Follow my location',
               onPressed: _toggleNavigationMode,
               backgroundColor: const Color(0xE6252E39),
@@ -2427,7 +2427,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
         if (_basemap.usesLegacyRaster)
           TileLayer(
             urlTemplate: _basemap.urlTemplate,
-            userAgentPackageName: 'me.osholt.ride_relay',
+            userAgentPackageName: 'me.osholt.tide_and_seek',
             maxNativeZoom: _basemap.maximumNativeZoom,
             tileProvider: LicensedCachingTileProvider(
               cache: widget.offlineTileCache,
@@ -3816,7 +3816,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
           );
   }
 
-  static const _overlayFallbackIconImage = 'ride-relay-overlay-marker';
+  static const _overlayFallbackIconImage = 'tide-and-seek-overlay-marker';
   bool _markerImagesRegistered = false;
   final Set<String> _registeredRiderSymbolImages = {};
 
@@ -3937,7 +3937,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       );
       await controller.addLineLayer(
         _remainingRouteSource,
-        'ride-relay-route-remaining-border',
+        'tide-and-seek-route-remaining-border',
         ml.LineLayerProperties(
           lineColor: _casingHex,
           lineWidth: RouteTrailStyle.routeAhead.casingWidthPixels,
@@ -3949,7 +3949,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       );
       await controller.addLineLayer(
         _remainingRouteSource,
-        'ride-relay-route-remaining',
+        'tide-and-seek-route-remaining',
         ml.LineLayerProperties(
           lineColor: _hexColor(RouteTrailStyle.routeAhead.color),
           lineWidth: RouteTrailStyle.routeAhead.widthPixels,
@@ -3971,7 +3971,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       );
       await controller.addSymbolLayer(
         _trailDirectionArrowSource,
-        'ride-relay-trail-direction-arrows',
+        'tide-and-seek-trail-direction-arrows',
         const ml.SymbolLayerProperties(
           iconImage: _trailDirectionArrowImage,
           iconColor: ['get', 'color'],
@@ -3989,7 +3989,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       await controller.addGeoJsonSource(_waypointSource, _waypointGeoJson());
       await controller.addCircleLayer(
         _waypointSource,
-        'ride-relay-waypoint-circles',
+        'tide-and-seek-waypoint-circles',
         const ml.CircleLayerProperties(
           circleRadius: 7,
           circleColor: '#FFC857',
@@ -4000,7 +4000,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       await controller.addGeoJsonSource(_positionSource, _positionGeoJson());
       await controller.addCircleLayer(
         _positionSource,
-        'ride-relay-position-badge',
+        'tide-and-seek-position-badge',
         ml.CircleLayerProperties(
           circleRadius: _localBadgeRadius,
           circleColor: _hexColor(widget.localBadgeColor),
@@ -4013,7 +4013,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       );
       await controller.addSymbolLayer(
         _positionSource,
-        'ride-relay-position-icon',
+        'tide-and-seek-position-icon',
         ml.SymbolLayerProperties(
           iconImage: widget.localRiderSymbol.imageName(
             widget.localDisplayName,
@@ -4041,7 +4041,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       // enforcement plate.
       await controller.addCircleLayer(
         _overlaySource,
-        'ride-relay-overlay-badges',
+        'tide-and-seek-overlay-badges',
         ml.CircleLayerProperties(
           circleRadius: _riderBadgeRadius,
           circleColor: ['get', 'color'],
@@ -4053,7 +4053,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
       );
       await controller.addSymbolLayer(
         _overlaySource,
-        'ride-relay-overlay-icons',
+        'tide-and-seek-overlay-icons',
         ml.SymbolLayerProperties(
           iconImage: ['get', 'iconImage'],
           // As above: the badge carries the colour, the glyph carries the shape,
@@ -4099,7 +4099,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
     ];
     await controller.addLineLayer(
       _riderTrailSource,
-      'ride-relay-trail-${kind.name}-casing',
+      'tide-and-seek-trail-${kind.name}-casing',
       ml.LineLayerProperties(
         lineColor: _casingHex,
         lineWidth: style.casingWidthPixels,
@@ -4112,7 +4112,7 @@ class _RideMapScreenState extends State<RideMapScreen> {
     );
     await controller.addLineLayer(
       _riderTrailSource,
-      'ride-relay-trail-${kind.name}-line',
+      'tide-and-seek-trail-${kind.name}-line',
       ml.LineLayerProperties(
         lineColor: _hexColor(style.color),
         lineWidth: style.widthPixels,
@@ -4469,8 +4469,8 @@ class _RideMapScreenState extends State<RideMapScreen> {
     String layerId,
     ml.Annotation? annotation,
   ) {
-    if (layerId != 'ride-relay-overlay-icons' &&
-        layerId != 'ride-relay-waypoint-circles') {
+    if (layerId != 'tide-and-seek-overlay-icons' &&
+        layerId != 'tide-and-seek-waypoint-circles') {
       return;
     }
     final overlay = (widget.overlayMarkers?.value ?? const <MapOverlayMarker>[])
@@ -6152,8 +6152,8 @@ typedef _MiniMapSnapshot = ({
 });
 
 class _GroupMiniMapState extends State<_GroupMiniMap> {
-  static const _routeSource = 'ride-relay-mini-route';
-  static const _riderSource = 'ride-relay-mini-riders';
+  static const _routeSource = 'tide-and-seek-mini-route';
+  static const _riderSource = 'tide-and-seek-mini-riders';
 
   /// Radius of a rider's badge on the group overview, which is smaller than the
   /// main map's because the whole map is.
@@ -6214,7 +6214,7 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
             widget.mapStyleUrl.trim().isNotEmpty
         ? vmt.StyleReader(
             uri: widget.mapStyleUrl,
-            httpHeaders: const {'User-Agent': 'me.osholt.ride_relay'},
+            httpHeaders: const {'User-Agent': 'me.osholt.tide_and_seek'},
           ).read().timeout(const Duration(seconds: 7))
         : null;
   }
@@ -6578,7 +6578,7 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
       await controller.addGeoJsonSource(_routeSource, _routeGeoJson(snapshot));
       await controller.addLineLayer(
         _routeSource,
-        'ride-relay-mini-route-border',
+        'tide-and-seek-mini-route-border',
         ml.LineLayerProperties(
           lineColor: RouteTrailStyle.casingHex,
           lineWidth: RouteTrailStyle.miniMapRoute.casingWidthPixels,
@@ -6589,7 +6589,7 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
       );
       await controller.addLineLayer(
         _routeSource,
-        'ride-relay-mini-route-line',
+        'tide-and-seek-mini-route-line',
         ml.LineLayerProperties(
           lineColor: _hexColor(RouteTrailStyle.miniMapRoute.color),
           lineWidth: RouteTrailStyle.miniMapRoute.widthPixels,
@@ -6601,7 +6601,7 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
       await controller.addGeoJsonSource(_riderSource, _riderGeoJson(snapshot));
       await controller.addCircleLayer(
         _riderSource,
-        'ride-relay-mini-rider-circles',
+        'tide-and-seek-mini-rider-circles',
         const ml.CircleLayerProperties(
           circleRadius: _miniBadgeRadius,
           circleColor: ['get', 'color'],
@@ -6612,7 +6612,7 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
       );
       await controller.addSymbolLayer(
         _riderSource,
-        'ride-relay-mini-rider-symbols',
+        'tide-and-seek-mini-rider-symbols',
         ml.SymbolLayerProperties(
           iconImage: ['get', 'iconImage'],
           iconColor: RouteTrailStyle.markerGlyphHex,

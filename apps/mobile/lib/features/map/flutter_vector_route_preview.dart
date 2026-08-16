@@ -64,7 +64,7 @@ class _FlutterVectorRoutePreviewState extends State<FlutterVectorRoutePreview> {
 
   Future<vmt.Style> _loadStyle() => vmt.StyleReader(
     uri: widget.basemapConfiguration.styleUrl,
-    httpHeaders: const {'User-Agent': 'me.osholt.ride_relay'},
+    httpHeaders: const {'User-Agent': 'me.osholt.tide_and_seek'},
   ).read().timeout(const Duration(seconds: 7));
 
   void _mapReady() {

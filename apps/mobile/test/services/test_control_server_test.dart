@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/test_control_controller.dart';
-import 'package:ride_relay/services/test_control_configuration.dart';
+import 'package:tide_and_seek/controllers/test_control_controller.dart';
+import 'package:tide_and_seek/services/test_control_configuration.dart';
 
 /// The define-**off** half of the test-control coverage: what an ordinary build,
 /// and every store build, must do.
 ///
 /// `test_control_server_enabled_test.dart` is the mirror image. Each half skips
 /// itself in the other's configuration, so `flutter test` and
-/// `flutter test --dart-define=RIDE_RELAY_TEST_CONTROL=true` are both green and
+/// `flutter test --dart-define=TIDE_AND_SEEK_TEST_CONTROL=true` are both green and
 /// neither silently covers nothing.
 void main() {
   // Always-true properties, whichever way the build was compiled.
@@ -87,7 +87,7 @@ void main() {
     // Skipped in a driven build, where the enabled-path suite asserts the
     // opposite. A named reason so a skipped run says why.
     skip: TestControlConfiguration.enabled
-        ? 'asserts the define-off build; run without RIDE_RELAY_TEST_CONTROL'
+        ? 'asserts the define-off build; run without TIDE_AND_SEEK_TEST_CONTROL'
         : null,
   );
 }

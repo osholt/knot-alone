@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/planner_link_channel.dart';
+import 'package:tide_and_seek/services/planner_link_channel.dart';
 
 void main() {
   test('accepts the production planner URL and normalises its code', () {

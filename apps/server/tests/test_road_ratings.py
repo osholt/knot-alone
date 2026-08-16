@@ -7,8 +7,8 @@ from contextlib import contextmanager
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from ride_relay_server.app import create_app
-from ride_relay_server.discovery import road_rating_recommendation
+from tide_and_seek_server.app import create_app
+from tide_and_seek_server.discovery import road_rating_recommendation
 
 ROAD = "osm-good-biking-road-0006a6641990bc7c"
 SOURCE = "derived/osm-good-biking-road-0006a6641990bc7c"

@@ -4,8 +4,8 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 
-from ride_relay_server.models import IdempotencyReplay, Ride, StoredEvent
-from ride_relay_server.service import purge_expired
+from tide_and_seek_server.models import IdempotencyReplay, Ride, StoredEvent
+from tide_and_seek_server.service import purge_expired
 
 from .conftest import ride_token
 

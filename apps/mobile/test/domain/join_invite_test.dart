@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/join_invite.dart';
+import 'package:tide_and_seek/domain/join_invite.dart';
 
 void main() {
   test('formats a code and token into one shareable invite', () {

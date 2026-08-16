@@ -1,12 +1,12 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/shared_route_controller.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/internet/plan_directory.dart';
-import 'package:ride_relay/services/gpx_import_source.dart';
-import 'package:ride_relay/services/planner_link_channel.dart';
-import 'package:ride_relay/services/shared_gpx_channel.dart';
+import 'package:tide_and_seek/controllers/shared_route_controller.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/internet/plan_directory.dart';
+import 'package:tide_and_seek/services/gpx_import_source.dart';
+import 'package:tide_and_seek/services/planner_link_channel.dart';
+import 'package:tide_and_seek/services/shared_gpx_channel.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

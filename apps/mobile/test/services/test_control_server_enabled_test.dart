@@ -2,25 +2,25 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/ride_controller.dart';
-import 'package:ride_relay/controllers/test_control_controller.dart';
-import 'package:ride_relay/data/in_memory_event_store.dart';
-import 'package:ride_relay/data/in_memory_session_store.dart';
-import 'package:ride_relay/domain/completed_ride_store.dart';
-import 'package:ride_relay/services/nearby_bridge.dart';
-import 'package:ride_relay/services/test_control_configuration.dart';
-import 'package:ride_relay/services/test_control_registry.dart';
-import 'package:ride_relay/services/test_control_server.dart';
+import 'package:tide_and_seek/controllers/ride_controller.dart';
+import 'package:tide_and_seek/controllers/test_control_controller.dart';
+import 'package:tide_and_seek/data/in_memory_event_store.dart';
+import 'package:tide_and_seek/data/in_memory_session_store.dart';
+import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/services/nearby_bridge.dart';
+import 'package:tide_and_seek/services/test_control_configuration.dart';
+import 'package:tide_and_seek/services/test_control_registry.dart';
+import 'package:tide_and_seek/services/test_control_server.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// End-to-end exercise of the test-control surface over real HTTP.
 ///
-/// Only runs with `--dart-define=RIDE_RELAY_TEST_CONTROL=true`, and skips itself
+/// Only runs with `--dart-define=TIDE_AND_SEEK_TEST_CONTROL=true`, and skips itself
 /// otherwise, because the ordinary suite must run in the configuration a release
 /// build uses - where the surface does not exist. Run it with:
 ///
 /// ```bash
-/// flutter test --dart-define=RIDE_RELAY_TEST_CONTROL=true \
+/// flutter test --dart-define=TIDE_AND_SEEK_TEST_CONTROL=true \
 ///   test/services/test_control_server_enabled_test.dart
 /// ```
 ///
@@ -30,7 +30,7 @@ void main() {
   // A named condition rather than a bare bool, so a skipped run says why.
   final withoutDefine = TestControlConfiguration.enabled
       ? null
-      : 'needs --dart-define=RIDE_RELAY_TEST_CONTROL=true';
+      : 'needs --dart-define=TIDE_AND_SEEK_TEST_CONTROL=true';
 
   group('test-control surface, define on', () {
     late TestControlController control;

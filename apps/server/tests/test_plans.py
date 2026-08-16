@@ -5,10 +5,10 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from ride_relay_server.app import create_app
-from ride_relay_server.gpx import GpxValidationError, validate_gpx
-from ride_relay_server.models import RidePlan
-from ride_relay_server.service import PLAN_CODE_ALPHABET, PLAN_CODE_LENGTH, purge_expired
+from tide_and_seek_server.app import create_app
+from tide_and_seek_server.gpx import GpxValidationError, validate_gpx
+from tide_and_seek_server.models import RidePlan
+from tide_and_seek_server.service import PLAN_CODE_ALPHABET, PLAN_CODE_LENGTH, purge_expired
 
 GPX_TWO_POINTS = """<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1"><trk><name>Loop</name><trkseg>

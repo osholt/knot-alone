@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/ride_code_preference_controller.dart';
+import 'package:tide_and_seek/controllers/ride_code_preference_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

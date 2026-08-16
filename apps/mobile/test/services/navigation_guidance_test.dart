@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/services/navigation_guidance.dart';
-import 'package:ride_relay/services/road_routing.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/services/navigation_guidance.dart';
+import 'package:tide_and_seek/services/road_routing.dart';
 
 import 'osrm_maneuver_fixtures.dart';
 

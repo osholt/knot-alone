@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/gpx_parser.dart';
+import 'package:tide_and_seek/services/gpx_parser.dart';
 
 void main() {
   const parser = GpxParser();

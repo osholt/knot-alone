@@ -18,12 +18,12 @@ class TestControlConfiguration {
     this.idleTimeout = defaultIdleTimeout,
   });
 
-  /// Compiled in only with `--dart-define=RIDE_RELAY_TEST_CONTROL=true`.
+  /// Compiled in only with `--dart-define=TIDE_AND_SEEK_TEST_CONTROL=true`.
   ///
-  /// Deliberately not `RIDE_RELAY_`-prefixed-and-forgotten: the name appears in
+  /// Deliberately not `TIDE_AND_SEEK_`-prefixed-and-forgotten: the name appears in
   /// **About & build** when it is on, because a build that can be driven
   /// remotely should say so rather than look like an ordinary build.
-  static const bool enabled = bool.fromEnvironment('RIDE_RELAY_TEST_CONTROL');
+  static const bool enabled = bool.fromEnvironment('TIDE_AND_SEEK_TEST_CONTROL');
 
   /// Fixed so tooling does not have to discover it. Above the privileged range
   /// and outside the ephemeral range on both platforms.

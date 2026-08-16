@@ -3,8 +3,8 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from ride_relay_server.app import create_app
-from ride_relay_server.models import RideJoinCode
+from tide_and_seek_server.app import create_app
+from tide_and_seek_server.models import RideJoinCode
 
 from .conftest import ride_token
 
@@ -52,7 +52,7 @@ def test_resolve_with_correct_token_succeeds(client) -> None:
 
     resolved = client.get(
         "/api/v1/join-codes/123456",
-        headers={"x-ride-relay-join-token": RESOLVE_TOKEN},
+        headers={"x-tide-and-seek-join-token": RESOLVE_TOKEN},
     )
     assert resolved.status_code == 200
     assert resolved.json()["inviteSecret"] == SECRET
@@ -63,7 +63,7 @@ def test_resolve_with_wrong_token_is_rejected(client) -> None:
 
     resolved = client.get(
         "/api/v1/join-codes/123456",
-        headers={"x-ride-relay-join-token": "not-the-right-token-at-all"},
+        headers={"x-tide-and-seek-join-token": "not-the-right-token-at-all"},
     )
     assert resolved.status_code == 404
 
@@ -88,7 +88,7 @@ def test_a_valid_token_is_exempt_from_the_global_rate_limit(settings) -> None:
         # A request carrying the correct token is unaffected.
         authenticated = client.get(
             "/api/v1/join-codes/123456",
-            headers={"x-ride-relay-join-token": RESOLVE_TOKEN},
+            headers={"x-tide-and-seek-join-token": RESOLVE_TOKEN},
         )
         assert authenticated.status_code == 200
 

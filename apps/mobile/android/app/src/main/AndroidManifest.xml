@@ -61,7 +61,7 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="ride_updates" />
         <service
-            android:name=".RideRelayMessagingService"
+            android:name=".TideAndSeekMessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />

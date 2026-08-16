@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/ride_join_payload.dart';
+import 'package:tide_and_seek/domain/ride_join_payload.dart';
 
 /// A QR code is arbitrary input from a camera - anyone can print one - so every
 /// bound here is checked rather than trusted (#279).

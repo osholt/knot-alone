@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:ride_relay/domain/imported_route.dart';
-import 'package:ride_relay/services/imported_track_matcher.dart';
+import 'package:tide_and_seek/domain/imported_route.dart';
+import 'package:tide_and_seek/services/imported_track_matcher.dart';
 
 void main() {
   test('matches an imported track and returns review evidence', () async {

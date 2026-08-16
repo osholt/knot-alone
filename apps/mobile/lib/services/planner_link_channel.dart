@@ -10,7 +10,7 @@ abstract interface class IncomingPlannerLinkSource {
 class PlannerLinkChannel implements IncomingPlannerLinkSource {
   const PlannerLinkChannel();
 
-  static const _channel = MethodChannel('me.osholt.ride_relay/planner_link');
+  static const _channel = MethodChannel('me.osholt.tide_and_seek/planner_link');
 
   @override
   Future<String?> consumePending() async {

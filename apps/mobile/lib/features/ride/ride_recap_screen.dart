@@ -145,7 +145,7 @@ class _RideRecapScreenState extends State<RideRecapScreen> {
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final bytes = byteData!.buffer.asUint8List();
       final fileName =
-          'ride-relay-${widget.summary.rideCode.toLowerCase()}-recap.png';
+          'tide-and-seek-${widget.summary.rideCode.toLowerCase()}-recap.png';
       await SharePlus.instance.share(
         ShareParams(
           text: 'Tide and Seek ride recap · ${widget.summary.rideCode}',

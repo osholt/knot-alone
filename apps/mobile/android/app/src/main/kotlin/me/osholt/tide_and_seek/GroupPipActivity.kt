@@ -1,4 +1,4 @@
-package me.osholt.ride_relay
+package me.osholt.tide_and_seek
 
 import android.app.Activity
 import android.app.PictureInPictureParams

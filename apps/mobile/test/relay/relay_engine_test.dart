@@ -2,14 +2,14 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/data/in_memory_event_store.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/domain/rider_location.dart';
-import 'package:ride_relay/relay/in_memory_relay_queue.dart';
-import 'package:ride_relay/relay/peer_transport.dart';
-import 'package:ride_relay/relay/relay_engine.dart';
+import 'package:tide_and_seek/data/in_memory_event_store.dart';
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/relay/in_memory_relay_queue.dart';
+import 'package:tide_and_seek/relay/peer_transport.dart';
+import 'package:tide_and_seek/relay/relay_engine.dart';
 
 void main() {
   const secret = '0123456789abcdef0123456789abcdef';

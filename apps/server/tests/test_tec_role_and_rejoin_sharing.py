@@ -12,8 +12,8 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
-from ride_relay_server.models import StoredEvent
-from ride_relay_server.service import RelayService
+from tide_and_seek_server.models import StoredEvent
+from tide_and_seek_server.service import RelayService
 
 from .conftest import event, ride_token, sync_request
 
@@ -235,7 +235,7 @@ def test_a_rejoin_share_is_not_a_field_an_observer_snapshot_can_carry(client) ->
         f"/api/v1/rides/{ride_id}/observer-grants",
         headers={
             "authorization": f"Bearer {ride_token(ride_id, OBSERVER_SECRET)}",
-            "x-ride-relay-device": "device-a",
+            "x-tide-and-seek-device": "device-a",
         },
         json={"label": "Home contact", "durationMinutes": 60, "consentConfirmed": True},
     )

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/basemap_configuration.dart';
+import 'package:tide_and_seek/services/basemap_configuration.dart';
 
 void main() {
   const configuration = BasemapConfiguration(

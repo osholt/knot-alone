@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/domain/route_preferences.dart';
+import 'package:tide_and_seek/domain/route_preferences.dart';
 
 /// These fixtures are the web planner's own numbers, copied from
 /// `apps/website/planner-core.mjs`. If either side changes, one of the two test

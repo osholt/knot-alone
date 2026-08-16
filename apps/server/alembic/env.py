@@ -5,8 +5,8 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-from ride_relay_server.config import get_settings
-from ride_relay_server.models import Base
+from tide_and_seek_server.config import get_settings
+from tide_and_seek_server.models import Base
 
 config = context.config
 if config.config_file_name is not None:

@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/services/natural_voice_pack.dart';
+import 'package:tide_and_seek/services/natural_voice_pack.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

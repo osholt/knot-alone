@@ -1,14 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/ride_push_notification_controller.dart';
-import 'package:ride_relay/internet/push_registration_client.dart';
-import 'package:ride_relay/services/native_push_token_source.dart';
+import 'package:tide_and_seek/controllers/ride_push_notification_controller.dart';
+import 'package:tide_and_seek/internet/push_registration_client.dart';
+import 'package:tide_and_seek/services/native_push_token_source.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const channel = MethodChannel('me.osholt.ride_relay/push');
+  const channel = MethodChannel('me.osholt.tide_and_seek/push');
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 

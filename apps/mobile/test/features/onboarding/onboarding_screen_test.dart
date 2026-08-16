@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/rider_profile_controller.dart';
-import 'package:ride_relay/features/onboarding/onboarding_screen.dart';
+import 'package:tide_and_seek/controllers/rider_profile_controller.dart';
+import 'package:tide_and_seek/features/onboarding/onboarding_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

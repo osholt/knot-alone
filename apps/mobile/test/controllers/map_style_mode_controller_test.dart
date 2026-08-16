@@ -1,8 +1,8 @@
 import 'dart:ui' show Brightness;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/map_style_mode_controller.dart';
-import 'package:ride_relay/domain/map_style_mode.dart';
+import 'package:tide_and_seek/controllers/map_style_mode_controller.dart';
+import 'package:tide_and_seek/domain/map_style_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

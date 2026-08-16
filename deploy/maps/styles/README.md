@@ -1,9 +1,9 @@
 # MapLibre styles
 
-`ride-relay.json` is the observer map style, exposed as:
+`tide-and-seek.json` is the observer map style, exposed as:
 
 ```text
-https://<RIDE_RELAY_DOMAIN>/maps/styles/ride-relay.json
+https://<TIDE_AND_SEEK_DOMAIN>/maps/styles/tide-and-seek.json
 ```
 
 ## Do not use relative source URLs

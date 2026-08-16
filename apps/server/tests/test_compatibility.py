@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from ride_relay_server.app import create_app
+from tide_and_seek_server.app import create_app
 
 SECRET = "0123456789abcdef0123456789abcdef"
 CURRENT_CAPABILITIES = [

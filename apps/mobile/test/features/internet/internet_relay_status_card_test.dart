@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/internet_relay_controller.dart';
-import 'package:ride_relay/data/in_memory_event_store.dart';
-import 'package:ride_relay/domain/ride_event.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/features/internet/internet_relay_status_card.dart';
-import 'package:ride_relay/internet/internet_cursor_store.dart';
-import 'package:ride_relay/internet/internet_relay_client.dart';
-import 'package:ride_relay/internet/internet_relay_worker.dart';
+import 'package:tide_and_seek/controllers/internet_relay_controller.dart';
+import 'package:tide_and_seek/data/in_memory_event_store.dart';
+import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/features/internet/internet_relay_status_card.dart';
+import 'package:tide_and_seek/internet/internet_cursor_store.dart';
+import 'package:tide_and_seek/internet/internet_relay_client.dart';
+import 'package:tide_and_seek/internet/internet_relay_worker.dart';
 
 void main() {
   testWidgets('makes unconfigured state explicit without implying live sync', (
@@ -31,7 +31,7 @@ void main() {
 
     expect(find.text('Internet relay not configured'), findsOneWidget);
     expect(
-      find.text('Set RIDE_RELAY_API_BASE_URL · no server traffic'),
+      find.text('Set TIDE_AND_SEEK_API_BASE_URL · no server traffic'),
       findsOneWidget,
     );
     expect(find.textContaining('live'), findsNothing);

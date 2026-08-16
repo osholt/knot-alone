@@ -87,7 +87,7 @@ enum BasemapStatus {
 class BasemapTileProbe {
   const BasemapTileProbe({
     this.timeout = const Duration(seconds: 8),
-    this.userAgent = 'me.osholt.ride_relay',
+    this.userAgent = 'me.osholt.tide_and_seek',
   });
 
   final Duration timeout;

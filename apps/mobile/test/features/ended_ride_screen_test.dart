@@ -11,15 +11,15 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/distance_unit_controller.dart';
-import 'package:ride_relay/controllers/ride_controller.dart';
-import 'package:ride_relay/data/in_memory_event_store.dart';
-import 'package:ride_relay/data/in_memory_session_store.dart';
-import 'package:ride_relay/domain/completed_ride_store.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/features/ride/ended_ride_screen.dart';
-import 'package:ride_relay/internet/internet_relay_client.dart';
-import 'package:ride_relay/services/nearby_bridge.dart';
+import 'package:tide_and_seek/controllers/distance_unit_controller.dart';
+import 'package:tide_and_seek/controllers/ride_controller.dart';
+import 'package:tide_and_seek/data/in_memory_event_store.dart';
+import 'package:tide_and_seek/data/in_memory_session_store.dart';
+import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/features/ride/ended_ride_screen.dart';
+import 'package:tide_and_seek/internet/internet_relay_client.dart';
+import 'package:tide_and_seek/services/nearby_bridge.dart';
 
 void main() {
   late InMemoryEventStore events;

@@ -16,7 +16,7 @@ final class BackgroundLocationPermissionBridge: NSObject, CLLocationManagerDeleg
     super.init()
     manager.delegate = self
     let channel = FlutterMethodChannel(
-      name: "me.osholt.ride_relay/background_location",
+      name: "me.osholt.tide_and_seek/background_location",
       binaryMessenger: messenger
     )
     channel.setMethodCallHandler { [weak self] call, result in

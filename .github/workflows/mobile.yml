@@ -71,15 +71,15 @@ jobs:
         run: |
           set -euo pipefail
           flutter build apk --debug \
-            --build-name="$RIDE_RELAY_APP_VERSION" \
-            --build-number="$RIDE_RELAY_APP_BUILD" \
-            --dart-define=RIDE_RELAY_APP_VERSION="$RIDE_RELAY_APP_VERSION" \
-            --dart-define=RIDE_RELAY_APP_BUILD="$RIDE_RELAY_APP_BUILD" \
-            --dart-define=RIDE_RELAY_DISTRIBUTION_TRACK="$RIDE_RELAY_DISTRIBUTION_TRACK" \
-            --dart-define=RIDE_RELAY_BUILD_TIMESTAMP="$RIDE_RELAY_BUILD_TIMESTAMP"
+            --build-name="$TIDE_AND_SEEK_APP_VERSION" \
+            --build-number="$TIDE_AND_SEEK_APP_BUILD" \
+            --dart-define=TIDE_AND_SEEK_APP_VERSION="$TIDE_AND_SEEK_APP_VERSION" \
+            --dart-define=TIDE_AND_SEEK_APP_BUILD="$TIDE_AND_SEEK_APP_BUILD" \
+            --dart-define=TIDE_AND_SEEK_DISTRIBUTION_TRACK="$TIDE_AND_SEEK_DISTRIBUTION_TRACK" \
+            --dart-define=TIDE_AND_SEEK_BUILD_TIMESTAMP="$TIDE_AND_SEEK_BUILD_TIMESTAMP"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: ride-relay-android-debug
+          name: tide-and-seek-android-debug
           path: ${{ env.MOBILE_DIR }}/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
 
@@ -108,14 +108,14 @@ jobs:
         run: |
           set -euo pipefail
           flutter build ios --debug --no-codesign \
-            --build-name="$RIDE_RELAY_APP_VERSION" \
-            --build-number="$RIDE_RELAY_APP_BUILD" \
-            --dart-define=RIDE_RELAY_APP_VERSION="$RIDE_RELAY_APP_VERSION" \
-            --dart-define=RIDE_RELAY_APP_BUILD="$RIDE_RELAY_APP_BUILD" \
-            --dart-define=RIDE_RELAY_DISTRIBUTION_TRACK="$RIDE_RELAY_DISTRIBUTION_TRACK" \
-            --dart-define=RIDE_RELAY_BUILD_TIMESTAMP="$RIDE_RELAY_BUILD_TIMESTAMP"
+            --build-name="$TIDE_AND_SEEK_APP_VERSION" \
+            --build-number="$TIDE_AND_SEEK_APP_BUILD" \
+            --dart-define=TIDE_AND_SEEK_APP_VERSION="$TIDE_AND_SEEK_APP_VERSION" \
+            --dart-define=TIDE_AND_SEEK_APP_BUILD="$TIDE_AND_SEEK_APP_BUILD" \
+            --dart-define=TIDE_AND_SEEK_DISTRIBUTION_TRACK="$TIDE_AND_SEEK_DISTRIBUTION_TRACK" \
+            --dart-define=TIDE_AND_SEEK_BUILD_TIMESTAMP="$TIDE_AND_SEEK_BUILD_TIMESTAMP"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: ride-relay-ios-unsigned-debug
+          name: tide-and-seek-ios-unsigned-debug
           path: ${{ env.MOBILE_DIR }}/build/ios/iphoneos/Runner.app
           if-no-files-found: error

@@ -4,10 +4,10 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 
-from ride_relay_server.crypto import CursorCodec, DataCipher
-from ride_relay_server.models import PreStartPosition, StoredEvent
-from ride_relay_server.schemas import PresenceSyncRequest
-from ride_relay_server.service import RelayService
+from tide_and_seek_server.crypto import CursorCodec, DataCipher
+from tide_and_seek_server.models import PreStartPosition, StoredEvent
+from tide_and_seek_server.schemas import PresenceSyncRequest
+from tide_and_seek_server.service import RelayService
 
 from .conftest import event, ride_token
 
@@ -36,7 +36,7 @@ def _presence(client, ride_id: str, device_id: str, **body):
         json={"protocolVersion": 1, "deviceId": device_id, **body},
         headers={
             "authorization": f"Bearer {ride_token(ride_id, SECRET)}",
-            "x-ride-relay-device": device_id,
+            "x-tide-and-seek-device": device_id,
             "x-tailendcharlie-protocol": "1",
             "x-tailendcharlie-capabilities": "pre-start-presence-v1",
         },
@@ -151,7 +151,7 @@ def test_presence_requires_matching_authenticated_device(client, synchronize) ->
         json={"protocolVersion": 1, "deviceId": "rider-a"},
         headers={
             "authorization": f"Bearer {ride_token(ride_id, SECRET)}",
-            "x-ride-relay-device": "rider-b",
+            "x-tide-and-seek-device": "rider-b",
         },
     )
 

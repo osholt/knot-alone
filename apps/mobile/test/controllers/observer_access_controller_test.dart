@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/observer_access_controller.dart';
-import 'package:ride_relay/data/observer_grant_store.dart';
-import 'package:ride_relay/domain/ride_role.dart';
-import 'package:ride_relay/domain/ride_session.dart';
-import 'package:ride_relay/internet/internet_relay_client.dart';
-import 'package:ride_relay/internet/observer_access_client.dart';
+import 'package:tide_and_seek/controllers/observer_access_controller.dart';
+import 'package:tide_and_seek/data/observer_grant_store.dart';
+import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/internet/internet_relay_client.dart';
+import 'package:tide_and_seek/internet/observer_access_client.dart';
 
 void main() {
   test('secure credentials survive a controller restart', () async {

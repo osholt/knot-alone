@@ -16,8 +16,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/features/map/maneuver_symbol.dart';
-import 'package:ride_relay/services/navigation_guidance.dart';
+import 'package:tide_and_seek/features/map/maneuver_symbol.dart';
+import 'package:tide_and_seek/services/navigation_guidance.dart';
 
 const _outputDirectory = 'build/roundabout-render';
 const _tile = 120.0;

@@ -8,7 +8,7 @@
 # This is `docs/server-runbook.md` § "Redeploying the live relay" written down
 # so it cannot be half-remembered. Everything the runbook calls load-bearing is
 # load-bearing here: a detached HEAD at a pinned commit, the image stamped with
-# RIDE_RELAY_BUILD_COMMIT, and `--force-recreate caddy` only when the Caddyfile
+# TIDE_AND_SEEK_BUILD_COMMIT, and `--force-recreate caddy` only when the Caddyfile
 # the running proxy actually mounts has changed.
 #
 # No host details live in this file. The repository is public. The hostname
@@ -88,8 +88,8 @@ fi
 # ---------------------------------------------------------------------------
 # Phase 2: build and start, from the checkout of the commit being deployed.
 # ---------------------------------------------------------------------------
-RIDE_RELAY_BUILD_COMMIT="$(git rev-parse --verify HEAD)"
-export RIDE_RELAY_BUILD_COMMIT
+TIDE_AND_SEEK_BUILD_COMMIT="$(git rev-parse --verify HEAD)"
+export TIDE_AND_SEEK_BUILD_COMMIT
 
 state_file="$state_dir/$target.commit"
 previous_commit=""
@@ -101,7 +101,7 @@ case "$target" in
 staging)
   env_file="deploy/.env.preproduction"
   compose=(docker compose --env-file "$env_file" --file deploy/compose.preproduction.yaml)
-  domain_key="RIDE_RELAY_PREPRODUCTION_DOMAIN"
+  domain_key="TIDE_AND_SEEK_PREPRODUCTION_DOMAIN"
   api_service="preproduction-server"
   # Staging's own containers carry no Caddy: its public route lives in the
   # production proxy. Recreating that proxy is the one action that can take
@@ -120,7 +120,7 @@ production)
       caddyfile="deploy/Caddyfile.preproduction"
     fi
   done
-  domain_key="RIDE_RELAY_DOMAIN"
+  domain_key="TIDE_AND_SEEK_DOMAIN"
   api_service="server"
   ;;
 esac
@@ -133,7 +133,7 @@ test -n "$domain" || fail "$domain_key is not set in $env_file"
 step "Validating the $target compose configuration"
 "${compose[@]}" config >/dev/null
 
-step "Building and starting $target at $RIDE_RELAY_BUILD_COMMIT"
+step "Building and starting $target at $TIDE_AND_SEEK_BUILD_COMMIT"
 "${compose[@]}" up -d --build
 
 # The Caddyfile is bind-mounted, and `git checkout` replaces it by rename: the
@@ -141,7 +141,7 @@ step "Building and starting $target at $RIDE_RELAY_BUILD_COMMIT"
 # it serving the pre-deploy config while reporting success. Only a recreate
 # re-resolves the mount. See the runbook for the 2 August deploy this cost.
 if test -n "$caddyfile" && test -n "$previous_commit"; then
-  if git diff --quiet "$previous_commit" "$RIDE_RELAY_BUILD_COMMIT" -- "$caddyfile"; then
+  if git diff --quiet "$previous_commit" "$TIDE_AND_SEEK_BUILD_COMMIT" -- "$caddyfile"; then
     echo "$caddyfile unchanged since $previous_commit; leaving caddy alone"
   else
     step "$caddyfile changed; recreating caddy"
@@ -179,13 +179,13 @@ docker run --rm --interactive \
   --network "$smoke_network" \
   --env "SMOKE_ORIGIN=http://$api_service:8080" \
   --env "SMOKE_HOST=$domain" \
-  --env "SMOKE_EXPECTED_COMMIT=$RIDE_RELAY_BUILD_COMMIT" \
+  --env "SMOKE_EXPECTED_COMMIT=$TIDE_AND_SEEK_BUILD_COMMIT" \
   --env "SMOKE_WRITE_PLAN=$(test "$target" = staging && echo 1 || echo 0)" \
   --entrypoint python "$smoke_image" - <deploy/relay-smoke.py
 
 mkdir -p "$state_dir" 2>/dev/null ||
   fail "cannot create $state_dir; create it once, owned by $(id -un)"
-printf '%s\n' "$RIDE_RELAY_BUILD_COMMIT" >"$state_file"
+printf '%s\n' "$TIDE_AND_SEEK_BUILD_COMMIT" >"$state_file"
 
-step "Deployed $target at $RIDE_RELAY_BUILD_COMMIT"
+step "Deployed $target at $TIDE_AND_SEEK_BUILD_COMMIT"
 "${compose[@]}" ps

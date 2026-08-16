@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ride_relay/controllers/foreground_location_controller.dart';
-import 'package:ride_relay/controllers/map_style_mode_controller.dart';
-import 'package:ride_relay/domain/distance_unit.dart';
-import 'package:ride_relay/domain/rider_location.dart';
-import 'package:ride_relay/features/home/home_map_backdrop.dart';
-import 'package:ride_relay/services/device_location_source.dart';
+import 'package:tide_and_seek/controllers/foreground_location_controller.dart';
+import 'package:tide_and_seek/controllers/map_style_mode_controller.dart';
+import 'package:tide_and_seek/domain/distance_unit.dart';
+import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/features/home/home_map_backdrop.dart';
+import 'package:tide_and_seek/services/device_location_source.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

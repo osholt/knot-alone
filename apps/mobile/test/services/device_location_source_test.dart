@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:ride_relay/controllers/foreground_location_controller.dart';
-import 'package:ride_relay/domain/geo_point.dart';
-import 'package:ride_relay/domain/rider_location.dart';
-import 'package:ride_relay/services/device_location_source.dart';
+import 'package:tide_and_seek/controllers/foreground_location_controller.dart';
+import 'package:tide_and_seek/domain/geo_point.dart';
+import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/services/device_location_source.dart';
 
 void main() {
   // #205. A plain LocationSettings is foreground-only, so a rider with the phone

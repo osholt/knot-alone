@@ -1,4 +1,4 @@
-package me.osholt.ride_relay
+package me.osholt.tide_and_seek
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -36,12 +36,12 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     companion object {
-        private const val METHOD_CHANNEL = "me.osholt.ride_relay/nearby"
-        private const val EVENT_CHANNEL = "me.osholt.ride_relay/nearby_events"
-        private const val GPX_METHOD_CHANNEL = "me.osholt.ride_relay/gpx_import"
-        private const val PLANNER_LINK_METHOD_CHANNEL = "me.osholt.ride_relay/planner_link"
-        private const val PUSH_METHOD_CHANNEL = "me.osholt.ride_relay/push"
-        private const val GROUP_PIP_METHOD_CHANNEL = "me.osholt.ride_relay/group_pip"
+        private const val METHOD_CHANNEL = "me.osholt.tide_and_seek/nearby"
+        private const val EVENT_CHANNEL = "me.osholt.tide_and_seek/nearby_events"
+        private const val GPX_METHOD_CHANNEL = "me.osholt.tide_and_seek/gpx_import"
+        private const val PLANNER_LINK_METHOD_CHANNEL = "me.osholt.tide_and_seek/planner_link"
+        private const val PUSH_METHOD_CHANNEL = "me.osholt.tide_and_seek/push"
+        private const val GROUP_PIP_METHOD_CHANNEL = "me.osholt.tide_and_seek/group_pip"
         private const val PERMISSION_REQUEST = 7102
         private const val PUSH_PERMISSION_REQUEST = 7103
         private const val LOCAL_NETWORK_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK"

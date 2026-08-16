@@ -1,4 +1,4 @@
-package me.osholt.ride_relay
+package me.osholt.tide_and_seek
 
 import android.os.Handler
 import android.os.Looper
@@ -35,7 +35,7 @@ object NativePushBridge {
     }
 }
 
-class RideRelayMessagingService : FirebaseMessagingService() {
+class TideAndSeekMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         NativePushBridge.tokenRotated(token)

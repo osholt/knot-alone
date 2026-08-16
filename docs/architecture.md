@@ -21,7 +21,7 @@ Passage plan + observations + context -> calculations and explicit alerts
 ## Domain migration
 
 The inherited implementation calls a session a `ride` and uses Dart/Python
-packages named `ride_relay`. Keep those internal names until the core domain
+packages named `tide_and_seek`. Keep those internal names until the core domain
 boundaries are covered by tests; a broad rename is not a product feature.
 
 | Target concept | Inherited basis | Required change |
