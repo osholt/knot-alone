@@ -127,6 +127,78 @@ More than expected, and separately from the charts:
 The ENCs themselves are not in that list. Those are AVCS, and they are
 commercial with no published price and no self-serve tier.
 
+## Is there a free UKHO licence? Not one that helps
+
+There is a genuinely free UKHO licence, and it is the wrong shape for this.
+
+UKHO runs a free online **copyright reproduction** licence, one year, for
+non-commercial or low-value commercial use. Qualifying means meeting at least
+one of: the product has no commercial value; total commercial value of all
+products containing the material is under £10,000 a year; limited tidal
+predictions or small extracts in a periodical; use on television or in film; or
+website display of images with **fewer than 1,000 page impressions per day**.
+
+Three clauses kill it for a navigation app:
+
+- **You must already have bought or legally obtained the material you copy.**
+  It is a licence to reproduce something you own, not a way to obtain chart
+  data.
+- **Navigation use is excluded** unless used with the original material.
+- Mobile apps are not addressed at all; the permitted surfaces are print,
+  broadcast and low-traffic websites.
+
+So emailing them about this licence will not produce ENC data for an app. It is
+the licence for reproducing a chart extract in a club newsletter or a pilot
+book. Chart data for a navigation product is the commercial AVCS route, and
+there is no free tier of that.
+
+Application: `https://copyright.ukho.gov.uk/onlineapplication.aspx`
+
+## Other cruising grounds
+
+Free official charts are the exception, not the rule, and the exceptions are
+mostly not where a UK yacht goes.
+
+| Country | Official charts free? |
+|---|---|
+| USA (NOAA) | **Yes** — ENC and RNC, public domain |
+| New Zealand (LINZ) | **Yes** — raster and ENC |
+| Brazil (DHN/CHM) | **Yes** — ENC and raster packs |
+| Norway (Kartverket) | Raster via an online viewer |
+| South China Sea (EAHC) | Small-scale ENCs only |
+| Inland European waterways (RIS) | **Yes** — vector, but rivers and canals, not coastal |
+| UK, Greece, Croatia, Italy, Spain, Turkey | **No** |
+
+That last row is the problem: essentially every Mediterranean charter
+destination, and home waters, is commercial.
+
+- **Greece (HNHS)** distributes official ENCs to the maritime market, encrypted,
+  and began an S-101 series in early 2026. It publishes a WMS rendered from ENC
+  data, but that service carries **no vector data and is explicitly not for
+  navigation**.
+- **Croatia (HHI)** distributes through **PRIMAR**, the regional ENC
+  coordinating centre, and its authorised distributors. Its WMS is available
+  only after concluding a distribution agreement through PRIMAR.
+
+**PRIMAR is the thing to know about.** It aggregates many European hydrographic
+offices into one distribution channel, so it — not a country-by-country
+scramble — is the single commercial conversation for European coverage, in the
+same way AVCS is for worldwide.
+
+### The model that avoids redistribution entirely
+
+Worth considering before any licensing conversation: let the **sailor** bring
+their own charts. They buy official ENCs for their cruising ground and the app
+renders them, so the app never distributes chart data. This is how OpenCPN and
+o-charts work, at leisure prices per region rather than commercial per-vessel
+rates.
+
+The catch, and it needs confirming before the architecture depends on it:
+official ENCs are protected under **IHO S-63**, and decrypting them requires
+the software to be registered with the RENC and issued a manufacturer key bound
+to an installation. That is a process, not a payment, but it is not nothing —
+and it is the reason a hobby app cannot simply open a purchased ENC.
+
 ## Recommendation
 
 **Build on the free stack, and do not open the UKHO commercial conversation
