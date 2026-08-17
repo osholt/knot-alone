@@ -97,23 +97,56 @@ says plainly that it is not a chart.
 **Verdict:** the right source for depth *shading* — it makes the water stop
 being an empty polygon. Not soundings, not a substitute for charted depths.
 
+## Do you legally need official charts?
+
+No, not for leisure use, and this is the finding that changes the plan.
+
+SOLAS V passage-planning duties do apply to pleasure craft, but there is no
+statutory requirement for *official* charts aboard a UK pleasure vessel under
+13.7 m. MCA guidance (MGN 599, MGN 610) expects a careful assessment of the
+intended voyage using "appropriate charts and publications" — a duty on the
+skipper, not on a piece of software. Nothing obliges this app to carry licensed
+ENCs.
+
+What the app is obliged to do is not imply it is a chart when it is not. That
+is a truthfulness constraint, and it is satisfied by provenance UI rather than
+by a licence.
+
+## What UKHO gives away free
+
+More than expected, and separately from the charts:
+
+| Data set | Licence |
+|---|---|
+| Wrecks and obstructions — 94,000+, global, quarterly | Open Government Licence, explicitly free of charge |
+| Bathymetry surfaces — 4,000+, 1970 to present | UKHO Bathymetry Data Licence, OGL-like |
+| Maritime limits and boundaries, ships' routeing measures, offshore infrastructure | Via the ADMIRALTY Marine Data Portal; licence not stated on the access page and needs confirming before use |
+
+The ENCs themselves are not in that list. Those are AVCS, and they are
+commercial with no published price and no self-serve tier.
+
 ## Recommendation
 
-Two tracks, because they are not blocked on the same thing:
+**Build on the free stack, and do not open the UKHO commercial conversation
+yet.** UKHO wrecks and obstructions, UKHO or EMODnet bathymetry for depth
+shading, and OpenSeaMap for seamarks and buoyage together make a legitimate,
+attributable, offline-cacheable passage-planning aid. For leisure sailing that
+may be the whole product.
 
-1. **Open the UKHO conversation now.** It is the long pole and it is a
-   commercial process, not an engineering one. Everything about whether this
-   product can honestly say "chart" depends on the answer.
-2. **Meanwhile build the provenance plumbing and ship an open layer.** EMODnet
-   bathymetry for depth shading plus OpenSeaMap seamarks, behind the source,
-   edition, cache-age and coverage surfaces #17 requires. That work is needed
-   whichever provider wins, and it replaces the road basemap with something
-   marine without waiting.
+Revisit paid ENCs only on a deliberate product decision — that Tide and Seek
+should claim to be a chart plotter, or should carry commercial credibility.
+That is positioning, not a technical blocker, which means #17 is not blocked on
+licensing after all.
 
-The trap to avoid: shipping OpenSeaMap and quietly letting the "not for
-navigation" warning erode, because the map now looks like a chart. The
-provenance UI is what stops that, which is why it is worth building before,
-not after, the pretty layer.
+The trap to avoid is unchanged, and is now the main risk: shipping a layer that
+looks like a chart and letting the "not for navigation" position erode because
+the map got prettier. The provenance UI — source, edition or vintage, cache
+age, uncovered areas — is what prevents that, and it is worth building before
+the layer rather than after.
+
+An earlier draft of this document concluded that UKHO ENCs were the only
+honest option. That was right about the word "chart" and wrong as a conclusion
+about what to build.
 
 ## Sources
 
@@ -126,3 +159,7 @@ not after, the pretty layer.
 - [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/)
 - [EMODnet Bathymetry](https://emodnet.ec.europa.eu/en/bathymetry)
 - [EMODnet Bathymetry WMTS](https://tiles.emodnet-bathymetry.eu/)
+- [UKHO marine data sets](https://www.admiralty.co.uk/access-data/marine-data)
+- [MGN 599: pleasure vessels — regulations and exemptions](https://www.gov.uk/government/publications/mgn-599-m-amendment-1-m-pleasure-vessels-regulations-and-exemptions-guidance-and-best-practice-advice/mgn-599-m-amendment-1m-pleasure-vessels-regulations-and-exemptions-guidance-and-best-practice-advice)
+- [MGN 610: SOLAS chapter V guidance](https://www.gov.uk/government/publications/mgn-610-mf-amendment-1-solas-chapter-v-guidance-on-the-merchant-shipping-safety-of-navigation-regulations-2020/mgn-610-mf-amendment-1-navigation-solas-chapter-v-guidance-on-the-merchant-shipping-safety-of-navigation-regulations-2020)
+- [RYA pleasure craft regulations](https://www.rya.org.uk/regulations/pleasure-craft-regulations/)
