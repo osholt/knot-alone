@@ -38,6 +38,8 @@ import '../../services/skipper_voyage_status.dart';
 import '../../services/sweeper_gap_trend.dart';
 import '../../services/map_geojson.dart';
 import '../../services/map_style_repository.dart';
+import '../../services/marine_layers.dart';
+import '../../services/marine_tile_layer.dart';
 import '../../services/maplibre_offline_manager.dart';
 import '../../services/map_camera_command.dart';
 import '../../services/measurement_formatter.dart';
@@ -2434,6 +2436,9 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       mapController: _mapController,
       options: options,
       children: [
+        // Depth shading goes down first, before the basemap: it is ground, not
+        // annotation, so land and labels must stay legible over it.
+        ..._marineTileLayers(MarineLayerPlacement.beneathBasemap),
         if (_basemap.usesLegacyRaster)
           TileLayer(
             urlTemplate: _basemap.urlTemplate,
@@ -2443,6 +2448,9 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
               cache: widget.offlineTileCache,
             ),
           ),
+        // Seamarks and buoyage over the basemap. They are the point of a
+        // marine chart surface and must not end up under a road casing.
+        ..._marineTileLayers(MarineLayerPlacement.overBasemap),
         if (_visiblePersonalHeatmap.cells.isNotEmpty)
           CircleLayer(
             key: const Key('personal-voyages-heatmap-layer'),
@@ -3818,6 +3826,90 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
 
   /// The badge for one overlay marker in the flutter_map fallback.
   ///
+  /// Adds the marine raster layers to the native style.
+  ///
+  /// Depth shading is inserted *below* an existing basemap layer so land and
+  /// labels stay on top; seamarks go on last so nothing buries them. A failure
+  /// here degrades the map rather than failing the voyage, so it is caught and
+  /// noted: no depth shading is a worse map, no map is a worse day.
+  Future<void> _addMarineRasterLayers(
+    ml.MapLibreMapController controller,
+  ) async {
+    // The lowest label or line layer in the basemap style, used as the ceiling
+    // for depth shading. Null is fine - the layer then goes on top, which is
+    // wrong-looking but not broken.
+    String? basemapFloor;
+    try {
+      final layers = await controller.getLayerIds();
+      basemapFloor = layers
+          .whereType<String>()
+          .where((id) => id.startsWith('water') || id.contains('label'))
+          .firstOrNull;
+    } on Object catch (error) {
+      if (kDebugMode) debugPrint('Could not read basemap layer ids: $error');
+    }
+
+    for (final layer in MarineLayers.tileLayers) {
+      if (!layer.isConfigured) continue;
+      final sourceId = 'marine-${layer.source.id}';
+      try {
+        await controller.addSource(
+          sourceId,
+          ml.RasterSourceProperties(
+            tiles: [layer.urlTemplate],
+            tileSize: layer.tileSize.toDouble(),
+            attribution: layer.source.licence.attribution,
+            minzoom: layer.minZoom.toDouble(),
+            maxzoom: layer.maxZoom.toDouble(),
+          ),
+        );
+        await controller.addRasterLayer(
+          sourceId,
+          '$sourceId-raster',
+          ml.RasterLayerProperties(rasterOpacity: layer.opacity),
+          belowLayerId: layer.placement == MarineLayerPlacement.beneathBasemap
+              ? basemapFloor
+              : null,
+          minzoom: layer.minZoom.toDouble(),
+          maxzoom: layer.maxZoom.toDouble(),
+        );
+      } on Object catch (error) {
+        if (kDebugMode) {
+          debugPrint('Marine layer ${layer.source.id} unavailable: $error');
+        }
+      }
+    }
+  }
+
+  /// The configured marine raster layers for one placement.
+  ///
+  /// Zoom bounds come from the provider rather than from taste: past them the
+  /// server returns 404s, which read to a sailor as the chart simply stopping.
+  /// Gated on the basemap being configured, which is the codebase's existing
+  /// invariant for "this build fetches map tiles". A widget test constructs a
+  /// bare `BasemapConfiguration()`, so nothing here reaches the network there —
+  /// without the gate these layers requested real tiles and ~50 tests failed on
+  /// HTTP 400.
+  List<Widget> _marineTileLayers(MarineLayerPlacement placement) => [
+    if (_basemap.isConfigured)
+      for (final layer in MarineLayers.tileLayers)
+        if (layer.placement == placement && layer.isConfigured)
+          Opacity(
+            opacity: layer.opacity,
+            child: TileLayer(
+              key: Key('marine-tiles-${layer.source.id}'),
+              urlTemplate: layer.urlTemplate,
+              userAgentPackageName: 'me.osholt.tide_and_seek',
+              minNativeZoom: layer.minZoom,
+              maxNativeZoom: layer.maxZoom,
+              tileDimension: layer.tileSize,
+              tileProvider: LicensedCachingTileProvider(
+                cache: widget.offlineTileCache,
+              ),
+            ),
+          ),
+  ];
+
   Widget _overlayMarkerChild(MapOverlayMarker overlay) {
     final style = overlay.motorcycleStyle;
     return style == null
@@ -4085,6 +4177,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         ),
         filter: _sailorOverlayFilter,
       );
+      await _addMarineRasterLayers(controller);
       _mapLibreStyleReady = true;
       await _syncMapLibreSources();
       if (_navigationMode) {

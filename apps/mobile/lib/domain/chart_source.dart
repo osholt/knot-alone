@@ -81,6 +81,7 @@ class ChartSource {
     this.vintage,
     this.edition,
     this.coverageNote,
+    this.continuouslyUpdated = false,
   });
 
   /// Stable identifier. Used as a cache namespace, so it must not move when the
@@ -102,13 +103,22 @@ class ChartSource {
   /// What this layer does and does not cover, in the provider's own terms.
   final String? coverageNote;
 
+  /// Whether the source changes continuously rather than in editions.
+  ///
+  /// OpenStreetMap-derived layers have no publication date — a seamark can be
+  /// edited this afternoon. For those, the only freshness fact available is
+  /// when *this device* last fetched the tile, so [ChartCoverage] judges them
+  /// on fetch time instead of demanding a vintage the provider never states.
+  final bool continuouslyUpdated;
+
   bool get isConfigured => id.trim().isNotEmpty && licence.isUsable;
 
   /// Whether this layer may be stored on the device for offline use.
   bool get cacheable => licence.permitsOfflineCache;
 
-  /// True when the provider states no vintage, so freshness cannot be judged.
-  bool get vintageUnknown => vintage == null;
+  /// True when freshness cannot be established at all: no stated vintage, and
+  /// not a continuously updated source whose fetch time could stand in.
+  bool get vintageUnknown => vintage == null && !continuouslyUpdated;
 
   /// How old the data is at [now], or null when the provider states no vintage.
   Duration? ageAt(DateTime now) {

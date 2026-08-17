@@ -52,7 +52,12 @@ enum CoverageShortfall {
 class ChartValidityPolicy {
   const ChartValidityPolicy({
     this.official = const Duration(days: 28),
-    this.surveyDerived = const Duration(days: 365),
+    // Three years, not one. Set against the real release cadence: EMODnet
+    // publishes its bathymetry roughly every two years, so a one-year bound
+    // flagged the current release as expired the moment it was wired up. The
+    // seabed does not move that fast; the point of this bound is to notice a
+    // missed release, not to cry wolf about the newest one.
+    this.surveyDerived = const Duration(days: 1095),
     this.crowdSourced = const Duration(days: 90),
   });
 
@@ -126,9 +131,17 @@ class ChartCoverage {
       shortfalls.add(CoverageShortfall.incomplete);
     }
 
-    final age = source.ageAt(now);
+    // A continuously updated source has no publication date to age against, so
+    // the only freshness fact available is when this device last fetched it.
+    final age = source.continuouslyUpdated
+        ? (fetchedAt == null ? null : now.difference(fetchedAt).abs())
+        : source.ageAt(now);
     if (age == null) {
-      shortfalls.add(CoverageShortfall.vintageUnknown);
+      shortfalls.add(
+        source.continuouslyUpdated
+            ? CoverageShortfall.incomplete
+            : CoverageShortfall.vintageUnknown,
+      );
     } else if (age > policy.limitFor(source.authority)) {
       shortfalls.add(CoverageShortfall.outsideValidity);
     }

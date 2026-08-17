@@ -12,6 +12,7 @@
 library;
 
 import '../domain/chart_source.dart';
+import 'marine_tile_layer.dart';
 
 /// Licence text is checked in rather than fetched, because it is a condition of
 /// use and must survive being offline.
@@ -20,7 +21,7 @@ abstract final class MarineLayers {
   ///
   /// Survey-derived, so it may say what the seabed is thought to look like. It
   /// is not soundings and it is not a substitute for charted depths.
-  static const emodnetBathymetry = ChartSource(
+  static final emodnetBathymetry = ChartSource(
     id: 'emodnet-bathymetry',
     displayName: 'EMODnet Bathymetry',
     authority: ChartAuthority.surveyDerived,
@@ -30,6 +31,10 @@ abstract final class MarineLayers {
       url: 'https://emodnet.ec.europa.eu/en/bathymetry',
       permitsOfflineCache: true,
     ),
+    // The served product is the 2024 release (v12 of mean_atlas_land). The
+    // year is the edition; the day is not meaningful.
+    vintage: emodnetRelease,
+    edition: 'mean_atlas_land 2024',
     coverageNote:
         'European seas at EMODnet resolution, the rest of the world from '
         'GEBCO. Indicative depth only, not charted soundings.',
@@ -71,14 +76,53 @@ abstract final class MarineLayers {
       permitsOfflineCache: true,
       shareAlike: true,
     ),
+    // Volunteers edit continuously; there is no release to date. Freshness is
+    // therefore judged on when this device last fetched a tile.
+    continuouslyUpdated: true,
     coverageNote:
         'Buoyage, lights and harbour detail contributed by volunteers. '
         'Coverage is uneven and no edition or Notice to Mariners stands '
         'behind it.',
   );
 
+  /// Release year of the EMODnet product actually served by [bathymetryTiles].
+  static final emodnetRelease = DateTime.utc(2024);
+
+  /// Depth shading. Verified live: the WMTS capabilities document lists
+  /// `web_mercator` among its tile matrix sets, and v12 is the newest path that
+  /// serves tiles — v13 returns 404.
+  static final bathymetryTiles = MarineTileLayer(
+    source: emodnetBathymetry,
+    urlTemplate:
+        'https://tiles.emodnet-bathymetry.eu/v12/mean_atlas_land/web_mercator/{z}/{x}/{y}.png',
+    placement: MarineLayerPlacement.beneathBasemap,
+    maxZoom: 12,
+    opacity: 0.85,
+  );
+
+  /// Seamarks, buoyage and lights. A transparent overlay: the tiles carry only
+  /// the marks, so whatever is beneath shows through.
+  ///
+  /// Pointed at OpenSeaMap's public tile server, which publishes no usage
+  /// policy or availability guarantee. That is a deliberate first step, not a
+  /// resting place — see docs/chart-providers.md. The template is overridable
+  /// so a self-hosted renderer can replace it without touching this file.
+  static final seamarkTiles = MarineTileLayer(
+    source: openSeaMapSeamarks,
+    urlTemplate: const String.fromEnvironment(
+      'TIDE_AND_SEEK_SEAMARK_TILE_URL',
+      defaultValue: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+    ),
+    placement: MarineLayerPlacement.overBasemap,
+    minZoom: 9,
+    maxZoom: 18,
+  );
+
+  /// The tile layers, in draw order: ground first, annotation last.
+  static final tileLayers = <MarineTileLayer>[bathymetryTiles, seamarkTiles];
+
   /// Every layer this build knows about.
-  static const all = <ChartSource>[
+  static final all = <ChartSource>[
     emodnetBathymetry,
     ukhoWrecks,
     openSeaMapSeamarks,
