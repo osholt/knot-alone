@@ -45,8 +45,10 @@ The obvious answer for UK waters, and the hardest to get.
   end user. That assumption needs confirming with UKHO before any design
   depends on it.
 
-**Verdict:** the only option that makes "nautical chart" a truthful claim for
-UK coastal waters. Blocked on a commercial conversation, not on engineering.
+**Verdict:** the only option that lets the product use the word "chart" without
+qualification. Not required for leisure use — see below — so this is a
+positioning choice rather than a prerequisite, and the commercial conversation
+can wait until there is a reason to have it.
 
 ### NOAA ENC / RNC
 
