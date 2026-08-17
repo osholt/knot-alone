@@ -90,9 +90,19 @@ void main() {
     );
   });
 
-  test('the curated emoji catalogue includes more sailor identities', () {
+  test('the curated emoji catalogue leads with marine identities', () {
     expect(sailorEmojiChoices.length, greaterThanOrEqualTo(30));
-    expect(sailorEmojiChoices, containsAll(const ['🧭', '🍩', '🦅', '🥷']));
+    // The head of the list is the picker's default preview, so a boat has to be
+    // first - this is where the inherited motorcycle emoji used to sit.
+    expect(sailorEmojiChoices.first, '⛵');
+    expect(sailorEmojiChoices.take(6), containsAll(const ['⚓', '🧭']));
+    // Breadth beyond the domain is deliberate: the symbol is personal identity.
+    expect(sailorEmojiChoices, containsAll(const ['🦅', '🥷']));
+  });
+
+  test('no motorcycle emoji survive the rename', () {
+    expect(sailorEmojiChoices, isNot(contains('🏍️')));
+    expect(sailorEmojiChoices, isNot(contains('🛵')));
   });
 
   test('live location carries a custom symbol through the existing field', () {

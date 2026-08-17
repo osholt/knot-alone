@@ -211,32 +211,45 @@ const sailorSymbolDefault = SailorSymbol.vessel();
 /// A deliberately small, high-contrast catalogue that renders consistently on
 /// both supported platforms and keeps the wire value comfortably below the
 /// relay's existing 40-character style limit.
+/// Emoji a sailor can use instead of a vessel silhouette.
+///
+/// Marine first, because the head of this list is the default preview in the
+/// picker. The motorcycle and racing emoji this was inherited with are gone;
+/// the rest are personal identity rather than domain, so they stay.
+///
+/// A stored `emoji:` value that is no longer in this list fails the membership
+/// check on decode and falls back to the vessel symbol, which is why removing
+/// entries is safe.
 const sailorEmojiChoices = <String>[
-  '🏍️',
-  '🛵',
-  '🏁',
+  '⛵',
+  '🛥️',
+  '🚤',
+  '⚓',
+  '🧭',
+  '🌊',
+  '🐬',
+  '🐋',
+  '🦈',
+  '🐙',
+  '🦀',
+  '🐠',
+  '🏝️',
+  '🗺️',
+  '🌅',
+  '🦅',
   '⚡',
   '🔥',
   '⭐',
-  '🚀',
   '😎',
   '😈',
-  '🐝',
   '🦊',
   '🐺',
   '🐉',
   '🦄',
   '🐢',
   '🦉',
-  '🧭',
-  '🏔️',
-  '🦅',
   '🦁',
   '🐻',
-  '🐙',
-  '🍩',
-  '🎯',
-  '🤘',
   '💀',
   '👻',
   '🥷',
