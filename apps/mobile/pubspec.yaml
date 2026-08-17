@@ -92,6 +92,13 @@ flutter:
     - assets/biker_places.json
     - assets/mini_roundabouts.geojson
     - assets/route_places.json
+    # White-on-transparent masters, tinted at draw time - see marine_glyphs.dart
+    - assets/glyphs/fleet.png
+    - assets/glyphs/passage_complete.png
+    - assets/glyphs/sailor.png
+    - assets/glyphs/sailor_profile.png
+    - assets/glyphs/skipper.png
+    - assets/glyphs/sweeper.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

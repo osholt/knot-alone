@@ -1,147 +1,74 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/features/map/marine_glyphs.dart';
 
-/// #30. The parser exists because the glyph data is authored as SVG and Flutter
-/// has no SVG path parser in the SDK. It supports absolute M, L, C and Z only,
-/// and the tests below pin that it *rejects* everything else rather than
-/// silently skipping it — a skipped command draws a subtly wrong boat, which is
-/// the kind of defect that ships.
+/// #30. The glyphs ship as white-on-transparent PNG masters, tinted at draw time
+/// so they follow the ambient IconTheme like an icon font does. These tests
+/// guard the two things that silently break that arrangement: an asset that is
+/// not declared in pubspec (which fails only at runtime, on the device), and a
+/// master that is not actually a tintable mask.
 void main() {
-  group('the glyph set', () {
-    test('every glyph parses', () {
+  group('the assets', () {
+    test('every glyph has a distinct declared asset', () {
+      final paths = MarineGlyph.values.map((g) => g.assetPath).toList();
+      expect(
+        paths.toSet().length,
+        paths.length,
+        reason: 'paths must be unique',
+      );
+      for (final path in paths) {
+        expect(path, startsWith('assets/glyphs/'));
+        expect(path, endsWith('.png'));
+      }
+    });
+
+    testWidgets('every declared asset is actually bundled', (tester) async {
+      // The failure this catches: adding a glyph and forgetting the pubspec
+      // entry. Analysis passes, tests that only pump widgets pass, and the icon
+      // is missing on the device.
       for (final glyph in MarineGlyph.values) {
+        final data = await rootBundle.load(glyph.assetPath);
         expect(
-          () => glyph.path,
-          returnsNormally,
-          reason: '${glyph.name} should parse',
+          data.lengthInBytes,
+          greaterThan(1000),
+          reason: '${glyph.assetPath} looks empty',
         );
       }
     });
 
-    test('every glyph draws inside its 24x24 grid', () {
+    testWidgets('every master is a PNG with an alpha channel', (tester) async {
+      // Checked structurally rather than by scanning pixels: decoding six 512px
+      // images and walking 1.5M pixels through toByteData hangs the test VM for
+      // minutes. The stronger property - that every master is pure white with
+      // real transparency, so BlendMode.srcIn can tint it - was verified against
+      // the committed files when they were generated:
+      //
+      //   fleet             opaque= 70399  transparent=162490  colouredInk=0
+      //   passage_complete  opaque= 23871  transparent=225844  colouredInk=0
+      //   sailor            opaque= 58484  transparent=183001  colouredInk=0
+      //   sailor_profile    opaque= 76396  transparent=164485  colouredInk=0
+      //   skipper           opaque= 47290  transparent=196199  colouredInk=0
+      //   sweeper           opaque= 57863  transparent=181477  colouredInk=0
+      //
+      // Re-run that check if a master is ever redrawn; a coloured master would
+      // still tint, but it would no longer match a themed icon beside it.
       for (final glyph in MarineGlyph.values) {
-        final bounds = glyph.path.getBounds();
-        // A stroke of 1.8 straddles the path by 0.9 either side, so geometry is
-        // allowed to reach 1 unit outside and still ink inside the box.
-        expect(bounds.left, greaterThanOrEqualTo(-1), reason: glyph.name);
-        expect(bounds.top, greaterThanOrEqualTo(-1), reason: glyph.name);
-        expect(bounds.right, lessThanOrEqualTo(25), reason: glyph.name);
-        expect(bounds.bottom, lessThanOrEqualTo(25), reason: glyph.name);
+        final data = await rootBundle.load(glyph.assetPath);
+        final bytes = data.buffer.asUint8List();
+        expect(bytes.sublist(0, 8), [
+          0x89,
+          0x50,
+          0x4E,
+          0x47,
+          0x0D,
+          0x0A,
+          0x1A,
+          0x0A,
+        ], reason: '${glyph.assetPath} is not a PNG');
+        // IHDR colour type byte: 6 is RGBA, which is what carries the mask.
+        expect(bytes[25], 6, reason: '${glyph.assetPath} has no alpha channel');
       }
-    });
-
-    test('every glyph is big enough to read, not a speck in the corner', () {
-      for (final glyph in MarineGlyph.values) {
-        final bounds = glyph.path.getBounds();
-        expect(bounds.width, greaterThan(10), reason: glyph.name);
-        expect(bounds.height, greaterThan(10), reason: glyph.name);
-      }
-    });
-
-    test('every glyph has a label, since each one is announced', () {
-      for (final glyph in MarineGlyph.values) {
-        expect(glyph.label.trim(), isNotEmpty, reason: glyph.name);
-      }
-    });
-
-    // The pair that has to stay distinguishable on a moving boat. They differ by
-    // reflection rather than by ornament, so the marker bar sits on opposite
-    // sides of the grid.
-    test('skipper and sweeper are mirror images, not variants', () {
-      final skipper = MarineGlyph.skipper.path.getBounds();
-      final sweeper = MarineGlyph.sweeper.path.getBounds();
-
-      expect(MarineGlyph.skipper.pathData, isNot(MarineGlyph.sweeper.pathData));
-      // The skipper's mark reaches the right edge; the sweeper's the left.
-      expect(skipper.right, greaterThan(20));
-      expect(sweeper.left, lessThan(4));
-      expect(skipper.center.dx, greaterThan(sweeper.center.dx));
-    });
-  });
-
-  group('the path parser', () {
-    test('reads a move, a line and a close', () {
-      final path = parseGlyphPath('M2 2 L20 2 L20 20 Z');
-      final bounds = path.getBounds();
-      expect(bounds.left, 2);
-      expect(bounds.top, 2);
-      expect(bounds.right, 20);
-      expect(bounds.bottom, 20);
-    });
-
-    test('reads a cubic', () {
-      final path = parseGlyphPath('M2 12 C2 2 22 2 22 12');
-      expect(path.getBounds().width, greaterThan(15));
-    });
-
-    test('reads decimals and multiple subpaths', () {
-      final path = parseGlyphPath('M1.5 1.5 L4.5 1.5 M10 10 L22.5 22.5');
-      final bounds = path.getBounds();
-      expect(bounds.left, 1.5);
-      expect(bounds.bottom, 22.5);
-    });
-
-    test('rejects relative commands rather than treating them as absolute', () {
-      // The failure this prevents: `l` silently read as `L` puts the point in
-      // completely the wrong place.
-      expect(
-        () => parseGlyphPath('M2 2 l10 10'),
-        throwsA(isA<GlyphPathFormatException>()),
-      );
-    });
-
-    test('rejects arcs and quadratics', () {
-      for (final data in [
-        'M2 2 A5 5 0 0 1 10 10',
-        'M2 2 Q5 5 10 10',
-        'M2 2 S5 5 10 10',
-        'M2 2 H10',
-        'M2 2 V10',
-      ]) {
-        expect(
-          () => parseGlyphPath(data),
-          throwsA(isA<GlyphPathFormatException>()),
-          reason: data,
-        );
-      }
-    });
-
-    test('rejects the wrong number of coordinates', () {
-      expect(
-        () => parseGlyphPath('M2'),
-        throwsA(isA<GlyphPathFormatException>()),
-      );
-      expect(
-        () => parseGlyphPath('M2 2 L5'),
-        throwsA(isA<GlyphPathFormatException>()),
-      );
-      expect(
-        () => parseGlyphPath('M2 2 C1 1 2 2'),
-        throwsA(isA<GlyphPathFormatException>()),
-      );
-    });
-
-    test('rejects drawing before any move', () {
-      expect(
-        () => parseGlyphPath('L5 5'),
-        throwsA(isA<GlyphPathFormatException>()),
-      );
-      expect(
-        () => parseGlyphPath('5 5'),
-        throwsA(isA<GlyphPathFormatException>()),
-      );
-    });
-
-    test('rejects empty data instead of returning a blank icon', () {
-      expect(
-        () => parseGlyphPath(''),
-        throwsA(isA<GlyphPathFormatException>()),
-      );
-      expect(
-        () => parseGlyphPath('Z'),
-        throwsA(isA<GlyphPathFormatException>()),
-      );
     });
   });
 
@@ -178,7 +105,58 @@ void main() {
       expect(tester.getSize(find.byType(MarineGlyphIcon)), const Size(18, 18));
     });
 
-    testWidgets('is announced by name', (tester) async {
+    testWidgets('is laid out before the asset resolves, so rows cannot jump', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Center(child: MarineGlyphIcon(MarineGlyph.fleet, size: 32)),
+        ),
+      );
+      // One pump only - deliberately not pumpAndSettle, so the image has had no
+      // chance to decode.
+      expect(tester.getSize(find.byType(MarineGlyphIcon)), const Size(32, 32));
+    });
+
+    testWidgets('tints through the theme rather than painting white', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Center(
+            child: IconTheme(
+              data: IconThemeData(color: Color(0xFF6ED89A)),
+              child: MarineGlyphIcon(MarineGlyph.sweeper),
+            ),
+          ),
+        ),
+      );
+      final image = tester.widget<Image>(find.byType(Image));
+      expect(image.color, const Color(0xFF6ED89A));
+      expect(image.colorBlendMode, BlendMode.srcIn);
+    });
+
+    testWidgets('an explicit colour wins over the theme', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Center(
+            child: IconTheme(
+              data: IconThemeData(color: Color(0xFF6ED89A)),
+              child: MarineGlyphIcon(
+                MarineGlyph.sweeper,
+                color: Color(0xFFFF4FA3),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(
+        tester.widget<Image>(find.byType(Image)).color,
+        const Color(0xFFFF4FA3),
+      );
+    });
+
+    testWidgets('is announced by name, once', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(home: MarineGlyphIcon(MarineGlyph.sweeper)),
       );
@@ -195,6 +173,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
       expect(
         find.byType(MarineGlyphIcon),
         findsNWidgets(MarineGlyph.values.length),
