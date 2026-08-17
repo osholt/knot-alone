@@ -1,10 +1,8 @@
 # Tide and Seek app icon
 
-`tide-and-seek-icon.svg` is the source of truth. Everything else is generated
-from it, so edit the SVG and re-render rather than touching a PNG.
-
-`tide-and-seek-app-icon-master.png` is the 1024px opaque square master.
-Derivative iOS and Android sizes are checked into their platform asset folders.
+`tide-and-seek-app-icon-master.png` is the 1024px opaque square master and the
+source of truth. Derivative iOS and Android sizes are generated from it and
+checked into their platform asset folders.
 
 ## The mark
 
@@ -14,44 +12,9 @@ of the inherited Tail End Charlie relay mark — hero vessel in the foreground,
 follower behind, direction of travel between them — with the two adventure
 motorcycles replaced by vessels and the purple field replaced by green.
 
-Original artwork. It uses no manufacturer's trademarks, badging or model
-names, and no Bavaria or other builder's design cues beyond the generic
-proportions of a modern production cruiser.
-
-## Re-rendering
-
-```bash
-cd apps/mobile
-python3 - <<'PY'
-import json, subprocess, pathlib
-SVG = 'assets/branding/tide-and-seek-icon.svg'
-iconset = pathlib.Path('ios/Runner/Assets.xcassets/AppIcon.appiconset')
-seen = set()
-for img in json.load(open(iconset / 'Contents.json'))['images']:
-    fn, size, scale = img.get('filename'), img['size'], img['scale']
-    if not fn or fn in seen:
-        continue
-    seen.add(fn)
-    px = round(float(size.split('x')[0]) * int(scale.rstrip('x')))
-    subprocess.run(['rsvg-convert', '-w', str(px), '-h', str(px), SVG,
-                    '-o', str(iconset / fn)], check=True)
-for d, px in {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96,
-              'xxhdpi': 144, 'xxxhdpi': 192}.items():
-    subprocess.run(['rsvg-convert', '-w', str(px), '-h', str(px), SVG, '-o',
-                    f'android/app/src/main/res/mipmap-{d}/ic_launcher.png'],
-                   check=True)
-PY
-# iOS rejects an app icon with an alpha channel.
-for f in ios/Runner/Assets.xcassets/AppIcon.appiconset/*.png; do
-  magick "$f" -background "#0C6B4F" -alpha remove -alpha off "$f"
-done
-rsvg-convert -w 1024 -h 1024 assets/branding/tide-and-seek-icon.svg \
-  -o assets/branding/tide-and-seek-app-icon-master.png
-```
-
-Requires `librsvg` and `imagemagick`.
-
-## Palette
+Original artwork. It carries no manufacturer's trademarks, badging or model
+names, and no builder's design cues beyond the generic proportions of a modern
+production cruiser.
 
 | Role | Hex |
 |---|---|
@@ -60,6 +23,70 @@ Requires `librsvg` and `imagemagick`.
 | Follower | `#9FD2BE` |
 | Chevrons | `#F5C542` |
 
-Every shape is outlined in the field colour. Without that, the mainsail, genoa
-and hull share a fill, fuse into one silhouette, and the rig disappears — which
-is what the first two drafts did.
+## Provenance, and what that costs
+
+The master is a **generated raster**, not vector art. Two consequences worth
+knowing before editing it:
+
+- It cannot be scaled beyond 1254px, which is the size it was generated at.
+  1024 is a downscale, so there is no headroom for a larger asset.
+- There is a faint vignette in the field rather than a perfectly flat fill. It
+  is invisible at icon sizes and was left alone.
+
+Changing the mark therefore means regenerating it rather than editing paths.
+The prompt that produced it is recorded below so that is reproducible.
+
+> Generate a square 1024x1024 flat-vector mobile app icon, solid fills only,
+> crisp edges, no gradients, no shadows, no texture, no text, no outline
+> border, bold enough to read at 40px. Background: solid green #0C6B4F filling
+> the whole square. Lower left, LARGE, in cream #FDF6E3: a stylised modern
+> production sailing yacht in side profile with the bow pointing RIGHT — a 40ft
+> cruiser like a Bavaria, near-plumb bow, long low hull, low coachroof, one
+> mast, with a clearly SEPARATE mainsail behind the mast and an overlapping
+> genoa in front of the mast, plus a fin keel under the hull; the mast must
+> read as a distinct line and the two sails must not merge into a single
+> triangle. Upper right, about half the size, in pale sea green #9FD2BE: a
+> stylised flybridge motor cruiser in side profile, bow also pointing RIGHT,
+> raked windscreen, small flybridge. Between the two boats, in yellow #F5C542:
+> two chevrons like >> pointing right, from the yacht towards the motor
+> cruiser. Separate every shape from its neighbours with a thin gap of the
+> green background so the silhouettes stay legible, and keep a comfortable
+> margin so nothing touches the edges. No people, no birds, no sun, no waves,
+> nothing else in the frame.
+
+Two things that went wrong generating it, so they are not repeated:
+
+- A multi-paragraph prompt submits at the first newline, so only the opening
+  sentence arrived and the model filled the rest from unrelated context. Send
+  the whole brief as one line.
+- The image download control next to a later image saved the *earlier* one.
+  Fetch the specific image instead of trusting the button.
+
+## Re-rendering the derivatives
+
+```bash
+cd apps/mobile
+python3 - <<'PY'
+import json, subprocess, pathlib
+MASTER = 'assets/branding/tide-and-seek-app-icon-master.png'
+iconset = pathlib.Path('ios/Runner/Assets.xcassets/AppIcon.appiconset')
+seen = set()
+for img in json.load(open(iconset / 'Contents.json'))['images']:
+    fn, size, scale = img.get('filename'), img['size'], img['scale']
+    if not fn or fn in seen:
+        continue
+    seen.add(fn)
+    px = round(float(size.split('x')[0]) * int(scale.rstrip('x')))
+    # iOS rejects an app icon with an alpha channel.
+    subprocess.run(['magick', MASTER, '-resize', f'{px}x{px}',
+                    '-background', '#0C6B4F', '-alpha', 'remove', '-alpha', 'off',
+                    str(iconset / fn)], check=True)
+for d, px in {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96,
+              'xxhdpi': 144, 'xxxhdpi': 192}.items():
+    subprocess.run(['magick', MASTER, '-resize', f'{px}x{px}',
+                    f'android/app/src/main/res/mipmap-{d}/ic_launcher.png'],
+                   check=True)
+PY
+```
+
+Requires `imagemagick`.
