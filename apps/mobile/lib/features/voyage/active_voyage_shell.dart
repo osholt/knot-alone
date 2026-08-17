@@ -79,6 +79,7 @@ import '../../services/trail_display_simplifier.dart';
 import '../map/maneuver_diagnostics.dart';
 import '../map/maneuver_list_screen.dart';
 import '../map/vessel_icon.dart';
+import '../map/voyage_layout.dart';
 import '../map/voyage_map.dart';
 import '../settings/emergency_info_sheet.dart';
 import '../settings/notification_preferences_sheet.dart';
@@ -2877,8 +2878,11 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     return ValueListenableBuilder<MapNavigationPosition?>(
       valueListenable: _mapNavigationPosition,
       builder: (context, navigationPosition, _) {
-        final landscape =
-            MediaQuery.orientationOf(context) == Orientation.landscape;
+        // The rail-versus-bar choice is about shape, so it stays on
+        // orientation; the bar's own height is about vertical room, so it
+        // follows VoyageLayout instead.
+        final layout = VoyageLayout.of(context);
+        final landscape = layout.isLandscape;
         // The native map flashes when a bottom bar is repeatedly inserted as
         // GPS speed dips at lights. Once there is a navigation fix, preserve
         // the map viewport until the sailor deliberately leaves the map tab.
@@ -2969,7 +2973,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
           bottomNavigationBar: hideWhileMoving
               ? null
               : NavigationBar(
-                  height: landscape ? 60 : 68,
+                  height: layout.isCompactHeight ? 60 : 68,
                   // Named, not four bare icons.
                   //
                   // #306: "no feature reachable only through an unlabelled

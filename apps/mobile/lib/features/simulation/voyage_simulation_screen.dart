@@ -7,6 +7,7 @@ import '../../domain/distance_unit.dart';
 import '../../domain/voyage_role.dart';
 import '../../domain/voyage_session.dart';
 import '../../services/measurement_formatter.dart';
+import '../map/voyage_layout.dart';
 
 class VoyageSimulationScreen extends StatelessWidget {
   const VoyageSimulationScreen({
@@ -36,11 +37,11 @@ class VoyageSimulationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final landscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final layout = VoyageLayout.of(context);
+    final landscape = layout.isLandscape;
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: landscape ? 42 : 52,
+        toolbarHeight: layout.toolbarHeight,
         title: const Text('Voyage Lab'),
         actions: [
           IconButton(

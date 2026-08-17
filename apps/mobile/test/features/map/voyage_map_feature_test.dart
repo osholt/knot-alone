@@ -18,6 +18,7 @@ import 'package:tide_and_seek/domain/recorded_route_store.dart';
 import 'package:tide_and_seek/domain/route_store.dart';
 import 'package:tide_and_seek/domain/route_alert.dart';
 import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/features/map/voyage_layout.dart';
 import 'package:tide_and_seek/features/map/voyage_map.dart';
 import 'package:tide_and_seek/services/basemap_configuration.dart';
 import 'package:tide_and_seek/services/voyage_completion_detector.dart';
@@ -284,6 +285,7 @@ void main() {
   testWidgets('a routed rejoin takes over the live turn guidance', (
     tester,
   ) async {
+    _useCompactPhoneViewport(tester);
     final directory = Directory.systemTemp.createTempSync(
       'rejoin-navigation-guidance',
     );
@@ -454,6 +456,7 @@ void main() {
   testWidgets('a distant planned route offers directions to its start', (
     tester,
   ) async {
+    _useCompactPhoneViewport(tester);
     final directory = Directory.systemTemp.createTempSync(
       'route-start-guidance',
     );
@@ -1019,6 +1022,7 @@ void main() {
   testWidgets('a registered TEC without a position yet still says so', (
     tester,
   ) async {
+    _useCompactPhoneViewport(tester);
     final directory = Directory.systemTemp.createTempSync(
       'map-sweeper-waiting-position-test',
     );
@@ -1088,6 +1092,71 @@ void main() {
         tester.view.physicalSize.height / tester.view.devicePixelRatio;
     expect(tester.getTopLeft(chip).dy, greaterThan(screenHeight / 2));
   });
+
+  // #28. The chrome used to compact whenever the surface was landscape, so the
+  // one device with room to spare - an iPad, which is what a boat actually
+  // mounts at the chart table - got the phone's squeeze: a 42pt toolbar, compact
+  // density, and status text abbreviated down to initials. Sizing now follows
+  // available height, so a tablet keeps the full chrome in both orientations.
+  for (final (label, size) in const [
+    ('iPad landscape', Size(1180, 820)),
+    ('iPad portrait', Size(820, 1180)),
+  ]) {
+    testWidgets('a tablet keeps the full chrome in $label', (tester) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final directory = Directory.systemTemp.createTempSync(
+        'map-tablet-chrome-test',
+      );
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final skipperStatus = ValueNotifier<SkipperVoyageStatus?>(
+        const SkipperVoyageStatus(
+          sweeperName: 'Cormorant',
+          sweeperAvailability: SweeperAvailability.awaitingLocation,
+          offCourseAlerts: [],
+        ),
+      );
+      addTearDown(skipperStatus.dispose);
+      final cache = OfflineTileCache(
+        rootDirectory: directory,
+        configuration: const BasemapConfiguration(),
+        httpClient: MockClient((_) async => http.Response('', 404)),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(useMaterial3: true),
+          home: VoyageMapScreen(
+            routeStore: InMemoryRouteStore(
+              _testRoute(id: 'tablet-chrome', name: 'Tablet route'),
+            ),
+            routeImporter: RouteImporter(source: const _NoFileSource()),
+            offlineTileCache: cache,
+            skipperStatus: skipperStatus,
+            distanceUnit: DistanceUnit.miles,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The full-height toolbar, not the 42pt one a short phone needs.
+      expect(
+        tester.widget<AppBar>(find.byType(AppBar)).toolbarHeight,
+        VoyageLayout(size: size).toolbarHeight,
+      );
+
+      // The status reads as a sentence with the name in it, rather than being
+      // abbreviated for a band that has no room.
+      expect(find.byKey(const Key('skipper-sweeper-gap')), findsOneWidget);
+      expect(
+        find.textContaining('Cormorant'),
+        findsWidgets,
+        reason: 'a tablet has room for the name, not just an abbreviation',
+      );
+    });
+  }
 
   testWidgets('no registered TEC hides the distance-to-TEC surface entirely', (
     tester,
@@ -1169,6 +1238,7 @@ void main() {
   testWidgets('offers file import and loads bundled demo route offline', (
     tester,
   ) async {
+    _useCompactPhoneViewport(tester);
     final directory = Directory.systemTemp.createTempSync('map-widget-test');
     addTearDown(() => directory.deleteSync(recursive: true));
     final overlays = ValueNotifier<List<MapOverlayMarker>>([
@@ -4640,3 +4710,18 @@ ImportedRoute _testRoute({
   waypoints: const [],
   maneuvers: maneuvers,
 );
+
+/// Pins the surface to a phone in landscape.
+///
+/// These tests describe the compact chrome - short labels, tight bands - and
+/// used to get it from the 800x600 default, because the old code compacted on
+/// orientation alone and 800x600 is landscape. Now that sizing follows height
+/// (see VoyageLayout), 800x600 is a roomy surface and gets the fuller chrome, so
+/// a test about the compact variant has to ask for a surface that is genuinely
+/// short.
+void _useCompactPhoneViewport(WidgetTester tester) {
+  tester.view.physicalSize = const Size(844, 390);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}

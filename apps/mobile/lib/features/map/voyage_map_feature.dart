@@ -30,6 +30,7 @@ import '../../services/basemap_configuration.dart';
 import '../../services/basemap_status.dart';
 import '../../services/demo_route_loader.dart';
 import 'voyage_clock.dart';
+import 'voyage_layout.dart';
 import '../../services/voyage_completion_detector.dart';
 import '../../services/gpx_import_source.dart';
 import '../../services/group_pip_bridge.dart';
@@ -1349,8 +1350,15 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   @override
   Widget build(BuildContext context) {
     _recordBottomChromeHeight();
-    final landscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final layout = VoyageLayout.of(context);
+    // Two separate questions that a phone lets you conflate. `landscape` decides
+    // *arrangement* - whether the controls split into side rails or stack into a
+    // bottom band - and a wide iPad wants the rails just as much as a wide phone
+    // does. `cramped` decides *sizing*, and that is about height alone: an iPad
+    // in landscape has more vertical room than a phone has in portrait, so it
+    // must not inherit the phone's squeeze. See VoyageLayout.
+    final landscape = layout.isLandscape;
+    final cramped = layout.isCompactHeight;
     final markerOverlay = widget.junctionMarkerOverlay?.value;
     final localMarkerOverlay = markerOverlay?.isLocalMarker == true
         ? markerOverlay
@@ -1371,14 +1379,14 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     // Only the voyage menu reaches the upper band (#125), and it still owes the
     // notch and the status bar their space.
     final overlayTop = safeInsets.top;
-    final compactDensity = landscape ? VisualDensity.compact : null;
+    final compactDensity = cramped ? VisualDensity.compact : null;
     // The group mini-map owns its own ValueListenableBuilder below. This
     // avoids relying on a parent platform-map rebuild to notice sailor updates,
     // which left the portrait mini-map absent in the live simulator.
     final canShowGroupMiniMap =
         widget.overlayMarkers != null && !markerOverviewActive;
-    final groupMiniMapWidth = landscape ? 196.0 : 150.0;
-    final groupMiniMapHeight = landscape ? 116.0 : 104.0;
+    final groupMiniMapWidth = layout.groupMiniMapSize.width;
+    final groupMiniMapHeight = layout.groupMiniMapSize.height;
     final showVoyageMenu = hideChrome && widget.onOpenVoyageMenu != null;
     // A route can contain manoeuvres before the device has a usable location.
     // The guidance banner is only composed into the band while guidance is
@@ -1402,15 +1410,13 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       appBar: hideChrome
           ? null
           : AppBar(
-              toolbarHeight: landscape ? 42 : 52,
+              toolbarHeight: layout.toolbarHeight,
               titleSpacing: 12,
               title: Text(
                 _route?.name ?? 'Navigation',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: landscape
-                    ? Theme.of(context).textTheme.titleMedium
-                    : null,
+                style: cramped ? Theme.of(context).textTheme.titleMedium : null,
               ),
               actions: [
                 if (widget.canEditRoute)
@@ -1463,10 +1469,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                 ),
                 PopupMenuButton<_MapAction>(
                   key: const Key('map-layer-actions'),
-                  iconSize: landscape ? 22 : 24,
-                  padding: landscape
-                      ? EdgeInsets.zero
-                      : const EdgeInsets.all(8),
+                  iconSize: layout.chromeIconSize,
+                  padding: cramped ? EdgeInsets.zero : const EdgeInsets.all(8),
                   onSelected: _handleMenuAction,
                   itemBuilder: (context) => [
                     if (widget.canEditRoute) ...[
@@ -1563,7 +1567,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                 ),
                 Positioned.fill(
                   child: _buildVoyageChrome(
-                    landscape: landscape,
+                    layout: layout,
                     hideChrome: hideChrome,
                     markerOverviewActive: markerOverviewActive,
                     hasGuidance: hasGuidance,
@@ -1685,7 +1689,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   /// above them: the sailor's eye leaves the road for the banner and comes
   /// straight back, so every pixel above it is map (#133).
   Widget _buildVoyageChrome({
-    required bool landscape,
+    required VoyageLayout layout,
     required bool hideChrome,
     required bool markerOverviewActive,
     required bool hasGuidance,
@@ -1713,7 +1717,10 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       safeRight: safeRight,
       leftHandTraffic: _routeUsesLeftHandTraffic,
     );
-    final compactStatus = landscape || hideChrome;
+    // Sizing follows height, arrangement follows shape - see VoyageLayout.
+    final landscape = layout.isLandscape;
+    final cramped = layout.isCompactHeight;
+    final compactStatus = cramped || hideChrome;
 
     Widget compose(
       SkipperVoyageStatus? skipperStatus,
@@ -1770,7 +1777,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
           ? _RouteStartBanner(
               distanceMeters: routeStartOfferDistance,
               distanceUnit: widget.distanceUnit,
-              compact: landscape,
+              compact: cramped,
               routing: _routingToStart,
               onNavigate: _routingToStart ? null : _navigateToRouteStart,
             )
@@ -1782,12 +1789,12 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                 return guidance == null
                     ? _NavigationGuidanceStatusBanner(
                         assessment: assessment,
-                        compact: landscape,
+                        compact: cramped,
                       )
                     : _NavigationGuidanceBanner(
                         guidance: guidance,
                         distanceUnit: widget.distanceUnit,
-                        compact: landscape,
+                        compact: cramped,
                       );
               },
             )
@@ -1878,8 +1885,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                     alignment: Alignment.bottomRight,
                     child: _JunctionMarkerOverlay(
                       overlay: overlay,
-                      compact: landscape,
-                      maxWidth: landscape
+                      compact: cramped,
+                      maxWidth: cramped
                           ? math.min(250.0, constraints.maxWidth)
                           : constraints.maxWidth,
                       distanceUnit: widget.distanceUnit,
@@ -1914,7 +1921,10 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       // ALERT SENT and ALERT SEEN states.
       final sosLabelSlot = 62.0;
       final leaveLabelSlot = 62.0;
-      final actionTargetHeight = landscape ? 48.0 : null;
+      // 48pt is the squeeze a phone in landscape needs to fit the stack, not a
+      // target size worth having: null lets each button take its natural,
+      // larger height wherever there is room, an iPad in landscape included.
+      final actionTargetHeight = cramped ? 48.0 : null;
       // Safety and voyage-lifecycle targets, all glove-sized: none of them is
       // derived from a planned route (#124), and REPORT belongs beside them
       // rather than on a row of its own (#125).
@@ -2911,8 +2921,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   ({GeoPoint target, NavigationCameraPlan plan}) _followCameraFraming(
     GeoPoint position,
   ) {
-    final landscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final landscape = VoyageLayout.of(context).isLandscape;
     final viewportHeight = _mapViewportHeightPixels;
     final viewportWidth = _mapViewportWidthPixels;
     final plan = NavigationCameraPlanner.plan(
@@ -3636,8 +3645,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         distinctPoints.add(point);
       }
     }
-    final landscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final landscape = VoyageLayout.of(context).isLandscape;
     final screenWidth = MediaQuery.sizeOf(context).width;
     final safeInsets = MediaQuery.paddingOf(context);
     final overlayWidth = landscape
