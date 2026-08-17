@@ -23,7 +23,6 @@ import 'package:tide_and_seek/features/map/voyage_map.dart';
 import 'package:tide_and_seek/services/basemap_configuration.dart';
 import 'package:tide_and_seek/services/voyage_completion_detector.dart';
 import 'package:tide_and_seek/services/gpx_import_source.dart';
-import 'package:tide_and_seek/services/imported_track_matcher.dart';
 import 'package:tide_and_seek/services/skipper_voyage_status.dart';
 import 'package:tide_and_seek/services/map_style_repository.dart';
 import 'package:tide_and_seek/services/navigation_camera.dart';
@@ -1332,93 +1331,12 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets(
-    'an imported track can generate and review a navigable candidate',
-    (tester) async {
-      final directory = Directory.systemTemp.createTempSync(
-        'map-track-matching-test',
-      );
-      addTearDown(() => directory.deleteSync(recursive: true));
-      final original = _testRoute(id: 'source-track', name: 'Sunday route');
-      final candidate = ImportedRoute(
-        id: 'matched-track',
-        name: 'Sunday route (navigable)',
-        importedAt: DateTime.utc(2026, 8, 3),
-        sourceFileName: 'matched-source-track.gpx',
-        paths: original.paths,
-        waypoints: original.waypoints,
-        maneuvers: const [
-          RouteManeuver(
-            position: GeoPoint(latitude: 51.455, longitude: -2.585),
-            type: 'turn',
-            modifier: 'left',
-          ),
-        ],
-      );
-      final matcher = _StubImportedTrackMatcher(
-        ImportedTrackMatch(
-          route: candidate,
-          confidence: 0.93,
-          traceCoverage: 1,
-          meanDeviationMeters: 4,
-          maximumDeviationMeters: 11,
-        ),
-      );
-      final savedRoutes = InMemoryRecordedRouteStore();
-      final routeStore = _RecordingRouteStore();
-      final cache = OfflineTileCache(
-        rootDirectory: directory,
-        configuration: const BasemapConfiguration(),
-        httpClient: MockClient((_) async => http.Response('', 404)),
-      );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData.dark(useMaterial3: true),
-          home: VoyageMapScreen(
-            routeStore: routeStore,
-            routeImporter: RouteImporter(source: const _NoFileSource()),
-            offlineTileCache: cache,
-            demoRouteLoader: () async => original,
-            importedTrackMatcher: matcher,
-            recordedRouteStore: savedRoutes,
-            voyageStarted: false,
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      await tester.ensureVisible(find.text('Use demo route'));
-      await tester.tap(find.text('Use demo route'));
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(find.text('Add turn directions?'), findsOneWidget);
-      expect(find.textContaining('kept in Saved routes'), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('generate-navigable-route')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(matcher.originals, [same(original)]);
-      expect(find.text('Review route'), findsOneWidget);
-      expect(find.text('Sunday route (navigable)'), findsOneWidget);
-      expect(
-        find.byKey(const Key('route-review-original-line')),
-        findsOneWidget,
-      );
-      expect(await savedRoutes.list(), [same(original)]);
-
-      await tester.tap(find.byKey(const Key('confirm-reviewed-route')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-      expect(routeStore.route?.id, 'matched-track');
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    },
-  );
-
-  testWidgets('an imported track can stay as the original offline line', (
+  // #19. There used to be three tests here covering a dialog that offered to
+  // "generate a navigable route" from an imported line - which matched it to the
+  // road network. On a GPX passage that is not a lesser route, it is a track
+  // across land, so the affordance is gone and this is the whole behaviour: the
+  // line is followed exactly as supplied and the original is kept.
+  testWidgets('an imported track is followed as supplied, with no road match', (
     tester,
   ) async {
     final directory = Directory.systemTemp.createTempSync(
@@ -1426,15 +1344,6 @@ void main() {
     );
     addTearDown(() => directory.deleteSync(recursive: true));
     final original = _testRoute(id: 'source-track', name: 'Sunday route');
-    final matcher = _StubImportedTrackMatcher(
-      ImportedTrackMatch(
-        route: original,
-        confidence: 1,
-        traceCoverage: 1,
-        meanDeviationMeters: 0,
-        maximumDeviationMeters: 0,
-      ),
-    );
     final savedRoutes = InMemoryRecordedRouteStore();
     final routeStore = _RecordingRouteStore();
     final cache = OfflineTileCache(
@@ -1451,7 +1360,6 @@ void main() {
           routeImporter: RouteImporter(source: const _NoFileSource()),
           offlineTileCache: cache,
           demoRouteLoader: () async => original,
-          importedTrackMatcher: matcher,
           recordedRouteStore: savedRoutes,
           voyageStarted: false,
         ),
@@ -1463,72 +1371,19 @@ void main() {
     await tester.ensureVisible(find.text('Use demo route'));
     await tester.tap(find.text('Use demo route'));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('follow-original-track')));
-    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
+
+    // Straight to review: nothing to answer on the way.
+    expect(find.text('Add turn directions?'), findsNothing);
     expect(find.text('Review route'), findsOneWidget);
-    expect(matcher.originals, isEmpty);
     expect(await savedRoutes.list(), [same(original)]);
 
     await tester.tap(find.byKey(const Key('confirm-reviewed-route')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(routeStore.route?.id, original.id);
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-  });
-
-  testWidgets('a failed track match keeps the active route unchanged', (
-    tester,
-  ) async {
-    final directory = Directory.systemTemp.createTempSync(
-      'map-track-match-failure-test',
-    );
-    addTearDown(() => directory.deleteSync(recursive: true));
-    final original = _testRoute(id: 'source-track', name: 'Sunday route');
-    final matcher = _StubImportedTrackMatcher.failure(
-      const FormatException(
-        'The road match was not confident enough. '
-        'The original line is unchanged.',
-      ),
-    );
-    final savedRoutes = InMemoryRecordedRouteStore();
-    final routeStore = _RecordingRouteStore();
-    final cache = OfflineTileCache(
-      rootDirectory: directory,
-      configuration: const BasemapConfiguration(),
-      httpClient: MockClient((_) async => http.Response('', 404)),
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData.dark(useMaterial3: true),
-        home: VoyageMapScreen(
-          routeStore: routeStore,
-          routeImporter: RouteImporter(source: const _NoFileSource()),
-          offlineTileCache: cache,
-          demoRouteLoader: () async => original,
-          importedTrackMatcher: matcher,
-          recordedRouteStore: savedRoutes,
-          voyageStarted: false,
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-
-    await tester.ensureVisible(find.text('Use demo route'));
-    await tester.tap(find.text('Use demo route'));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('generate-navigable-route')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(routeStore.route, isNull);
-    expect(routeStore.savedRoutes, isEmpty);
-    expect(await savedRoutes.list(), [same(original)]);
-    expect(find.textContaining('not confident enough'), findsOneWidget);
+    // Unchanged: the geometry the sailor imported is the geometry stored.
+    expect(routeStore.route?.paths.first.points, original.paths.first.points);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -4608,23 +4463,6 @@ class _RecordingRouteStore implements RouteStore {
   Future<void> saveActiveRoute(ImportedRoute value) async {
     savedRoutes.add(value);
     route = value;
-  }
-}
-
-class _StubImportedTrackMatcher implements ImportedTrackMatcher {
-  _StubImportedTrackMatcher(this.result) : error = null;
-
-  _StubImportedTrackMatcher.failure(this.error) : result = null;
-
-  final ImportedTrackMatch? result;
-  final Object? error;
-  final originals = <ImportedRoute>[];
-
-  @override
-  Future<ImportedTrackMatch> match(ImportedRoute original) async {
-    originals.add(original);
-    if (error case final failure?) throw failure;
-    return result!;
   }
 }
 

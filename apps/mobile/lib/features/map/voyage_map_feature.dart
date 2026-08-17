@@ -35,7 +35,6 @@ import 'voyage_layout.dart';
 import '../../services/voyage_completion_detector.dart';
 import '../../services/gpx_import_source.dart';
 import '../../services/group_pip_bridge.dart';
-import '../../services/imported_track_matcher.dart';
 import '../../services/skipper_voyage_status.dart';
 import '../../services/sweeper_gap_trend.dart';
 import '../../services/map_geojson.dart';
@@ -74,6 +73,7 @@ import 'route_trail_style.dart';
 import 'smooth_countdown.dart';
 import 'stored_route_picker.dart';
 import 'marine_glyphs.dart';
+import '../../services/passage_planning.dart';
 
 @visibleForTesting
 GroupMiniMapRenderer groupMiniMapRenderer({
@@ -102,8 +102,6 @@ enum GroupMiniMapRenderer {
   /// surface.
   flutterVector,
 }
-
-enum _ImportedTrackChoice { cancel, followOriginal, generateNavigable }
 
 @visibleForTesting
 Color groupMiniMapBackgroundColor(Brightness brightness) =>
@@ -665,7 +663,6 @@ class VoyageMapScreen extends StatefulWidget {
     this.destinationRoutePlanner,
     this.roadRoutingService,
     this.routeGeometryEnricher,
-    this.importedTrackMatcher,
     this.demoRouteLoader,
     this.recordedRouteStore,
     this.completedVoyageStore,
@@ -767,7 +764,6 @@ class VoyageMapScreen extends StatefulWidget {
   final DestinationRoutePlanner? destinationRoutePlanner;
   final RoadRoutingService? roadRoutingService;
   final RouteGeometryEnricher? routeGeometryEnricher;
-  final ImportedTrackMatcher? importedTrackMatcher;
   final Future<ImportedRoute> Function()? demoRouteLoader;
 
   /// Stored geometry, resolved from the app's own on-disk stores when these are
@@ -832,7 +828,6 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   late final RoadRoutingService _roadRoutingService;
   late final DestinationRoutePlanner _defaultDestinationRoutePlanner;
   late final RouteGeometryEnricher _defaultRouteGeometryEnricher;
-  late final ImportedTrackMatcher _defaultImportedTrackMatcher;
   PersonalVoyageHeatmapController? _personalVoyageHeatmap;
   bool _ownsPersonalVoyageHeatmap = false;
   late final GroupPipBridge _groupPipBridge;
@@ -1068,30 +1063,17 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   RouteGeometryEnricher get _routeGeometryEnricher =>
       widget.routeGeometryEnricher ?? _defaultRouteGeometryEnricher;
 
-  ImportedTrackMatcher get _importedTrackMatcher =>
-      widget.importedTrackMatcher ?? _defaultImportedTrackMatcher;
-
   @override
   void initState() {
     super.initState();
     _routeStartConnector = widget.initialRouteStartConnector;
     _routingClient = http.Client();
     final routingConfiguration = RoutingConfiguration.fromEnvironment();
-    // Preferences the OSRM driving profile cannot express are sent to the same
-    // Valhalla motorcycle service the web planner uses, by the same rule, so the
-    // two surfaces agree about what a preference means (#182).
+    // A passage planner, not a road router (#19). The inherited pair - OSRM's
+    // car profile with a Valhalla motorcycle fallback - would answer a request
+    // to plan across a stretch of water with a confident road route around it.
     _roadRoutingService =
-        widget.roadRoutingService ??
-        PreferenceAwareRoadRoutingService(
-          osrm: OsrmRoadRoutingService(
-            client: _routingClient,
-            baseUrl: routingConfiguration.routingBaseUrl,
-          ),
-          motorcycle: ValhallaMotorcycleRoutingService(
-            client: _routingClient,
-            routeUrl: routingConfiguration.motorcycleRoutingUrl,
-          ),
-        );
+        widget.roadRoutingService ?? const RhumbLinePassagePlanner();
     _defaultDestinationRoutePlanner = DestinationRoutePlanner(
       searchService: NominatimDestinationSearchService(
         client: _routingClient,
@@ -1101,10 +1083,6 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     );
     _defaultRouteGeometryEnricher = RouteGeometryEnricher(
       routingService: _roadRoutingService,
-    );
-    _defaultImportedTrackMatcher = OsrmImportedTrackMatcher(
-      client: _routingClient,
-      baseUrl: routingConfiguration.routingBaseUrl,
     );
     _groupPipBridge = GroupPipBridge();
     _mapLibreOfflineManager =
@@ -4820,29 +4798,17 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         'Only the voyage skipper can replace the group route.',
       );
     }
-    ImportedRoute? comparisonRoute;
-    if (_canGenerateNavigableRoute(route)) {
-      final choice = await _chooseImportedTrackTreatment(route);
-      if (choice == _ImportedTrackChoice.cancel || !mounted) return null;
+    // An imported passage is followed exactly as supplied. The inherited build
+    // offered to "generate a navigable route" here, which matched the line to
+    // the road network - on a GPX passage that is not a lesser answer, it is a
+    // track across land (#19). Turn-by-turn does not exist at sea; the guidance
+    // surfaces already say so when a route carries no manoeuvres.
+    const ImportedRoute? comparisonRoute = null;
+    if (_isImportedTrackWithoutManeuvers(route)) {
       final savedRoutes =
           widget.recordedRouteStore ??
           await JsonFileRecordedRouteStore.openDefault();
       await savedRoutes.save(route);
-      if (choice == _ImportedTrackChoice.generateNavigable) {
-        _showMessage('Matching the imported line to roads…');
-        if (mounted) setState(() => _routing = true);
-        late final ImportedTrackMatch match;
-        try {
-          match = await _importedTrackMatcher.match(route);
-        } finally {
-          if (mounted) setState(() => _routing = false);
-        }
-        comparisonRoute = route;
-        route = match.route;
-        distanceMeters = routeLengthMeters(route);
-        duration = null;
-        warnings = [...warnings, ...match.reviewWarnings];
-      }
     }
     final review = await _reviewRoute(
       route,
@@ -4912,50 +4878,13 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     );
   }
 
-  bool _canGenerateNavigableRoute(ImportedRoute route) {
+  /// An imported line with no manoeuvres, which is every GPX passage.
+  bool _isImportedTrackWithoutManeuvers(ImportedRoute route) {
     final drawablePaths = route.paths.where((path) => path.points.length >= 2);
     return route.maneuvers.isEmpty &&
         drawablePaths.isNotEmpty &&
         drawablePaths.every((path) => path.kind == RoutePathKind.track);
   }
-
-  Future<_ImportedTrackChoice> _chooseImportedTrackTreatment(
-    ImportedRoute route,
-  ) async =>
-      await showDialog<_ImportedTrackChoice>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Add turn directions?'),
-          content: Text(
-            '${route.name} is an imported line without turn instructions. '
-            'You can follow it exactly as supplied, or use an internet '
-            'connection to generate a navigable road route.\n\n'
-            'The original line will be kept in Saved routes either way.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(dialogContext).pop(_ImportedTrackChoice.cancel),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              key: const Key('follow-original-track'),
-              onPressed: () => Navigator.of(
-                dialogContext,
-              ).pop(_ImportedTrackChoice.followOriginal),
-              child: const Text('Follow original line'),
-            ),
-            FilledButton(
-              key: const Key('generate-navigable-route'),
-              onPressed: () => Navigator.of(
-                dialogContext,
-              ).pop(_ImportedTrackChoice.generateNavigable),
-              child: const Text('Generate navigable route'),
-            ),
-          ],
-        ),
-      ) ??
-      _ImportedTrackChoice.cancel;
 
   Future<ImportedRoute> _commitRoute(ImportedRoute activeRoute) async {
     await widget.routeStore.saveActiveRoute(activeRoute);

@@ -14,7 +14,6 @@ import 'package:tide_and_seek/domain/route_store.dart';
 import 'package:tide_and_seek/features/map/voyage_map.dart';
 import 'package:tide_and_seek/services/basemap_configuration.dart';
 import 'package:tide_and_seek/services/gpx_import_source.dart';
-import 'package:tide_and_seek/services/imported_track_matcher.dart';
 import 'package:tide_and_seek/services/offline_tile_cache.dart';
 import 'package:tide_and_seek/services/approximate_place_index.dart';
 import 'package:tide_and_seek/services/route_importer.dart';
@@ -153,62 +152,6 @@ void main() {
     expect(points.last.latitude, closeTo(51.45, 1e-9));
   });
 
-  testWidgets(
-    'a reversed previous voyage ignores a one-fix fragment when adding directions',
-    (tester) async {
-      final voyages = InMemoryCompletedVoyageStore();
-      await voyages.save(
-        _completedVoyage(
-          voyageId: 'voyage-392725',
-          voyageCode: '392725',
-          traveledRoute: _recordingWithTrailingFix(),
-        ),
-      );
-      final store = _RecordingRouteStore();
-      final matcher = _RecordingTrackMatcher();
-
-      await _pumpMap(
-        tester,
-        store: store,
-        voyages: voyages,
-        importedTrackMatcher: matcher,
-      );
-
-      await tester.tap(find.byKey(const Key('use-stored-route-empty-button')));
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.byKey(
-          const Key('stored-route-candidate-voyage:voyage-392725:track'),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('stored-route-reverse')));
-      await tester.tap(find.byKey(const Key('use-stored-route')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.text('Add turn directions?'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('generate-navigable-route')));
-      await tester.pumpAndSettle();
-
-      expect(matcher.originals, hasLength(1));
-      final reversed = matcher.originals.single;
-      expect(reversed.paths.first.points, hasLength(1));
-      expect(reversed.paths[1].points.length, greaterThanOrEqualTo(2));
-      expect(reversed.paths[1].points.first.latitude, closeTo(51.47, 1e-9));
-      expect(reversed.paths[1].points.last.latitude, closeTo(51.45, 1e-9));
-      expect(find.text('Review route'), findsOneWidget);
-      expect(
-        find.byKey(const Key('route-review-original-line')),
-        findsOneWidget,
-      );
-
-      await _confirmReview(tester);
-      expect(store.savedRoutes.single.maneuvers, isNotEmpty);
-      expect(store.savedRoutes.single.paths, hasLength(1));
-    },
-  );
-
   testWidgets('a voyage whose data has been removed is not offered', (
     tester,
   ) async {
@@ -283,7 +226,6 @@ Future<void> _pumpMap(
   RecordedRouteStore? recorded,
   CompletedVoyageStore? voyages,
   ValueChanged<ImportedRoute?>? onRouteCommitted,
-  ImportedTrackMatcher? importedTrackMatcher,
   // The Voyage page's "Change route" asks the map to open its route-change sheet.
   // Left off, the empty-route card is what a sailor sees, and its own controls
   // are the ones under test.
@@ -319,7 +261,6 @@ Future<void> _pumpMap(
         ),
         changeRouteRequestToken: openChangeRouteSheet ? Object() : null,
         onRouteCommitted: onRouteCommitted,
-        importedTrackMatcher: importedTrackMatcher,
       ),
     ),
   );
@@ -347,14 +288,14 @@ Future<void> _confirmReview(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// An imported line is now followed exactly as supplied (#19). The build used to
+/// stop here and offer to "generate a navigable route", which matched the line to
+/// the road network - on a GPX passage that is a track across land, so the choice
+/// is gone and there is nothing to answer.
 Future<void> _followOriginalTrack(WidgetTester tester) async {
-  // While the decision is open the underlying import button intentionally
-  // keeps spinning, so pump only through the dialog transition before making
-  // the explicit offline choice. `pumpAndSettle` would wait on that spinner.
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
-  expect(find.text('Add turn directions?'), findsOneWidget);
-  await tester.tap(find.byKey(const Key('follow-original-track')));
+  expect(find.text('Add turn directions?'), findsNothing);
   await tester.pumpAndSettle();
 }
 
@@ -378,24 +319,6 @@ ImportedRoute _recording({required String id, required String name}) {
             ),
           const GeoPoint(latitude: 51.47, longitude: -2.59),
         ],
-      ),
-    ],
-    waypoints: const [],
-  );
-}
-
-ImportedRoute _recordingWithTrailingFix() {
-  final main = _recording(id: 'trail', name: 'Trail');
-  return ImportedRoute(
-    id: main.id,
-    name: main.name,
-    importedAt: main.importedAt,
-    sourceFileName: main.sourceFileName,
-    paths: [
-      ...main.paths,
-      const RoutePath(
-        kind: RoutePathKind.track,
-        points: [GeoPoint(latitude: 51.4701, longitude: -2.5901)],
       ),
     ],
     waypoints: const [],
@@ -445,37 +368,4 @@ class _NoFileSource implements GpxImportSource {
 
   @override
   Future<PickedGpxFile?> pickGpxFile() async => null;
-}
-
-class _RecordingTrackMatcher implements ImportedTrackMatcher {
-  final originals = <ImportedRoute>[];
-
-  @override
-  Future<ImportedTrackMatch> match(ImportedRoute original) async {
-    originals.add(original);
-    final drawable = original.paths
-        .where((path) => path.points.length >= 2)
-        .toList(growable: false);
-    return ImportedTrackMatch(
-      route: ImportedRoute(
-        id: 'matched-reversed-track',
-        name: '${original.name} (navigable)',
-        importedAt: DateTime.utc(2026, 8, 12),
-        sourceFileName: 'matched-${original.sourceFileName}',
-        paths: drawable,
-        waypoints: original.waypoints,
-        maneuvers: [
-          RouteManeuver(
-            position: drawable.single.points[1],
-            type: 'turn',
-            modifier: 'right',
-          ),
-        ],
-      ),
-      confidence: 0.95,
-      traceCoverage: 1,
-      meanDeviationMeters: 2,
-      maximumDeviationMeters: 5,
-    );
-  }
 }

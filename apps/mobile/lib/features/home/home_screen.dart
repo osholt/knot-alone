@@ -36,6 +36,7 @@ import '../voyage/route_recorder_screen.dart';
 import '../settings/about_build_sheet.dart';
 import '../settings/emergency_info_sheet.dart';
 import '../settings/unit_settings_sheet.dart';
+import '../../services/passage_planning.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -175,10 +176,8 @@ class _HomeScreenState extends State<HomeScreen> {
         client: _routingClient,
         baseUrl: configuration.geocodingBaseUrl,
       ),
-      routingService: OsrmRoadRoutingService(
-        client: _routingClient,
-        baseUrl: configuration.routingBaseUrl,
-      ),
+      // Not a road router (#19): legs are direct courses on the water.
+      routingService: const RhumbLinePassagePlanner(),
     );
   }();
 

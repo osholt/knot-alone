@@ -882,13 +882,16 @@ void main() {
         plan.route.preferences,
         const RoutePreferences(style: RouteStyle.twisty, avoidMotorways: true),
       );
-      expect(plan.route.description, contains('motorways excluded'));
-      expect(plan.route.description, contains('unsurfaced byways avoided'));
+      // Road avoidances no longer appear in a passage description (#19): they
+      // are meaningless on the water, and the description now carries what the
+      // sailor can act on. The preferences themselves still round-trip on the
+      // route until the road-only ones are removed entirely.
+      expect(plan.route.description, isNot(contains('motorways excluded')));
+      expect(plan.route.description, contains('Passage generated'));
       expect(plan.route.plannedDuration, plan.duration);
-      expect(
-        plan.warnings,
-        contains(PreferenceAwareRoadRoutingService.motorcycleManeuverWarning),
-      );
+      // Warnings now come from whatever planned the route, in its own words,
+      // rather than from a motorcycle-specific notice raised by the caller.
+      expect(plan.warnings, contains('Planner said so.'));
     });
 
     test('a preference-routed plan that has turn instructions is not warned '
@@ -1046,6 +1049,7 @@ class _ManeuverlessRoadRoutingService implements RoadRoutingService {
     distanceMeters: 12500,
     duration: const Duration(minutes: 15),
     preferences: preferences,
+    warnings: const ['Planner said so.'],
   );
 }
 
