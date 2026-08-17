@@ -3696,8 +3696,9 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
         ],
       ),
     );
-    if (decision == _MissingSweeperDecision.assignSweeper && mounted)
+    if (decision == _MissingSweeperDecision.assignSweeper && mounted) {
       _openRoster();
+    }
     return decision == _MissingSweeperDecision.startAnyway;
   }
 
@@ -4190,8 +4191,9 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     sailors.add(labelFor(session.displayName, session.role));
     if (_isSimulation) {
       for (final sailor in _simulationController?.sailors ?? const []) {
-        if (!sailor.isLocal)
+        if (!sailor.isLocal) {
           sailors.add(labelFor(sailor.displayName, sailor.role));
+        }
       }
     } else {
       for (final sailor in _awarenessController?.sailorLocations ?? const []) {

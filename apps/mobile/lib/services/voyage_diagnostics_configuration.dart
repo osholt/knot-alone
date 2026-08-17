@@ -20,9 +20,9 @@ library;
 class VoyageDiagnosticsConfiguration {
   const VoyageDiagnosticsConfiguration._();
 
-  /// Compiled in only with `--dart-define=TIDE_AND_SEEK_RIDE_DIAGNOSTICS=true`.
+  /// Compiled in only with `--dart-define=TIDE_AND_SEEK_VOYAGE_DIAGNOSTICS=true`.
   static const bool enabled = bool.fromEnvironment(
-    'TIDE_AND_SEEK_RIDE_DIAGNOSTICS',
+    'TIDE_AND_SEEK_VOYAGE_DIAGNOSTICS',
   );
 
   /// Bound on entries held in memory.

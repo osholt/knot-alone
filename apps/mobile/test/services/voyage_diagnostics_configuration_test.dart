@@ -19,7 +19,7 @@ void main() {
     // Skipped in an instrumented build. A named reason so a skipped run says
     // why, following test_control_server_test.dart.
     skip: VoyageDiagnosticsConfiguration.enabled
-        ? 'asserts the define-off build; run without TIDE_AND_SEEK_RIDE_DIAGNOSTICS'
+        ? 'asserts the define-off build; run without TIDE_AND_SEEK_VOYAGE_DIAGNOSTICS'
         : null,
   );
 

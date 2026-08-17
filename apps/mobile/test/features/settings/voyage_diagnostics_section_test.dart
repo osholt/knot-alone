@@ -31,7 +31,7 @@ void main() {
       });
     },
     skip: VoyageDiagnosticsConfiguration.enabled
-        ? 'asserts the define-off build; run without TIDE_AND_SEEK_RIDE_DIAGNOSTICS'
+        ? 'asserts the define-off build; run without TIDE_AND_SEEK_VOYAGE_DIAGNOSTICS'
         : null,
   );
 
@@ -73,6 +73,6 @@ void main() {
     },
     skip: VoyageDiagnosticsConfiguration.enabled
         ? null
-        : 'asserts the instrumented build; run with TIDE_AND_SEEK_RIDE_DIAGNOSTICS',
+        : 'asserts the instrumented build; run with TIDE_AND_SEEK_VOYAGE_DIAGNOSTICS',
   );
 }

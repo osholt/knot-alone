@@ -22,7 +22,7 @@ IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 MANAGEMENT_TOKEN = re.compile(r"^om1_[A-Za-z0-9_-]{43}$")
 PUBLISHER_TOKEN = re.compile(r"^op1_[A-Za-z0-9_-]{43}$")
 OBSERVER_TOKEN = re.compile(r"^ro1_[A-Za-z0-9_-]{43}$")
-RIDE_TOKEN = re.compile(r"^rr1_[A-Za-z0-9_-]{43}$")
+VOYAGE_TOKEN = re.compile(r"^rr1_[A-Za-z0-9_-]{43}$")
 _CREATE_LOCKS = tuple(threading.Lock() for _ in range(64))
 
 
@@ -390,7 +390,7 @@ def _authenticated_voyage(
 ) -> Voyage:
     if not IDENTIFIER.fullmatch(voyage_id):
         raise RelayServiceError(400, "Voyage identity is invalid")
-    if not RIDE_TOKEN.fullmatch(bearer_token):
+    if not VOYAGE_TOKEN.fullmatch(bearer_token):
         raise RelayServiceError(403, "Voyage credential rejected")
     statement = select(Voyage).where(Voyage.id == voyage_id)
     if lock_for_update:

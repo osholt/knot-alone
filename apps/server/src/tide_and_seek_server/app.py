@@ -83,7 +83,7 @@ from .traffic import (
 )
 
 OBSERVER_API_TOKEN = re.compile(r"^(?:om1|op1|ro1)_[A-Za-z0-9_-]{43}$")
-RIDE_API_TOKEN = re.compile(r"^rr1_[A-Za-z0-9_-]{43}$")
+VOYAGE_API_TOKEN = re.compile(r"^rr1_[A-Za-z0-9_-]{43}$")
 
 
 def create_app(
@@ -719,7 +719,7 @@ def create_app(
         session: Session = Depends(database_session),
     ) -> dict[str, object]:
         bearer_token = _voyage_bearer(request)
-        if not RIDE_API_TOKEN.fullmatch(bearer_token):
+        if not VOYAGE_API_TOKEN.fullmatch(bearer_token):
             raise RelayServiceError(401, "Voyage credential rejected")
         client_ip = request.client.host if request.client is not None else "unknown"
         # Carrier-grade NAT must not make a few active voyages exhaust each
