@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tide_and_seek/domain/chart_source.dart';
 import 'package:tide_and_seek/services/marine_layers.dart';
 import 'package:tide_and_seek/services/marine_tile_layer.dart';
 
@@ -43,7 +42,7 @@ void main() {
       expect(
         MarineLayers.bathymetryTiles.tileUrl(z: 6, x: 32, y: 21),
         'https://tiles.emodnet-bathymetry.eu/v12/mean_atlas_land/'
-            'web_mercator/6/32/21.png',
+        'web_mercator/6/32/21.png',
       );
     });
 
@@ -58,7 +57,8 @@ void main() {
   group('zoom bounds come from the provider, not from taste', () {
     test('bathymetry stops where EMODnet stops', () {
       // Past the provider's maximum the server 404s, and to a sailor that reads
-      // as the chart simply stopping. Better to hold the last good tile.
+      // as the chart simply stopping. Retained for whenever a usable depth
+      // product replaces it.
       expect(MarineLayers.bathymetryTiles.maxZoom, 12);
     });
 
@@ -90,14 +90,21 @@ void main() {
       );
     });
 
-    test('ground is listed before annotation', () {
-      final order = MarineLayers.tileLayers
-          .map((layer) => layer.placement)
-          .toList();
+    test('bathymetry is configured but not drawn', () {
+      // EMODnet renders shelf water white, so it added land hill-shading to a
+      // sailing app and nothing to the sea. Kept configured so the research is
+      // not lost, kept out of tileLayers so it does not draw.
+      expect(MarineLayers.bathymetryTiles.isConfigured, isTrue);
       expect(
-        order.indexOf(MarineLayerPlacement.beneathBasemap),
-        lessThan(order.indexOf(MarineLayerPlacement.overBasemap)),
+        MarineLayers.tileLayers,
+        isNot(contains(MarineLayers.bathymetryTiles)),
       );
+    });
+
+    test('everything actually drawn is an overlay over the basemap', () {
+      for (final layer in MarineLayers.tileLayers) {
+        expect(layer.placement, MarineLayerPlacement.overBasemap);
+      }
     });
   });
 
@@ -114,7 +121,10 @@ void main() {
 
     test('bathymetry carries the release it actually serves', () {
       expect(MarineLayers.emodnetBathymetry.edition, contains('2024'));
-      expect(MarineLayers.emodnetBathymetry.vintage, MarineLayers.emodnetRelease);
+      expect(
+        MarineLayers.emodnetBathymetry.vintage,
+        MarineLayers.emodnetRelease,
+      );
       expect(MarineLayers.emodnetBathymetry.vintageUnknown, isFalse);
     });
 
@@ -128,7 +138,11 @@ void main() {
 
     test('neither tile layer claims hydrographic authority', () {
       for (final layer in MarineLayers.tileLayers) {
-        expect(layer.source.authority.isChart, isFalse, reason: layer.source.id);
+        expect(
+          layer.source.authority.isChart,
+          isFalse,
+          reason: layer.source.id,
+        );
       }
     });
   });

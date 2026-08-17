@@ -88,9 +88,21 @@ abstract final class MarineLayers {
   /// Release year of the EMODnet product actually served by [bathymetryTiles].
   static final emodnetRelease = DateTime.utc(2024);
 
-  /// Depth shading. Verified live: the WMTS capabilities document lists
-  /// `web_mercator` among its tile matrix sets, and v12 is the newest path that
-  /// serves tiles — v13 returns 404.
+  /// EMODnet raster tiles, **not enabled**, and the reason is worth keeping.
+  ///
+  /// The endpoint works: `v12/mean_atlas_land` serves real tiles over
+  /// `web_mercator` (v13 is a 404). But its colour ramp is built for ocean
+  /// depths, so over a shelf sea it renders near-white. Fetched over the Solent
+  /// at z10, all three EMODnet products — `mean_atlas_land`, `baselayer` and
+  /// `baselayer_land` — show the water as white with no gradient at all.
+  ///
+  /// Drawn in the app it therefore contributed land hill-shading to a sailing
+  /// app and nothing whatsoever to the water, while washing out the basemap. It
+  /// is the wrong tool for the 0–30 m a yacht actually cares about.
+  ///
+  /// Coastal depth needs survey data at coastal resolution. UKHO bathymetry is
+  /// free under an OGL-like licence and has it, but it is a download-and-index
+  /// job rather than a tile URL — see the issue tracker.
   static final bathymetryTiles = MarineTileLayer(
     source: emodnetBathymetry,
     urlTemplate:
@@ -118,8 +130,12 @@ abstract final class MarineLayers {
     maxZoom: 18,
   );
 
-  /// The tile layers, in draw order: ground first, annotation last.
-  static final tileLayers = <MarineTileLayer>[bathymetryTiles, seamarkTiles];
+  /// The tile layers actually drawn, in draw order: ground first, annotation
+  /// last.
+  ///
+  /// [bathymetryTiles] is deliberately absent. It is configured and correct,
+  /// and it is useless here — see its own note.
+  static final tileLayers = <MarineTileLayer>[seamarkTiles];
 
   /// Every layer this build knows about.
   static final all = <ChartSource>[
