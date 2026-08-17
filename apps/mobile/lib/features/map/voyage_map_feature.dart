@@ -29,6 +29,7 @@ import '../../internet/plan_directory.dart';
 import '../../services/basemap_configuration.dart';
 import '../../services/basemap_status.dart';
 import '../../services/demo_route_loader.dart';
+import 'chart_provenance_sheet.dart';
 import 'voyage_clock.dart';
 import 'voyage_layout.dart';
 import '../../services/voyage_completion_detector.dart';
@@ -1536,6 +1537,12 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                     const PopupMenuItem(
                       value: _MapAction.clearOfflineTiles,
                       child: Text('Clear downloaded map data'),
+                    ),
+                    // Always offered, route or not: what the map is made of is
+                    // not a property of the plan.
+                    const PopupMenuItem(
+                      value: _MapAction.chartSources,
+                      child: Text('Chart sources and accuracy'),
                     ),
                     // Route-derived: nothing to remove without one.
                     if (widget.canEditRoute && _route != null)
@@ -5227,6 +5234,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
           widget.onRouteChanged?.call(null);
           widget.onRouteCommitted?.call(null);
         }
+      case _MapAction.chartSources:
+        await showChartProvenanceSheet(context);
       case _MapAction.clearOfflineTiles:
         await _mapLibreOfflineManager.clearAll();
         await widget.offlineTileCache.clearAll();
@@ -5529,6 +5538,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
 }
 
 enum _MapAction {
+  chartSources,
   importGpx,
   loadDemo,
   personalVoyageHeatmap,

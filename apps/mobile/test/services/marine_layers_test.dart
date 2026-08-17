@@ -52,12 +52,48 @@ void main() {
       }
     });
 
-    test('combined attribution names every source', () {
+    test('combined attribution names every source that is drawn', () {
       final combined = MarineLayers.combinedAttribution;
-      for (final source in MarineLayers.all) {
+      expect(MarineLayers.drawn, isNotEmpty);
+      for (final source in MarineLayers.drawn) {
         expect(combined, contains(source.licence.attribution));
       }
     });
+
+    test('and names nothing that is not drawn', () {
+      // Attribution states what is on screen. Crediting a source that is not
+      // drawn overstates the map: a sailor reading "Depth data © EMODnet" in the
+      // credits would reasonably conclude depth data was present, when this
+      // build draws none.
+      final combined = MarineLayers.combinedAttribution;
+      for (final unused in MarineLayers.notInUse) {
+        expect(
+          combined,
+          isNot(contains(unused.source.licence.attribution)),
+          reason: unused.source.id,
+        );
+      }
+    });
+
+    test(
+      'every known source is either drawn or has a stated reason not to be',
+      () {
+        final accounted = {
+          ...MarineLayers.drawn.map((source) => source.id),
+          ...MarineLayers.notInUse.map((unused) => unused.source.id),
+        };
+        expect(
+          MarineLayers.all.map((source) => source.id).toSet(),
+          accounted,
+          reason:
+              'a source that is neither drawn nor explained is invisible to the '
+              'provenance sheet',
+        );
+        for (final unused in MarineLayers.notInUse) {
+          expect(unused.reason.trim(), isNotEmpty, reason: unused.source.id);
+        }
+      },
+    );
 
     test('UKHO attribution carries the Crown copyright wording', () {
       // Required by the Open Government Licence, and easy to lose in a reword.

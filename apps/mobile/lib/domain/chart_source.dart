@@ -27,6 +27,13 @@ enum ChartAuthority {
   /// Whether a surface may use the bare word "chart" for this layer.
   bool get isChart => this == ChartAuthority.official;
 
+  /// Short label for a badge beside a source name.
+  String get label => switch (this) {
+    ChartAuthority.official => 'Official',
+    ChartAuthority.surveyDerived => 'Survey data',
+    ChartAuthority.crowdSourced => 'Crowd-sourced',
+  };
+
   /// One line the UI can show verbatim. Deliberately blunt.
   String get caveat => switch (this) {
     ChartAuthority.official => 'Official chart data.',

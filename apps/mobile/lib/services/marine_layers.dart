@@ -144,6 +144,34 @@ abstract final class MarineLayers {
     openSeaMapSeamarks,
   ];
 
+  /// The sources actually on screen.
+  static final drawn = <ChartSource>[
+    for (final layer in tileLayers)
+      if (layer.isConfigured) layer.source,
+  ];
+
+  /// Sources this build knows about but does not draw, each with the reason.
+  ///
+  /// Kept here rather than on [ChartSource] because "not drawn" is a fact about
+  /// this build, not about the data. And stated in the UI rather than only in a
+  /// doc comment: a sailor who has read that the app carries depth data needs to
+  /// be told, on screen, that no depth data is being shown. Silence there is the
+  /// same failure mode as a stale layer — the map looks complete.
+  static final notInUse = <UnusedChartSource>[
+    UnusedChartSource(
+      source: emodnetBathymetry,
+      reason:
+          'Its colour ramp is built for ocean depths, so it renders shelf '
+          'water white and adds nothing over a sailing area.',
+    ),
+    UnusedChartSource(
+      source: ukhoWrecks,
+      reason:
+          'Published as a bulk data set rather than tiles, so it needs a '
+          'download-and-index step that is not built yet.',
+    ),
+  ];
+
   /// True when no configured layer carries hydrographic authority, which is the
   /// current state and the reason the "not for navigation" position stands.
   static bool get anyOfficial => all.any((source) => source.authority.isChart);
@@ -151,6 +179,21 @@ abstract final class MarineLayers {
   /// One line summarising what the map is built from, for the map's own
   /// attribution surface. Every licence here requires attribution, so this is
   /// not decoration.
+  ///
+  /// Built from [drawn], not from [all]. Attribution is a statement about what
+  /// is on screen: crediting EMODnet while no EMODnet tile is drawn would
+  /// overstate the map rather than over-comply, and a sailor reading the credits
+  /// would reasonably conclude depth data was present.
   static String get combinedAttribution =>
-      all.map((source) => source.licence.attribution).join(' · ');
+      drawn.map((source) => source.licence.attribution).join(' · ');
+}
+
+/// A source this build knows about but does not draw.
+class UnusedChartSource {
+  const UnusedChartSource({required this.source, required this.reason});
+
+  final ChartSource source;
+
+  /// Why it is not drawn, in terms a sailor can act on.
+  final String reason;
 }
