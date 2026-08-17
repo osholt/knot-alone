@@ -3045,8 +3045,6 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
       voyagePaused: widget.voyageController.voyagePaused,
       voyageHasNoSkipper: widget.voyageController.voyageHasNoSkipper,
       voyageStarted: widget.voyageController.voyageStarted,
-      markerFeaturesEnabled:
-          widget.voyageController.coordinationMode.usesSecondBikeDropOff,
       onLeaveVoyage: _confirmLeaveVoyageFromMap,
       onRouteCommitted: _onRouteChanged,
       onNavigationGuidanceChanged: _onNavigationGuidanceChanged,

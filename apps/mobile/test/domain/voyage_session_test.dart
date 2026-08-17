@@ -76,7 +76,7 @@ void main() {
       final legacy = solo.toJson()..remove('coordinationMode');
       expect(
         VoyageSession.fromJson(legacy).coordinationMode,
-        VoyageCoordinationMode.secondBikeDropOff,
+        VoyageCoordinationMode.crew,
       );
     },
   );

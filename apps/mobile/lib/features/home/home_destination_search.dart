@@ -55,7 +55,7 @@ enum VoyageStartChoice {
   /// sensible defaults now, adjustable later, rather than four questions first.
   VoyageCoordinationMode get coordinationMode => switch (this) {
     VoyageStartChoice.solo => VoyageCoordinationMode.solo,
-    VoyageStartChoice.group => VoyageCoordinationMode.secondBikeDropOff,
+    VoyageStartChoice.group => VoyageCoordinationMode.crew,
   };
 
   String get label => switch (this) {

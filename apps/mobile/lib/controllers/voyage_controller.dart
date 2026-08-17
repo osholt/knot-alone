@@ -678,8 +678,7 @@ class VoyageController extends ChangeNotifier {
     MotorcycleIconStyle motorcycleStyle = motorcycleIconStyleDefault,
     SailorSymbol sailorSymbol = sailorSymbolDefault,
     SailorColor sailorColor = sailorColorDefault,
-    VoyageCoordinationMode coordinationMode =
-        VoyageCoordinationMode.secondBikeDropOff,
+    VoyageCoordinationMode coordinationMode = VoyageCoordinationMode.crew,
     String? voyageName,
   }) async {
     await _run(() async {
@@ -1529,8 +1528,7 @@ class VoyageController extends ChangeNotifier {
     MotorcycleIconStyle motorcycleStyle = motorcycleIconStyleDefault,
     SailorSymbol sailorSymbol = sailorSymbolDefault,
     SailorColor sailorColor = sailorColorDefault,
-    VoyageCoordinationMode coordinationMode =
-        VoyageCoordinationMode.secondBikeDropOff,
+    VoyageCoordinationMode coordinationMode = VoyageCoordinationMode.crew,
     String? voyageName,
   }) async {
     // The home screen deliberately remains available while an ended voyage is

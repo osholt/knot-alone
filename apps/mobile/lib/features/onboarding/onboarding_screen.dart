@@ -112,7 +112,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 16),
       const Text(
-        'Tide and Seek coordinates a private riding group with a shared '
+        'Tide and Seek coordinates a private crew with a shared '
         'roster, route and safety alerts. Voyage events are kept on your phone '
         'first, then relayed by the internet or nearby devices when available.',
         style: TextStyle(color: Color(0xFFBCC5D0), height: 1.5, fontSize: 17),

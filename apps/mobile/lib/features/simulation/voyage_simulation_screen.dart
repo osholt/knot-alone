@@ -151,7 +151,7 @@ class _SimulationControls extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              '${controller.sailorCount} virtual bikes use the real navigation, '
+              '${controller.sailorCount} virtual boats use the real navigation, '
               'TEC and off-course logic. Device GPS, internet relay and nearby '
               'radios are off.',
               style: const TextStyle(color: Color(0xFFADB7C4), height: 1.35),

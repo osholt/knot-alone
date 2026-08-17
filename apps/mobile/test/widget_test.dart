@@ -222,8 +222,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('voyage-scope-selector')), findsOneWidget);
-    expect(find.text('Second-bike drop-off'), findsOneWidget);
-    expect(find.text('Keep-together group'), findsOneWidget);
+    // The junction-handling choice went with the road surfaces; solo versus
+    // crew is the whole decision now.
+    expect(find.text(VoyageCoordinationMode.crew.description), findsOneWidget);
 
     await tester.tap(find.text('Solo'));
     await tester.pumpAndSettle();

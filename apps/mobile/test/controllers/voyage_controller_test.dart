@@ -70,17 +70,14 @@ void main() {
   test('voyage coordination mode is persisted and published', () async {
     await controller.createVoyage(
       'Oliver',
-      coordinationMode: VoyageCoordinationMode.keepTogether,
+      coordinationMode: VoyageCoordinationMode.crew,
     );
 
-    expect(
-      controller.session?.coordinationMode,
-      VoyageCoordinationMode.keepTogether,
-    );
-    expect(controller.coordinationMode, VoyageCoordinationMode.keepTogether);
+    expect(controller.session?.coordinationMode, VoyageCoordinationMode.crew);
+    expect(controller.coordinationMode, VoyageCoordinationMode.crew);
     expect(
       controller.events.single.payload['coordinationMode'],
-      VoyageCoordinationMode.keepTogether.name,
+      VoyageCoordinationMode.crew.name,
     );
   });
 

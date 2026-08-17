@@ -68,7 +68,7 @@ void main() {
       );
       expect(
         VoyageStartChoice.group.coordinationMode,
-        VoyageCoordinationMode.secondBikeDropOff,
+        VoyageCoordinationMode.crew,
       );
     });
 

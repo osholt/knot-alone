@@ -1,44 +1,45 @@
-/// How a voyage uses Tide and Seek's group-coordination features.
+/// How a voyage uses Tide and Seek's crew-coordination features.
 enum VoyageCoordinationMode {
-  /// One sailor, with route recording and navigation but no join code or group
+  /// One sailor, with route recording and navigation but no join code or crew
   /// controls.
   solo,
 
-  /// The classic second-bike drop-off system: junction marker prompts, marker
-  /// passes and Tide and Seek statistics are enabled.
-  secondBikeDropOff,
+  /// The crew share one voyage: roster, positions and quick messages.
+  crew,
 
-  /// Sailors stay together as one group, without junction drop-off prompts.
+  /// Recorded by builds that offered the junction drop-off system.
   ///
-  /// "Keep-together" describes the coordination policy without suggesting
-  /// sailors should follow at an unsafe close distance.
-  keepTogether;
+  /// The road surfaces it selected are gone, so nothing offers it now and it
+  /// behaves exactly as [crew]. Kept so a voyage stored by an earlier build
+  /// still decodes instead of failing to load.
+  @Deprecated('Junction drop-offs were removed with the road surfaces.')
+  secondBikeDropOff;
 
   bool get isGroup => this != VoyageCoordinationMode.solo;
 
-  bool get usesSecondBikeDropOff =>
-      this == VoyageCoordinationMode.secondBikeDropOff;
-
   String get label => switch (this) {
     VoyageCoordinationMode.solo => 'Solo voyage',
-    VoyageCoordinationMode.secondBikeDropOff => 'Second-bike drop-off',
-    VoyageCoordinationMode.keepTogether => 'Keep-together group',
+    VoyageCoordinationMode.crew => 'Crew voyage',
+    // ignore: deprecated_member_use_from_same_package
+    VoyageCoordinationMode.secondBikeDropOff => 'Crew voyage',
   };
 
   String get description => switch (this) {
     VoyageCoordinationMode.solo =>
-      'Navigation and voyage recording for just you. No join code or group '
+      'Navigation and voyage recording for just you. No join code or crew '
           'controls; you can still share a private watcher link.',
+    VoyageCoordinationMode.crew =>
+      'Share a six-digit code so the crew see one roster, one route and each '
+          "other's positions.",
+    // ignore: deprecated_member_use_from_same_package
     VoyageCoordinationMode.secondBikeDropOff =>
-      'Use junction drop-offs, marker prompts and Tide and Seek tracking.',
-    VoyageCoordinationMode.keepTogether =>
-      'Voyage as one group without junction drop-offs or marker prompts.',
+      'Share a six-digit code so the crew see one roster, one route and each '
+          "other's positions.",
   };
 
   static VoyageCoordinationMode fromName(String? name) =>
       VoyageCoordinationMode.values.firstWhere(
         (mode) => mode.name == name,
-        // Every voyage created before this choice existed used this system.
-        orElse: () => VoyageCoordinationMode.secondBikeDropOff,
+        orElse: () => VoyageCoordinationMode.crew,
       );
 }

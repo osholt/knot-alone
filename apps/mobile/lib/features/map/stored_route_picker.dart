@@ -330,7 +330,7 @@ class _StoredRouteOptionsSheetState extends State<StoredRouteOptionsSheet> {
               Text(
                 _variant == StoredRouteVariant.tidied
                     ? 'Tidied: a recording, not a planned route. Stops and GPS '
-                          'wander are removed. Every road the bike actually '
+                          'wander are removed. Every leg the boat actually '
                           'took is kept, including any wrong turns and car '
                           'park loops.'
                     : 'Raw track: every fix exactly as recorded, including '

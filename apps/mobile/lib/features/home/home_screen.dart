@@ -803,7 +803,7 @@ class _VoyageFormState extends State<_VoyageForm> with WidgetsBindingObserver {
   final _codeFocusNode = FocusNode();
   final _codeFieldKey = GlobalKey();
   VoyageCoordinationMode _selectedCoordinationMode =
-      VoyageCoordinationMode.secondBikeDropOff;
+      VoyageCoordinationMode.crew;
 
   /// Set once a created voyage's code needs sharing before handing off to the
   /// map - the moment a skipper most needs it, with people waiting nearby.
@@ -898,46 +898,18 @@ class _VoyageFormState extends State<_VoyageForm> with WidgetsBindingObserver {
                   selected: {_selectedCoordinationMode.isGroup},
                   onSelectionChanged: (selection) => setState(() {
                     _selectedCoordinationMode = selection.first
-                        ? VoyageCoordinationMode.secondBikeDropOff
+                        ? VoyageCoordinationMode.crew
                         : VoyageCoordinationMode.solo;
                   }),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _selectedCoordinationMode == VoyageCoordinationMode.solo
-                      ? VoyageCoordinationMode.solo.description
-                      : 'Choose how this group will handle junctions.',
+                  _selectedCoordinationMode.description,
                   style: const TextStyle(
                     color: Color(0xFFABB5C1),
                     fontSize: 13,
                   ),
                 ),
-                if (_selectedCoordinationMode.isGroup) ...[
-                  const SizedBox(height: 12),
-                  RadioGroup<VoyageCoordinationMode>(
-                    groupValue: _selectedCoordinationMode,
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _selectedCoordinationMode = value);
-                      }
-                    },
-                    child: Column(
-                      children: [
-                        for (final mode in const [
-                          VoyageCoordinationMode.secondBikeDropOff,
-                          VoyageCoordinationMode.keepTogether,
-                        ])
-                          RadioListTile<VoyageCoordinationMode>(
-                            key: Key('voyage-mode-${mode.name}'),
-                            contentPadding: EdgeInsets.zero,
-                            value: mode,
-                            title: Text(mode.label),
-                            subtitle: Text(mode.description),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: _voyageNameController,

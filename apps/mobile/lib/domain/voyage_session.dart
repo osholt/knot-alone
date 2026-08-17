@@ -25,7 +25,7 @@ class VoyageSession {
     this.motorcycleStyle = motorcycleIconStyleDefault,
     this.sailorSymbol = sailorSymbolDefault,
     this.sailorColor = sailorColorDefault,
-    this.coordinationMode = VoyageCoordinationMode.secondBikeDropOff,
+    this.coordinationMode = VoyageCoordinationMode.crew,
     this.voyageName,
   }) : assert(
          !isSimulation ||

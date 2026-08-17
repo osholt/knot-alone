@@ -53,7 +53,7 @@ class NavigationExportSheet extends StatelessWidget {
             const SizedBox(height: 5),
             const Text(
               'Direct links cannot transfer an exact GPX route. Use GPX sharing '
-              'for motorcycle navigation apps and connected bike devices.',
+              'for chartplotters and other navigation apps.',
               style: TextStyle(color: Color(0xFF98A3B1)),
             ),
             const SizedBox(height: 18),
