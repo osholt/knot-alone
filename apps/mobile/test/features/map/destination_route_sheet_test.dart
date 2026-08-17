@@ -4,7 +4,7 @@ import 'package:tide_and_seek/domain/route_preferences.dart';
 import 'package:tide_and_seek/features/map/destination_route_sheet.dart';
 
 void main() {
-  testWidgets('collects a destination and offers motorcycle app handoff', (
+  testWidgets('collects a destination and offers marine app handoff', (
     tester,
   ) async {
     DestinationPlanRequest? request;
@@ -45,10 +45,13 @@ void main() {
     await tester.tap(find.byKey(const Key('destination-handoff-field')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Calimoto'), findsOneWidget);
-    expect(find.text('MyRoute-app'), findsOneWidget);
+    expect(find.text('Navionics Boating'), findsOneWidget);
+    expect(find.text('Aqua Map'), findsOneWidget);
+    // The road apps the inherited sheet offered are gone (#30).
+    expect(find.text('Calimoto'), findsNothing);
+    expect(find.text('Google Maps'), findsNothing);
 
-    await tester.tap(find.text('MyRoute-app'));
+    await tester.tap(find.text('Aqua Map'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.byKey(const Key('plan-destination-button')),
@@ -60,7 +63,7 @@ void main() {
 
     expect(request?.query, 'Matlock Bath');
     expect(request?.stopQueries, const ['Bakewell']);
-    expect(request?.handoffTarget?.name, 'myRouteApp');
+    expect(request?.handoffTarget?.name, 'aquaMap');
   });
 
   testWidgets('restores an edited request and allows stops to be reordered', (

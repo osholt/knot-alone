@@ -79,6 +79,7 @@ import '../../services/trail_display_simplifier.dart';
 import '../map/maneuver_diagnostics.dart';
 import '../map/maneuver_list_screen.dart';
 import '../map/vessel_icon.dart';
+import '../map/marine_glyphs.dart';
 import '../map/voyage_layout.dart';
 import '../map/voyage_map.dart';
 import '../settings/emergency_info_sheet.dart';
@@ -893,8 +894,12 @@ class VoyageDestination {
   /// and a simulation because Voyage Lab is inserted at 1.
   final int index;
   final String label;
-  final IconData icon;
-  final IconData selectedIcon;
+
+  /// Widgets rather than [IconData], so a destination can be drawn by the app's
+  /// own glyph set as well as by an icon font. Voyage uses [MarineGlyph], which
+  /// Material has no equivalent for (#30).
+  final Widget icon;
+  final Widget selectedIcon;
 }
 
 /// The destinations of an active voyage, in bar order.
@@ -903,7 +908,7 @@ class VoyageDestination {
 /// why the index is carried rather than inferred by a caller counting.
 List<VoyageDestination> voyageDestinations({required bool simulation}) {
   var index = 0;
-  VoyageDestination next(String label, IconData icon, IconData selectedIcon) =>
+  VoyageDestination next(String label, Widget icon, Widget selectedIcon) =>
       VoyageDestination(
         index: index++,
         label: label,
@@ -911,10 +916,23 @@ List<VoyageDestination> voyageDestinations({required bool simulation}) {
         selectedIcon: selectedIcon,
       );
   return [
-    next('Map', Icons.map_outlined, Icons.map),
-    if (simulation) next('Voyage Lab', Icons.science_outlined, Icons.science),
-    next('Voyage', Icons.two_wheeler_outlined, Icons.two_wheeler),
-    next('Settings', Icons.settings_outlined, Icons.settings),
+    next('Map', const Icon(Icons.map_outlined), const Icon(Icons.map)),
+    if (simulation)
+      next(
+        'Voyage Lab',
+        const Icon(Icons.science_outlined),
+        const Icon(Icons.science),
+      ),
+    next(
+      'Voyage',
+      const MarineGlyphIcon(MarineGlyph.sailor),
+      const MarineGlyphIcon(MarineGlyph.sailor),
+    ),
+    next(
+      'Settings',
+      const Icon(Icons.settings_outlined),
+      const Icon(Icons.settings),
+    ),
   ];
 }
 
@@ -2069,7 +2087,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
                 : needsAttention
                 ? 'check route'
                 : isSweeper
-                ? 'TEC'
+                ? 'Sweeper'
                 : isLead
                 ? 'Lead'
                 : null;
@@ -2895,8 +2913,8 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
         final destinations = [
           for (final destination in _voyageDestinations)
             NavigationDestination(
-              icon: Icon(destination.icon),
-              selectedIcon: Icon(destination.selectedIcon),
+              icon: destination.icon,
+              selectedIcon: destination.selectedIcon,
               label: destination.label,
             ),
         ];
@@ -3955,11 +3973,9 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
             for (final destination in destinations)
               ListTile(
                 key: Key('voyage-menu-destination-${destination.index}'),
-                leading: Icon(
-                  destination.index == _selectedIndex
-                      ? destination.selectedIcon
-                      : destination.icon,
-                ),
+                leading: destination.index == _selectedIndex
+                    ? destination.selectedIcon
+                    : destination.icon,
                 // Words, not a bare icon (#306), and the same words the bar
                 // uses so a sailor is not learning a second vocabulary.
                 title: Text(destination.label),

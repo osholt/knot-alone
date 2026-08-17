@@ -1011,8 +1011,8 @@ void main() {
 
     final chip = find.byKey(const Key('skipper-sweeper-gap'));
     expect(chip, findsOneWidget);
-    expect(find.text('TEC GAP'), findsNothing);
-    expect(find.text('TEC'), findsOneWidget);
+    expect(find.text('SWEEPER GAP'), findsNothing);
+    expect(find.text('SWEEPER'), findsOneWidget);
     expect(find.textContaining('2.0 mi · ~4 min'), findsOneWidget);
     expect(find.textContaining('Charlie ·'), findsNothing);
     expect(tester.getSize(chip).height, lessThanOrEqualTo(44));
@@ -1296,7 +1296,7 @@ void main() {
     expect(find.text('ROUTE-ONLY OFFLINE MAP'), findsOneWidget);
     expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
     expect(find.byKey(const Key('skipper-sweeper-gap')), findsOneWidget);
-    expect(find.text('TEC'), findsOneWidget);
+    expect(find.text('SWEEPER'), findsOneWidget);
     expect(find.textContaining('Alex is clearly off course'), findsOneWidget);
     expect(find.textContaining('2.0 mi'), findsOneWidget);
     expect(find.textContaining('0.1 mi'), findsOneWidget);
@@ -2493,7 +2493,7 @@ void main() {
     expect(find.byKey(const Key('emergency-contact-lead')), findsOneWidget);
     expect(find.byKey(const Key('emergency-contact-sweeper')), findsOneWidget);
     expect(find.text('Oliver (skipper)'), findsOneWidget);
-    expect(find.text('Charlie (TEC)'), findsOneWidget);
+    expect(find.text('Charlie (sweeper)'), findsOneWidget);
 
     // The skipper shared, so both dial controls are offered.
     expect(

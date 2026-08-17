@@ -9,6 +9,7 @@ import '../../relay/live_presence.dart';
 import '../../services/voyage_membership.dart';
 import '../../services/sweeper_role_assignment.dart';
 import '../map/vessel_icon.dart';
+import '../map/marine_glyphs.dart';
 
 enum _RosterFilter { active, attention, left, all }
 
@@ -151,7 +152,7 @@ class _VoyageRosterSheetState extends State<VoyageRosterSheet> {
                 segments: const [
                   ButtonSegment(
                     value: _RosterFilter.active,
-                    icon: Icon(Icons.motorcycle_outlined),
+                    icon: MarineGlyphIcon(MarineGlyph.fleet),
                     label: Text('Current'),
                   ),
                   ButtonSegment(

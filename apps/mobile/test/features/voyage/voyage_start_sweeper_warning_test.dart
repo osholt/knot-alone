@@ -203,7 +203,7 @@ void main() {
 
     await tester.pumpWidget(harness.app);
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.two_wheeler_outlined));
+    await tester.tap(voyageDestinationTab);
     await tester.pumpAndSettle();
     final roster = find.byKey(const Key('voyage-menu-open-roster'));
     await tester.scrollUntilVisible(
@@ -309,3 +309,15 @@ class _FakeNearbyBridge extends NearbyBridge {
     status: 'phase0',
   );
 }
+
+/// The Voyage destination in the shell's navigation bar or landscape rail.
+///
+/// Found by its label rather than by icon data: the destination now draws the
+/// app's own [MarineGlyph] instead of a Material icon (#30), and #306 requires
+/// the label to be there anyway, so this is also the affordance a sailor uses.
+///
+/// Matches in either chrome, because which one the shell builds depends on the
+/// surface shape and the default test viewport is landscape.
+final voyageDestinationTab = find.byWidgetPredicate(
+  (widget) => widget is Text && widget.data == 'Voyage',
+);

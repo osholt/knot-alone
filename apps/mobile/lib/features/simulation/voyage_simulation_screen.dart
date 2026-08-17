@@ -8,6 +8,7 @@ import '../../domain/voyage_role.dart';
 import '../../domain/voyage_session.dart';
 import '../../services/measurement_formatter.dart';
 import '../map/voyage_layout.dart';
+import '../map/marine_glyphs.dart';
 
 class VoyageSimulationScreen extends StatelessWidget {
   const VoyageSimulationScreen({
@@ -153,7 +154,8 @@ class _SimulationControls extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               '${controller.sailorCount} virtual boats use the real navigation, '
-              'TEC and off-course logic. Device GPS, internet relay and nearby '
+              'Sweeper and off-course logic. Device GPS, internet relay and '
+              'nearby '
               'radios are off.',
               style: const TextStyle(color: Color(0xFFADB7C4), height: 1.35),
             ),
@@ -180,18 +182,18 @@ class _SimulationControls extends StatelessWidget {
               segments: const [
                 ButtonSegment(
                   value: VoyageRole.lead,
-                  icon: Icon(Icons.flag_outlined),
+                  icon: MarineGlyphIcon(MarineGlyph.skipper),
                   label: Text('Skipper'),
                 ),
                 ButtonSegment(
                   value: VoyageRole.sailor,
-                  icon: Icon(Icons.two_wheeler),
+                  icon: MarineGlyphIcon(MarineGlyph.sailor),
                   label: Text('Follower'),
                 ),
                 ButtonSegment(
                   value: VoyageRole.sweeper,
-                  icon: Icon(Icons.safety_check_outlined),
-                  label: Text('TEC'),
+                  icon: MarineGlyphIcon(MarineGlyph.sweeper),
+                  label: Text('Sweeper'),
                 ),
               ],
               selected: {controller.localRole},
@@ -306,7 +308,7 @@ class _SimulationControls extends StatelessWidget {
               key: const Key('simulation-sweeper-delay'),
               contentPadding: EdgeInsets.zero,
               title: const Text('Delay Sweeper'),
-              subtitle: const Text('Increases the lead-to-TEC gap'),
+              subtitle: const Text('Increases the lead-to-sweeper gap'),
               value: controller.sweeperDelayed,
               onChanged: controller.setSweeperDelayed,
             ),
@@ -328,7 +330,7 @@ class _SimulationControls extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'MARKER ACTIVE · $markerPassCount passed · '
-                '${sweeperPassedMarker ? 'TEC passed' : 'waiting for TEC'}',
+                '${sweeperPassedMarker ? 'sweeper passed' : 'waiting for sweeper'}',
                 key: const Key('simulation-marker-status'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -418,7 +420,7 @@ class _AutomaticMarkerViewport extends StatelessWidget {
           ),
           if (sweeperDistance != null && !controller.canGetUnderWay)
             Text(
-              'TEC ${sweeperDistance.round()} m away',
+              'Sweeper ${sweeperDistance.round()} m away',
               style: const TextStyle(color: Color(0xFFB9C4D1), fontSize: 12),
             ),
           const SizedBox(height: 6),
@@ -478,7 +480,7 @@ class _FleetCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  sailor.isLocal ? Icons.navigation : Icons.two_wheeler,
+                  sailor.isLocal ? Icons.navigation : Icons.sailing_outlined,
                   color: sailor.isOffRoute
                       ? const Color(0xFFFF4FA3)
                       : const Color(0xFF6ED89A),

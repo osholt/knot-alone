@@ -343,39 +343,39 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
   }
 }
 
-enum _DestinationHandoff { tideAndSeek, calimoto, myRouteApp, googleMaps }
+enum _DestinationHandoff { tideAndSeek, navionics, aquaMap, shareGpx }
 
 _DestinationHandoff _handoffFromTarget(NavigationTarget? target) =>
     switch (target) {
-      NavigationTarget.calimoto => _DestinationHandoff.calimoto,
-      NavigationTarget.myRouteApp => _DestinationHandoff.myRouteApp,
-      NavigationTarget.googleMaps => _DestinationHandoff.googleMaps,
+      NavigationTarget.navionics => _DestinationHandoff.navionics,
+      NavigationTarget.aquaMap => _DestinationHandoff.aquaMap,
+      NavigationTarget.shareGpx => _DestinationHandoff.shareGpx,
       _ => _DestinationHandoff.tideAndSeek,
     };
 
 extension on _DestinationHandoff {
   String get label => switch (this) {
     _DestinationHandoff.tideAndSeek => 'Tide and Seek',
-    _DestinationHandoff.calimoto => 'Calimoto',
-    _DestinationHandoff.myRouteApp => 'MyRoute-app',
-    _DestinationHandoff.googleMaps => 'Google Maps',
+    _DestinationHandoff.navionics => 'Navionics Boating',
+    _DestinationHandoff.aquaMap => 'Aqua Map',
+    _DestinationHandoff.shareGpx => 'Share GPX file',
   };
 
   String get detail => switch (this) {
     _DestinationHandoff.tideAndSeek =>
       'Show and save the route in Tide and Seek.',
-    _DestinationHandoff.calimoto =>
-      'Generate GPX, then choose Calimoto in the system share sheet.',
-    _DestinationHandoff.myRouteApp =>
-      'Generate GPX, then choose MyRoute-app in the system share sheet.',
-    _DestinationHandoff.googleMaps =>
-      'Open a Google Maps route preview after saving it in Tide and Seek.',
+    _DestinationHandoff.navionics =>
+      'Generate GPX, then choose Boating in the system share sheet.',
+    _DestinationHandoff.aquaMap =>
+      'Generate GPX, then choose Aqua Map in the system share sheet.',
+    _DestinationHandoff.shareGpx =>
+      'Generate GPX and pick the destination app from the share sheet.',
   };
 
   NavigationTarget? get target => switch (this) {
     _DestinationHandoff.tideAndSeek => null,
-    _DestinationHandoff.calimoto => NavigationTarget.calimoto,
-    _DestinationHandoff.myRouteApp => NavigationTarget.myRouteApp,
-    _DestinationHandoff.googleMaps => NavigationTarget.googleMaps,
+    _DestinationHandoff.navionics => NavigationTarget.navionics,
+    _DestinationHandoff.aquaMap => NavigationTarget.aquaMap,
+    _DestinationHandoff.shareGpx => NavigationTarget.shareGpx,
   };
 }

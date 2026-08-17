@@ -21,6 +21,7 @@ import 'about_build_sheet.dart';
 import 'sailor_profile_sheet.dart';
 import 'voyage_diagnostics_section.dart';
 import 'test_control_section.dart';
+import '../map/marine_glyphs.dart';
 
 class UnitSettingsSheet extends StatelessWidget {
   const UnitSettingsSheet({
@@ -126,7 +127,7 @@ class UnitSettingsSheet extends StatelessWidget {
           ListTile(
             key: const Key('open-sailor-profile'),
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.two_wheeler),
+            leading: const MarineGlyphIcon(MarineGlyph.sailorProfile),
             title: Text(
               sailorProfile.displayName.isEmpty
                   ? 'Set up sailor profile'

@@ -489,10 +489,10 @@ void main() {
     expect(find.text('Navigation'), findsOneWidget);
     expect(find.text('Navigation map'), findsOneWidget);
     expect(find.byIcon(Icons.map), findsOneWidget);
-    expect(find.byIcon(Icons.two_wheeler_outlined), findsOneWidget);
+    expect(voyageDestinationTab, findsOneWidget);
     expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.two_wheeler_outlined));
+    await tester.tap(voyageDestinationTab);
     await tester.pumpAndSettle();
 
     expect(find.text('Oliver'), findsOneWidget);
@@ -540,7 +540,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Alerts'), findsNothing);
-    await tester.tap(find.byIcon(Icons.two_wheeler_outlined));
+    await tester.tap(voyageDestinationTab);
     await tester.pumpAndSettle();
     final alerts = find.byKey(const Key('voyage-actions-alerts'));
     await tester.scrollUntilVisible(
@@ -746,7 +746,7 @@ void main() {
     await tester.pumpWidget(_app(controller));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.two_wheeler_outlined));
+    await tester.tap(voyageDestinationTab);
     await tester.pumpAndSettle();
     final leaveOrEnd = find.byKey(const Key('voyage-actions-leave-or-end'));
     await tester.ensureVisible(leaveOrEnd);
@@ -773,7 +773,7 @@ void main() {
     await tester.pumpWidget(_app(controller));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.two_wheeler_outlined));
+    await tester.tap(voyageDestinationTab);
     await tester.pumpAndSettle();
     final leaveOrEnd = find.byKey(const Key('voyage-actions-leave-or-end'));
     await tester.ensureVisible(leaveOrEnd);
@@ -1026,3 +1026,15 @@ class _FakeNearbyBridge extends NearbyBridge {
     status: 'phase0',
   );
 }
+
+/// The Voyage destination in the shell's navigation bar or landscape rail.
+///
+/// Found by its label rather than by icon data: the destination now draws the
+/// app's own [MarineGlyph] instead of a Material icon (#30), and #306 requires
+/// the label to be there anyway, so this is also the affordance a sailor uses.
+///
+/// Matches in either chrome, because which one the shell builds depends on the
+/// surface shape and the default test viewport is landscape.
+final voyageDestinationTab = find.byWidgetPredicate(
+  (widget) => widget is Text && widget.data == 'Voyage',
+);

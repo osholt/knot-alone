@@ -41,7 +41,7 @@ void main() {
             isLocal: index == 0,
           ),
       ],
-      status: 'TEC 1.2 mi behind',
+      status: 'Sweeper 1.2 mi behind',
       alert: true,
     );
 
@@ -59,7 +59,7 @@ void main() {
     expect(routePaths, hasLength(1));
     expect(routePaths.single as List<Object?>, hasLength(401));
     expect(payload['markers'] as List<Object?>, hasLength(100));
-    expect(payload['status'], 'TEC 1.2 mi behind');
+    expect(payload['status'], 'Sweeper 1.2 mi behind');
     expect(payload['alert'], isTrue);
     expect(bridge.active, isFalse);
   });

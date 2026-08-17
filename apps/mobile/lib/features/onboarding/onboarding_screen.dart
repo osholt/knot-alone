@@ -4,6 +4,7 @@ import '../../controllers/sailor_profile_controller.dart';
 import '../../domain/sailor_color.dart';
 import '../map/vessel_icon.dart';
 import '../map/sailor_symbol_picker.dart';
+import '../map/marine_glyphs.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key, required this.sailorProfile});
@@ -118,13 +119,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 24),
       const _InfoCard(
-        icon: Icons.person_off_outlined,
+        icon: Icon(Icons.person_off_outlined),
         title: 'No account required',
         body: 'No email, password or unnecessary personal details.',
       ),
       const SizedBox(height: 12),
       const _InfoCard(
-        icon: Icons.cloud_off_outlined,
+        icon: Icon(Icons.cloud_off_outlined),
         title: 'Designed for patchy coverage',
         body: 'Losing a relay does not erase the voyage journal on your phone.',
       ),
@@ -256,21 +257,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 14),
       const _InfoCard(
-        icon: Icons.route_outlined,
+        icon: MarineGlyphIcon(MarineGlyph.skipper),
         title: 'Lead',
         body:
             'Creates the private code, publishes the group route, starts, pauses and ends the voyage.',
       ),
       const SizedBox(height: 10),
       const _InfoCard(
-        icon: Icons.two_wheeler,
+        icon: MarineGlyphIcon(MarineGlyph.sailor),
         title: 'Sailor',
         body:
             'Follows the shared route and can send status, assistance and hazard markers.',
       ),
       const SizedBox(height: 10),
       const _InfoCard(
-        icon: Icons.flag_outlined,
+        icon: MarineGlyphIcon(MarineGlyph.sweeper),
         title: 'Sweeper',
         body:
             'Closes the group and helps identify sailors who may have dropped back.',
@@ -319,21 +320,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 20),
       const _PermissionCard(
-        icon: Icons.location_on_outlined,
+        icon: Icon(Icons.location_on_outlined),
         title: 'Location while using the app',
         body:
             'Requested when you start foreground voyage tracking or ask the map to use your position.',
       ),
       const SizedBox(height: 10),
       const _PermissionCard(
-        icon: Icons.bluetooth_outlined,
+        icon: Icon(Icons.bluetooth_outlined),
         title: 'Bluetooth and nearby devices',
         body:
             'Requested when an installed app starts the nearby relay for a live voyage.',
       ),
       const SizedBox(height: 10),
       const _PermissionCard(
-        icon: Icons.notifications_none,
+        icon: Icon(Icons.notifications_none),
         title: 'Notifications',
         body:
             'Requested when you join a live voyage if encrypted push delivery is configured. Lock-screen alerts omit coordinates, invitation secrets and medical details.',
@@ -487,7 +488,7 @@ class _InfoCard extends StatelessWidget {
     required this.body,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String title;
   final String body;
 
@@ -498,7 +499,10 @@ class _InfoCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Theme.of(context).colorScheme.primary),
+          IconTheme.merge(
+            data: IconThemeData(color: Theme.of(context).colorScheme.primary),
+            child: icon,
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(

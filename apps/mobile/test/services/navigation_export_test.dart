@@ -4,60 +4,77 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/domain/imported_route.dart';
 import 'package:tide_and_seek/services/navigation_export.dart';
 
+/// #30. The handoff targets were Google Maps, Waze, Calimoto, BMW Motorrad and
+/// Harley-Davidson, and the Google Maps link asked for a *driving* route between
+/// the route's endpoints — which between two sea waypoints returns a road route
+/// around the coast, confidently. These tests pin the marine replacement and the
+/// property that made the old design unsafe: nothing here invents a route.
 void main() {
-  test(
-    'capability registry is complete and makes transfer limits explicit',
-    () {
+  test('the registry covers every target and declares both platforms', () {
+    expect(
+      navigationHandoffCapabilities.map((capability) => capability.target),
+      unorderedEquals(NavigationTarget.values),
+    );
+    for (final platform in NavigationPlatform.values) {
       expect(
-        navigationHandoffCapabilities.map((capability) => capability.target),
+        navigationCapabilitiesFor(
+          platform,
+        ).map((capability) => capability.target),
         unorderedEquals(NavigationTarget.values),
+        reason: 'Every current handoff should declare $platform support',
       );
-      for (final platform in NavigationPlatform.values) {
-        expect(
-          navigationCapabilitiesFor(
-            platform,
-          ).map((capability) => capability.target),
-          unorderedEquals(NavigationTarget.values),
-          reason: 'Every current handoff should declare $platform support',
-        );
-      }
+    }
+  });
 
+  test('every target transfers the whole route, not a summary of it', () {
+    // The old design had two targets that could only carry sampled via points
+    // or a bare destination. Both were road links. Nothing here discards part
+    // of a passage.
+    for (final target in NavigationTarget.values) {
       expect(
-        NavigationTarget.googleMaps.capability.routeTransfer,
-        NavigationRouteTransfer.sampledWaypoints,
+        target.capability.routeTransfer,
+        NavigationRouteTransfer.fullGpx,
+        reason: '${target.name} should hand over the full GPX',
       );
-      expect(
-        NavigationTarget.waze.capability.routeTransfer,
-        NavigationRouteTransfer.destinationOnly,
-      );
-      for (final target in [
-        NavigationTarget.shareGpx,
-        NavigationTarget.calimoto,
-        NavigationTarget.myRouteApp,
-        NavigationTarget.garmin,
-        NavigationTarget.bmwMotorrad,
-        NavigationTarget.harleyDavidson,
-      ]) {
-        expect(
-          target.capability.routeTransfer,
-          NavigationRouteTransfer.fullGpx,
-        );
-        expect(target.hasDocumentedDirectLink, isFalse);
-      }
-    },
-  );
+    }
+  });
+
+  test('no target is a road or motorcycle app', () {
+    final labels = NavigationTarget.values
+        .map((target) => target.label.toLowerCase())
+        .join(' | ');
+    for (final banned in [
+      'google maps',
+      'waze',
+      'calimoto',
+      'myroute',
+      'motorrad',
+      'harley',
+    ]) {
+      expect(labels, isNot(contains(banned)), reason: banned);
+    }
+  });
+
+  test('every target says what will actually happen', () {
+    for (final target in NavigationTarget.values) {
+      expect(target.limitation.trim(), isNotEmpty, reason: target.name);
+    }
+    // The one that always works, whatever is installed.
+    expect(
+      NavigationTarget.shareGpx.limitation.toLowerCase(),
+      contains('any gpx-compatible app'),
+    );
+  });
 
   test(
     'a platform-exclusive capability is excluded from the other platform',
     () {
-      // Every current entry declares both platforms, so this is the only
-      // path that exercises exclusion - a synthetic capability here, not a
-      // fabricated real provider, since none of the seven actual entries are
-      // genuinely platform-exclusive.
+      // Every current entry declares both platforms, so this is the only path
+      // that exercises exclusion - a synthetic capability, not a fabricated real
+      // provider.
       const androidOnly = NavigationHandoffCapability(
         target: NavigationTarget.garmin,
         label: 'Garmin (Android only, hypothetical)',
-        transport: NavigationHandoffTransport.gpxShare,
         routeTransfer: NavigationRouteTransfer.fullGpx,
         platforms: {NavigationPlatform.android},
         limitation: 'test fixture',
@@ -68,109 +85,57 @@ void main() {
     },
   );
 
-  test('Google Maps link is bounded to three sampled via points', () {
-    final uri = RouteNavigationLinks.googleMaps(_route(10))!;
+  test(
+    'every target goes through the share sheet, inventing no URL scheme',
+    () async {
+      final gateway = _FakeShareGateway();
+      final coordinator = NavigationExportCoordinator(shareGateway: gateway);
 
-    expect(uri.scheme, 'https');
-    expect(uri.host, 'www.google.com');
-    expect(uri.queryParameters['api'], '1');
-    expect(uri.queryParameters['travelmode'], 'driving');
-    expect(uri.queryParameters['waypoints']!.split('|'), hasLength(3));
-    expect(uri.toString().length, lessThan(2048));
-  });
+      for (final target in NavigationTarget.values) {
+        final result = await coordinator.export(target, _route(4));
+        expect(result.sharedGpx, isTrue, reason: target.name);
+      }
 
-  test('Waze link honestly transfers only the final destination', () {
-    final uri = RouteNavigationLinks.waze(_route(4))!;
+      expect(gateway.targets, NavigationTarget.values);
+    },
+  );
 
-    expect(uri.host, 'waze.com');
-    expect(uri.queryParameters['ll'], '53.030000,-1.030000');
-    expect(uri.queryParameters['navigate'], 'yes');
-    expect(uri.queryParameters['vehicle_type'], 'motorcycle');
-    expect(uri.queryParameters, isNot(contains('waypoints')));
-  });
-
-  test('failed direct handoff falls back to GPX sharing', () async {
-    final launcher = _FakeLauncher(result: false);
+  test('a route with no points still shares rather than failing', () async {
+    // An empty route used to be the case that skipped the direct link. There is
+    // no direct link now, so the only requirement is that it does not throw.
     final gateway = _FakeShareGateway();
-    final coordinator = NavigationExportCoordinator(
-      launcher: launcher,
-      shareGateway: gateway,
-    );
+    final coordinator = NavigationExportCoordinator(shareGateway: gateway);
 
     final result = await coordinator.export(
-      NavigationTarget.googleMaps,
-      _route(4),
-    );
-
-    expect(launcher.opened, hasLength(1));
-    expect(gateway.targets, [NavigationTarget.googleMaps]);
-    expect(result.openedDirectly, isFalse);
-    expect(result.sharedGpx, isTrue);
-  });
-
-  test('a direct handoff that throws (rather than returning false) also falls '
-      'back to GPX sharing', () async {
-    final launcher = _FakeLauncher(result: true, throws: true);
-    final gateway = _FakeShareGateway();
-    final coordinator = NavigationExportCoordinator(
-      launcher: launcher,
-      shareGateway: gateway,
-    );
-
-    final result = await coordinator.export(NavigationTarget.waze, _route(4));
-
-    expect(launcher.opened, hasLength(1));
-    expect(gateway.targets, [NavigationTarget.waze]);
-    expect(result.openedDirectly, isFalse);
-    expect(result.sharedGpx, isTrue);
-  });
-
-  test('a route with no navigable points falls back to GPX sharing without '
-      'attempting to launch a direct link', () async {
-    final launcher = _FakeLauncher(result: true);
-    final gateway = _FakeShareGateway();
-    final coordinator = NavigationExportCoordinator(
-      launcher: launcher,
-      shareGateway: gateway,
-    );
-
-    final result = await coordinator.export(
-      NavigationTarget.googleMaps,
+      NavigationTarget.shareGpx,
       _route(0),
     );
 
-    expect(launcher.opened, isEmpty);
-    expect(gateway.targets, [NavigationTarget.googleMaps]);
     expect(result.sharedGpx, isTrue);
+    expect(gateway.targets, [NavigationTarget.shareGpx]);
   });
 
-  test('GPX-only targets never use invented URL schemes', () async {
-    final launcher = _FakeLauncher(result: true);
-    final gateway = _FakeShareGateway();
-    final coordinator = NavigationExportCoordinator(
-      launcher: launcher,
-      shareGateway: gateway,
-    );
+  test(
+    'a named target tells the sailor to pick it in the share sheet',
+    () async {
+      final gateway = _FakeShareGateway();
+      final coordinator = NavigationExportCoordinator(shareGateway: gateway);
 
-    for (final target in [
-      NavigationTarget.calimoto,
-      NavigationTarget.myRouteApp,
-      NavigationTarget.garmin,
-      NavigationTarget.bmwMotorrad,
-      NavigationTarget.harleyDavidson,
-    ]) {
-      await coordinator.export(target, _route(4));
-    }
+      final named = await coordinator.export(
+        NavigationTarget.navionics,
+        _route(4),
+      );
+      expect(named.message, contains('Navionics'));
+      expect(named.message.toLowerCase(), contains('share sheet'));
 
-    expect(launcher.opened, isEmpty);
-    expect(gateway.targets, [
-      NavigationTarget.calimoto,
-      NavigationTarget.myRouteApp,
-      NavigationTarget.garmin,
-      NavigationTarget.bmwMotorrad,
-      NavigationTarget.harleyDavidson,
-    ]);
-  });
+      // The generic option makes no claim about another app.
+      final generic = await coordinator.export(
+        NavigationTarget.shareGpx,
+        _route(4),
+      );
+      expect(generic.message.toLowerCase(), isNot(contains('share sheet')));
+    },
+  );
 }
 
 ImportedRoute _route(int count) => ImportedRoute(
@@ -189,21 +154,6 @@ ImportedRoute _route(int count) => ImportedRoute(
   ],
   waypoints: const [],
 );
-
-class _FakeLauncher implements ExternalUriLauncher {
-  _FakeLauncher({required this.result, this.throws = false});
-
-  final bool result;
-  final bool throws;
-  final List<Uri> opened = [];
-
-  @override
-  Future<bool> open(Uri uri) async {
-    opened.add(uri);
-    if (throws) throw StateError('launch failed');
-    return result;
-  }
-}
 
 class _FakeShareGateway implements GpxShareGateway {
   final List<NavigationTarget> targets = [];

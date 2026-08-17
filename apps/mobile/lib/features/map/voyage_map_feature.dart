@@ -73,6 +73,7 @@ import 'route_progress_panel.dart';
 import 'route_trail_style.dart';
 import 'smooth_countdown.dart';
 import 'stored_route_picker.dart';
+import 'marine_glyphs.dart';
 
 @visibleForTesting
 GroupMiniMapRenderer groupMiniMapRenderer({
@@ -1961,7 +1962,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
               key: const Key('emergency-alert-button'),
               extendedPadding: actionPadding,
               heroTag: 'tide-and-seek-emergency-alert',
-              tooltip: 'Alert skipper and TEC',
+              tooltip: 'Alert skipper and sweeper',
               onPressed: _emergencyAlertSending ? null : _triggerEmergencyAlert,
               backgroundColor: const Color(0xFFD9304F),
               foregroundColor: Colors.white,
@@ -5315,7 +5316,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
           'need attention';
     } else if (skipperStatus?.distanceToSweeperMeters case final distance?) {
       status =
-          'TEC '
+          'Sweeper '
           '${MeasurementFormatter(widget.distanceUnit).distance(distance)} '
           'behind';
     } else if (widget.groupSailorCount case final count?) {
@@ -5655,7 +5656,7 @@ class MapEmergencyContact {
 
   String get shortRoleLabel => switch (role) {
     VoyageRole.lead => 'the skipper',
-    VoyageRole.sweeper => 'the TEC',
+    VoyageRole.sweeper => 'the sweeper',
     _ => displayName,
   };
 
@@ -5663,7 +5664,7 @@ class MapEmergencyContact {
   /// know both who and which role.
   String get roleQualifiedName => switch (role) {
     VoyageRole.lead => '$displayName (skipper)',
-    VoyageRole.sweeper => '$displayName (TEC)',
+    VoyageRole.sweeper => '$displayName (sweeper)',
     _ => displayName,
   };
 }
@@ -6166,7 +6167,8 @@ class _EmergencyActionsSheetState extends State<_EmergencyActionsSheet> {
               const SizedBox(height: 6),
               const Text(
                 'Your position is filled in ready to send. Pick who to text - '
-                'the skipper and TEC have already had the alert in the app.',
+                'the skipper and sweeper have already had the alert in the '
+                'app.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Color(0xFF98A3B1), fontSize: 12),
               ),
@@ -8519,14 +8521,14 @@ class _SweeperGapCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.two_wheeler,
+                  const MarineGlyphIcon(
+                    MarineGlyph.sweeper,
                     size: 18,
                     color: Color(0xFF6ED89A),
                   ),
                   const SizedBox(width: 7),
                   const Text(
-                    'TEC',
+                    'SWEEPER',
                     style: TextStyle(
                       color: Color(0xFFB7C2CF),
                       fontWeight: FontWeight.w800,
@@ -8560,14 +8562,17 @@ class _SweeperGapCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.two_wheeler, color: Color(0xFF6ED89A)),
+            const MarineGlyphIcon(
+              MarineGlyph.sweeper,
+              color: Color(0xFF6ED89A),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'TEC GAP',
+                    'SWEEPER GAP',
                     style: TextStyle(
                       color: Color(0xFFB7C2CF),
                       fontWeight: FontWeight.w800,

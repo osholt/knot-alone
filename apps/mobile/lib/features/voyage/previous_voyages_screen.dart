@@ -24,6 +24,7 @@ import '../map/resolved_route_map_preview.dart'
     show embeddedMapGestureRecognizers;
 import '../map/stored_route_picker.dart';
 import 'voyage_recap_screen.dart';
+import '../map/marine_glyphs.dart';
 
 class PreviousVoyagesScreen extends StatelessWidget {
   const PreviousVoyagesScreen({
@@ -145,7 +146,9 @@ class _VoyageTile extends StatelessWidget {
   Widget build(BuildContext context) => Card(
     child: ListTile(
       contentPadding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
-      leading: const CircleAvatar(child: Icon(Icons.two_wheeler)),
+      leading: const CircleAvatar(
+        child: MarineGlyphIcon(MarineGlyph.passageComplete),
+      ),
       title: Text(voyage.title),
       subtitle: Text(
         '${_date(voyage.startedAt)} · $distance · ${voyage.sailorCount} sailors\n'
