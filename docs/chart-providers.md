@@ -127,6 +127,60 @@ More than expected, and separately from the charts:
 The ENCs themselves are not in that list. Those are AVCS, and they are
 commercial with no published price and no self-serve tier.
 
+### The free data may carry a field-of-use restriction that blocks this app
+
+The table above says "OGL" and "OGL-like", and that is not the whole story. Two
+different formulations are in circulation, and the difference decides whether
+this app may use the data at all.
+
+The INSPIRE metadata for `Bathymetry_Mosaic_Depth` records the licence as "Open
+Government Licence", with the limitation:
+
+> These data are not suitable for use in marine navigation. Acknowledgement of
+> Originator/Owner as source is required.
+
+That is a **fitness warning**. It says the data is not good enough for
+navigation, which is a statement this app already makes about every layer it
+draws, and it does not restrict what you may build.
+
+UKHO's own portal terms, however, have been published as:
+
+> 1. The data sets must not be used for navigation or in the creation of
+>    navigational products.
+
+That is a **field-of-use prohibition**, and Tide and Seek is a navigational
+product by any reading — it draws a chart-like surface, plots a route on it and
+shows the vessel's position against it. Under that wording, rendering UKHO
+bathymetry as depth shading is outside the licence no matter how the UI is
+captioned, and the same wording would also cover the wrecks and obstructions
+data this repo has already modelled as OGL-clean.
+
+Two further points worth holding onto:
+
+- The restriction has been publicly criticised as incompatible with the Open
+  Definition, precisely because a licence must not "restrict anyone from making
+  use of the work in a specific field of endeavour", with the suggestion that
+  UKHO should express it as a warning in the documentation rather than as a
+  binding term. That is an argument about what UKHO *ought* to publish. It is
+  not authority that the term is unenforceable, and it cannot be relied on.
+- The current ADMIRALTY Marine Data Portal does not publish its terms inline, so
+  the governing text for a download made today could not be established from
+  public pages.
+
+**Consequence.** The bathymetry work is blocked on a licence question, not an
+engineering one, and no pipeline should be built until it is answered. This is
+also the concrete question worth putting to UKHO in writing, and a better one
+than asking about the copyright reproduction licence below:
+
+> May UKHO bathymetry surfaces and the wrecks and obstructions data set be
+> rendered in a leisure sailing application as depth shading and hazard markers,
+> where the application states prominently that it is not for navigation and
+> carries the required attribution? If the "creation of navigational products"
+> restriction applies, what licence would permit it?
+
+Until there is an answer, the wrecks entry in `marine_layers.dart` carries this
+caveat beside it, and neither data set is drawn.
+
 ## Is there a free UKHO licence? Not one that helps
 
 There is a genuinely free UKHO licence, and it is the wrong shape for this.
@@ -237,3 +291,7 @@ about what to build.
 - [MGN 599: pleasure vessels — regulations and exemptions](https://www.gov.uk/government/publications/mgn-599-m-amendment-1-m-pleasure-vessels-regulations-and-exemptions-guidance-and-best-practice-advice/mgn-599-m-amendment-1m-pleasure-vessels-regulations-and-exemptions-guidance-and-best-practice-advice)
 - [MGN 610: SOLAS chapter V guidance](https://www.gov.uk/government/publications/mgn-610-mf-amendment-1-solas-chapter-v-guidance-on-the-merchant-shipping-safety-of-navigation-regulations-2020/mgn-610-mf-amendment-1-navigation-solas-chapter-v-guidance-on-the-merchant-shipping-safety-of-navigation-regulations-2020)
 - [RYA pleasure craft regulations](https://www.rya.org.uk/regulations/pleasure-craft-regulations/)
+- [INSPIRE metadata for `Bathymetry_Mosaic_Depth`](https://ckan.publishing.service.gov.uk/api/2/rest/harvestobject/60caa433-7602-4f1c-9598-9d1f6f155e18/html) — the "not suitable for use in marine navigation" limitation
+- [Owen Boswarva, "That's not how the OGL works"](https://www.owenboswarva.com/blog/archive/mg/20131209.htm) — quotes UKHO's "must not be used for navigation or in the creation of navigational products" term and argues it is incompatible with the Open Definition
+- [ADMIRALTY Marine Data Portal](https://datahub.admiralty.co.uk/portal/apps/sites/#/marine-data-portal) — terms not published inline
+- [UKHO copyright licensing](https://copyright.ukho.gov.uk/datasets.aspx)

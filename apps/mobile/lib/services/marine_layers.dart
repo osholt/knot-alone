@@ -41,8 +41,22 @@ abstract final class MarineLayers {
   );
 
   /// Wrecks and obstructions. The most directly useful free UKHO data set:
-  /// 94,000+ records, global, quarterly, and explicitly free under the Open
+  /// 94,000+ records, global, quarterly, and free of charge under the Open
   /// Government Licence.
+  ///
+  /// **Not cleared for use here.** The access page says OGL, but UKHO has also
+  /// published, as a term on top of the OGL, that its data sets "must not be
+  /// used for navigation or in the creation of navigational products". This app
+  /// is a navigational product on any reading, so that term — if it governs —
+  /// blocks this layer however the UI is captioned. The INSPIRE metadata for the
+  /// bathymetry product instead carries only a fitness warning ("not suitable
+  /// for use in marine navigation"), which would not block it, and the current
+  /// portal does not publish its terms inline. The two readings differ on
+  /// whether this is usable at all.
+  ///
+  /// So this stays modelled and undrawn until UKHO answers in writing. See
+  /// `docs/chart-providers.md` for the quotes, the sources and the question to
+  /// put to them.
   static const ukhoWrecks = ChartSource(
     id: 'ukho-wrecks-obstructions',
     displayName: 'UKHO wrecks and obstructions',
@@ -167,8 +181,10 @@ abstract final class MarineLayers {
     UnusedChartSource(
       source: ukhoWrecks,
       reason:
-          'Published as a bulk data set rather than tiles, so it needs a '
-          'download-and-index step that is not built yet.',
+          'Awaiting written confirmation from the UK Hydrographic Office that '
+          'its licence permits use in a navigation app. It also needs a '
+          'download-and-index step, as it is published as a bulk data set '
+          'rather than tiles.',
     ),
   ];
 
