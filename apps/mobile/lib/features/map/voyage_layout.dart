@@ -30,8 +30,14 @@ abstract final class VoyageBreakpoints {
   /// A phone is 320–440pt wide. The smallest iPad is 744pt in portrait.
   static const compactWidth = 600.0;
 
-  /// Shortest side of the smallest current iPad in either orientation.
-  static const tabletShortestSide = 600.0;
+  /// Shortest side that means "tablet".
+  ///
+  /// Set below real hardware rather than at it: the narrowest iPad ever shipped
+  /// is 768pt on its short edge, and the current mini is 744pt, so anything at
+  /// or above this is a tablet and no phone comes close (the widest phone short
+  /// edge is around 440pt). The gap is deliberately large, because a threshold
+  /// sitting on top of a real device size is one OS release from being wrong.
+  static const tabletShortestSide = 700.0;
 }
 
 /// The layout facts a voyage surface needs, derived from one place.

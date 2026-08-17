@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../map/voyage_layout.dart';
+
 /// The voyage actions, as a bar standing on the map (#426).
 ///
 /// ## What this replaces
@@ -55,6 +57,16 @@ class HomeVoyageActions extends StatelessWidget {
   /// settle before the map knew where to put them.
   static const reservedHeight = 84.0;
 
+  /// Width the row of actions is allowed to grow to.
+  ///
+  /// Two buttons stretched across a 1366pt iPad are not easier to hit than two
+  /// buttons at a sane size — they just stop reading as buttons, and they cover
+  /// a strip of chart the whole way across. The bar keeps its full-bleed
+  /// background so it still reads as a bar; only its contents are bounded.
+  ///
+  /// Below this the row simply fills the width, so nothing changes on a phone.
+  static const _maxActionRowWidth = 560.0;
+
   @override
   Widget build(BuildContext context) => Container(
     key: const Key('home-voyage-actions'),
@@ -74,38 +86,58 @@ class HomeVoyageActions extends StatelessWidget {
     ),
     child: SafeArea(
       top: false,
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: FilledButton.icon(
-              key: const Key('home-create-voyage'),
-              onPressed: enabled ? onCreate : null,
-              icon: const Icon(Icons.sailing_outlined),
-              label: const Text('New voyage'),
-            ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _maxActionRowWidth),
+          child: Row(
+            key: const Key('home-voyage-action-row'),
+            children: [
+              Expanded(
+                flex: 3,
+                child: FilledButton.icon(
+                  key: const Key('home-create-voyage'),
+                  onPressed: enabled ? onCreate : null,
+                  icon: const Icon(Icons.sailing_outlined),
+                  label: const Text('New voyage'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: OutlinedButton.icon(
+                  key: const Key('home-join-voyage'),
+                  onPressed: enabled ? onJoin : null,
+                  icon: const Icon(Icons.group_add_outlined),
+                  // Gated on the surface being a tablet rather than on a width,
+                  // because the row is capped at [_maxActionRowWidth] on every
+                  // large screen: a landscape phone and an iPad hand this row
+                  // the same width, and only one of them has room for the words
+                  // at that size once the icon and "More" are in.
+                  //
+                  // The label was shortened because 393pt was tight (#28). That
+                  // was a phone constraint applied at every width, so until now
+                  // no device got it back.
+                  label: Text(
+                    VoyageLayout.of(context).isTablet
+                        ? 'Join a voyage'
+                        : 'Join',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              // A word, not a bare icon. #306 was raised because the only way
+              // to find a feature was an unlabelled icon, and moving the
+              // occasional actions behind `more_horiz` alone would have
+              // reintroduced exactly that — an overflow nobody can read is not
+              // reachable.
+              TextButton(
+                key: const Key('home-more-actions'),
+                onPressed: onMore,
+                child: const Text('More'),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 2,
-            child: OutlinedButton.icon(
-              key: const Key('home-join-voyage'),
-              onPressed: enabled ? onJoin : null,
-              icon: const Icon(Icons.group_add_outlined),
-              label: const Text('Join'),
-            ),
-          ),
-          const SizedBox(width: 4),
-          // A word, not a bare icon. #306 was raised because the only way to
-          // find a feature was an unlabelled icon, and moving the occasional
-          // actions behind `more_horiz` alone would have reintroduced exactly
-          // that — an overflow nobody can read is not reachable.
-          TextButton(
-            key: const Key('home-more-actions'),
-            onPressed: onMore,
-            child: const Text('More'),
-          ),
-        ],
+        ),
       ),
     ),
   );
