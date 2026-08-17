@@ -27,7 +27,7 @@ void main() {
     _sailorProfile = await SailorProfileController.load();
     await _sailorProfile.completeOnboarding(
       displayName: 'Oliver',
-      motorcycleStyle: _sailorProfile.motorcycleStyle,
+      vesselStyle: _sailorProfile.vesselStyle,
       sailorColor: _sailorProfile.sailorColor,
       educationSkipped: false,
       voyageChoice: OnboardingVoyageChoice.create,

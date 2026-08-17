@@ -6,7 +6,7 @@ import 'package:tide_and_seek/domain/geo_point.dart';
 import 'package:tide_and_seek/domain/voyage_role.dart';
 import 'package:tide_and_seek/domain/sailor_color.dart';
 import 'package:tide_and_seek/domain/sailor_location.dart';
-import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/features/map/vessel_icon.dart';
 import 'package:tide_and_seek/features/map/sailor_symbol_picker.dart';
 
 void main() {
@@ -22,13 +22,13 @@ void main() {
     const emoji = SailorSymbol.emoji('😈');
 
     expect(
-      const SailorSymbol.motorcycle().wireValue(MotorcycleIconStyle.scrambler),
-      MotorcycleIconStyle.scrambler.name,
+      const SailorSymbol.vessel().wireValue(VesselIconStyle.ketch),
+      VesselIconStyle.ketch.name,
     );
-    expect(initials.wireValue(MotorcycleIconStyle.scrambler), 'initials');
-    expect(emoji.wireValue(MotorcycleIconStyle.scrambler), 'emoji:😈');
+    expect(initials.wireValue(VesselIconStyle.ketch), 'initials');
+    expect(emoji.wireValue(VesselIconStyle.ketch), 'emoji:😈');
     expect(
-      SailorSymbol.fromWireValue(MotorcycleIconStyle.scrambler.name),
+      SailorSymbol.fromWireValue(VesselIconStyle.ketch.name),
       sailorSymbolDefault,
     );
     expect(SailorSymbol.fromWireValue('initials'), initials);
@@ -50,9 +50,7 @@ void main() {
     expect(custom.initialsFor('Different Name'), 'OH');
     expect(SailorSymbol.fromStorageValue(custom.storageValue), custom);
     expect(
-      SailorSymbol.fromWireValue(
-        custom.wireValue(MotorcycleIconStyle.scrambler),
-      ),
+      SailorSymbol.fromWireValue(custom.wireValue(VesselIconStyle.ketch)),
       custom,
     );
     expect(
@@ -108,12 +106,12 @@ void main() {
         accuracyMeters: 4,
       ),
       receivedAt: DateTime.utc(2026, 7, 29),
-      motorcycleStyle: MotorcycleIconStyle.scrambler,
+      vesselStyle: VesselIconStyle.ketch,
       sailorSymbol: const SailorSymbol.emoji('😈'),
     );
 
     final json = location.toJson();
-    expect(json['motorcycleStyle'], 'emoji:😈');
+    expect(json['vesselStyle'], 'emoji:😈');
     expect(
       SailorLocation.fromJson(json).sailorSymbol,
       const SailorSymbol.emoji('😈'),
@@ -124,7 +122,7 @@ void main() {
     tester,
   ) async {
     var symbol = sailorSymbolDefault;
-    var style = MotorcycleIconStyle.adventureTourer;
+    var style = VesselIconStyle.sloop;
     late StateSetter update;
     await tester.pumpWidget(
       MaterialApp(
@@ -137,13 +135,12 @@ void main() {
                 child: SailorSymbolPicker(
                   displayName: 'Keith Simmonds',
                   selectedSymbol: symbol,
-                  motorcycleStyle: style,
+                  vesselStyle: style,
                   badgeColor: Colors.teal,
                   keyPrefix: 'test-symbol',
                   bikeKeyPrefix: 'test-bike',
                   onSymbolChanged: (value) => update(() => symbol = value),
-                  onMotorcycleStyleChanged: (value) =>
-                      update(() => style = value),
+                  onVesselStyleChanged: (value) => update(() => style = value),
                 ),
               );
             },
@@ -183,12 +180,12 @@ void main() {
               child: SailorSymbolPicker(
                 displayName: 'Oliver Holt',
                 selectedSymbol: symbol,
-                motorcycleStyle: MotorcycleIconStyle.scrambler,
+                vesselStyle: VesselIconStyle.ketch,
                 badgeColor: SailorColor.white.color,
                 keyPrefix: 'custom-symbol',
                 bikeKeyPrefix: 'custom-bike',
                 onSymbolChanged: (value) => setState(() => symbol = value),
-                onMotorcycleStyleChanged: (_) {},
+                onVesselStyleChanged: (_) {},
               ),
             ),
           ),
@@ -220,7 +217,7 @@ void main() {
       const MaterialApp(
         home: Center(
           child: SailorMarkerBadge(
-            style: MotorcycleIconStyle.scrambler,
+            style: VesselIconStyle.ketch,
             badgeColor: Colors.teal,
             symbol: SailorSymbol.initials(),
             displayName: 'Keith Simmonds',
@@ -242,7 +239,7 @@ void main() {
     final result = await rasterizeSailorSymbolPng(
       symbol: const SailorSymbol.initials(),
       displayName: 'Keith Simmonds',
-      motorcycleStyle: MotorcycleIconStyle.scrambler,
+      vesselStyle: VesselIconStyle.ketch,
       size: 128,
     );
     final codec = await ui.instantiateImageCodec(result.bytes);
@@ -277,7 +274,7 @@ void main() {
     final result = await rasterizeSailorSymbolPng(
       symbol: symbol,
       displayName: 'Ignored Name',
-      motorcycleStyle: MotorcycleIconStyle.scrambler,
+      vesselStyle: VesselIconStyle.ketch,
     );
     final frame = await (await ui.instantiateImageCodec(
       result.bytes,
@@ -299,7 +296,7 @@ void main() {
     expect(result.sdf, isFalse);
     expect(purplePixels, greaterThan(100));
     expect(
-      symbol.imageName('Ignored Name', MotorcycleIconStyle.scrambler),
+      symbol.imageName('Ignored Name', VesselIconStyle.ketch),
       contains('purple'),
     );
   });
@@ -325,7 +322,7 @@ void main() {
           home: Scaffold(
             body: Center(
               child: SailorMarkerBadge(
-                style: MotorcycleIconStyle.scrambler,
+                style: VesselIconStyle.ketch,
                 symbol: const SailorSymbol.initials(),
                 displayName: 'Keith Simmonds',
                 badgeColor: const Color(0xFF2F80ED),
@@ -366,7 +363,7 @@ void main() {
       final result = await rasterizeSailorSymbolPng(
         symbol: const SailorSymbol.initials(),
         displayName: 'Keith Simmonds',
-        motorcycleStyle: MotorcycleIconStyle.scrambler,
+        vesselStyle: VesselIconStyle.ketch,
       );
       final frame = await (await ui.instantiateImageCodec(
         result.bytes,

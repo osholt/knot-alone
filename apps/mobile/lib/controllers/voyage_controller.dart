@@ -21,7 +21,7 @@ import '../domain/voyage_join_payload.dart';
 import '../domain/voyage_session.dart';
 import '../domain/sailor_color.dart';
 import '../domain/session_store.dart';
-import '../features/map/motorcycle_icon.dart';
+import '../features/map/vessel_icon.dart';
 import '../relay/live_presence.dart';
 import '../services/nearby_bridge.dart';
 import '../services/completed_voyage_archiver.dart';
@@ -263,7 +263,7 @@ class VoyageController extends ChangeNotifier {
       localDisplayName: activeSession.displayName,
       localRole: activeSession.role,
       localJoinedAt: activeSession.joinedAt,
-      localMotorcycleStyle: activeSession.motorcycleStyle,
+      localVesselStyle: activeSession.vesselStyle,
       localSailorColor: activeSession.sailorColor,
       localSailorSymbol: activeSession.sailorSymbol,
       voyageStartedAt: voyageStartedAt,
@@ -373,7 +373,7 @@ class VoyageController extends ChangeNotifier {
           !setEquals(left.sources, right.sources) ||
           left.isLocal != right.isLocal ||
           left.knownSince != right.knownSince ||
-          left.motorcycleStyle != right.motorcycleStyle ||
+          left.vesselStyle != right.vesselStyle ||
           left.sailorSymbol != right.sailorSymbol ||
           left.sailorColor != right.sailorColor ||
           (left.contactAt == null) != (right.contactAt == null)) {
@@ -675,7 +675,7 @@ class VoyageController extends ChangeNotifier {
 
   Future<void> createVoyage(
     String displayName, {
-    MotorcycleIconStyle motorcycleStyle = motorcycleIconStyleDefault,
+    VesselIconStyle vesselStyle = vesselIconStyleDefault,
     SailorSymbol sailorSymbol = sailorSymbolDefault,
     SailorColor sailorColor = sailorColorDefault,
     VoyageCoordinationMode coordinationMode = VoyageCoordinationMode.crew,
@@ -684,7 +684,7 @@ class VoyageController extends ChangeNotifier {
     await _run(() async {
       await _createVoyage(
         displayName: displayName,
-        motorcycleStyle: motorcycleStyle,
+        vesselStyle: vesselStyle,
         sailorSymbol: sailorSymbol,
         sailorColor: sailorColor,
         coordinationMode: coordinationMode,
@@ -695,7 +695,7 @@ class VoyageController extends ChangeNotifier {
 
   Future<void> createSimulationVoyage({
     int sailorCount = VoyageSession.defaultSimulationSailorCount,
-    MotorcycleIconStyle motorcycleStyle = motorcycleIconStyleDefault,
+    VesselIconStyle vesselStyle = vesselIconStyleDefault,
     SailorSymbol sailorSymbol = sailorSymbolDefault,
     SailorColor sailorColor = sailorColorDefault,
   }) async {
@@ -704,7 +704,7 @@ class VoyageController extends ChangeNotifier {
         displayName: 'Demo Lead',
         isSimulation: true,
         simulationSailorCount: _validatedSimulationSailorCount(sailorCount),
-        motorcycleStyle: motorcycleStyle,
+        vesselStyle: vesselStyle,
         sailorSymbol: sailorSymbol,
         sailorColor: sailorColor,
       );
@@ -730,7 +730,7 @@ class VoyageController extends ChangeNotifier {
         simulationSailorCount: _validatedSimulationSailorCount(
           sailorCount ?? activeSession.simulationSailorCount,
         ),
-        motorcycleStyle: activeSession.motorcycleStyle,
+        vesselStyle: activeSession.vesselStyle,
         sailorSymbol: activeSession.sailorSymbol,
         sailorColor: activeSession.sailorColor,
         voyageName: activeSession.voyageName,
@@ -777,7 +777,7 @@ class VoyageController extends ChangeNotifier {
   Future<void> joinVoyageFromInvitation(
     VoyageJoinPayload invitation,
     String displayName, {
-    MotorcycleIconStyle motorcycleStyle = motorcycleIconStyleDefault,
+    VesselIconStyle vesselStyle = vesselIconStyleDefault,
     SailorSymbol sailorSymbol = sailorSymbolDefault,
     SailorColor sailorColor = sailorColorDefault,
   }) async {
@@ -788,7 +788,7 @@ class VoyageController extends ChangeNotifier {
         inviteSecret: invitation.inviteSecret,
         joinToken: invitation.joinToken,
         displayName: displayName,
-        motorcycleStyle: motorcycleStyle,
+        vesselStyle: vesselStyle,
         sailorSymbol: sailorSymbol,
         sailorColor: sailorColor,
       ),
@@ -798,7 +798,7 @@ class VoyageController extends ChangeNotifier {
   Future<void> joinVoyage(
     String voyageCode,
     String displayName, {
-    MotorcycleIconStyle motorcycleStyle = motorcycleIconStyleDefault,
+    VesselIconStyle vesselStyle = vesselIconStyleDefault,
     SailorSymbol sailorSymbol = sailorSymbolDefault,
     SailorColor sailorColor = sailorColorDefault,
     String? joinToken,
@@ -818,7 +818,7 @@ class VoyageController extends ChangeNotifier {
         inviteSecret: credentials.inviteSecret,
         joinToken: credentials.joinToken,
         displayName: displayName,
-        motorcycleStyle: motorcycleStyle,
+        vesselStyle: vesselStyle,
         sailorSymbol: sailorSymbol,
         sailorColor: sailorColor,
       );
@@ -832,7 +832,7 @@ class VoyageController extends ChangeNotifier {
     required String inviteSecret,
     required String joinToken,
     required String displayName,
-    required MotorcycleIconStyle motorcycleStyle,
+    required VesselIconStyle vesselStyle,
     required SailorSymbol sailorSymbol,
     required SailorColor sailorColor,
   }) async {
@@ -866,7 +866,7 @@ class VoyageController extends ChangeNotifier {
         displayName: _normaliseName(displayName),
         role: VoyageRole.sailor,
         joinedAt: now,
-        motorcycleStyle: motorcycleStyle,
+        vesselStyle: vesselStyle,
         sailorSymbol: sailorSymbol,
         sailorColor: sailorColor,
       );
@@ -880,9 +880,7 @@ class VoyageController extends ChangeNotifier {
         payload: {
           'displayName': session.displayName,
           'role': session.role.name,
-          'motorcycleStyle': session.sailorSymbol.wireValue(
-            session.motorcycleStyle,
-          ),
+          'vesselStyle': session.sailorSymbol.wireValue(session.vesselStyle),
           'sailorColor': session.sailorColor.name,
         },
       );
@@ -1525,7 +1523,7 @@ class VoyageController extends ChangeNotifier {
     required String displayName,
     bool isSimulation = false,
     int simulationSailorCount = VoyageSession.defaultSimulationSailorCount,
-    MotorcycleIconStyle motorcycleStyle = motorcycleIconStyleDefault,
+    VesselIconStyle vesselStyle = vesselIconStyleDefault,
     SailorSymbol sailorSymbol = sailorSymbolDefault,
     SailorColor sailorColor = sailorColorDefault,
     VoyageCoordinationMode coordinationMode = VoyageCoordinationMode.crew,
@@ -1563,7 +1561,7 @@ class VoyageController extends ChangeNotifier {
       joinedAt: now,
       isSimulation: isSimulation,
       simulationSailorCount: simulationSailorCount,
-      motorcycleStyle: motorcycleStyle,
+      vesselStyle: vesselStyle,
       sailorSymbol: sailorSymbol,
       sailorColor: sailorColor,
       coordinationMode: coordinationMode,
@@ -1579,9 +1577,7 @@ class VoyageController extends ChangeNotifier {
         'displayName': session.displayName,
         'role': session.role.name,
         if (isSimulation) 'simulation': true,
-        'motorcycleStyle': session.sailorSymbol.wireValue(
-          session.motorcycleStyle,
-        ),
+        'vesselStyle': session.sailorSymbol.wireValue(session.vesselStyle),
         'sailorColor': session.sailorColor.name,
         'coordinationMode': session.coordinationMode.name,
         if (session.voyageName != null) 'voyageName': session.voyageName,

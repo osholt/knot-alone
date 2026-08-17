@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'motorcycle_icon.dart';
+import 'vessel_icon.dart';
 
 /// Shared profile control for choosing the glyph inside a sailor's colour badge.
 ///
@@ -12,20 +12,20 @@ class SailorSymbolPicker extends StatelessWidget {
     super.key,
     required this.displayName,
     required this.selectedSymbol,
-    required this.motorcycleStyle,
+    required this.vesselStyle,
     required this.badgeColor,
     required this.onSymbolChanged,
-    required this.onMotorcycleStyleChanged,
+    required this.onVesselStyleChanged,
     required this.keyPrefix,
     required this.bikeKeyPrefix,
   });
 
   final String displayName;
   final SailorSymbol selectedSymbol;
-  final MotorcycleIconStyle motorcycleStyle;
+  final VesselIconStyle vesselStyle;
   final Color badgeColor;
   final ValueChanged<SailorSymbol> onSymbolChanged;
-  final ValueChanged<MotorcycleIconStyle> onMotorcycleStyleChanged;
+  final ValueChanged<VesselIconStyle> onVesselStyleChanged;
   final String keyPrefix;
   final String bikeKeyPrefix;
 
@@ -40,14 +40,14 @@ class SailorSymbolPicker extends StatelessWidget {
         runSpacing: 9,
         children: [
           _SymbolChoice(
-            key: Key('$keyPrefix-motorcycle'),
-            label: 'Bike',
-            selected: selectedSymbol.kind == SailorSymbolKind.motorcycle,
-            symbol: const SailorSymbol.motorcycle(),
+            key: Key('$keyPrefix-vessel'),
+            label: 'Vessel',
+            selected: selectedSymbol.kind == SailorSymbolKind.vessel,
+            symbol: const SailorSymbol.vessel(),
             displayName: displayName,
-            motorcycleStyle: motorcycleStyle,
+            vesselStyle: vesselStyle,
             badgeColor: badgeColor,
-            onTap: () => onSymbolChanged(const SailorSymbol.motorcycle()),
+            onTap: () => onSymbolChanged(const SailorSymbol.vessel()),
           ),
           _SymbolChoice(
             key: Key('$keyPrefix-initials'),
@@ -57,7 +57,7 @@ class SailorSymbolPicker extends StatelessWidget {
                 ? selectedSymbol
                 : const SailorSymbol.initials(),
             displayName: displayName,
-            motorcycleStyle: motorcycleStyle,
+            vesselStyle: vesselStyle,
             badgeColor: badgeColor,
             onTap: () => onSymbolChanged(
               selectedSymbol.kind == SailorSymbolKind.initials
@@ -75,7 +75,7 @@ class SailorSymbolPicker extends StatelessWidget {
                   : sailorEmojiChoices.first,
             ),
             displayName: displayName,
-            motorcycleStyle: motorcycleStyle,
+            vesselStyle: vesselStyle,
             badgeColor: badgeColor,
             onTap: () => onSymbolChanged(
               SailorSymbol.emoji(
@@ -88,16 +88,16 @@ class SailorSymbolPicker extends StatelessWidget {
         ],
       ),
       const SizedBox(height: 12),
-      if (selectedSymbol.kind == SailorSymbolKind.motorcycle)
+      if (selectedSymbol.kind == SailorSymbolKind.vessel)
         SizedBox(
           height: 68,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: MotorcycleIconStyle.values.length,
+            itemCount: VesselIconStyle.values.length,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
-              final style = MotorcycleIconStyle.values[index];
-              final selected = style == motorcycleStyle;
+              final style = VesselIconStyle.values[index];
+              final selected = style == vesselStyle;
               return Semantics(
                 button: true,
                 selected: selected,
@@ -105,7 +105,7 @@ class SailorSymbolPicker extends StatelessWidget {
                 child: InkWell(
                   key: Key('$bikeKeyPrefix-${style.name}'),
                   borderRadius: BorderRadius.circular(12),
-                  onTap: () => onMotorcycleStyleChanged(style),
+                  onTap: () => onVesselStyleChanged(style),
                   child: Container(
                     width: 56,
                     decoration: BoxDecoration(
@@ -265,7 +265,7 @@ class _SymbolChoice extends StatelessWidget {
     required this.selected,
     required this.symbol,
     required this.displayName,
-    required this.motorcycleStyle,
+    required this.vesselStyle,
     required this.badgeColor,
     required this.onTap,
   });
@@ -274,7 +274,7 @@ class _SymbolChoice extends StatelessWidget {
   final bool selected;
   final SailorSymbol symbol;
   final String displayName;
-  final MotorcycleIconStyle motorcycleStyle;
+  final VesselIconStyle vesselStyle;
   final Color badgeColor;
   final VoidCallback onTap;
 
@@ -303,7 +303,7 @@ class _SymbolChoice extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             SailorMarkerBadge(
-              style: motorcycleStyle,
+              style: vesselStyle,
               symbol: symbol,
               displayName: displayName,
               badgeColor: badgeColor,

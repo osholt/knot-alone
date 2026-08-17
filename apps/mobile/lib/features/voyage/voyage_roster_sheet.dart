@@ -8,7 +8,7 @@ import '../../domain/sailor_color.dart';
 import '../../relay/live_presence.dart';
 import '../../services/voyage_membership.dart';
 import '../../services/sweeper_role_assignment.dart';
-import '../map/motorcycle_icon.dart';
+import '../map/vessel_icon.dart';
 
 enum _RosterFilter { active, attention, left, all }
 
@@ -548,7 +548,7 @@ class _ParticipantTile extends StatelessWidget {
         key: Key('roster-sailor-${participant.sailorId}'),
         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         leading: SailorMarkerBadge(
-          style: participant.motorcycleStyle,
+          style: participant.vesselStyle,
           symbol: participant.sailorSymbol,
           displayName: participant.displayName,
           // Identity colour belongs to the sailor, not the role. Lead/TEC and

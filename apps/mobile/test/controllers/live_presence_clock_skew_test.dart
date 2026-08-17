@@ -279,7 +279,7 @@ class _Device {
             localDisplayName: _session.displayName,
             localRole: _session.role,
             localJoinedAt: _session.joinedAt,
-            localMotorcycleStyle: _session.motorcycleStyle,
+            localVesselStyle: _session.vesselStyle,
             localSailorColor: _session.sailorColor,
             voyageStartedAt: now.subtract(const Duration(minutes: 30)),
             livePresence: controller.presenceAt(now),

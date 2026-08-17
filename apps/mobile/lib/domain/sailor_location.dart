@@ -1,4 +1,4 @@
-import '../features/map/motorcycle_icon.dart';
+import '../features/map/vessel_icon.dart';
 import 'geo_point.dart';
 import 'voyage_role.dart';
 import 'sailor_color.dart';
@@ -56,7 +56,7 @@ class SailorLocation {
     required this.role,
     required this.sample,
     required this.receivedAt,
-    this.motorcycleStyle = motorcycleIconStyleDefault,
+    this.vesselStyle = vesselIconStyleDefault,
     this.sailorSymbol = sailorSymbolDefault,
     this.sailorColor = sailorColorDefault,
   });
@@ -66,7 +66,7 @@ class SailorLocation {
   final VoyageRole role;
   final LocationSample sample;
   final DateTime receivedAt;
-  final MotorcycleIconStyle motorcycleStyle;
+  final VesselIconStyle vesselStyle;
   final SailorSymbol sailorSymbol;
   final SailorColor sailorColor;
 
@@ -76,7 +76,7 @@ class SailorLocation {
     'role': role.name,
     'sample': sample.toJson(),
     'receivedAt': receivedAt.toUtc().toIso8601String(),
-    'motorcycleStyle': sailorSymbol.wireValue(motorcycleStyle),
+    'vesselStyle': sailorSymbol.wireValue(vesselStyle),
     'sailorColor': sailorColor.name,
   };
 
@@ -88,12 +88,8 @@ class SailorLocation {
       Map<String, Object?>.from(json['sample']! as Map),
     ),
     receivedAt: DateTime.parse(json['receivedAt']! as String).toLocal(),
-    motorcycleStyle: motorcycleIconStyleFromName(
-      json['motorcycleStyle'] as String?,
-    ),
-    sailorSymbol: SailorSymbol.fromWireValue(
-      json['motorcycleStyle'] as String?,
-    ),
+    vesselStyle: vesselIconStyleFromName(json['vesselStyle'] as String?),
+    sailorSymbol: SailorSymbol.fromWireValue(json['vesselStyle'] as String?),
     sailorColor: sailorColorFromName(json['sailorColor'] as String?),
   );
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../controllers/sailor_profile_controller.dart';
 import '../../domain/sailor_color.dart';
-import '../map/motorcycle_icon.dart';
+import '../map/vessel_icon.dart';
 import '../map/sailor_symbol_picker.dart';
 
 class SailorProfileSheet extends StatefulWidget {
@@ -38,7 +38,7 @@ class _SailorProfileSheetState extends State<SailorProfileSheet> {
   late final TextEditingController _nameController = TextEditingController(
     text: widget.sailorProfile.displayName,
   );
-  late MotorcycleIconStyle _style = widget.sailorProfile.motorcycleStyle;
+  late VesselIconStyle _style = widget.sailorProfile.vesselStyle;
   late SailorSymbol _symbol = widget.sailorProfile.sailorSymbol;
   late SailorColor _color = widget.sailorProfile.sailorColor;
   String? _nameError;
@@ -87,12 +87,12 @@ class _SailorProfileSheetState extends State<SailorProfileSheet> {
           SailorSymbolPicker(
             displayName: _nameController.text,
             selectedSymbol: _symbol,
-            motorcycleStyle: _style,
+            vesselStyle: _style,
             badgeColor: _color.color,
             keyPrefix: 'profile-symbol',
             bikeKeyPrefix: 'profile-bike',
             onSymbolChanged: (symbol) => setState(() => _symbol = symbol),
-            onMotorcycleStyleChanged: (style) => setState(() => _style = style),
+            onVesselStyleChanged: (style) => setState(() => _style = style),
           ),
           const SizedBox(height: 18),
           const Text('Your colour', style: TextStyle(color: Color(0xFFABB5C1))),
@@ -164,7 +164,7 @@ class _SailorProfileSheetState extends State<SailorProfileSheet> {
     setState(() => _saving = true);
     await widget.sailorProfile.save(
       displayName: name,
-      motorcycleStyle: _style,
+      vesselStyle: _style,
       sailorSymbol: _symbol,
       sailorColor: _color,
     );

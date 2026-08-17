@@ -133,7 +133,7 @@ class UnitSettingsSheet extends StatelessWidget {
                   : sailorProfile.displayName,
             ),
             subtitle: Text(
-              '${sailorProfile.sailorSymbol.label(sailorProfile.displayName, sailorProfile.motorcycleStyle)} · ${sailorProfile.sailorColor.label}',
+              '${sailorProfile.sailorSymbol.label(sailorProfile.displayName, sailorProfile.vesselStyle)} · ${sailorProfile.sailorColor.label}',
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {

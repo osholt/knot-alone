@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/domain/voyage_event.dart';
 import 'package:tide_and_seek/domain/voyage_role.dart';
 import 'package:tide_and_seek/domain/sailor_color.dart';
-import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/features/map/vessel_icon.dart';
 import 'package:tide_and_seek/services/voyage_event_authenticator.dart';
 import 'package:tide_and_seek/services/voyage_membership.dart';
 
@@ -22,7 +22,7 @@ void main() {
           payload: const {
             'displayName': 'Alex',
             'role': 'sailor',
-            'motorcycleStyle': 'adventure',
+            'vesselStyle': 'adventure',
             'sailorColor': 'blue',
           },
           secret: secret,
@@ -48,7 +48,7 @@ void main() {
                 localDisplayName: 'Lead',
                 localRole: VoyageRole.lead,
                 localJoinedAt: joinedAt,
-                localMotorcycleStyle: motorcycleIconStyleDefault,
+                localVesselStyle: vesselIconStyleDefault,
                 localSailorColor: sailorColorDefault,
                 voyageStartedAt: joinedAt,
                 transportByEventId: const {
@@ -109,7 +109,7 @@ void main() {
       localDisplayName: 'Lead',
       localRole: VoyageRole.lead,
       localJoinedAt: joinedAt,
-      localMotorcycleStyle: motorcycleIconStyleDefault,
+      localVesselStyle: vesselIconStyleDefault,
       localSailorColor: sailorColorDefault,
       voyageStartedAt: joinedAt,
     );
@@ -153,7 +153,7 @@ void main() {
       payload: const {
         'displayName': 'Alex',
         'role': 'lead',
-        'motorcycleStyle': 'adventure',
+        'vesselStyle': 'adventure',
         'sailorColor': 'blue',
       },
       secret: secret,
@@ -166,7 +166,7 @@ void main() {
       payload: const {
         'displayName': 'Blake',
         'role': 'lead',
-        'motorcycleStyle': 'adventure',
+        'vesselStyle': 'adventure',
         'sailorColor': 'green',
       },
       secret: secret,
@@ -182,7 +182,7 @@ void main() {
           localDisplayName: 'Observer',
           localRole: VoyageRole.sailor,
           localJoinedAt: joinedAt,
-          localMotorcycleStyle: motorcycleIconStyleDefault,
+          localVesselStyle: vesselIconStyleDefault,
           localSailorColor: sailorColorDefault,
           voyageStartedAt: joinedAt,
         );
@@ -244,7 +244,7 @@ void main() {
           localDisplayName: 'Lead',
           localRole: VoyageRole.lead,
           localJoinedAt: joinedAt,
-          localMotorcycleStyle: motorcycleIconStyleDefault,
+          localVesselStyle: vesselIconStyleDefault,
           localSailorColor: sailorColorDefault,
         )
         .singleWhere((participant) => participant.sailorId == 'sailor-a');

@@ -1,7 +1,7 @@
 import '../domain/voyage_role.dart';
 import '../domain/sailor_color.dart';
 import '../domain/sailor_location.dart';
-import '../features/map/motorcycle_icon.dart';
+import '../features/map/vessel_icon.dart';
 
 /// How old a sailor's newest position is, in states a sailor can act on.
 ///
@@ -146,7 +146,7 @@ class PresenceRosterMember {
     required this.joinedAt,
     this.left = false,
     this.leftAt,
-    this.motorcycleStyle = motorcycleIconStyleDefault,
+    this.vesselStyle = vesselIconStyleDefault,
     this.sailorSymbol = sailorSymbolDefault,
     this.sailorColor = sailorColorDefault,
   });
@@ -163,7 +163,7 @@ class PresenceRosterMember {
   /// authoritative but cannot be ordered against a later rejoin, so the roster
   /// may only add a departed row it alone knows about (#144).
   final DateTime? leftAt;
-  final MotorcycleIconStyle motorcycleStyle;
+  final VesselIconStyle vesselStyle;
   final SailorSymbol sailorSymbol;
   final SailorColor sailorColor;
 }
@@ -179,7 +179,7 @@ class LiveSailorPresence {
     required this.sources,
     required this.isLocal,
     required this.knownSince,
-    this.motorcycleStyle = motorcycleIconStyleDefault,
+    this.vesselStyle = vesselIconStyleDefault,
     this.sailorSymbol = sailorSymbolDefault,
     this.sailorColor = sailorColorDefault,
     this.location,
@@ -200,7 +200,7 @@ class LiveSailorPresence {
   /// roster when the transport supplies it and otherwise from their oldest
   /// observed sample. Deterministic so a recomputed roster does not reorder.
   final DateTime knownSince;
-  final MotorcycleIconStyle motorcycleStyle;
+  final VesselIconStyle vesselStyle;
   final SailorSymbol sailorSymbol;
   final SailorColor sailorColor;
 
@@ -571,7 +571,7 @@ class LivePresenceReconciler {
             sources: const {},
             isLocal: isLocal,
             knownSince: member.joinedAt,
-            motorcycleStyle: member.motorcycleStyle,
+            vesselStyle: member.vesselStyle,
             sailorSymbol: member.sailorSymbol,
             sailorColor: member.sailorColor,
           ),
@@ -619,7 +619,7 @@ class LivePresenceReconciler {
           sources: Set.unmodifiable(sources),
           isLocal: isLocal,
           knownSince: member?.joinedAt ?? candidate.oldestSampleAt,
-          motorcycleStyle: location.motorcycleStyle,
+          vesselStyle: location.vesselStyle,
           sailorSymbol: location.sailorSymbol,
           sailorColor: location.sailorColor,
           location: location,

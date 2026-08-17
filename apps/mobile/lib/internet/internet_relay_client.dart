@@ -1090,8 +1090,8 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
             : {
                 'displayName': position.displayName,
                 'role': position.role.name,
-                'motorcycleStyle': position.sailorSymbol.wireValue(
-                  position.motorcycleStyle,
+                'vesselStyle': position.sailorSymbol.wireValue(
+                  position.vesselStyle,
                 ),
                 'sailorColor': position.sailorColor.name,
                 'sample': position.sample.toJson(),
@@ -1239,7 +1239,7 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
     'role',
     'sample',
     'receivedAt',
-    'motorcycleStyle',
+    'vesselStyle',
     'sailorColor',
   };
 

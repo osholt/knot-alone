@@ -9,7 +9,7 @@ import '../domain/voyage_role.dart';
 import '../domain/voyage_session.dart';
 import '../domain/sailor_color.dart';
 import '../domain/sailor_location.dart';
-import '../features/map/motorcycle_icon.dart';
+import '../features/map/vessel_icon.dart';
 import '../services/geo_calculations.dart';
 import '../services/situation_event_factory.dart';
 import 'situational_awareness_controller.dart';
@@ -37,7 +37,7 @@ class SimulatedSailorSnapshot {
     required this.headingDegrees,
     required this.offRouteTrail,
     required this.travelTrail,
-    required this.motorcycleStyle,
+    required this.vesselStyle,
     required this.sailorColor,
     this.sailorSymbol = sailorSymbolDefault,
   });
@@ -51,7 +51,7 @@ class SimulatedSailorSnapshot {
   final bool isOffRoute;
   final GeoPoint position;
   final double headingDegrees;
-  final MotorcycleIconStyle motorcycleStyle;
+  final VesselIconStyle vesselStyle;
   final SailorSymbol sailorSymbol;
   final SailorColor sailorColor;
 
@@ -232,7 +232,7 @@ class VoyageSimulationController extends ChangeNotifier {
         headingDegrees: sampled.headingDegrees,
         offRouteTrail: List.unmodifiable(agent.offRouteTrail),
         travelTrail: List.unmodifiable(_displayTrailFor(agent)),
-        motorcycleStyle: agent.motorcycleStyle,
+        vesselStyle: agent.vesselStyle,
         sailorSymbol: agent.sailorSymbol,
         sailorColor: agent.sailorColor,
       );
@@ -247,9 +247,8 @@ class VoyageSimulationController extends ChangeNotifier {
     // of silhouettes and colours without repeating the local sailor's own
     // choices. Lead/TEC roles still override to their reserved colour when
     // rendered, so this only ever shows for plain sailors.
-    MotorcycleIconStyle demoStyleFor(int index) =>
-        MotorcycleIconStyle.values[(index + 1) %
-            MotorcycleIconStyle.values.length];
+    VesselIconStyle demoStyleFor(int index) =>
+        VesselIconStyle.values[(index + 1) % VesselIconStyle.values.length];
     SailorColor demoColorFor(int index) =>
         SailorColor.values[(index + 1) % SailorColor.values.length];
     _SimulatedAgent sailor({
@@ -266,7 +265,7 @@ class VoyageSimulationController extends ChangeNotifier {
       speedFactor: 1 - (0.2 * index / (sailorCount - 1)),
       trafficPhaseSeconds: (3 + index * 12) % 58,
       isLocal: isLocal,
-      motorcycleStyle: isLocal ? _session.motorcycleStyle : demoStyleFor(index),
+      vesselStyle: isLocal ? _session.vesselStyle : demoStyleFor(index),
       sailorSymbol: isLocal ? _session.sailorSymbol : sailorSymbolDefault,
       sailorColor: isLocal ? _session.sailorColor : demoColorFor(index),
     );
@@ -571,7 +570,7 @@ class VoyageSimulationController extends ChangeNotifier {
       role: agent.role,
       joinedAt: _session.joinedAt,
       isSimulation: true,
-      motorcycleStyle: agent.motorcycleStyle,
+      vesselStyle: agent.vesselStyle,
       sailorSymbol: agent.sailorSymbol,
       sailorColor: agent.sailorColor,
     );
@@ -581,7 +580,7 @@ class VoyageSimulationController extends ChangeNotifier {
       role: agent.role,
       sample: sample,
       receivedAt: recordedAt,
-      motorcycleStyle: agent.motorcycleStyle,
+      vesselStyle: agent.vesselStyle,
       sailorSymbol: agent.sailorSymbol,
       sailorColor: agent.sailorColor,
     );
@@ -874,7 +873,7 @@ class _SimulatedAgent {
     required this.progressMeters,
     required this.speedFactor,
     required this.trafficPhaseSeconds,
-    required this.motorcycleStyle,
+    required this.vesselStyle,
     required this.sailorColor,
     this.isLocal = false,
     this.sailorSymbol = sailorSymbolDefault,
@@ -886,7 +885,7 @@ class _SimulatedAgent {
   double progressMeters;
   final double speedFactor;
   final double trafficPhaseSeconds;
-  final MotorcycleIconStyle motorcycleStyle;
+  final VesselIconStyle vesselStyle;
   final SailorSymbol sailorSymbol;
   final SailorColor sailorColor;
   final bool isLocal;

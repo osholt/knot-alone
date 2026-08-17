@@ -9,7 +9,7 @@ import 'package:tide_and_seek/domain/voyage_event.dart';
 import 'package:tide_and_seek/domain/voyage_role.dart';
 import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/domain/sailor_color.dart';
-import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/features/map/vessel_icon.dart';
 import 'package:tide_and_seek/features/voyage/voyage_roster_sheet.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 import 'package:tide_and_seek/services/nearby_bridge.dart';

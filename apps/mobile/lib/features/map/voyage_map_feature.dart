@@ -64,7 +64,7 @@ import 'map_camera_guard.dart';
 import 'maneuver_list_screen.dart';
 import 'maneuver_symbol.dart';
 import 'group_mini_map_framing.dart';
-import 'motorcycle_icon.dart';
+import 'vessel_icon.dart';
 import 'navigation_export_sheet.dart';
 import 'route_review_screen.dart';
 import 'route_progress_panel.dart';
@@ -213,7 +213,7 @@ class VoyageMapFeature extends StatefulWidget {
     this.distanceUnit = DistanceUnit.kilometres,
     this.showRouteProgress = true,
     this.basemapConfiguration = const BasemapConfiguration(),
-    this.localMotorcycleStyle = motorcycleIconStyleDefault,
+    this.localVesselStyle = vesselIconStyleDefault,
     this.localSailorSymbol = sailorSymbolDefault,
     this.localDisplayName = 'You',
     this.localBadgeColor = const Color(0xFF2F80ED),
@@ -271,7 +271,7 @@ class VoyageMapFeature extends StatefulWidget {
     bool showRouteProgress = true,
     bool darkMapStyle = false,
     bool restrainedLightMapStyle = true,
-    MotorcycleIconStyle localMotorcycleStyle = motorcycleIconStyleDefault,
+    VesselIconStyle localVesselStyle = vesselIconStyleDefault,
     SailorSymbol localSailorSymbol = sailorSymbolDefault,
     String localDisplayName = 'You',
     Color localBadgeColor = const Color(0xFF2F80ED),
@@ -328,7 +328,7 @@ class VoyageMapFeature extends StatefulWidget {
       dark: darkMapStyle,
       restrainedLightStyle: restrainedLightMapStyle,
     ),
-    localMotorcycleStyle: localMotorcycleStyle,
+    localVesselStyle: localVesselStyle,
     localSailorSymbol: localSailorSymbol,
     localDisplayName: localDisplayName,
     localBadgeColor: localBadgeColor,
@@ -421,7 +421,7 @@ class VoyageMapFeature extends StatefulWidget {
   final DistanceUnit distanceUnit;
   final bool showRouteProgress;
   final BasemapConfiguration basemapConfiguration;
-  final MotorcycleIconStyle localMotorcycleStyle;
+  final VesselIconStyle localVesselStyle;
   final SailorSymbol localSailorSymbol;
   final String localDisplayName;
   final Color localBadgeColor;
@@ -577,7 +577,7 @@ class _VoyageMapFeatureState extends State<VoyageMapFeature> {
         navigationExportCoordinator: widget.navigationExportCoordinator,
         distanceUnit: widget.distanceUnit,
         showRouteProgress: widget.showRouteProgress,
-        localMotorcycleStyle: widget.localMotorcycleStyle,
+        localVesselStyle: widget.localVesselStyle,
         localSailorSymbol: widget.localSailorSymbol,
         localDisplayName: widget.localDisplayName,
         localBadgeColor: widget.localBadgeColor,
@@ -671,7 +671,7 @@ class VoyageMapScreen extends StatefulWidget {
     this.distanceUnit = DistanceUnit.kilometres,
     this.showRouteProgress = true,
     this.disposeOfflineTileCache = false,
-    this.localMotorcycleStyle = motorcycleIconStyleDefault,
+    this.localVesselStyle = vesselIconStyleDefault,
     this.localSailorSymbol = sailorSymbolDefault,
     this.localDisplayName = 'You',
     this.localBadgeColor = const Color(0xFF2F80ED),
@@ -786,7 +786,7 @@ class VoyageMapScreen extends StatefulWidget {
   final DistanceUnit distanceUnit;
   final bool showRouteProgress;
   final bool disposeOfflineTileCache;
-  final MotorcycleIconStyle localMotorcycleStyle;
+  final VesselIconStyle localVesselStyle;
   final SailorSymbol localSailorSymbol;
   final String localDisplayName;
   final Color localBadgeColor;
@@ -2393,7 +2393,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       currentPosition: _effectivePosition,
       sailors: groupSailors,
       sailorCount: groupSize,
-      localMotorcycleStyle: widget.localMotorcycleStyle,
+      localVesselStyle: widget.localVesselStyle,
       localSailorSymbol: widget.localSailorSymbol,
       localDisplayName: widget.localDisplayName,
       onTap: widget.onOpenRoster,
@@ -2543,7 +2543,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                   // The marker follows the bike, not the plan (#124).
                   navigationMode: _isMoving,
                   headingDegrees: _lastHeadingDegrees,
-                  style: widget.localMotorcycleStyle,
+                  style: widget.localVesselStyle,
                   symbol: widget.localSailorSymbol,
                   displayName: widget.localDisplayName,
                   badgeColor: widget.localBadgeColor,
@@ -3911,7 +3911,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   ];
 
   Widget _overlayMarkerChild(MapOverlayMarker overlay) {
-    final style = overlay.motorcycleStyle;
+    final style = overlay.vesselStyle;
     return style == null
         ? _IconBadge(icon: overlay.icon, badgeColor: overlay.color, size: 34)
         : SailorMarkerBadge(
@@ -3934,10 +3934,10 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       await _ensureSailorSymbolImages(controller);
       return;
     }
-    for (final style in MotorcycleIconStyle.values) {
+    for (final style in VesselIconStyle.values) {
       await controller.addImage(
         style.name,
-        await loadMotorcycleIconPng(style),
+        await loadVesselIconPng(style),
         true,
       );
     }
@@ -3959,17 +3959,15 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     ml.MapLibreMapController controller,
   ) async {
     final sailors =
-        <
-          ({SailorSymbol symbol, String displayName, MotorcycleIconStyle style})
-        >[
+        <({SailorSymbol symbol, String displayName, VesselIconStyle style})>[
           (
             symbol: widget.localSailorSymbol,
             displayName: widget.localDisplayName,
-            style: widget.localMotorcycleStyle,
+            style: widget.localVesselStyle,
           ),
           for (final overlay
               in widget.overlayMarkers?.value ?? const <MapOverlayMarker>[])
-            if (overlay.motorcycleStyle case final style?)
+            if (overlay.vesselStyle case final style?)
               (
                 symbol: overlay.sailorSymbol,
                 displayName: overlay.sailorDisplayName ?? overlay.label,
@@ -3977,7 +3975,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
               ),
         ];
     for (final sailor in sailors) {
-      if (sailor.symbol.kind == SailorSymbolKind.motorcycle) continue;
+      if (sailor.symbol.kind == SailorSymbolKind.vessel) continue;
       final imageName = sailor.symbol.imageName(
         sailor.displayName,
         sailor.style,
@@ -3986,7 +3984,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       final raster = await rasterizeSailorSymbolPng(
         symbol: sailor.symbol,
         displayName: sailor.displayName,
-        motorcycleStyle: sailor.style,
+        vesselStyle: sailor.style,
       );
       await controller.addImage(imageName, raster.bytes, raster.sdf);
     }
@@ -4129,7 +4127,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         ml.SymbolLayerProperties(
           iconImage: widget.localSailorSymbol.imageName(
             widget.localDisplayName,
-            widget.localMotorcycleStyle,
+            widget.localVesselStyle,
           ),
           // Dark on a light badge: see [RouteTrailStyle.markerGlyph] (#133).
           iconColor: RouteTrailStyle.markerGlyphHex,
@@ -4535,7 +4533,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   /// pictogram — they are meant to fill the circle — and inheriting the
   /// pictogram's size is what left them at about three quarters of what the
   /// symbol picker's preview promised (#259). Theirs is derived from the badge
-  /// instead, by the one rule in `motorcycle_icon.dart`, so the three sailor
+  /// instead, by the one rule in `vessel_icon.dart`, so the three sailor
   /// layers and the picker cannot answer differently again.
   static Object _sailorIconSize(
     double badgeDiameter,
@@ -4557,7 +4555,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
             properties: {
               'label': overlay.label,
               'color': _hexColor(overlay.color),
-              'nonSailorSymbol': overlay.motorcycleStyle == null,
+              'nonSailorSymbol': overlay.vesselStyle == null,
               'iconImage': _overlayIconImage(overlay),
               'initialsSymbol':
                   overlay.sailorSymbol.kind == SailorSymbolKind.initials,
@@ -4567,7 +4565,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   );
 
   String _overlayIconImage(MapOverlayMarker overlay) {
-    final style = overlay.motorcycleStyle;
+    final style = overlay.vesselStyle;
     if (style == null) return _overlayFallbackIconImage;
     return overlay.sailorSymbol.imageName(
       overlay.sailorDisplayName ?? overlay.label,
@@ -5324,7 +5322,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
             point: marker.point,
             label: marker.label,
             colourArgb: marker.color.toARGB32(),
-            kind: marker.motorcycleStyle == null
+            kind: marker.vesselStyle == null
                 ? GroupPipMarkerKind.hazard
                 : GroupPipMarkerKind.sailor,
           ),
@@ -5332,7 +5330,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       status: status,
       alert:
           offCourseCount > 0 ||
-          overlays.any((marker) => marker.motorcycleStyle == null),
+          overlays.any((marker) => marker.vesselStyle == null),
     );
   }
 
@@ -5704,7 +5702,7 @@ class MapOverlayMarker {
     required this.label,
     this.icon = Icons.warning_amber_rounded,
     this.color = const Color(0xFFFFC857),
-    this.motorcycleStyle,
+    this.vesselStyle,
     this.sailorSymbol = sailorSymbolDefault,
     this.sailorDisplayName,
   });
@@ -5713,11 +5711,11 @@ class MapOverlayMarker {
   final GeoPoint point;
   final String label;
 
-  /// Used for non-sailor markers (hazards). Ignored when [motorcycleStyle] is
+  /// Used for non-sailor markers (hazards). Ignored when [vesselStyle] is
   /// set, which sailors always provide.
   final IconData icon;
   final Color color;
-  final MotorcycleIconStyle? motorcycleStyle;
+  final VesselIconStyle? vesselStyle;
   final SailorSymbol sailorSymbol;
   final String? sailorDisplayName;
 }
@@ -6235,7 +6233,7 @@ class _GroupMiniMap extends StatefulWidget {
     required this.currentPosition,
     required this.sailors,
     required this.sailorCount,
-    required this.localMotorcycleStyle,
+    required this.localVesselStyle,
     required this.localSailorSymbol,
     required this.localDisplayName,
     required this.onTap,
@@ -6250,7 +6248,7 @@ class _GroupMiniMap extends StatefulWidget {
   final GeoPoint? currentPosition;
   final List<MapOverlayMarker> sailors;
   final int sailorCount;
-  final MotorcycleIconStyle localMotorcycleStyle;
+  final VesselIconStyle localVesselStyle;
   final SailorSymbol localSailorSymbol;
   final String localDisplayName;
   final VoidCallback? onTap;
@@ -6631,9 +6629,8 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
                         point: sailor.point,
                         color: sailor.color,
                         size: 16,
-                        motorcycleStyle:
-                            sailor.motorcycleStyle ??
-                            motorcycleIconStyleDefault,
+                        vesselStyle:
+                            sailor.vesselStyle ?? vesselIconStyleDefault,
                         sailorSymbol: sailor.sailorSymbol,
                         displayName: sailor.sailorDisplayName ?? sailor.label,
                       ),
@@ -6642,7 +6639,7 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
                         point: point,
                         color: const Color(0xFFFF7A1A),
                         size: 18,
-                        motorcycleStyle: widget.localMotorcycleStyle,
+                        vesselStyle: widget.localVesselStyle,
                         sailorSymbol: widget.localSailorSymbol,
                         displayName: widget.localDisplayName,
                       ),
@@ -6662,7 +6659,7 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
     required GeoPoint point,
     required Color color,
     required double size,
-    required MotorcycleIconStyle motorcycleStyle,
+    required VesselIconStyle vesselStyle,
     required SailorSymbol sailorSymbol,
     required String displayName,
   }) => Marker(
@@ -6675,7 +6672,7 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
         boxShadow: [BoxShadow(color: Colors.black87, spreadRadius: 2)],
       ),
       child: SailorMarkerBadge(
-        style: motorcycleStyle,
+        style: vesselStyle,
         symbol: sailorSymbol,
         displayName: displayName,
         badgeColor: color,
@@ -6909,7 +6906,7 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
               'strokeColor': _hexColor(sailorBadgeStrokeColor(sailor.color)),
               'iconImage': sailor.sailorSymbol.imageName(
                 sailor.sailorDisplayName ?? sailor.label,
-                sailor.motorcycleStyle ?? motorcycleIconStyleDefault,
+                sailor.vesselStyle ?? vesselIconStyleDefault,
               ),
               'initialsSymbol':
                   sailor.sailorSymbol.kind == SailorSymbolKind.initials,
@@ -6926,7 +6923,7 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
               ),
               'iconImage': widget.localSailorSymbol.imageName(
                 widget.localDisplayName,
-                widget.localMotorcycleStyle,
+                widget.localVesselStyle,
               ),
               'initialsSymbol':
                   widget.localSailorSymbol.kind == SailorSymbolKind.initials,
@@ -6939,20 +6936,18 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
     _MiniMapSnapshot snapshot,
   ) async {
     final sailors =
-        <
-          ({SailorSymbol symbol, String displayName, MotorcycleIconStyle style})
-        >[
+        <({SailorSymbol symbol, String displayName, VesselIconStyle style})>[
           for (final sailor in snapshot.sailors)
             (
               symbol: sailor.sailorSymbol,
               displayName: sailor.sailorDisplayName ?? sailor.label,
-              style: sailor.motorcycleStyle ?? motorcycleIconStyleDefault,
+              style: sailor.vesselStyle ?? vesselIconStyleDefault,
             ),
           if (snapshot.currentPosition != null)
             (
               symbol: widget.localSailorSymbol,
               displayName: widget.localDisplayName,
-              style: widget.localMotorcycleStyle,
+              style: widget.localVesselStyle,
             ),
         ];
     for (final sailor in sailors) {
@@ -6964,7 +6959,7 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
       final raster = await rasterizeSailorSymbolPng(
         symbol: sailor.symbol,
         displayName: sailor.displayName,
-        motorcycleStyle: sailor.style,
+        vesselStyle: sailor.style,
       );
       await controller.addImage(imageName, raster.bytes, raster.sdf);
     }
@@ -7234,7 +7229,7 @@ class _GroupMiniMapPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1,
       );
-      if (symbol.kind == SailorSymbolKind.motorcycle) return;
+      if (symbol.kind == SailorSymbolKind.vessel) return;
       final text = symbol.kind == SailorSymbolKind.initials
           ? sailorInitials(displayName)
           : symbol.emoji!;
@@ -8620,7 +8615,7 @@ class _CurrentPositionMarker extends StatelessWidget {
 
   final bool navigationMode;
   final double headingDegrees;
-  final MotorcycleIconStyle style;
+  final VesselIconStyle style;
   final SailorSymbol symbol;
   final String displayName;
   final Color badgeColor;
@@ -8630,7 +8625,7 @@ class _CurrentPositionMarker extends StatelessWidget {
     // The badge circle is rotation-symmetric, so only the bike glyph inside
     // visibly turns - this keeps showing heading without the odd look a
     // rotating non-circular marker would have.
-    angle: navigationMode || symbol.kind != SailorSymbolKind.motorcycle
+    angle: navigationMode || symbol.kind != SailorSymbolKind.vessel
         ? 0
         : headingDegrees * math.pi / 180,
     child: DecoratedBox(

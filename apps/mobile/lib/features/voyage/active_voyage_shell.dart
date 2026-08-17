@@ -78,7 +78,7 @@ import '../../services/sweeper_gap_trend.dart';
 import '../../services/trail_display_simplifier.dart';
 import '../map/maneuver_diagnostics.dart';
 import '../map/maneuver_list_screen.dart';
-import '../map/motorcycle_icon.dart';
+import '../map/vessel_icon.dart';
 import '../map/voyage_map.dart';
 import '../settings/emergency_info_sheet.dart';
 import '../settings/notification_preferences_sheet.dart';
@@ -1428,7 +1428,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
                 role: currentSession.role,
                 sample: sample,
                 receivedAt: DateTime.now(),
-                motorcycleStyle: currentSession.motorcycleStyle,
+                vesselStyle: currentSession.vesselStyle,
                 sailorSymbol: currentSession.sailorSymbol,
                 sailorColor: currentSession.sailorColor,
               ),
@@ -2011,7 +2011,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
                         sailorId: location.sailorId,
                         displayName: location.displayName,
                         role: location.role,
-                        motorcycleStyle: location.motorcycleStyle,
+                        vesselStyle: location.vesselStyle,
                         sailorSymbol: location.sailorSymbol,
                         sailorColor: location.sailorColor,
                         point: route_domain.GeoPoint(
@@ -2028,7 +2028,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
                         sailorId: sailor.id,
                         displayName: sailor.displayName,
                         role: sailor.role,
-                        motorcycleStyle: sailor.motorcycleStyle,
+                        vesselStyle: sailor.vesselStyle,
                         sailorSymbol: sailor.sailorSymbol,
                         sailorColor: sailor.sailorColor,
                         point: route_domain.GeoPoint(
@@ -2085,7 +2085,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
               id: 'sailor-${location.sailorId}',
               point: location.point,
               label: label,
-              motorcycleStyle: location.motorcycleStyle,
+              vesselStyle: location.vesselStyle,
               sailorSymbol: location.sailorSymbol,
               sailorDisplayName: location.displayName,
               color: baseColor,
@@ -3065,9 +3065,9 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
       ),
       restrainedLightMapStyle:
           widget.mapStyleMode.dayStyle == DayMapStyle.restrained,
-      localMotorcycleStyle:
-          widget.voyageController.session?.motorcycleStyle ??
-          motorcycleIconStyleDefault,
+      localVesselStyle:
+          widget.voyageController.session?.vesselStyle ??
+          vesselIconStyleDefault,
       localSailorSymbol:
           widget.voyageController.session?.sailorSymbol ?? sailorSymbolDefault,
       localDisplayName: widget.voyageController.session?.displayName ?? 'You',

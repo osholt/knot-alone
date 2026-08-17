@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
-import '../features/map/motorcycle_icon.dart';
+import '../features/map/vessel_icon.dart';
 import 'voyage_coordination_mode.dart';
 import 'voyage_role.dart';
 import 'sailor_color.dart';
@@ -22,7 +22,7 @@ class VoyageSession {
     required this.joinedAt,
     this.isSimulation = false,
     this.simulationSailorCount = defaultSimulationSailorCount,
-    this.motorcycleStyle = motorcycleIconStyleDefault,
+    this.vesselStyle = vesselIconStyleDefault,
     this.sailorSymbol = sailorSymbolDefault,
     this.sailorColor = sailorColorDefault,
     this.coordinationMode = VoyageCoordinationMode.crew,
@@ -49,7 +49,7 @@ class VoyageSession {
   final DateTime joinedAt;
   final bool isSimulation;
   final int simulationSailorCount;
-  final MotorcycleIconStyle motorcycleStyle;
+  final VesselIconStyle vesselStyle;
   final SailorSymbol sailorSymbol;
   final SailorColor sailorColor;
   final VoyageCoordinationMode coordinationMode;
@@ -74,7 +74,7 @@ class VoyageSession {
     joinedAt: joinedAt,
     isSimulation: isSimulation,
     simulationSailorCount: simulationSailorCount ?? this.simulationSailorCount,
-    motorcycleStyle: motorcycleStyle,
+    vesselStyle: vesselStyle,
     sailorSymbol: sailorSymbol,
     sailorColor: sailorColor,
     coordinationMode: coordinationMode ?? this.coordinationMode,
@@ -92,7 +92,7 @@ class VoyageSession {
     'joinedAt': joinedAt.toUtc().toIso8601String(),
     if (isSimulation) 'isSimulation': true,
     if (isSimulation) 'simulationSailorCount': simulationSailorCount,
-    'motorcycleStyle': motorcycleStyle.name,
+    'vesselStyle': vesselStyle.name,
     'sailorSymbol': sailorSymbol.storageValue,
     'sailorColor': sailorColor.name,
     'coordinationMode': coordinationMode.name,
@@ -112,9 +112,7 @@ class VoyageSession {
     simulationSailorCount: _simulationSailorCount(
       json['simulationSailorCount'],
     ),
-    motorcycleStyle: motorcycleIconStyleFromName(
-      json['motorcycleStyle'] as String?,
-    ),
+    vesselStyle: vesselIconStyleFromName(json['vesselStyle'] as String?),
     sailorSymbol: SailorSymbol.fromStorageValue(
       json['sailorSymbol'] as String?,
     ),

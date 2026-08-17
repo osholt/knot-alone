@@ -2,7 +2,7 @@ import '../domain/voyage_event.dart';
 import '../domain/voyage_role.dart';
 import '../domain/sailor_color.dart';
 import '../domain/sailor_location.dart';
-import '../features/map/motorcycle_icon.dart';
+import '../features/map/vessel_icon.dart';
 import '../relay/live_presence.dart';
 import 'voyage_event_authenticator.dart';
 import 'voyage_lifecycle.dart';
@@ -92,7 +92,7 @@ class VoyageParticipant {
     required this.joinedAt,
     required this.lastSeenAt,
     required this.state,
-    required this.motorcycleStyle,
+    required this.vesselStyle,
     required this.sailorColor,
     required this.transportEvidence,
     required this.isLocal,
@@ -130,7 +130,7 @@ class VoyageParticipant {
   /// [VoyageLiveView.renderedPositions] draws, and that comes from live presence.
   final SailorLocation? lastKnownLocation;
   final VoyageMembershipState state;
-  final MotorcycleIconStyle motorcycleStyle;
+  final VesselIconStyle vesselStyle;
   final SailorSymbol sailorSymbol;
   final SailorColor sailorColor;
   final Set<VoyageTransportEvidence> transportEvidence;
@@ -256,7 +256,7 @@ class VoyageParticipant {
     DateTime? rejoinedAfterLeavingAt,
     SailorLocation? lastKnownLocation,
     VoyageMembershipState? state,
-    MotorcycleIconStyle? motorcycleStyle,
+    VesselIconStyle? vesselStyle,
     SailorSymbol? sailorSymbol,
     SailorColor? sailorColor,
     Set<VoyageTransportEvidence>? transportEvidence,
@@ -277,7 +277,7 @@ class VoyageParticipant {
         rejoinedAfterLeavingAt ?? this.rejoinedAfterLeavingAt,
     lastKnownLocation: lastKnownLocation ?? this.lastKnownLocation,
     state: state ?? this.state,
-    motorcycleStyle: motorcycleStyle ?? this.motorcycleStyle,
+    vesselStyle: vesselStyle ?? this.vesselStyle,
     sailorSymbol: sailorSymbol ?? this.sailorSymbol,
     sailorColor: sailorColor ?? this.sailorColor,
     transportEvidence: transportEvidence ?? this.transportEvidence,
@@ -392,7 +392,7 @@ class VoyageMembershipReducer {
     required String localDisplayName,
     required VoyageRole localRole,
     required DateTime localJoinedAt,
-    required MotorcycleIconStyle localMotorcycleStyle,
+    required VesselIconStyle localVesselStyle,
     required SailorColor localSailorColor,
     SailorSymbol localSailorSymbol = sailorSymbolDefault,
     DateTime? voyageStartedAt,
@@ -418,7 +418,7 @@ class VoyageMembershipReducer {
         joinedAt: localJoinedAt,
         lastSeenAt: localJoinedAt,
         state: VoyageMembershipState.joined,
-        motorcycleStyle: localMotorcycleStyle,
+        vesselStyle: localVesselStyle,
         sailorSymbol: localSailorSymbol,
         sailorColor: localSailorColor,
         transportEvidence: const {VoyageTransportEvidence.localDevice},
@@ -459,15 +459,15 @@ class VoyageMembershipReducer {
           joinedAt: event.createdAt,
           lastSeenAt: event.createdAt,
           state: VoyageMembershipState.joined,
-          motorcycleStyle: isLocal
-              ? localMotorcycleStyle
-              : motorcycleIconStyleFromName(
-                  event.payload['motorcycleStyle'] as String?,
+          vesselStyle: isLocal
+              ? localVesselStyle
+              : vesselIconStyleFromName(
+                  event.payload['vesselStyle'] as String?,
                 ),
           sailorSymbol: isLocal
               ? localSailorSymbol
               : SailorSymbol.fromWireValue(
-                  event.payload['motorcycleStyle'] as String?,
+                  event.payload['vesselStyle'] as String?,
                 ),
           sailorColor: isLocal
               ? localSailorColor
@@ -573,7 +573,7 @@ class VoyageMembershipReducer {
         joinedAt: presence.knownSince,
         lastSeenAt: presence.location?.sample.recordedAt ?? presence.knownSince,
         state: VoyageMembershipState.joined,
-        motorcycleStyle: presence.motorcycleStyle,
+        vesselStyle: presence.vesselStyle,
         sailorSymbol: presence.sailorSymbol,
         sailorColor: presence.sailorColor,
         // A roster entry with no position yet is still internet-relay evidence:
@@ -624,7 +624,7 @@ class VoyageMembershipReducer {
         lastSeenAt: departedAt ?? member.joinedAt,
         leftAt: departedAt,
         state: VoyageMembershipState.left,
-        motorcycleStyle: member.motorcycleStyle,
+        vesselStyle: member.vesselStyle,
         sailorSymbol: member.sailorSymbol,
         sailorColor: member.sailorColor,
         transportEvidence: const {VoyageTransportEvidence.internetRelay},
@@ -833,7 +833,7 @@ class VoyageMembershipReducer {
       joinedAt: location?.sample.recordedAt ?? event.createdAt,
       lastSeenAt: event.createdAt,
       state: VoyageMembershipState.left,
-      motorcycleStyle: location?.motorcycleStyle ?? motorcycleIconStyleDefault,
+      vesselStyle: location?.vesselStyle ?? vesselIconStyleDefault,
       sailorSymbol: location?.sailorSymbol ?? sailorSymbolDefault,
       sailorColor: location?.sailorColor ?? sailorColorDefault,
       transportEvidence: _evidenceFor(

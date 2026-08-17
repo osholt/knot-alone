@@ -6,7 +6,7 @@ import 'package:tide_and_seek/domain/voyage_role.dart';
 import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/domain/sailor_color.dart';
 import 'package:tide_and_seek/domain/sailor_location.dart';
-import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/features/map/vessel_icon.dart';
 import 'package:tide_and_seek/features/voyage/active_voyage_shell.dart';
 import 'package:tide_and_seek/services/voyage_membership.dart';
 import 'package:tide_and_seek/services/sailor_contact_share.dart';
@@ -163,7 +163,7 @@ void main() {
         joinedAt: now,
         lastSeenAt: now,
         state: VoyageMembershipState.active,
-        motorcycleStyle: motorcycleIconStyleDefault,
+        vesselStyle: vesselIconStyleDefault,
         sailorColor: SailorColor.orange,
         transportEvidence: const {VoyageTransportEvidence.localDevice},
         isLocal: true,
@@ -175,7 +175,7 @@ void main() {
         joinedAt: now,
         lastSeenAt: now,
         state: VoyageMembershipState.active,
-        motorcycleStyle: motorcycleIconStyleDefault,
+        vesselStyle: vesselIconStyleDefault,
         sailorColor: SailorColor.cyan,
         transportEvidence: const {VoyageTransportEvidence.internetRelay},
         isLocal: false,

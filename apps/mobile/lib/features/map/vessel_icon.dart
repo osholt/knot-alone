@@ -4,82 +4,54 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 
 import 'route_trail_style.dart';
+import 'vessel_icon_painter.dart';
+
+// Re-exported so the 40-odd files that import this one keep resolving
+// VesselIconStyle without each needing the painter's path.
+export 'vessel_icon_painter.dart' show VesselIconStyle, VesselIconPainter;
 
 /// Sailor-selectable bike silhouettes, generated as flat single-colour art
-/// (see assets/icons/motorcycles) so they can be tinted per role exactly like
+/// (drawn by VesselIconPainter) so they can be tinted per role exactly like
 /// the Icon widgets they replace.
-enum MotorcycleIconStyle {
-  adventureTourer,
-  roadster,
-  dualSport,
-  sportNaked,
-  cruiserClassic,
-  standardTwin,
-  cafeRacer,
-  dirtBike,
-  fullTourer,
-  cruiserBagger,
-  scrambler,
-  sportTouring,
-  scooter,
-  sidecarRig,
-  streetFighter,
-}
+/// The style a profile starts on: the most common cruising rig.
+const vesselIconStyleDefault = VesselIconStyle.sloop;
 
-extension MotorcycleIconStyleData on MotorcycleIconStyle {
-  static const Map<MotorcycleIconStyle, String> _fileNames = {
-    MotorcycleIconStyle.adventureTourer: '00_adventure_tourer',
-    MotorcycleIconStyle.roadster: '01_roadster',
-    MotorcycleIconStyle.dualSport: '02_dual_sport',
-    MotorcycleIconStyle.sportNaked: '03_sport_naked',
-    MotorcycleIconStyle.cruiserClassic: '04_cruiser_classic',
-    MotorcycleIconStyle.standardTwin: '05_standard_twin',
-    MotorcycleIconStyle.cafeRacer: '06_cafe_racer',
-    MotorcycleIconStyle.dirtBike: '07_dirt_bike',
-    MotorcycleIconStyle.fullTourer: '08_full_tourer',
-    MotorcycleIconStyle.cruiserBagger: '09_cruiser_bagger',
-    MotorcycleIconStyle.scrambler: '10_scrambler',
-    MotorcycleIconStyle.sportTouring: '11_sport_touring',
-    MotorcycleIconStyle.scooter: '12_scooter',
-    MotorcycleIconStyle.sidecarRig: '13_sidecar_rig',
-    MotorcycleIconStyle.streetFighter: '14_street_fighter',
-  };
-
-  String get assetPath => 'assets/icons/motorcycles/${_fileNames[this]}.png';
-
-  String get label => switch (this) {
-    MotorcycleIconStyle.adventureTourer => 'Adventure tourer',
-    MotorcycleIconStyle.roadster => 'Roadster',
-    MotorcycleIconStyle.dualSport => 'Dual sport',
-    MotorcycleIconStyle.sportNaked => 'Sport naked',
-    MotorcycleIconStyle.cruiserClassic => 'Classic cruiser',
-    MotorcycleIconStyle.standardTwin => 'Standard twin',
-    MotorcycleIconStyle.cafeRacer => 'Cafe racer',
-    MotorcycleIconStyle.dirtBike => 'Dirt bike',
-    MotorcycleIconStyle.fullTourer => 'Full tourer',
-    MotorcycleIconStyle.cruiserBagger => 'Cruiser bagger',
-    MotorcycleIconStyle.scrambler => 'Scrambler',
-    MotorcycleIconStyle.sportTouring => 'Sport touring',
-    MotorcycleIconStyle.scooter => 'Scooter',
-    MotorcycleIconStyle.sidecarRig => 'Sidecar rig',
-    MotorcycleIconStyle.streetFighter => 'Street fighter',
-  };
-}
-
-/// Default style for sessions created before this feature existed, and the
-/// fallback when a peer sends an unrecognised style name.
-const motorcycleIconStyleDefault = MotorcycleIconStyle.adventureTourer;
-
-MotorcycleIconStyle motorcycleIconStyleFromName(String? name) =>
-    MotorcycleIconStyle.values.firstWhere(
+/// Decodes a stored style name, falling back to the default.
+///
+/// The fallback carries the migration: every stored value is a motorcycle style
+/// name from the app this was derived from, none of which matches a vessel, so
+/// they all resolve to the default rather than throwing. The SharedPreferences
+/// key deliberately keeps its old name - it is opaque, and renaming it would
+/// orphan the entry for no gain.
+VesselIconStyle vesselIconStyleFromName(String? name) =>
+    VesselIconStyle.values.firstWhere(
       (style) => style.name == name,
-      orElse: () => motorcycleIconStyleDefault,
+      orElse: () => vesselIconStyleDefault,
     );
 
-enum SailorSymbolKind { motorcycle, initials, emoji }
+/// Style names shipped by the motorcycle app this was derived from. Retained
+/// only for decoding peers and stored profiles written before the rename.
+const _legacyMotorcycleStyleNames = {
+  'adventureTourer',
+  'roadster',
+  'dualSport',
+  'sportNaked',
+  'cruiserClassic',
+  'standardTwin',
+  'cafeRacer',
+  'dirtBike',
+  'fullTourer',
+  'cruiserBagger',
+  'scrambler',
+  'sportTouring',
+  'scooter',
+  'sidecarRig',
+  'streetFighter',
+};
+
+enum SailorSymbolKind { vessel, initials, emoji }
 
 /// Ink choices for an initials marker. These stay separate from the sailor's
 /// badge colour because the same initials need to remain recognisable when two
@@ -111,12 +83,12 @@ const sailorInitialsInkDefault = SailorInitialsInk.dark;
 /// How a sailor identifies themselves inside their coloured marker badge.
 ///
 /// The wire representation deliberately reuses the existing
-/// `motorcycleStyle` string. Old builds therefore see an unknown style and
+/// `vesselStyle` string. Old builds therefore see an unknown style and
 /// safely fall back to the default bike, while new builds can show initials or
 /// an emoji without requiring a relay protocol migration.
 class SailorSymbol {
-  const SailorSymbol.motorcycle()
-    : kind = SailorSymbolKind.motorcycle,
+  const SailorSymbol.vessel()
+    : kind = SailorSymbolKind.vessel,
       emoji = null,
       customInitials = null,
       initialsInk = sailorInitialsInkDefault;
@@ -139,7 +111,11 @@ class SailorSymbol {
   final SailorInitialsInk initialsInk;
 
   String get storageValue => switch (kind) {
-    SailorSymbolKind.motorcycle => 'motorcycle',
+    // Pinned. This token is both the stored value on device and the value sent
+    // over the relay, so moving it to 'vessel' would orphan every saved profile
+    // and desync peers on different builds. It is opaque, like the other
+    // identifiers recorded in docs/source-baseline.md, and stays put.
+    SailorSymbolKind.vessel => 'motorcycle',
     SailorSymbolKind.initials =>
       customInitials == null && initialsInk == sailorInitialsInkDefault
           ? 'initials'
@@ -147,14 +123,14 @@ class SailorSymbol {
     SailorSymbolKind.emoji => 'emoji:$emoji',
   };
 
-  String wireValue(MotorcycleIconStyle motorcycleStyle) => switch (kind) {
-    SailorSymbolKind.motorcycle => motorcycleStyle.name,
+  String wireValue(VesselIconStyle vesselStyle) => switch (kind) {
+    SailorSymbolKind.vessel => vesselStyle.name,
     _ => storageValue,
   };
 
-  String label(String displayName, MotorcycleIconStyle motorcycleStyle) =>
+  String label(String displayName, VesselIconStyle vesselStyle) =>
       switch (kind) {
-        SailorSymbolKind.motorcycle => motorcycleStyle.label,
+        SailorSymbolKind.vessel => vesselStyle.label,
         SailorSymbolKind.initials => 'Initials ${initialsFor(displayName)}',
         SailorSymbolKind.emoji => 'Emoji $emoji',
       };
@@ -173,8 +149,8 @@ class SailorSymbol {
     initialsInk: ink ?? initialsInk,
   );
 
-  String imageName(String displayName, MotorcycleIconStyle motorcycleStyle) {
-    if (kind == SailorSymbolKind.motorcycle) return motorcycleStyle.name;
+  String imageName(String displayName, VesselIconStyle vesselStyle) {
+    if (kind == SailorSymbolKind.vessel) return vesselStyle.name;
     final glyph = kind == SailorSymbolKind.initials
         ? initialsFor(displayName)
         : emoji!;
@@ -201,12 +177,19 @@ class SailorSymbol {
       final emoji = value!.substring('emoji:'.length);
       if (sailorEmojiChoices.contains(emoji)) return SailorSymbol.emoji(emoji);
     }
-    return const SailorSymbol.motorcycle();
+    return const SailorSymbol.vessel();
   }
 
   static SailorSymbol fromWireValue(String? value) {
-    if (MotorcycleIconStyle.values.any((style) => style.name == value)) {
-      return const SailorSymbol.motorcycle();
+    if (VesselIconStyle.values.any((style) => style.name == value)) {
+      return const SailorSymbol.vessel();
+    }
+    // A peer on an older build sends one of the motorcycle style names this app
+    // was derived from. Those are not decodable as vessels and must not be read
+    // as an initials or emoji symbol either, so they resolve to the vessel
+    // symbol with this device's own style.
+    if (_legacyMotorcycleStyleNames.contains(value)) {
+      return const SailorSymbol.vessel();
     }
     return fromStorageValue(value);
   }
@@ -223,11 +206,11 @@ class SailorSymbol {
   int get hashCode => Object.hash(kind, emoji, customInitials, initialsInk);
 }
 
-const sailorSymbolDefault = SailorSymbol.motorcycle();
+const sailorSymbolDefault = SailorSymbol.vessel();
 
 /// A deliberately small, high-contrast catalogue that renders consistently on
 /// both supported platforms and keeps the wire value comfortably below the
-/// relay's existing 40-character motorcycle-style limit.
+/// relay's existing 40-character style limit.
 const sailorEmojiChoices = <String>[
   '🏍️',
   '🛵',
@@ -276,7 +259,7 @@ String? normalizeCustomSailorInitials(String value) {
     return null;
   }
   // Keeps `initials:v1:<base64>:<ink>` below the existing 40-character
-  // motorcycleStyle relay limit even for multi-byte letters.
+  // vesselStyle relay limit even for multi-byte letters.
   if (utf8.encode(normalized).length > 12) return null;
   return normalized;
 }
@@ -348,30 +331,25 @@ double sailorInitialsIconSize({
   double rasterSize = sailorSymbolRasterSize,
 }) => badgeDiameter / rasterSize;
 
-/// A motorcycle glyph standing in for the plain circle/Material icon
+/// A vessel glyph standing in for the plain circle/Material icon
 /// previously used for sailor map markers, tinted by the caller (role colour)
 /// exactly like the `Icon` widget it replaces.
-class MotorcycleIcon extends StatelessWidget {
-  const MotorcycleIcon({
+class VesselIcon extends StatelessWidget {
+  const VesselIcon({
     super.key,
     required this.style,
     required this.color,
     this.size = 34,
   });
 
-  final MotorcycleIconStyle style;
+  final VesselIconStyle style;
   final Color color;
   final double size;
 
   @override
-  Widget build(BuildContext context) => ColorFiltered(
-    colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-    child: Image.asset(
-      style.assetPath,
-      width: size,
-      height: size,
-      fit: BoxFit.contain,
-    ),
+  Widget build(BuildContext context) => CustomPaint(
+    size: Size.square(size),
+    painter: VesselIconPainter(style: style, color: color),
   );
 }
 
@@ -391,7 +369,7 @@ class SailorMarkerBadge extends StatelessWidget {
     this.glyphColor = RouteTrailStyle.markerGlyph,
   });
 
-  final MotorcycleIconStyle style;
+  final VesselIconStyle style;
   final Color badgeColor;
   final SailorSymbol symbol;
   final String displayName;
@@ -399,7 +377,7 @@ class SailorMarkerBadge extends StatelessWidget {
   final Color borderColor;
   final double borderWidth;
 
-  /// Ink for the motorcycle glyph inside the badge.
+  /// Ink for the vessel glyph inside the badge.
   final Color glyphColor;
 
   @override
@@ -415,7 +393,7 @@ class SailorMarkerBadge extends StatelessWidget {
     ),
     child: Center(
       child: switch (symbol.kind) {
-        SailorSymbolKind.motorcycle => MotorcycleIcon(
+        SailorSymbolKind.vessel => VesselIcon(
           style: style,
           // Dark, not white. Every badge fill is light because it has to be
           // found on a dark basemap, so a white glyph on top had almost no
@@ -471,19 +449,26 @@ class SailorMarkerBadge extends StatelessWidget {
 /// `MapLibreMapController.addImage(name, bytes, sdf: true)` on the native
 /// map. SDF images are tinted per-feature via the layer's `iconColor` paint
 /// property, using only this asset's alpha channel as the shape mask.
-Future<Uint8List> loadMotorcycleIconPng(MotorcycleIconStyle style) async {
-  final data = await rootBundle.load(style.assetPath);
-  return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-}
+Future<Uint8List> loadVesselIconPng(
+  VesselIconStyle style, {
+  double size = sailorSymbolRasterSize,
+}) => _rasterizePng(
+  size: size,
+  paint: (canvas) => VesselIconPainter(
+    style: style,
+    // Alpha is all an SDF image uses; the map tints per feature.
+    color: const Color(0xFFFFFFFF),
+  ).paint(canvas, Size.square(size)),
+);
 
 Future<({Uint8List bytes, bool sdf})> rasterizeSailorSymbolPng({
   required SailorSymbol symbol,
   required String displayName,
-  required MotorcycleIconStyle motorcycleStyle,
+  required VesselIconStyle vesselStyle,
   double size = sailorSymbolRasterSize,
 }) async {
-  if (symbol.kind == SailorSymbolKind.motorcycle) {
-    return (bytes: await loadMotorcycleIconPng(motorcycleStyle), sdf: true);
+  if (symbol.kind == SailorSymbolKind.vessel) {
+    return (bytes: await loadVesselIconPng(vesselStyle), sdf: true);
   }
   final glyph = symbol.kind == SailorSymbolKind.initials
       ? symbol.initialsFor(displayName)

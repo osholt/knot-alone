@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../controllers/sailor_profile_controller.dart';
 import '../../domain/sailor_color.dart';
-import '../map/motorcycle_icon.dart';
+import '../map/vessel_icon.dart';
 import '../map/sailor_symbol_picker.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -20,8 +20,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   late final TextEditingController _nameController = TextEditingController(
     text: widget.sailorProfile.displayName,
   );
-  late MotorcycleIconStyle _motorcycleStyle =
-      widget.sailorProfile.motorcycleStyle;
+  late VesselIconStyle _vesselStyle = widget.sailorProfile.vesselStyle;
   late SailorSymbol _sailorSymbol = widget.sailorProfile.sailorSymbol;
   late SailorColor _sailorColor = widget.sailorProfile.sailorColor;
   int _step = 0;
@@ -164,13 +163,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       SailorSymbolPicker(
         displayName: _nameController.text,
         selectedSymbol: _sailorSymbol,
-        motorcycleStyle: _motorcycleStyle,
+        vesselStyle: _vesselStyle,
         badgeColor: _sailorColor.color,
         keyPrefix: 'onboarding-symbol',
         bikeKeyPrefix: 'onboarding-bike',
         onSymbolChanged: (symbol) => setState(() => _sailorSymbol = symbol),
-        onMotorcycleStyleChanged: (style) =>
-            setState(() => _motorcycleStyle = style),
+        onVesselStyleChanged: (style) => setState(() => _vesselStyle = style),
       ),
       const SizedBox(height: 20),
       const Text('Your colour', style: TextStyle(color: Color(0xFFABB5C1))),
@@ -220,7 +218,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Row(
         children: [
           SailorMarkerBadge(
-            style: _motorcycleStyle,
+            style: _vesselStyle,
             symbol: _sailorSymbol,
             displayName: _nameController.text,
             badgeColor: _sailorColor.color,
@@ -238,7 +236,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 Text(
-                  '${_sailorSymbol.label(_nameController.text, _motorcycleStyle)} · ${_sailorColor.label}',
+                  '${_sailorSymbol.label(_nameController.text, _vesselStyle)} · ${_sailorColor.label}',
                   style: const TextStyle(color: Color(0xFFABB5C1)),
                 ),
               ],
@@ -472,7 +470,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() => _saving = true);
     await widget.sailorProfile.completeOnboarding(
       displayName: _nameController.text,
-      motorcycleStyle: _motorcycleStyle,
+      vesselStyle: _vesselStyle,
       sailorSymbol: _sailorSymbol,
       sailorColor: _sailorColor,
       educationSkipped: _educationSkipped,

@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../domain/sailor_color.dart';
-import '../features/map/motorcycle_icon.dart';
+import '../features/map/vessel_icon.dart';
 import '../services/sailor_contact_share.dart';
 
 /// Remembers how a sailor last presented themselves - name, bike, colour -
@@ -15,7 +15,7 @@ class SailorProfileController extends ChangeNotifier {
     this._preferences,
     this._installationId,
     this._displayName,
-    this._motorcycleStyle,
+    this._vesselStyle,
     this._sailorSymbol,
     this._sailorColor,
     this._emergencyContactName,
@@ -49,7 +49,7 @@ class SailorProfileController extends ChangeNotifier {
   final SharedPreferences _preferences;
   final String _installationId;
   String _displayName;
-  MotorcycleIconStyle _motorcycleStyle;
+  VesselIconStyle _vesselStyle;
   SailorSymbol _sailorSymbol;
   SailorColor _sailorColor;
   String _emergencyContactName;
@@ -63,7 +63,7 @@ class SailorProfileController extends ChangeNotifier {
 
   String get installationId => _installationId;
   String get displayName => _displayName;
-  MotorcycleIconStyle get motorcycleStyle => _motorcycleStyle;
+  VesselIconStyle get vesselStyle => _vesselStyle;
   SailorSymbol get sailorSymbol => _sailorSymbol;
   SailorColor get sailorColor => _sailorColor;
   bool get onboardingCompleted => _onboardingCompleted;
@@ -119,7 +119,7 @@ class SailorProfileController extends ChangeNotifier {
       preferences,
       installationId,
       displayName,
-      motorcycleIconStyleFromName(preferences.getString(_styleKey)),
+      vesselIconStyleFromName(preferences.getString(_styleKey)),
       SailorSymbol.fromStorageValue(preferences.getString(_symbolKey)),
       sailorColorFromName(preferences.getString(_colorKey)),
       preferences.getString(_emergencyContactNameKey) ?? '',
@@ -134,17 +134,17 @@ class SailorProfileController extends ChangeNotifier {
 
   Future<void> save({
     required String displayName,
-    required MotorcycleIconStyle motorcycleStyle,
+    required VesselIconStyle vesselStyle,
     SailorSymbol? sailorSymbol,
     required SailorColor sailorColor,
   }) async {
     _displayName = displayName;
-    _motorcycleStyle = motorcycleStyle;
+    _vesselStyle = vesselStyle;
     _sailorSymbol = sailorSymbol ?? _sailorSymbol;
     _sailorColor = sailorColor;
     await Future.wait([
       _preferences.setString(_nameKey, displayName),
-      _preferences.setString(_styleKey, motorcycleStyle.name),
+      _preferences.setString(_styleKey, vesselStyle.name),
       _preferences.setString(_symbolKey, _sailorSymbol.storageValue),
       _preferences.setString(_colorKey, sailorColor.name),
     ]);
@@ -153,7 +153,7 @@ class SailorProfileController extends ChangeNotifier {
 
   Future<void> completeOnboarding({
     required String displayName,
-    required MotorcycleIconStyle motorcycleStyle,
+    required VesselIconStyle vesselStyle,
     SailorSymbol? sailorSymbol,
     required SailorColor sailorColor,
     required bool educationSkipped,
@@ -164,7 +164,7 @@ class SailorProfileController extends ChangeNotifier {
       throw ArgumentError.value(displayName, 'displayName', 'is required');
     }
     _displayName = normalizedName;
-    _motorcycleStyle = motorcycleStyle;
+    _vesselStyle = vesselStyle;
     _sailorSymbol = sailorSymbol ?? sailorSymbolDefault;
     _sailorColor = sailorColor;
     _onboardingCompleted = true;
@@ -172,7 +172,7 @@ class SailorProfileController extends ChangeNotifier {
     _pendingVoyageChoice = voyageChoice;
     await Future.wait([
       _preferences.setString(_nameKey, normalizedName),
-      _preferences.setString(_styleKey, motorcycleStyle.name),
+      _preferences.setString(_styleKey, vesselStyle.name),
       _preferences.setString(_symbolKey, _sailorSymbol.storageValue),
       _preferences.setString(_colorKey, sailorColor.name),
       _preferences.setBool(_onboardingCompletedKey, true),

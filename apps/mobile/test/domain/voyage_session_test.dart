@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/domain/voyage_coordination_mode.dart';
 import 'package:tide_and_seek/domain/voyage_role.dart';
 import 'package:tide_and_seek/domain/voyage_session.dart';
-import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/features/map/vessel_icon.dart';
 
 void main() {
   final session = VoyageSession(

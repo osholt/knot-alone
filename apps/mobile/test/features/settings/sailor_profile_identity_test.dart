@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/controllers/sailor_profile_controller.dart';
 import 'package:tide_and_seek/domain/sailor_color.dart';
-import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/features/map/vessel_icon.dart';
 import 'package:tide_and_seek/features/settings/sailor_profile_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,7 +17,7 @@ void main() {
     final profile = await SailorProfileController.load();
     await profile.save(
       displayName: 'Oliver Holt',
-      motorcycleStyle: MotorcycleIconStyle.scrambler,
+      vesselStyle: VesselIconStyle.ketch,
       sailorColor: SailorColor.green,
     );
     await tester.pumpWidget(

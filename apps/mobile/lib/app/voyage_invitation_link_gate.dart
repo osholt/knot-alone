@@ -156,7 +156,7 @@ class _VoyageInvitationLinkGateState extends State<VoyageInvitationLinkGate> {
         invitation.voyageCode,
         profile.displayName,
         joinToken: invitation.joinToken,
-        motorcycleStyle: profile.motorcycleStyle,
+        vesselStyle: profile.vesselStyle,
         sailorSymbol: profile.sailorSymbol,
         sailorColor: profile.sailorColor,
       );

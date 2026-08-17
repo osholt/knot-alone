@@ -5,7 +5,7 @@ import 'package:tide_and_seek/domain/imported_route.dart' as imported_route;
 import 'package:tide_and_seek/domain/voyage_role.dart';
 import 'package:tide_and_seek/domain/sailor_color.dart';
 import 'package:tide_and_seek/domain/route_store.dart';
-import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/features/map/vessel_icon.dart';
 import 'package:tide_and_seek/features/voyage/active_voyage_shell.dart';
 import 'package:tide_and_seek/services/voyage_membership.dart';
 import 'package:tide_and_seek/services/road_routing.dart';
@@ -80,7 +80,7 @@ void main() {
       joinedAt: DateTime.utc(2026, 7, 25, 9),
       lastSeenAt: DateTime.utc(2026, 7, 25, 9),
       state: state,
-      motorcycleStyle: motorcycleIconStyleDefault,
+      vesselStyle: vesselIconStyleDefault,
       sailorColor: SailorColor.amber,
       transportEvidence: const {VoyageTransportEvidence.internetRelay},
       isLocal: false,
@@ -194,6 +194,6 @@ SimulatedSailorSnapshot _simulated({
   headingDegrees: 90,
   offRouteTrail: const [],
   travelTrail: const [],
-  motorcycleStyle: motorcycleIconStyleDefault,
+  vesselStyle: vesselIconStyleDefault,
   sailorColor: SailorColor.amber,
 );

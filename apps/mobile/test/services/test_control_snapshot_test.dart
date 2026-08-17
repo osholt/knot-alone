@@ -3,7 +3,7 @@ import 'package:tide_and_seek/domain/geo_point.dart';
 import 'package:tide_and_seek/domain/voyage_role.dart';
 import 'package:tide_and_seek/domain/sailor_color.dart';
 import 'package:tide_and_seek/domain/sailor_location.dart';
-import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/features/map/vessel_icon.dart';
 import 'package:tide_and_seek/relay/live_presence.dart';
 import 'package:tide_and_seek/services/voyage_membership.dart';
 import 'package:tide_and_seek/services/test_control_snapshot.dart';
@@ -161,7 +161,7 @@ VoyageParticipant _participant(
   lastSeenAt: DateTime.utc(2026, 7, 31, 11, 59),
   leftAt: leftAt,
   state: state,
-  motorcycleStyle: motorcycleIconStyleDefault,
+  vesselStyle: vesselIconStyleDefault,
   sailorColor: sailorColorDefault,
   transportEvidence: const {VoyageTransportEvidence.internetRelay},
   isLocal: false,

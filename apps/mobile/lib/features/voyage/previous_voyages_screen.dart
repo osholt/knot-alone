@@ -19,7 +19,7 @@ import '../../services/measurement_formatter.dart';
 import '../../services/voyage_summary_exporter.dart';
 import '../../services/stored_route_library.dart';
 import '../../services/trail_direction_arrows.dart';
-import '../map/motorcycle_icon.dart';
+import '../map/vessel_icon.dart';
 import '../map/resolved_route_map_preview.dart'
     show embeddedMapGestureRecognizers;
 import '../map/stored_route_picker.dart';

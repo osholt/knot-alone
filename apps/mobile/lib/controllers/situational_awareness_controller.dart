@@ -189,7 +189,7 @@ class SituationalAwarenessController extends ChangeNotifier {
       role: _session.role,
       sample: sample,
       receivedAt: _clock(),
-      motorcycleStyle: _session.motorcycleStyle,
+      vesselStyle: _session.vesselStyle,
       sailorSymbol: _session.sailorSymbol,
       sailorColor: _session.sailorColor,
     );

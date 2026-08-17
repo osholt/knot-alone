@@ -17,7 +17,7 @@ import 'package:tide_and_seek/domain/sailor_color.dart';
 import 'package:tide_and_seek/domain/recorded_route_store.dart';
 import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/features/home/home_screen.dart';
-import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/features/map/vessel_icon.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 import 'package:tide_and_seek/services/nearby_bridge.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -114,7 +114,7 @@ void main() {
     (tester) async {
       await sailorProfile.save(
         displayName: 'Oliver',
-        motorcycleStyle: MotorcycleIconStyle.scrambler,
+        vesselStyle: VesselIconStyle.ketch,
         sailorSymbol: const SailorSymbol.emoji('🦊'),
         sailorColor: SailorColor.cyan,
       );

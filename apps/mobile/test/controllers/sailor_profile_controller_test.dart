@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/controllers/sailor_profile_controller.dart';
 import 'package:tide_and_seek/domain/sailor_color.dart';
-import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/features/map/vessel_icon.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -54,7 +54,7 @@ void main() {
 
     await profile.completeOnboarding(
       displayName: '  Oliver  ',
-      motorcycleStyle: MotorcycleIconStyle.scrambler,
+      vesselStyle: VesselIconStyle.ketch,
       sailorSymbol: const SailorSymbol.emoji('🦊'),
       sailorColor: SailorColor.cyan,
       educationSkipped: false,
@@ -66,7 +66,7 @@ void main() {
     expect(profile.takePendingVoyageChoice(), isNull);
     expect(reloaded.onboardingCompleted, isTrue);
     expect(reloaded.displayName, 'Oliver');
-    expect(reloaded.motorcycleStyle, MotorcycleIconStyle.scrambler);
+    expect(reloaded.vesselStyle, VesselIconStyle.ketch);
     expect(reloaded.sailorSymbol, const SailorSymbol.emoji('🦊'));
     expect(reloaded.sailorColor, SailorColor.cyan);
   });
@@ -82,7 +82,7 @@ void main() {
 
       await profile.save(
         displayName: 'Sweeper',
-        motorcycleStyle: MotorcycleIconStyle.fullTourer,
+        vesselStyle: VesselIconStyle.motorYacht,
         sailorSymbol: symbol,
         sailorColor: SailorColor.purple,
       );
@@ -97,7 +97,7 @@ void main() {
     final profile = await SailorProfileController.load();
     await profile.completeOnboarding(
       displayName: 'Oliver',
-      motorcycleStyle: MotorcycleIconStyle.roadster,
+      vesselStyle: VesselIconStyle.motorCruiser,
       sailorColor: SailorColor.orange,
       educationSkipped: true,
       voyageChoice: OnboardingVoyageChoice.create,
@@ -117,7 +117,7 @@ void main() {
     await expectLater(
       profile.completeOnboarding(
         displayName: '   ',
-        motorcycleStyle: MotorcycleIconStyle.adventureTourer,
+        vesselStyle: VesselIconStyle.sloop,
         sailorColor: SailorColor.green,
         educationSkipped: false,
         voyageChoice: OnboardingVoyageChoice.create,

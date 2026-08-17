@@ -4,7 +4,7 @@ import 'package:tide_and_seek/domain/voyage_event.dart';
 import 'package:tide_and_seek/domain/voyage_role.dart';
 import 'package:tide_and_seek/domain/sailor_color.dart';
 import 'package:tide_and_seek/domain/sailor_location.dart';
-import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
+import 'package:tide_and_seek/features/map/vessel_icon.dart';
 import 'package:tide_and_seek/relay/live_presence.dart';
 import 'package:tide_and_seek/services/voyage_event_authenticator.dart';
 import 'package:tide_and_seek/services/voyage_membership.dart';
@@ -38,7 +38,7 @@ void main() {
     localDisplayName: 'Oliver',
     localRole: VoyageRole.lead,
     localJoinedAt: startedAt,
-    localMotorcycleStyle: motorcycleIconStyleDefault,
+    localVesselStyle: vesselIconStyleDefault,
     localSailorColor: sailorColorDefault,
     voyageStartedAt: startedAt,
     voyageEndedAt: voyageEndedAt,

@@ -1135,7 +1135,7 @@ class _VoyageFormState extends State<_VoyageForm> with WidgetsBindingObserver {
       }
       await widget.controller.createVoyage(
         name,
-        motorcycleStyle: widget.sailorProfile.motorcycleStyle,
+        vesselStyle: widget.sailorProfile.vesselStyle,
         sailorSymbol: widget.sailorProfile.sailorSymbol,
         sailorColor: widget.sailorProfile.sailorColor,
         coordinationMode: _selectedCoordinationMode,
@@ -1146,7 +1146,7 @@ class _VoyageFormState extends State<_VoyageForm> with WidgetsBindingObserver {
       await widget.controller.joinVoyage(
         code,
         name,
-        motorcycleStyle: widget.sailorProfile.motorcycleStyle,
+        vesselStyle: widget.sailorProfile.vesselStyle,
         sailorSymbol: widget.sailorProfile.sailorSymbol,
         sailorColor: widget.sailorProfile.sailorColor,
         joinToken: _pastedJoinToken,
@@ -1163,7 +1163,7 @@ class _VoyageFormState extends State<_VoyageForm> with WidgetsBindingObserver {
     if (widget.controller.hasActiveVoyage && mounted) {
       await widget.sailorProfile.save(
         displayName: name.trim(),
-        motorcycleStyle: widget.sailorProfile.motorcycleStyle,
+        vesselStyle: widget.sailorProfile.vesselStyle,
         sailorSymbol: widget.sailorProfile.sailorSymbol,
         sailorColor: widget.sailorProfile.sailorColor,
       );
@@ -1241,7 +1241,7 @@ class _VoyageFormState extends State<_VoyageForm> with WidgetsBindingObserver {
     await widget.controller.joinVoyageFromInvitation(
       invitation,
       name,
-      motorcycleStyle: widget.sailorProfile.motorcycleStyle,
+      vesselStyle: widget.sailorProfile.vesselStyle,
       sailorSymbol: widget.sailorProfile.sailorSymbol,
       sailorColor: widget.sailorProfile.sailorColor,
     );
