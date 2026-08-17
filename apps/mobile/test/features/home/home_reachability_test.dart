@@ -105,8 +105,8 @@ void main() {
   ) async {
     await pumpHome(tester);
 
-    expect(find.text('Create a voyage'), findsOneWidget);
-    expect(find.text('Join a voyage'), findsOneWidget);
+    expect(find.text('New voyage'), findsOneWidget);
+    expect(find.text('Join'), findsOneWidget);
   });
 
   testWidgets(
@@ -120,7 +120,7 @@ void main() {
       );
       await pumpHome(tester);
 
-      await tester.tap(find.text('Create a voyage'));
+      await tester.tap(find.text('New voyage'));
       await tester.pumpAndSettle();
 
       expect(find.text('Your colour'), findsNothing);
@@ -208,7 +208,7 @@ void main() {
     // then concluded to be missing, because the only way to find it was an
     // unlabelled camera icon inside a text field's suffix.
     await pumpHome(tester);
-    await tester.tap(find.text('Join a voyage'));
+    await tester.tap(find.text('Join'));
     await tester.pumpAndSettle();
 
     expect(
@@ -223,7 +223,7 @@ void main() {
   ) async {
     // Adding the label must not have quietly replaced the compact affordance.
     await pumpHome(tester);
-    await tester.tap(find.text('Join a voyage'));
+    await tester.tap(find.text('Join'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('scan-invitation-button')), findsOneWidget);

@@ -58,8 +58,8 @@ void main() {
       await tester.pumpWidget(_app(controller));
 
       expect(find.byType(HomeMapBackdrop), findsOneWidget);
-      expect(find.text('Create a voyage'), findsOneWidget);
-      expect(find.text('Join a voyage'), findsOneWidget);
+      expect(find.text('New voyage'), findsOneWidget);
+      expect(find.text('Join'), findsOneWidget);
     },
   );
 
@@ -69,8 +69,8 @@ void main() {
     final controller = await _controller();
     await tester.pumpWidget(_app(controller));
 
-    expect(find.text('Create a voyage'), findsOneWidget);
-    expect(find.text('Join a voyage'), findsOneWidget);
+    expect(find.text('New voyage'), findsOneWidget);
+    expect(find.text('Join'), findsOneWidget);
     // The simulator is behind "More" now, and there is no heading or paragraph
     // at all: #426 removed the start panel rather than shrinking it, because
     // "I don't want the start screen at all" leaves no room for a smaller one.
@@ -156,16 +156,14 @@ void main() {
       expect(
         tester
             .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'Create a voyage'),
+              find.widgetWithText(FilledButton, 'New voyage'),
             )
             .onPressed,
         isNull,
       );
       expect(
         tester
-            .widget<OutlinedButton>(
-              find.widgetWithText(OutlinedButton, 'Join a voyage'),
-            )
+            .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Join'))
             .onPressed,
         isNull,
       );
@@ -189,7 +187,7 @@ void main() {
     final plans = _FakePlanDirectory();
 
     await tester.pumpWidget(_app(controller, planDirectory: plans));
-    await tester.tap(find.text('Create a voyage'));
+    await tester.tap(find.text('New voyage'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('planned-route-code-field')), findsOneWidget);
@@ -218,7 +216,7 @@ void main() {
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(_app(controller));
-    await tester.tap(find.text('Create a voyage'));
+    await tester.tap(find.text('New voyage'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('voyage-scope-selector')), findsOneWidget);
@@ -296,7 +294,7 @@ void main() {
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(_app(controller));
-    await tester.tap(find.text('Join a voyage'));
+    await tester.tap(find.text('Join'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.byKey(const Key('voyage-code-field')),
@@ -333,7 +331,7 @@ void main() {
     addTearDown(preference.dispose);
 
     await tester.pumpWidget(_app(controller, voyageCodePreference: preference));
-    await tester.tap(find.text('Join a voyage'));
+    await tester.tap(find.text('Join'));
     await tester.pumpAndSettle();
 
     final codeField = tester.widget<TextField>(
@@ -368,7 +366,7 @@ void main() {
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(_app(controller, voyageCodePreference: preference));
-    await tester.tap(find.text('Join a voyage'));
+    await tester.tap(find.text('Join'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('sailor-name-field')),
@@ -411,7 +409,7 @@ void main() {
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(_app(controller));
-    await tester.tap(find.text('Join a voyage'));
+    await tester.tap(find.text('Join'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('sailor-name-field')),
@@ -760,8 +758,8 @@ void main() {
     await tester.tap(find.text('Leave only'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Create a voyage'), findsOneWidget);
-    expect(find.text('Join a voyage'), findsOneWidget);
+    expect(find.text('New voyage'), findsOneWidget);
+    expect(find.text('Join'), findsOneWidget);
     expect(controller.hasActiveVoyage, isFalse);
 
     controller.dispose();
@@ -819,7 +817,7 @@ void main() {
     await tester.tap(find.byKey(const Key('leave-ended-voyage-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Create a voyage'), findsOneWidget);
+    expect(find.text('New voyage'), findsOneWidget);
     expect(find.byKey(const Key('set-aside-voyage-banner')), findsOneWidget);
     expect(find.text('Voyage $voyageCode has ended'), findsOneWidget);
     // Nothing was given up to get here.
@@ -853,7 +851,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('set-aside-voyage-banner')), findsOneWidget);
 
-    await tester.tap(find.text('Create a voyage'));
+    await tester.tap(find.text('New voyage'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.widgetWithText(FilledButton, 'Create voyage'),
