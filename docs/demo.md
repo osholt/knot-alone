@@ -68,7 +68,7 @@ ipconfig getifaddr en0
 The base URL is compiled in, so it is a build-time argument:
 
 ```bash
-flutter build ios --debug --dart-define=TIDE_AND_SEEK_API_BASE_URL=http://<mac-lan-ip>:8000/api
+flutter build ios --release --dart-define=TIDE_AND_SEEK_API_BASE_URL=http://<mac-lan-ip>:8000/api
 ```
 
 On one phone create a voyage and read the six-digit code from the voyage
@@ -95,7 +95,18 @@ profiles were tied to the previous identifier and no longer apply, so the
 project is set to **automatic** signing: Xcode creates the App ID and profile
 against your team by itself, and the developer portal does not need visiting.
 
-Claude cannot do this part — signing needs your Apple ID inside Xcode.
+**Build `--release`, never `--debug`.** Since iOS 14 a debug Flutter build
+cannot be launched by tapping the home-screen icon at all: debug mode uses a
+JIT that requires an attached debugger, so the app dies on signal 11 with
+"Cannot create a FlutterEngine instance in debug mode without Flutter tooling
+or Xcode". It looks exactly like a crash in the app. Debug builds only run
+under `flutter run` or from Xcode; anything you hand someone to tap must be
+`--release` (or `--profile`).
+
+Signing itself can be done from the command line — `flutter build ios` passes
+`-allowProvisioningUpdates` to xcodebuild, which creates the App ID and profile
+against the team in the project. That needs Xcode already signed in to the
+Apple ID; Claude will not enter credentials.
 
 1. `open apps/mobile/ios/Runner.xcworkspace`
 2. Select the **Runner** target, then **Signing & Capabilities**.
