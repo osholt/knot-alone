@@ -266,19 +266,22 @@ void main() {
     );
   });
 
-  test('reset forgets the ride so a new one adopts its own first heading', () {
-    final smoother = NavigationHeadingSmoother();
-    _drive(smoother, [45]);
-    smoother.reset();
+  test(
+    'reset forgets the voyage so a new one adopts its own first heading',
+    () {
+      final smoother = NavigationHeadingSmoother();
+      _drive(smoother, [45]);
+      smoother.reset();
 
-    expect(smoother.bearingDegrees, isNull);
-    expect(
-      smoother.update(
-        headingDegrees: 300,
-        speedMetersPerSecond: 18,
-        at: _start.add(const Duration(minutes: 5)),
-      ),
-      300,
-    );
-  });
+      expect(smoother.bearingDegrees, isNull);
+      expect(
+        smoother.update(
+          headingDegrees: 300,
+          speedMetersPerSecond: 18,
+          at: _start.add(const Duration(minutes: 5)),
+        ),
+        300,
+      );
+    },
+  );
 }

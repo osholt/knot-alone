@@ -5,11 +5,11 @@ import '../../services/navigation_guidance.dart';
 
 /// What the routing engine said about one turn, and what this app made of it.
 ///
-/// Two issues from the ride of 2 August 2026 are blocked on the same missing
+/// Two issues from the voyage of 2 August 2026 are blocked on the same missing
 /// thing: a 90-degree right announced as a sharp right (#302), and a roundabout
 /// exit icon that looked like the wrong way round (#301). Both diagnoses ended
 /// at "capture the raw manoeuvre JSON for the reported junction before touching
-/// any code", and there was no way for a rider to capture it.
+/// any code", and there was no way for a sailor to capture it.
 ///
 /// This is that way. It is deliberately the same instinct as #281's basemap
 /// badge: rather than guess at a cause that only appears on a particular road,
@@ -35,7 +35,7 @@ String maneuverDiagnosticsReport(
   // the heading on the road *taken*, across two merged steps - so the entry
   // manoeuvre's own bearingAfter, which every other manoeuvre uses, is not the
   // number the app reasoned from. Reporting that one made a roundabout capture
-  // unable to explain the instruction the rider saw (#360).
+  // unable to explain the instruction the sailor saw (#360).
   final departure = isRoundabout
       ? instruction.departureBearingDegrees
       : maneuver.bearingAfterDegrees;
@@ -97,7 +97,7 @@ String _signed(double? value) {
 
 /// Shows [maneuverDiagnosticsReport] with a button that copies it.
 ///
-/// Copyable because the reporting channel is the tester group: a rider who has
+/// Copyable because the reporting channel is the tester group: a sailor who has
 /// just been sent the wrong way needs to paste a dozen lines into a chat, not
 /// transcribe them at the roadside.
 class ManeuverDiagnosticsSheet extends StatelessWidget {

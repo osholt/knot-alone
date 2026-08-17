@@ -20,14 +20,14 @@ void main() {
       observerToken: 'ro1_CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC',
     );
 
-    await store.save('ride-a', [credentials]);
-    final reloaded = await store.load('ride-a');
+    await store.save('voyage-a', [credentials]);
+    final reloaded = await store.load('voyage-a');
 
     expect(reloaded.single.managementToken, credentials.managementToken);
     expect(reloaded.single.publisherToken, credentials.publisherToken);
     expect(reloaded.single.observerToken, credentials.observerToken);
-    await store.delete('ride-a');
-    expect(await store.load('ride-a'), isEmpty);
+    await store.delete('voyage-a');
+    expect(await store.load('voyage-a'), isEmpty);
   });
 
   test(
@@ -41,7 +41,7 @@ void main() {
         value: '{"schemaVersion":1,"credentials":[{"bad":true}]}',
       );
 
-      expect(await store.load('ride-a'), isEmpty);
+      expect(await store.load('voyage-a'), isEmpty);
     },
   );
 
@@ -49,7 +49,7 @@ void main() {
     const store = SecureObserverGrantStore();
     final now = DateTime.utc(2026, 7, 24, 12);
     await store.saveLocalAssistance(
-      'ride-a',
+      'voyage-a',
       ObserverLocalAssistanceState(
         updatedAt: now,
         assistance: ObserverPublishedAssistance(
@@ -59,10 +59,10 @@ void main() {
       ),
     );
 
-    final restored = await store.loadLocalAssistance('ride-a');
+    final restored = await store.loadLocalAssistance('voyage-a');
     expect(restored?.assistance?.kind, 'assistance');
     expect(restored?.updatedAt.toUtc(), now);
-    await store.deleteLocalAssistance('ride-a');
-    expect(await store.loadLocalAssistance('ride-a'), isNull);
+    await store.deleteLocalAssistance('voyage-a');
+    expect(await store.loadLocalAssistance('voyage-a'), isNull);
   });
 }

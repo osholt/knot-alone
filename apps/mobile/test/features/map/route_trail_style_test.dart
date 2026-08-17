@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/features/map/route_trail_style.dart';
-import 'package:tide_and_seek/services/rider_trail_recorder.dart';
+import 'package:tide_and_seek/services/sailor_trail_recorder.dart';
 
 /// Measured cover for #107. These assertions are the numeric part of the fix:
 /// they cannot prove sunlight or visor legibility, which needs a photograph from
@@ -18,7 +18,7 @@ void main() {
     const documented = <String, (double, double, double)>{
       'route ahead': (4.11, 9.54, 10.27),
       'travelled': (2.81, 6.52, 7.02),
-      'leader trail': (4.22, 9.78, 10.53),
+      'skipper trail': (4.22, 9.78, 10.53),
       'off route': (2.73, 6.33, 6.81),
       'rejoin breadcrumb': (4.77, 11.06, 11.91),
     };
@@ -157,14 +157,14 @@ void main() {
       reason: 'width alone also separates them',
     );
     expect(
-      RouteTrailStyle.leaderTrail.widthPixels,
+      RouteTrailStyle.skipperTrail.widthPixels,
       RouteTrailStyle.allLines.values
           .map((line) => line.widthPixels)
           .reduce((a, b) => a > b ? a : b),
-      reason: 'the leader trail is the group ground truth',
+      reason: 'the skipper trail is the group ground truth',
     );
     expect(RouteTrailStyle.travelled.isDashed, isFalse);
-    expect(RouteTrailStyle.leaderTrail.isDashed, isFalse);
+    expect(RouteTrailStyle.skipperTrail.isDashed, isFalse);
     expect(RouteTrailStyle.routeAhead.isDashed, isTrue);
     expect(RouteTrailStyle.offRouteTrail.isDashed, isTrue);
     expect(RouteTrailStyle.rejoinBreadcrumb.isDashed, isTrue);
@@ -248,7 +248,7 @@ void main() {
   });
 
   test('every trail kind has a style', () {
-    for (final kind in RiderTrailKind.values) {
+    for (final kind in SailorTrailKind.values) {
       expect(
         RouteTrailStyle.allLines.values,
         contains(RouteTrailStyle.forTrail(kind)),
@@ -256,25 +256,25 @@ void main() {
       );
     }
     expect(
-      RouteTrailStyle.forTrail(RiderTrailKind.rider),
+      RouteTrailStyle.forTrail(SailorTrailKind.sailor),
       RouteTrailStyle.travelled,
     );
     expect(
-      RouteTrailStyle.forTrail(RiderTrailKind.leader),
-      RouteTrailStyle.leaderTrail,
+      RouteTrailStyle.forTrail(SailorTrailKind.skipper),
+      RouteTrailStyle.skipperTrail,
     );
     expect(
-      RouteTrailStyle.forTrail(RiderTrailKind.offRoute),
+      RouteTrailStyle.forTrail(SailorTrailKind.offRoute),
       RouteTrailStyle.offRouteTrail,
     );
   });
 
   group('marker glyph', () {
-    // #133's audit measured every ride-map ink against the dark basemap and found
+    // #133's audit measured every voyage-map ink against the dark basemap and found
     // the route palette #107 fixed was fine - every line and pin sits inside an
     // opaque casing worth 4.7-12:1 - while the glyph *inside* a marker badge, the
     // one ink with nothing behind it, ran from 1.53:1 to 3.87:1. That is the
-    // symbol that says which rider and how bad a hazard, so it was the least
+    // symbol that says which sailor and how bad a hazard, so it was the least
     // legible thing on the surface.
     test('is dark, and beats white on every badge in the palette', () {
       for (final entry in RouteTrailStyle.markerBadgeFills.entries) {
@@ -287,7 +287,7 @@ void main() {
               '${entry.key}: a white glyph would read better, so this badge '
               'needs its own glyph colour rather than the shared dark one',
         );
-        // WCAG AA for a graphical object. The worst case is the rider's own blue
+        // WCAG AA for a graphical object. The worst case is the sailor's own blue
         // badge at 4.74:1; the caution yellow is 12.00:1.
         expect(
           dark,
@@ -316,14 +316,14 @@ void main() {
         for (final entry in RouteTrailStyle.markerBadgeFills.entries)
           entry.key: contrastRatio(RouteTrailStyle.markerGlyph, entry.value),
       };
-      expect(ratios['own rider'], closeTo(4.74, 0.01));
-      expect(ratios['rider yellow'], closeTo(12.00, 0.01));
+      expect(ratios['own sailor'], closeTo(4.74, 0.01));
+      expect(ratios['sailor yellow'], closeTo(12.00, 0.01));
       expect(ratios['hazard caution'], closeTo(11.91, 0.01));
       // What each of those measured behind a white glyph before the change.
       expect(
         contrastRatio(
           const Color(0xFFFFFFFF),
-          RouteTrailStyle.markerBadgeFills['rider yellow']!,
+          RouteTrailStyle.markerBadgeFills['sailor yellow']!,
         ),
         closeTo(1.53, 0.01),
       );

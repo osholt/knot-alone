@@ -18,8 +18,8 @@ class _RecordingEngine implements SpokenGuidanceEngine {
 }
 
 void main() {
-  // #361: the ride surface declared a speaker and never built one, so it was
-  // null for the whole life of every ride and the speak call returned at its
+  // #361: the voyage surface declared a speaker and never built one, so it was
+  // null for the whole life of every voyage and the speak call returned at its
   // first guard. The setting saved, the setting read, and nothing behind it.
   //
   // The voice now comes from the controller, which is the thing the surface is
@@ -46,7 +46,7 @@ void main() {
         key: 'turn-1',
         phrase: 'Turn left onto Tennis Court Road',
         enabled: false,
-        rideActive: true,
+        voyageActive: true,
       );
       expect(engine.spoken, isEmpty);
       expect(engine.configured, 0);
@@ -55,7 +55,7 @@ void main() {
         key: 'turn-1',
         phrase: 'Turn left onto Tennis Court Road',
         enabled: true,
-        rideActive: true,
+        voyageActive: true,
       );
       expect(spoke, isTrue);
       expect(engine.spoken, ['Turn left onto Tennis Court Road']);
@@ -66,7 +66,7 @@ void main() {
         key: 'turn-1',
         phrase: 'Turn left onto Tennis Court Road',
         enabled: true,
-        rideActive: true,
+        voyageActive: true,
       );
       expect(repeated, isFalse);
       expect(engine.spoken, hasLength(1));

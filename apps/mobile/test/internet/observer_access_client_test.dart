@@ -3,20 +3,20 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 import 'package:tide_and_seek/internet/observer_access_client.dart';
 
 void main() {
-  final session = RideSession(
-    rideId: 'ride-observer',
-    rideCode: '123456',
+  final session = VoyageSession(
+    voyageId: 'voyage-observer',
+    voyageCode: '123456',
     inviteSecret: 'observer-secret-0123456789012345',
     joinToken: 'join-token-0123456789',
-    localRiderId: 'rider-a',
+    localSailorId: 'sailor-a',
     displayName: 'Oliver',
-    role: RideRole.rider,
+    role: VoyageRole.sailor,
     joinedAt: DateTime(2026, 7, 24),
   );
   final configuration = ObserverAccessConfiguration(
@@ -71,7 +71,7 @@ void main() {
 
     expect(
       captured.url.toString(),
-      'https://relay.example/api/v1/rides/ride-observer/observer-grants',
+      'https://relay.example/api/v1/voyages/voyage-observer/observer-grants',
     );
     expect(captured.headers['authorization'], startsWith('Bearer rr1_'));
     expect(captured.headers, isNot(contains('x-tide-and-seek-device')));
@@ -123,13 +123,13 @@ void main() {
 
     final credentials = await client.create(
       session,
-      label: 'Ride watcher',
+      label: 'Voyage watcher',
       duration: const Duration(hours: 1),
       scope: ObserverAccessScope.group,
     );
 
     expect(jsonDecode(captured.body), {
-      'label': 'Ride watcher',
+      'label': 'Voyage watcher',
       'durationMinutes': 60,
       'consentConfirmed': true,
       'scope': 'group',
@@ -168,7 +168,7 @@ void main() {
       ObserverPublishedSnapshot(
         subjectName: 'Oliver',
         snapshotGeneratedAt: now,
-        rideStatus: 'waiting',
+        voyageStatus: 'waiting',
         statusUpdatedAt: now,
         assistanceUpdatedAt: now,
       ),

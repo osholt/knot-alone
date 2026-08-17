@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from .config import Settings
 from .crypto import DataCipher, base64url, sha256, token_hash
 from .membership import MembershipEvent, project_membership_events
-from .models import PushDelivery, PushRegistration, Ride, RideMember, StoredEvent
+from .models import PushDelivery, PushRegistration, Voyage, VoyageMember, StoredEvent
 from .schemas import PushRegistrationRequest
 from .service import RelayServiceError
 
@@ -28,7 +28,7 @@ from .service import RelayServiceError
 @dataclass(frozen=True)
 class PushMessage:
     event_id: str
-    ride_id: str
+    voyage_id: str
     category: str
     title: str
     body: str
@@ -40,7 +40,7 @@ class PushMessage:
     @property
     def data(self) -> dict[str, str]:
         return {
-            "rideId": self.ride_id,
+            "voyageId": self.voyage_id,
             "eventId": self.event_id,
             "category": self.category,
         }
@@ -75,7 +75,7 @@ def register_push(
     session: Session,
     *,
     cipher: DataCipher,
-    ride_id: str,
+    voyage_id: str,
     bearer_token: str,
     installation_id: str,
     device_header: str,
@@ -85,7 +85,7 @@ def register_push(
     now = now or datetime.now(UTC)
     _authorize_installation(
         session,
-        ride_id=ride_id,
+        voyage_id=voyage_id,
         bearer_token=bearer_token,
         installation_id=installation_id,
         device_header=device_header,
@@ -98,14 +98,14 @@ def register_push(
     )
     if valid_provider_token is None:
         raise RelayServiceError(400, "Push token is invalid")
-    aad = _token_aad(ride_id, installation_id, request.provider)
+    aad = _token_aad(voyage_id, installation_id, request.provider)
     encrypted = cipher.encrypt_json({"token": token}, associated_data=aad)
     digest = token_hash(token)
 
     registration = session.scalar(
         select(PushRegistration)
         .where(
-            PushRegistration.ride_id == ride_id,
+            PushRegistration.voyage_id == voyage_id,
             PushRegistration.installation_id == installation_id,
             PushRegistration.provider == request.provider,
         )
@@ -113,7 +113,7 @@ def register_push(
     )
     if registration is None:
         registration = PushRegistration(
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             installation_id=installation_id,
             platform=request.platform,
             provider=request.provider,
@@ -146,7 +146,7 @@ def register_push(
 def revoke_push(
     session: Session,
     *,
-    ride_id: str,
+    voyage_id: str,
     bearer_token: str,
     installation_id: str,
     device_header: str,
@@ -155,14 +155,14 @@ def revoke_push(
     now = now or datetime.now(UTC)
     _authorize_installation(
         session,
-        ride_id=ride_id,
+        voyage_id=voyage_id,
         bearer_token=bearer_token,
         installation_id=installation_id,
         device_header=device_header,
     )
     registrations = session.scalars(
         select(PushRegistration).where(
-            PushRegistration.ride_id == ride_id,
+            PushRegistration.voyage_id == voyage_id,
             PushRegistration.installation_id == installation_id,
             PushRegistration.revoked_at.is_(None),
         )
@@ -217,7 +217,7 @@ class PushDispatcher:
         self,
         session: Session,
         *,
-        ride_id: str,
+        voyage_id: str,
         events: list[dict[str, Any]],
         now: datetime | None = None,
     ) -> PushDispatchReport:
@@ -225,14 +225,14 @@ class PushDispatcher:
         messages = [
             message
             for event in events
-            if (message := classify_push_event(ride_id, event)) is not None
+            if (message := classify_push_event(voyage_id, event)) is not None
         ]
         if not messages:
             return PushDispatchReport()
-        memberships = self._memberships(session, ride_id, now)
+        memberships = self._memberships(session, voyage_id, now)
         registrations = session.scalars(
             select(PushRegistration).where(
-                PushRegistration.ride_id == ride_id,
+                PushRegistration.voyage_id == voyage_id,
                 PushRegistration.revoked_at.is_(None),
             )
         ).all()
@@ -292,7 +292,7 @@ class PushDispatcher:
             value = self._cipher.decrypt_json(
                 registration.token_ciphertext,
                 associated_data=_token_aad(
-                    registration.ride_id,
+                    registration.voyage_id,
                     registration.installation_id,
                     registration.provider,
                 ),
@@ -317,22 +317,22 @@ class PushDispatcher:
     def _memberships(
         self,
         session: Session,
-        ride_id: str,
+        voyage_id: str,
         now: datetime,
     ) -> dict[str, _Membership]:
-        ride = session.scalar(select(Ride).where(Ride.id == ride_id).with_for_update())
-        if ride is None:
+        voyage = session.scalar(select(Voyage).where(Voyage.id == voyage_id).with_for_update())
+        if voyage is None:
             return {}
-        if not ride.membership_projection_ready:
-            self._rebuild_membership_projection(session, ride)
+        if not voyage.membership_projection_ready:
+            self._rebuild_membership_projection(session, voyage)
         result = {
             row.device_id: _Membership(
-                rider_id=row.device_id,
+                sailor_id=row.device_id,
                 role=row.role,
                 state=row.state,
                 last_seen_at=_as_utc(row.last_seen_at),
             )
-            for row in session.scalars(select(RideMember).where(RideMember.ride_id == ride_id))
+            for row in session.scalars(select(VoyageMember).where(VoyageMember.voyage_id == voyage_id))
         }
         for membership in result.values():
             if membership.state == "left":
@@ -346,19 +346,19 @@ class PushDispatcher:
                 membership.state = "active"
         return result
 
-    def _rebuild_membership_projection(self, session: Session, ride: Ride) -> None:
-        """Upgrade an in-flight pre-projection ride once, under its row lock."""
+    def _rebuild_membership_projection(self, session: Session, voyage: Voyage) -> None:
+        """Upgrade an in-flight pre-projection voyage once, under its row lock."""
 
-        session.execute(delete(RideMember).where(RideMember.ride_id == ride.id))
+        session.execute(delete(VoyageMember).where(VoyageMember.voyage_id == voyage.id))
         events: list[MembershipEvent] = []
         rows = session.scalars(
-            select(StoredEvent).where(StoredEvent.ride_id == ride.id).order_by(StoredEvent.sequence)
+            select(StoredEvent).where(StoredEvent.voyage_id == voyage.id).order_by(StoredEvent.sequence)
         ).all()
         for row in rows:
             try:
                 event = self._cipher.decrypt_json(
                     row.body_ciphertext,
-                    associated_data=f"event:{ride.id}:{row.event_id}".encode(),
+                    associated_data=f"event:{voyage.id}:{row.event_id}".encode(),
                 )
             except (TypeError, ValueError):
                 event = None
@@ -373,15 +373,15 @@ class PushDispatcher:
                     payload=payload if isinstance(payload, dict) else {},
                 )
             )
-        project_membership_events(session, ride_id=ride.id, events=events)
-        ride.membership_projection_ready = True
+        project_membership_events(session, voyage_id=voyage.id, events=events)
+        voyage.membership_projection_ready = True
         session.flush()
 
     @staticmethod
     def _targets(message: PushMessage, membership: _Membership) -> bool:
         return (
             message.all_members
-            or membership.rider_id in message.recipient_ids
+            or membership.sailor_id in message.recipient_ids
             or membership.role in message.recipient_roles
         )
 
@@ -407,7 +407,7 @@ class PushDispatcher:
         now: datetime,
     ) -> PushDelivery | None:
         delivery = PushDelivery(
-            ride_id=message.ride_id,
+            voyage_id=message.voyage_id,
             event_id=message.event_id,
             registration_id=registration.id,
             category=message.category,
@@ -425,14 +425,14 @@ class PushDispatcher:
 
 @dataclass
 class _Membership:
-    rider_id: str
+    sailor_id: str
     role: str
     state: str
     last_seen_at: datetime
 
 
 def classify_push_event(
-    ride_id: str,
+    voyage_id: str,
     event: dict[str, Any],
 ) -> PushMessage | None:
     event_id = event.get("id")
@@ -441,17 +441,17 @@ def classify_push_event(
     if not isinstance(event_id, str) or not isinstance(payload, dict):
         return None
     recipients = _recipient_ids(payload)
-    coordinator_roles = frozenset({"lead", "tailEndCharlie"})
+    coordinator_roles = frozenset({"lead", "sweeper"})
 
     if event_type == "statusMessage":
         message_type = payload.get("message")
         if message_type in {"emergencyStop", "assistance"}:
             return PushMessage(
                 event_id=event_id,
-                ride_id=ride_id,
+                voyage_id=voyage_id,
                 category="safety",
-                title="Urgent ride alert",
-                body="Open Tide and Seek for the authenticated ride details.",
+                title="Urgent voyage alert",
+                body="Open Tide and Seek for the authenticated voyage details.",
                 critical=True,
                 recipient_ids=recipients,
                 recipient_roles=frozenset() if recipients else coordinator_roles,
@@ -459,10 +459,10 @@ def classify_push_event(
         if message_type in {"stopped", "mechanical", "fuel", "routeBlocked"}:
             return PushMessage(
                 event_id=event_id,
-                ride_id=ride_id,
+                voyage_id=voyage_id,
                 category="safety",
-                title="Ride assistance update",
-                body="A rider status needs attention. Open the ride for details.",
+                title="Voyage assistance update",
+                body="A sailor status needs attention. Open the voyage for details.",
                 critical=False,
                 recipient_ids=recipients,
                 recipient_roles=frozenset() if recipients else coordinator_roles,
@@ -470,13 +470,13 @@ def classify_push_event(
         if message_type in {"allPassed", "resolved"}:
             return PushMessage(
                 event_id=event_id,
-                ride_id=ride_id,
+                voyage_id=voyage_id,
                 category="status",
-                title="Ride status update",
+                title="Voyage status update",
                 body="Open Tide and Seek for the latest group status.",
                 critical=False,
                 recipient_ids=recipients,
-                recipient_roles=frozenset({"lead", "tailEndCharlie", "marker"}),
+                recipient_roles=frozenset({"lead", "sweeper", "marker"}),
             )
         return None
 
@@ -490,28 +490,28 @@ def classify_push_event(
         level = assessment.get("alertLevel")
         if level not in {"urgent", "critical"}:
             return None
-        affected = alert.get("riderId")
+        affected = alert.get("sailorId")
         affected_ids = recipients | ({affected} if isinstance(affected, str) else set())
         audience = assessment.get("audience")
         return PushMessage(
             event_id=event_id,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             category="safety",
             title="Route attention needed",
-            body="A rider may be off course. Open the ride for verified details.",
+            body="A sailor may be off course. Open the voyage for verified details.",
             critical=level == "critical",
             recipient_ids=frozenset(affected_ids),
             recipient_roles=coordinator_roles,
-            all_members=audience == "allRiders" and level == "critical",
+            all_members=audience == "allSailors" and level == "critical",
         )
 
     if event_type == "iceInfoShared":
         return PushMessage(
             event_id=event_id,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             category="safety",
             title="Emergency information shared",
-            body="Open the authorised ride to view the private information.",
+            body="Open the authorised voyage to view the private information.",
             critical=True,
             recipient_ids=recipients,
             all_members=not recipients,
@@ -520,7 +520,7 @@ def classify_push_event(
     if event_type in {"markerStarted", "markerEnded"}:
         return PushMessage(
             event_id=event_id,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             category="status",
             title="Marker status changed",
             body="Open Tide and Seek for the current marker status.",
@@ -528,13 +528,13 @@ def classify_push_event(
             recipient_roles=coordinator_roles,
         )
 
-    if event_type in {"ridePaused", "rideResumed", "rideEnded"}:
+    if event_type in {"voyagePaused", "voyageResumed", "voyageEnded"}:
         return PushMessage(
             event_id=event_id,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             category="administrative",
-            title="Ride status changed",
-            body="Open Tide and Seek for the current ride state.",
+            title="Voyage status changed",
+            body="Open Tide and Seek for the current voyage state.",
             critical=False,
             all_members=True,
         )
@@ -569,7 +569,7 @@ class ApnsPushProvider:
         aps: dict[str, Any] = {
             "alert": {"title": message.title, "body": message.body},
             "sound": "default" if message.critical else None,
-            "thread-id": f"ride-{base64url(sha256(message.ride_id.encode()))[:24]}",
+            "thread-id": f"voyage-{base64url(sha256(message.voyage_id.encode()))[:24]}",
         }
         aps = {key: value for key, value in aps.items() if value is not None}
         response = self._client.post(
@@ -659,7 +659,7 @@ class FcmPushProvider:
                         "priority": "HIGH" if message.critical else "NORMAL",
                         "notification": {
                             "channel_id": (
-                                "ride_safety_alerts" if message.critical else "ride_updates"
+                                "voyage_safety_alerts" if message.critical else "voyage_updates"
                             ),
                             "tag": message.event_id,
                         },
@@ -727,35 +727,35 @@ class FcmPushProvider:
 def _authorize_installation(
     session: Session,
     *,
-    ride_id: str,
+    voyage_id: str,
     bearer_token: str,
     installation_id: str,
     device_header: str,
 ) -> None:
     if (
-        not ride_id
-        or len(ride_id) > 128
+        not voyage_id
+        or len(voyage_id) > 128
         or not installation_id
         or len(installation_id) > 128
         or not hmac.compare_digest(installation_id, device_header)
     ):
-        raise RelayServiceError(400, "Ride or installation identity is invalid")
-    ride = session.get(Ride, ride_id)
-    if ride is None:
-        raise RelayServiceError(404, "Ride is not available")
-    if not hmac.compare_digest(ride.token_hash, token_hash(bearer_token)):
-        raise RelayServiceError(403, "Ride credential rejected")
+        raise RelayServiceError(400, "Voyage or installation identity is invalid")
+    voyage = session.get(Voyage, voyage_id)
+    if voyage is None:
+        raise RelayServiceError(404, "Voyage is not available")
+    if not hmac.compare_digest(voyage.token_hash, token_hash(bearer_token)):
+        raise RelayServiceError(403, "Voyage credential rejected")
 
 
 def _recipient_ids(payload: dict[str, Any]) -> frozenset[str]:
-    values = payload.get("recipientRiderIds")
+    values = payload.get("recipientSailorIds")
     if not isinstance(values, list):
         return frozenset()
     return frozenset(value for value in values if isinstance(value, str) and 0 < len(value) <= 128)
 
 
-def _token_aad(ride_id: str, installation_id: str, provider: str) -> bytes:
-    return f"push-token-v1\n{ride_id}\n{installation_id}\n{provider}".encode()
+def _token_aad(voyage_id: str, installation_id: str, provider: str) -> bytes:
+    return f"push-token-v1\n{voyage_id}\n{installation_id}\n{provider}".encode()
 
 
 def _as_utc(value: datetime) -> datetime:

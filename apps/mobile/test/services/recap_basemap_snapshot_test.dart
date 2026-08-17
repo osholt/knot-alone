@@ -1,10 +1,10 @@
-// Every way the recap basemap can fail, and what the rider is told (#157).
+// Every way the recap basemap can fail, and what the sailor is told (#157).
 //
 //   "The image export still isn't rendering map tiles and should have a toggle
 //    for light and dark mode just for that image."
 //
 // The export must never ship an empty map silently. So the outcomes are explicit,
-// each carries words for the rider, and the snapshot is injected rather than
+// each carries words for the sailor, and the snapshot is injected rather than
 // reached for - MapLibre's snapshot needs a platform view, which a host test
 // cannot provide, and pretending otherwise is how #141 went wrong three times.
 
@@ -85,7 +85,7 @@ void main() {
       expect(
         result.degradedMessage,
         contains('Try again in a moment'),
-        reason: 'the one failure a rider can do something about',
+        reason: 'the one failure a sailor can do something about',
       );
     },
   );
@@ -113,7 +113,7 @@ void main() {
     );
   });
 
-  test('every unavailable outcome has words for the rider', () async {
+  test('every unavailable outcome has words for the sailor', () async {
     for (final outcome in RecapBasemapOutcome.values) {
       final snapshot = RecapBasemapSnapshot.unavailable(outcome);
       if (outcome == RecapBasemapOutcome.captured) continue;

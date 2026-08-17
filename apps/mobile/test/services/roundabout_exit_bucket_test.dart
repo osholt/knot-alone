@@ -18,11 +18,11 @@ void main() {
     });
 
     test('slight is straight on, both ways', () {
-      // The ring offsets its own arms, so a crossing a rider calls straight
+      // The ring offsets its own arms, so a crossing a sailor calls straight
       // routinely shows 25-35 degrees of heading change from geometry alone —
       // which is why the roundabout straight band is already 38 rather than 20.
       // This follows the same reasoning one step further, and it is what absorbs
-      // most of #412's "one off" error before it reaches a rider.
+      // most of #412's "one off" error before it reaches a sailor.
       expect(
         roundaboutExitBucket(ManeuverDirection.slightLeft),
         RoundaboutExitBucket.straightOn,
@@ -68,7 +68,7 @@ void main() {
       );
     });
 
-    test('every bucket is named in words a rider would use', () {
+    test('every bucket is named in words a sailor would use', () {
       for (final bucket in RoundaboutExitBucket.values) {
         expect(bucket.label.trim(), isNotEmpty, reason: '$bucket');
       }

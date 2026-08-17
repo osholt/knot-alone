@@ -7,7 +7,7 @@ import '../domain/imported_route.dart';
 import 'road_routing.dart';
 import 'route_progress.dart';
 
-/// A routed candidate made from an imported line, plus the evidence the rider
+/// A routed candidate made from an imported line, plus the evidence the sailor
 /// needs before deciding whether it still represents the intended route.
 class ImportedTrackMatch {
   const ImportedTrackMatch({
@@ -210,7 +210,7 @@ class OsrmImportedTrackMatcher implements ImportedTrackMatcher {
           uri,
           headers: const {
             'Accept': 'application/json',
-            'User-Agent': 'TailEndCharlie/1.0 (route matching)',
+            'User-Agent': 'Sweeper/1.0 (route matching)',
           },
         )
         .timeout(timeout);

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../../controllers/rider_profile_controller.dart';
-import '../../domain/rider_color.dart';
+import '../../controllers/sailor_profile_controller.dart';
+import '../../domain/sailor_color.dart';
 import '../map/motorcycle_icon.dart';
-import '../map/rider_symbol_picker.dart';
+import '../map/sailor_symbol_picker.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key, required this.riderProfile});
+  const OnboardingScreen({super.key, required this.sailorProfile});
 
-  final RiderProfileController riderProfile;
+  final SailorProfileController sailorProfile;
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -18,12 +18,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   static const _stepCount = 5;
 
   late final TextEditingController _nameController = TextEditingController(
-    text: widget.riderProfile.displayName,
+    text: widget.sailorProfile.displayName,
   );
   late MotorcycleIconStyle _motorcycleStyle =
-      widget.riderProfile.motorcycleStyle;
-  late RiderSymbol _riderSymbol = widget.riderProfile.riderSymbol;
-  late RiderColor _riderColor = widget.riderProfile.riderColor;
+      widget.sailorProfile.motorcycleStyle;
+  late SailorSymbol _sailorSymbol = widget.sailorProfile.sailorSymbol;
+  late SailorColor _sailorColor = widget.sailorProfile.sailorColor;
   int _step = 0;
   bool _educationSkipped = false;
   bool _permissionsDeferred = false;
@@ -92,7 +92,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _stepContent(BuildContext context) => switch (_step) {
     0 => _welcome(context),
     1 => _profile(context),
-    2 => _rideWalkthrough(context),
+    2 => _voyageWalkthrough(context),
     3 => _permissions(context),
     _ => _finish(context),
   };
@@ -107,13 +107,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 28),
       Text(
-        'Keep the whole ride together',
+        'Keep the whole voyage together',
         style: Theme.of(context).textTheme.displaySmall,
       ),
       const SizedBox(height: 16),
       const Text(
         'Tide and Seek coordinates a private riding group with a shared '
-        'roster, route and safety alerts. Ride events are kept on your phone '
+        'roster, route and safety alerts. Voyage events are kept on your phone '
         'first, then relayed by the internet or nearby devices when available.',
         style: TextStyle(color: Color(0xFFBCC5D0), height: 1.5, fontSize: 17),
       ),
@@ -127,7 +127,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       const _InfoCard(
         icon: Icons.cloud_off_outlined,
         title: 'Designed for patchy coverage',
-        body: 'Losing a relay does not erase the ride journal on your phone.',
+        body: 'Losing a relay does not erase the voyage journal on your phone.',
       ),
     ],
   );
@@ -141,7 +141,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 10),
       const Text(
-        'Your saved name, symbol and colour are prefilled whenever you create or join a ride.',
+        'Your saved name, symbol and colour are prefilled whenever you create or join a voyage.',
         style: TextStyle(color: Color(0xFFABB5C1), height: 1.4),
       ),
       const SizedBox(height: 24),
@@ -152,7 +152,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         textCapitalization: TextCapitalization.words,
         onChanged: (_) => setState(() => _nameError = null),
         decoration: InputDecoration(
-          labelText: 'Rider name',
+          labelText: 'Sailor name',
           hintText: 'How the group will recognise you',
           counterText: '',
           errorText: _nameError,
@@ -161,14 +161,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       const SizedBox(height: 20),
       _profilePreview(),
       const SizedBox(height: 24),
-      RiderSymbolPicker(
+      SailorSymbolPicker(
         displayName: _nameController.text,
-        selectedSymbol: _riderSymbol,
+        selectedSymbol: _sailorSymbol,
         motorcycleStyle: _motorcycleStyle,
-        badgeColor: _riderColor.color,
+        badgeColor: _sailorColor.color,
         keyPrefix: 'onboarding-symbol',
         bikeKeyPrefix: 'onboarding-bike',
-        onSymbolChanged: (symbol) => setState(() => _riderSymbol = symbol),
+        onSymbolChanged: (symbol) => setState(() => _sailorSymbol = symbol),
         onMotorcycleStyleChanged: (style) =>
             setState(() => _motorcycleStyle = style),
       ),
@@ -179,15 +179,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         spacing: 12,
         runSpacing: 12,
         children: [
-          for (final color in RiderColor.values)
+          for (final color in SailorColor.values)
             Semantics(
               button: true,
-              selected: color == _riderColor,
-              label: '${color.label} rider colour',
+              selected: color == _sailorColor,
+              label: '${color.label} sailor colour',
               child: InkWell(
                 key: Key('onboarding-colour-${color.name}'),
                 customBorder: const CircleBorder(),
-                onTap: () => setState(() => _riderColor = color),
+                onTap: () => setState(() => _sailorColor = color),
                 child: Container(
                   width: 42,
                   height: 42,
@@ -195,8 +195,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     color: color.color,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: color == _riderColor
-                          ? riderBadgeStrokeColor(color.color)
+                      color: color == _sailorColor
+                          ? sailorBadgeStrokeColor(color.color)
                           : Colors.transparent,
                       width: 3,
                     ),
@@ -208,7 +208,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 14),
       const Text(
-        'Lead and Sweeper use reserved role colours during a ride.',
+        'Lead and Sweeper use reserved role colours during a voyage.',
         style: TextStyle(color: Color(0xFF7F8A98), fontSize: 12),
       ),
     ],
@@ -219,11 +219,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          RiderMarkerBadge(
+          SailorMarkerBadge(
             style: _motorcycleStyle,
-            symbol: _riderSymbol,
+            symbol: _sailorSymbol,
             displayName: _nameController.text,
-            badgeColor: _riderColor.color,
+            badgeColor: _sailorColor.color,
             size: 48,
           ),
           const SizedBox(width: 14),
@@ -233,12 +233,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               children: [
                 Text(
                   _nameController.text.trim().isEmpty
-                      ? 'Your rider name'
+                      ? 'Your sailor name'
                       : _nameController.text.trim(),
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 Text(
-                  '${_riderSymbol.label(_nameController.text, _motorcycleStyle)} · ${_riderColor.label}',
+                  '${_sailorSymbol.label(_nameController.text, _motorcycleStyle)} · ${_sailorColor.label}',
                   style: const TextStyle(color: Color(0xFFABB5C1)),
                 ),
               ],
@@ -249,7 +249,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   );
 
-  Widget _rideWalkthrough(BuildContext context) => Column(
+  Widget _voyageWalkthrough(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Text(
@@ -261,12 +261,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         icon: Icons.route_outlined,
         title: 'Lead',
         body:
-            'Creates the private code, publishes the group route, starts, pauses and ends the ride.',
+            'Creates the private code, publishes the group route, starts, pauses and ends the voyage.',
       ),
       const SizedBox(height: 10),
       const _InfoCard(
         icon: Icons.two_wheeler,
-        title: 'Rider',
+        title: 'Sailor',
         body:
             'Follows the shared route and can send status, assistance and hazard markers.',
       ),
@@ -275,19 +275,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         icon: Icons.flag_outlined,
         title: 'Sweeper',
         body:
-            'Closes the group and helps identify riders who may have dropped back.',
+            'Closes the group and helps identify sailors who may have dropped back.',
       ),
       const SizedBox(height: 24),
-      Text('The ride flow', style: Theme.of(context).textTheme.titleLarge),
+      Text('The voyage flow', style: Theme.of(context).textTheme.titleLarge),
       const SizedBox(height: 12),
       const _NumberedStep(
         number: '1',
-        text: 'Create or join with the private six-digit ride code.',
+        text: 'Create or join with the private six-digit voyage code.',
       ),
       const _NumberedStep(
         number: '2',
         text:
-            'Check the pre-start roster. Tracking waits for the lead to tap Start ride.',
+            'Check the pre-start roster. Tracking waits for the lead to tap Start voyage.',
       ),
       const _NumberedStep(
         number: '3',
@@ -297,11 +297,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       const _NumberedStep(
         number: '4',
         text:
-            'Leave stops sharing for you; End ride is a lead-only group action.',
+            'Leave stops sharing for you; End voyage is a lead-only group action.',
       ),
       const SizedBox(height: 14),
       const Text(
-        'Treat the ride code like a private invitation. Only share it with riders you expect.',
+        'Treat the voyage code like a private invitation. Only share it with sailors you expect.',
         style: TextStyle(color: Color(0xFFFFC47A), height: 1.4),
       ),
     ],
@@ -316,7 +316,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 12),
       const Text(
-        'Internet and nearby-device relays can overlap. “Active” means a rider was seen recently; “stale” means the last signed update is older. The roster shows the evidence it actually has.',
+        'Internet and nearby-device relays can overlap. “Active” means a sailor was seen recently; “stale” means the last signed update is older. The roster shows the evidence it actually has.',
         style: TextStyle(color: Color(0xFFBCC5D0), height: 1.5),
       ),
       const SizedBox(height: 20),
@@ -324,21 +324,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         icon: Icons.location_on_outlined,
         title: 'Location while using the app',
         body:
-            'Requested when you start foreground ride tracking or ask the map to use your position.',
+            'Requested when you start foreground voyage tracking or ask the map to use your position.',
       ),
       const SizedBox(height: 10),
       const _PermissionCard(
         icon: Icons.bluetooth_outlined,
         title: 'Bluetooth and nearby devices',
         body:
-            'Requested when an installed app starts the nearby relay for a live ride.',
+            'Requested when an installed app starts the nearby relay for a live voyage.',
       ),
       const SizedBox(height: 10),
       const _PermissionCard(
         icon: Icons.notifications_none,
         title: 'Notifications',
         body:
-            'Requested when you join a live ride if encrypted push delivery is configured. Lock-screen alerts omit coordinates, invitation secrets and medical details.',
+            'Requested when you join a live voyage if encrypted push delivery is configured. Lock-screen alerts omit coordinates, invitation secrets and medical details.',
       ),
       const SizedBox(height: 18),
       OutlinedButton.icon(
@@ -358,7 +358,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             border: Border.all(color: const Color(0xFF6F5739)),
           ),
           child: const Text(
-            'You can still create or join a ride. Without location, your live position is unavailable; without nearby access, internet relay may still work. Retry from the feature, or restore blocked access in iOS or Android Settings.',
+            'You can still create or join a voyage. Without location, your live position is unavailable; without nearby access, internet relay may still work. Retry from the feature, or restore blocked access in iOS or Android Settings.',
             style: TextStyle(color: Color(0xFFFFD39C), height: 1.4),
           ),
         ),
@@ -381,7 +381,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 24),
       Text(
-        'You are ready to ride',
+        'You are ready to voyage',
         style: Theme.of(context).textTheme.displaySmall,
       ),
       const SizedBox(height: 12),
@@ -391,19 +391,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 28),
       FilledButton.icon(
-        key: const Key('onboarding-create-ride'),
+        key: const Key('onboarding-create-voyage'),
         onPressed: _saving
             ? null
-            : () => _complete(OnboardingRideChoice.create),
+            : () => _complete(OnboardingVoyageChoice.create),
         icon: const Icon(Icons.add_road),
-        label: const Text('Create a ride'),
+        label: const Text('Create a voyage'),
       ),
       const SizedBox(height: 12),
       OutlinedButton.icon(
-        key: const Key('onboarding-join-ride'),
-        onPressed: _saving ? null : () => _complete(OnboardingRideChoice.join),
+        key: const Key('onboarding-join-voyage'),
+        onPressed: _saving
+            ? null
+            : () => _complete(OnboardingVoyageChoice.join),
         icon: const Icon(Icons.group_add_outlined),
-        label: const Text('Join a ride'),
+        label: const Text('Join a voyage'),
       ),
       if (_saving) ...[
         const SizedBox(height: 20),
@@ -465,16 +467,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return false;
   }
 
-  Future<void> _complete(OnboardingRideChoice choice) async {
+  Future<void> _complete(OnboardingVoyageChoice choice) async {
     if (!_validateName()) return;
     setState(() => _saving = true);
-    await widget.riderProfile.completeOnboarding(
+    await widget.sailorProfile.completeOnboarding(
       displayName: _nameController.text,
       motorcycleStyle: _motorcycleStyle,
-      riderSymbol: _riderSymbol,
-      riderColor: _riderColor,
+      sailorSymbol: _sailorSymbol,
+      sailorColor: _sailorColor,
       educationSkipped: _educationSkipped,
-      rideChoice: choice,
+      voyageChoice: choice,
     );
     if (mounted) setState(() => _saving = false);
   }

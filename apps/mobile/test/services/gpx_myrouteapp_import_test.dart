@@ -53,7 +53,7 @@ void main() {
     final route = importFixture();
 
     // 6 trp:ShapingPoint and 2 trp:ViaPoint in the file. Dropping the redundant
-    // path must not drop what the rider planned with.
+    // path must not drop what the sailor planned with.
     expect(route.waypoints, hasLength(8));
     expect(
       route.waypoints.where((point) => point.symbol == 'Shaping point'),

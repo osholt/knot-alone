@@ -2,32 +2,32 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tide_and_seek/controllers/completed_rides_controller.dart';
+import 'package:tide_and_seek/controllers/completed_voyages_controller.dart';
 import 'package:tide_and_seek/controllers/distance_unit_controller.dart';
 import 'package:tide_and_seek/controllers/map_style_mode_controller.dart';
-import 'package:tide_and_seek/controllers/ride_code_preference_controller.dart';
-import 'package:tide_and_seek/controllers/ride_controller.dart';
-import 'package:tide_and_seek/controllers/rider_profile_controller.dart';
+import 'package:tide_and_seek/controllers/voyage_code_preference_controller.dart';
+import 'package:tide_and_seek/controllers/voyage_controller.dart';
+import 'package:tide_and_seek/controllers/sailor_profile_controller.dart';
 import 'package:tide_and_seek/controllers/shared_route_controller.dart';
 import 'package:tide_and_seek/data/in_memory_event_store.dart';
 import 'package:tide_and_seek/data/in_memory_session_store.dart';
-import 'package:tide_and_seek/domain/completed_ride.dart';
-import 'package:tide_and_seek/domain/completed_ride_store.dart';
-import 'package:tide_and_seek/domain/rider_color.dart';
+import 'package:tide_and_seek/domain/completed_voyage.dart';
+import 'package:tide_and_seek/domain/completed_voyage_store.dart';
+import 'package:tide_and_seek/domain/sailor_color.dart';
 import 'package:tide_and_seek/domain/recorded_route_store.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/features/home/home_screen.dart';
 import 'package:tide_and_seek/features/map/motorcycle_icon.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 import 'package:tide_and_seek/services/nearby_bridge.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Every way into the app, by the words a rider can read (#306).
+/// Every way into the app, by the words a sailor can read (#306).
 ///
 /// "Features that exist but cannot be found are not delivered." QR joining
 /// shipped in #279 and was then reported as missing, because its only
 /// affordance was an unlabelled icon with a tooltip — and a tooltip does not
-/// appear when you tap a phone. "Ride again" (#251) went the same way.
+/// appear when you tap a phone. "Voyage again" (#251) went the same way.
 ///
 /// These assert the journeys #306 names by their **label**, not by a key or an
 /// icon, so a consolidation that moves them has to keep them findable. They are
@@ -35,46 +35,46 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// job is to be the safety net it lands into.
 void main() {
   late InMemoryEventStore eventStore;
-  late RideController rideController;
+  late VoyageController voyageController;
   late DistanceUnitController distanceUnits;
   late MapStyleModeController mapStyleMode;
-  late RideCodePreferenceController rideCodePreference;
-  late RiderProfileController riderProfile;
+  late VoyageCodePreferenceController voyageCodePreference;
+  late SailorProfileController sailorProfile;
   late SharedRouteController sharedRoutes;
-  late CompletedRidesController completedRides;
+  late CompletedVoyagesController completedVoyages;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues(const {});
     eventStore = InMemoryEventStore();
     var id = 0;
-    rideController = RideController(
+    voyageController = VoyageController(
       eventStore,
       InMemorySessionStore(),
       const _FakeNearbyBridge(),
       clock: () => DateTime.utc(2026, 8, 2, 9),
       idFactory: () => 'id-${id++}',
       random: Random(7),
-      rideCodeDirectory: _NullRideCodeDirectory(),
+      voyageCodeDirectory: _NullVoyageCodeDirectory(),
     );
-    await rideController.initialize();
+    await voyageController.initialize();
     distanceUnits = DistanceUnitController.forLocale(const Locale('en', 'GB'));
     mapStyleMode = await MapStyleModeController.load();
-    rideCodePreference = await RideCodePreferenceController.load();
-    riderProfile = await RiderProfileController.load();
+    voyageCodePreference = await VoyageCodePreferenceController.load();
+    sailorProfile = await SailorProfileController.load();
     sharedRoutes = await SharedRouteController.load(planDirectory: null);
-    completedRides = await CompletedRidesController.load(
-      _EmptyCompletedRideStore(),
+    completedVoyages = await CompletedVoyagesController.load(
+      _EmptyCompletedVoyageStore(),
     );
   });
 
   tearDown(() {
-    rideController.dispose();
+    voyageController.dispose();
     distanceUnits.dispose();
     mapStyleMode.dispose();
-    rideCodePreference.dispose();
-    riderProfile.dispose();
+    voyageCodePreference.dispose();
+    sailorProfile.dispose();
     sharedRoutes.dispose();
-    completedRides.dispose();
+    completedVoyages.dispose();
   });
 
   Future<void> pumpHome(WidgetTester tester) async {
@@ -82,14 +82,14 @@ void main() {
       MaterialApp(
         theme: ThemeData.dark(useMaterial3: true),
         home: HomeScreen(
-          controller: rideController,
+          controller: voyageController,
           distanceUnits: distanceUnits,
           mapStyleMode: mapStyleMode,
-          rideCodePreference: rideCodePreference,
-          riderProfile: riderProfile,
+          voyageCodePreference: voyageCodePreference,
+          sailorProfile: sailorProfile,
           sharedRoutes: sharedRoutes,
           recordedRoutes: InMemoryRecordedRouteStore(),
-          completedRides: completedRides,
+          completedVoyages: completedVoyages,
           // The home map backdrop is live in production. Without this it would
           // wait forever here on a platform map and a location plugin that
           // never answer, and pumpAndSettle would time out.
@@ -100,68 +100,76 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('starting a ride is offered in words on the first screen', (
+  testWidgets('starting a voyage is offered in words on the first screen', (
     tester,
   ) async {
     await pumpHome(tester);
 
-    expect(find.text('Create a ride'), findsOneWidget);
-    expect(find.text('Join a ride'), findsOneWidget);
+    expect(find.text('Create a voyage'), findsOneWidget);
+    expect(find.text('Join a voyage'), findsOneWidget);
   });
 
-  testWidgets('ride setup uses the saved symbol and colour without repicking', (
-    tester,
-  ) async {
-    await riderProfile.save(
-      displayName: 'Oliver',
-      motorcycleStyle: MotorcycleIconStyle.scrambler,
-      riderSymbol: const RiderSymbol.emoji('🦊'),
-      riderColor: RiderColor.cyan,
-    );
-    await pumpHome(tester);
+  testWidgets(
+    'voyage setup uses the saved symbol and colour without repicking',
+    (tester) async {
+      await sailorProfile.save(
+        displayName: 'Oliver',
+        motorcycleStyle: MotorcycleIconStyle.scrambler,
+        sailorSymbol: const SailorSymbol.emoji('🦊'),
+        sailorColor: SailorColor.cyan,
+      );
+      await pumpHome(tester);
 
-    await tester.tap(find.text('Create a ride'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Create a voyage'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Your colour'), findsNothing);
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget.key is ValueKey<String> &&
-            (widget.key! as ValueKey<String>).value.startsWith('ride-symbol-'),
-      ),
-      findsNothing,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget.key is ValueKey<String> &&
-            (widget.key! as ValueKey<String>).value.startsWith('rider-colour-'),
-      ),
-      findsNothing,
-    );
+      expect(find.text('Your colour'), findsNothing);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget.key is ValueKey<String> &&
+              (widget.key! as ValueKey<String>).value.startsWith(
+                'voyage-symbol-',
+              ),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget.key is ValueKey<String> &&
+              (widget.key! as ValueKey<String>).value.startsWith(
+                'sailor-colour-',
+              ),
+        ),
+        findsNothing,
+      );
 
-    await tester.scrollUntilVisible(
-      find.widgetWithText(FilledButton, 'Create ride'),
-      180,
-      scrollable: find
-          .descendant(
-            of: find.byKey(const Key('ride-form-scroll-view')),
-            matching: find.byType(Scrollable),
-          )
-          .first,
-    );
-    await tester.tap(find.widgetWithText(FilledButton, 'Create ride'));
-    await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.widgetWithText(FilledButton, 'Create voyage'),
+        180,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const Key('voyage-form-scroll-view')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Create voyage'));
+      await tester.pumpAndSettle();
 
-    expect(rideController.session?.riderSymbol, const RiderSymbol.emoji('🦊'));
-    expect(rideController.session?.riderColor, RiderColor.cyan);
-  });
+      expect(
+        voyageController.session?.sailorSymbol,
+        const SailorSymbol.emoji('🦊'),
+      );
+      expect(voyageController.session?.sailorColor, SailorColor.cyan);
+    },
+  );
 
-  testWidgets('a past ride is reachable by words alone', (tester) async {
+  testWidgets('a past voyage is reachable by words alone', (tester) async {
     // Moved one tap in by #426, which removed the full-screen start panel these
     // rows used to sit on. The #306 rule is what matters and it still holds: the
-    // path is words the whole way, "More" then "Ride library", with no
+    // path is words the whole way, "More" then "Voyage library", with no
     // unlabelled icon anywhere on it. An overflow nobody can read would not be
     // reachable, which is why the control is a word rather than `more_horiz`.
     await pumpHome(tester);
@@ -170,15 +178,15 @@ void main() {
     await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ride library'), findsOneWidget);
+    expect(find.text('Voyage library'), findsOneWidget);
     expect(
-      find.textContaining('Recorded routes and previous rides'),
+      find.textContaining('Recorded routes and previous voyages'),
       findsOneWidget,
     );
 
-    await tester.tap(find.text('Ride library'));
+    await tester.tap(find.text('Voyage library'));
     await tester.pumpAndSettle();
-    expect(find.text('Ride library'), findsOneWidget);
+    expect(find.text('Voyage library'), findsOneWidget);
     expect(find.text('No saved routes yet'), findsOneWidget);
   });
 
@@ -189,7 +197,7 @@ void main() {
     await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Try a simulated ride'), findsOneWidget);
+    expect(find.text('Try a simulated voyage'), findsOneWidget);
     expect(find.text('Record a route'), findsOneWidget);
   });
 
@@ -200,22 +208,22 @@ void main() {
     // then concluded to be missing, because the only way to find it was an
     // unlabelled camera icon inside a text field's suffix.
     await pumpHome(tester);
-    await tester.tap(find.text('Join a ride'));
+    await tester.tap(find.text('Join a voyage'));
     await tester.pumpAndSettle();
 
     expect(
       find.text('Scan an invitation code'),
       findsOneWidget,
-      reason: 'a rider who has never seen the app has to be able to read it',
+      reason: 'a sailor who has never seen the app has to be able to read it',
     );
   });
 
-  testWidgets('the QR icon still works for riders who have learned it', (
+  testWidgets('the QR icon still works for sailors who have learned it', (
     tester,
   ) async {
     // Adding the label must not have quietly replaced the compact affordance.
     await pumpHome(tester);
-    await tester.tap(find.text('Join a ride'));
+    await tester.tap(find.text('Join a voyage'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('scan-invitation-button')), findsOneWidget);
@@ -234,27 +242,28 @@ class _FakeNearbyBridge extends NearbyBridge {
       const NearbyCapabilities.unavailable();
 }
 
-class _NullRideCodeDirectory implements RideCodeDirectory {
+class _NullVoyageCodeDirectory implements VoyageCodeDirectory {
   @override
-  Future<void> register(RideSession session) async {}
+  Future<void> register(VoyageSession session) async {}
 
   @override
-  Future<RideCodeCredentials> resolve(
-    String rideCode, {
+  Future<VoyageCodeCredentials> resolve(
+    String voyageCode, {
     String? joinToken,
-  }) async => throw const RideCodeDirectoryException('Not used in this test.');
+  }) async =>
+      throw const VoyageCodeDirectoryException('Not used in this test.');
 
   @override
   void close() {}
 }
 
-class _EmptyCompletedRideStore implements CompletedRideStore {
+class _EmptyCompletedVoyageStore implements CompletedVoyageStore {
   @override
-  Future<List<CompletedRide>> list() async => const [];
+  Future<List<CompletedVoyage>> list() async => const [];
 
   @override
-  Future<void> save(CompletedRide ride) async {}
+  Future<void> save(CompletedVoyage voyage) async {}
 
   @override
-  Future<void> delete(String rideId) async {}
+  Future<void> delete(String voyageId) async {}
 }

@@ -1,19 +1,19 @@
-import 'ride_event.dart';
+import 'voyage_event.dart';
 
 abstract interface class EventStore {
-  Future<void> append(RideEvent event);
+  Future<void> append(VoyageEvent event);
 
-  Future<List<RideEvent>> eventsForRide(String rideId);
+  Future<List<VoyageEvent>> eventsForVoyage(String voyageId);
 
-  Future<List<RideEvent>> pendingEvents(String rideId);
+  Future<List<VoyageEvent>> pendingEvents(String voyageId);
 
   Future<void> markAcknowledged(String eventId);
 
-  Future<void> deleteRide(String rideId);
+  Future<void> deleteVoyage(String voyageId);
 
   /// Removes specific events (e.g. an unused ICE-info share, purged once a
-  /// ride ends) without discarding the rest of the ride's history.
-  Future<void> deleteEvents(String rideId, Iterable<String> eventIds);
+  /// voyage ends) without discarding the rest of the voyage's history.
+  Future<void> deleteEvents(String voyageId, Iterable<String> eventIds);
 
   Future<void> close();
 }

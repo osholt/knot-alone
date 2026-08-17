@@ -5,21 +5,21 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../controllers/distance_unit_controller.dart';
 import '../../controllers/map_style_mode_controller.dart';
-import '../../controllers/rider_profile_controller.dart';
+import '../../controllers/sailor_profile_controller.dart';
 import '../../controllers/route_progress_display_controller.dart';
-import '../../controllers/ride_diagnostics_controller.dart';
+import '../../controllers/voyage_diagnostics_controller.dart';
 import '../../controllers/spoken_guidance_controller.dart';
 import '../../controllers/test_control_controller.dart';
 import '../../domain/distance_unit.dart';
 import '../../domain/map_style_mode.dart';
-import '../../domain/rider_color.dart';
+import '../../domain/sailor_color.dart';
 import '../../services/basemap_configuration.dart';
 import '../../services/build_identity.dart';
 import '../../services/natural_voice_pack.dart';
 import '../../services/spoken_guidance.dart';
 import 'about_build_sheet.dart';
-import 'rider_profile_sheet.dart';
-import 'ride_diagnostics_section.dart';
+import 'sailor_profile_sheet.dart';
+import 'voyage_diagnostics_section.dart';
 import 'test_control_section.dart';
 
 class UnitSettingsSheet extends StatelessWidget {
@@ -27,35 +27,35 @@ class UnitSettingsSheet extends StatelessWidget {
     super.key,
     required this.controller,
     required this.mapStyleMode,
-    required this.riderProfile,
+    required this.sailorProfile,
     this.routeProgressDisplay,
-    this.currentRideActive = false,
+    this.currentVoyageActive = false,
     this.lastRelaySync,
     this.buildIdentity,
     this.testControl,
     this.spokenGuidance,
-    this.rideDiagnostics,
+    this.voyageDiagnostics,
     this.embedded = false,
   });
 
   final DistanceUnitController controller;
   final MapStyleModeController mapStyleMode;
-  final RiderProfileController riderProfile;
+  final SailorProfileController sailorProfile;
   final RouteProgressDisplayController? routeProgressDisplay;
-  final bool currentRideActive;
+  final bool currentVoyageActive;
 
   /// Whether these settings are the body of a primary destination rather than
-  /// a dismissible sheet. Nested editors must not pop the active ride when
+  /// a dismissible sheet. Nested editors must not pop the active voyage when
   /// Settings occupies the bottom-bar slot (#306).
   final bool embedded;
 
-  /// Whether turn instructions are spoken. Off by default: most riders already
+  /// Whether turn instructions are spoken. Off by default: most sailors already
   /// have an intercom carrying music or another app's prompts, and a second
   /// uninvited voice is worse than silence (#286).
   final SpokenGuidanceController? spokenGuidance;
 
   /// Off, and absent from an ordinary build (#419).
-  final RideDiagnosticsController? rideDiagnostics;
+  final VoyageDiagnosticsController? voyageDiagnostics;
 
   /// Present only in a build carrying the test-control define. Null everywhere
   /// else, and [TestControlSection] renders nothing when the define is absent,
@@ -74,14 +74,14 @@ class UnitSettingsSheet extends StatelessWidget {
     BuildContext context,
     DistanceUnitController controller,
     MapStyleModeController mapStyleMode,
-    RiderProfileController riderProfile, {
+    SailorProfileController sailorProfile, {
     RouteProgressDisplayController? routeProgressDisplay,
-    bool currentRideActive = false,
+    bool currentVoyageActive = false,
     DateTime? lastRelaySync,
     BuildIdentity? buildIdentity,
     TestControlController? testControl,
     SpokenGuidanceController? spokenGuidance,
-    RideDiagnosticsController? rideDiagnostics,
+    VoyageDiagnosticsController? voyageDiagnostics,
   }) => showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
@@ -89,14 +89,14 @@ class UnitSettingsSheet extends StatelessWidget {
     builder: (_) => UnitSettingsSheet(
       controller: controller,
       mapStyleMode: mapStyleMode,
-      riderProfile: riderProfile,
+      sailorProfile: sailorProfile,
       routeProgressDisplay: routeProgressDisplay,
-      currentRideActive: currentRideActive,
+      currentVoyageActive: currentVoyageActive,
       lastRelaySync: lastRelaySync,
       buildIdentity: buildIdentity,
       testControl: testControl,
       spokenGuidance: spokenGuidance,
-      rideDiagnostics: rideDiagnostics,
+      voyageDiagnostics: voyageDiagnostics,
     ),
   );
 
@@ -124,16 +124,16 @@ class UnitSettingsSheet extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           ListTile(
-            key: const Key('open-rider-profile'),
+            key: const Key('open-sailor-profile'),
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.two_wheeler),
             title: Text(
-              riderProfile.displayName.isEmpty
-                  ? 'Set up rider profile'
-                  : riderProfile.displayName,
+              sailorProfile.displayName.isEmpty
+                  ? 'Set up sailor profile'
+                  : sailorProfile.displayName,
             ),
             subtitle: Text(
-              '${riderProfile.riderSymbol.label(riderProfile.displayName, riderProfile.motorcycleStyle)} · ${riderProfile.riderColor.label}',
+              '${sailorProfile.sailorSymbol.label(sailorProfile.displayName, sailorProfile.motorcycleStyle)} · ${sailorProfile.sailorColor.label}',
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
@@ -143,10 +143,10 @@ class UnitSettingsSheet extends StatelessWidget {
               ).context;
               if (!embedded) Navigator.of(context).pop();
               unawaited(
-                RiderProfileSheet.show(
+                SailorProfileSheet.show(
                   appContext,
-                  riderProfile,
-                  currentRideActive: currentRideActive,
+                  sailorProfile,
+                  currentVoyageActive: currentVoyageActive,
                 ),
               );
             },
@@ -337,8 +337,8 @@ class UnitSettingsSheet extends StatelessWidget {
           const SizedBox(height: 4),
           if (testControl case final testControl?)
             TestControlSection(controller: testControl),
-          if (rideDiagnostics case final diagnostics?)
-            RideDiagnosticsSection(controller: diagnostics),
+          if (voyageDiagnostics case final diagnostics?)
+            VoyageDiagnosticsSection(controller: diagnostics),
           _AboutBuildTile(
             identity: buildIdentity ?? BuildIdentity.fromEnvironment(),
             lastRelaySync: lastRelaySync,
@@ -602,7 +602,7 @@ class _NaturalVoicePackSetting extends StatelessWidget {
               const SizedBox(height: 6),
               const Text(
                 'A more expressive British voice generated on this phone for '
-                'complete directions, road names and rider alerts. The same '
+                'complete directions, road names and sailor alerts. The same '
                 'voice works on iPhone and Android without a connection.',
               ),
               const SizedBox(height: 8),

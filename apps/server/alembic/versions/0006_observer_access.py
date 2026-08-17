@@ -21,7 +21,7 @@ def upgrade() -> None:
     op.create_table(
         "observer_grants",
         sa.Column("id", sa.String(length=36), nullable=False),
-        sa.Column("ride_id", sa.String(length=128), nullable=False),
+        sa.Column("voyage_id", sa.String(length=128), nullable=False),
         sa.Column("label", sa.String(length=80), nullable=False),
         sa.Column("management_token_hash", sa.LargeBinary(length=32), nullable=False),
         sa.Column("publisher_token_hash", sa.LargeBinary(length=32), nullable=False),
@@ -33,13 +33,13 @@ def upgrade() -> None:
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_read_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(["ride_id"], ["rides.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["voyage_id"], ["voyages.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        "ix_observer_grants_ride",
+        "ix_observer_grants_voyage",
         "observer_grants",
-        ["ride_id"],
+        ["voyage_id"],
         unique=False,
     )
     op.create_index(
@@ -52,5 +52,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("ix_observer_grants_expiry", table_name="observer_grants")
-    op.drop_index("ix_observer_grants_ride", table_name="observer_grants")
+    op.drop_index("ix_observer_grants_voyage", table_name="observer_grants")
     op.drop_table("observer_grants")

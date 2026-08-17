@@ -2,9 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/data/shared_preferences_session_store.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_secret_store.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_secret_store.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -20,45 +20,45 @@ void main() {
     await store.save(session);
 
     final preferences = await SharedPreferences.getInstance();
-    final metadata = preferences.getString('active_ride_session_v1')!;
+    final metadata = preferences.getString('active_voyage_session_v1')!;
     expect(metadata, isNot(contains(session.inviteSecret)));
     expect(jsonDecode(metadata), isNot(contains('inviteSecret')));
     expect(await store.load(), _matches(session));
 
     await store.clear();
-    expect(await secrets.read(session.rideId), isNull);
+    expect(await secrets.read(session.voyageId), isNull);
     expect(await store.load(), isNull);
   });
 
   test('migrates a legacy plaintext session on first load', () async {
     final session = _session();
     SharedPreferences.setMockInitialValues({
-      'active_ride_session_v1': jsonEncode(session.toJson()),
+      'active_voyage_session_v1': jsonEncode(session.toJson()),
     });
     final secrets = _MemorySecretStore();
     final store = SharedPreferencesSessionStore(secretStore: secrets);
 
     expect(await store.load(), _matches(session));
-    expect(await secrets.read(session.rideId), session.inviteSecret);
+    expect(await secrets.read(session.voyageId), session.inviteSecret);
     final preferences = await SharedPreferences.getInstance();
     expect(
-      preferences.getString('active_ride_session_v1'),
+      preferences.getString('active_voyage_session_v1'),
       isNot(contains(session.inviteSecret)),
     );
   });
 
-  test('preserves an intentional code-only local ride', () async {
+  test('preserves an intentional code-only local voyage', () async {
     final store = SharedPreferencesSessionStore(
       secretStore: _MemorySecretStore(),
     );
-    final localOnly = RideSession(
-      rideId: 'pending-ABC234',
-      rideCode: 'ABC234',
+    final localOnly = VoyageSession(
+      voyageId: 'pending-ABC234',
+      voyageCode: 'ABC234',
       inviteSecret: '',
       joinToken: 'test-join-token-0123456789',
-      localRiderId: 'rider-1',
+      localSailorId: 'sailor-1',
       displayName: 'Oliver',
-      role: RideRole.rider,
+      role: VoyageRole.sailor,
       joinedAt: DateTime.utc(2026, 7, 16, 12),
     );
 
@@ -72,52 +72,52 @@ void main() {
     () async {
       final session = _session();
       SharedPreferences.setMockInitialValues({
-        'active_ride_session_v1': jsonEncode(session.toJson()),
+        'active_voyage_session_v1': jsonEncode(session.toJson()),
       });
       final secrets = _MemorySecretStore();
-      await secrets.write(session.rideId, session.inviteSecret);
+      await secrets.write(session.voyageId, session.inviteSecret);
       final store = SharedPreferencesSessionStore(secretStore: secrets);
 
       expect(await store.load(), _matches(session));
       final preferences = await SharedPreferences.getInstance();
       expect(
-        preferences.getString('active_ride_session_v1'),
+        preferences.getString('active_voyage_session_v1'),
         isNot(contains(session.inviteSecret)),
       );
     },
   );
 }
 
-RideSession _session() => RideSession(
-  rideId: 'ride-1',
-  rideCode: 'ABC234',
+VoyageSession _session() => VoyageSession(
+  voyageId: 'voyage-1',
+  voyageCode: 'ABC234',
   inviteSecret: '0123456789abcdef0123456789abcdef',
   joinToken: 'test-join-token-0123456789',
-  localRiderId: 'rider-1',
+  localSailorId: 'sailor-1',
   displayName: 'Oliver',
-  role: RideRole.lead,
+  role: VoyageRole.lead,
   joinedAt: DateTime.utc(2026, 7, 16, 12),
 );
 
-Matcher _matches(RideSession expected) => isA<RideSession>()
-    .having((value) => value.rideId, 'rideId', expected.rideId)
+Matcher _matches(VoyageSession expected) => isA<VoyageSession>()
+    .having((value) => value.voyageId, 'voyageId', expected.voyageId)
     .having(
       (value) => value.inviteSecret,
       'inviteSecret',
       expected.inviteSecret,
     );
 
-class _MemorySecretStore implements RideSecretStore {
+class _MemorySecretStore implements VoyageSecretStore {
   final _values = <String, String>{};
 
   @override
-  Future<void> delete(String rideId) async => _values.remove(rideId);
+  Future<void> delete(String voyageId) async => _values.remove(voyageId);
 
   @override
-  Future<String?> read(String rideId) async => _values[rideId];
+  Future<String?> read(String voyageId) async => _values[voyageId];
 
   @override
-  Future<void> write(String rideId, String secret) async {
-    _values[rideId] = secret;
+  Future<void> write(String voyageId, String secret) async {
+    _values[voyageId] = secret;
   }
 }

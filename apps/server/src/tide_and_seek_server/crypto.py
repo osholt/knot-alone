@@ -49,12 +49,12 @@ class CursorCodec:
     def __init__(self, key: bytes) -> None:
         self._key = key
 
-    def encode(self, ride_id: str, sequence: int) -> str:
-        message = f"{ride_id}\n{sequence}".encode()
+    def encode(self, voyage_id: str, sequence: int) -> str:
+        message = f"{voyage_id}\n{sequence}".encode()
         signature = base64url(hmac.new(self._key, message, hashlib.sha256).digest())
         return f"{self.prefix}.{sequence}.{signature}"
 
-    def decode(self, ride_id: str, cursor: str | None) -> int:
+    def decode(self, voyage_id: str, cursor: str | None) -> int:
         if cursor is None:
             return 0
         parts = cursor.split(".")
@@ -63,7 +63,7 @@ class CursorCodec:
         sequence = int(parts[1])
         if sequence < 0:
             raise ValueError("invalid cursor")
-        expected = self.encode(ride_id, sequence)
+        expected = self.encode(voyage_id, sequence)
         if not hmac.compare_digest(cursor, expected):
             raise ValueError("invalid cursor")
         return sequence

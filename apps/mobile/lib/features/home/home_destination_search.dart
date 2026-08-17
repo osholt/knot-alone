@@ -1,18 +1,18 @@
-/// Searching for somewhere to ride to, from the map (#431).
+/// Searching for somewhere to voyage to, from the map (#431).
 ///
 /// ## The shape asked for
 ///
 /// > I like the way waze deal with it. Just make a search magnifying glass and
 /// > text field you can start searching from that then shows you the options for
-/// > solo and group ride, entering a code to recall a planned ride etc.
+/// > solo and group voyage, entering a code to recall a planned voyage etc.
 ///
-/// So: the destination comes first and the ride is arranged around it. That
+/// So: the destination comes first and the voyage is arranged around it. That
 /// reverses what the app did — a form asking for scope, coordination mode, display
-/// name and an optional route code before it would let a rider anywhere near a
+/// name and an optional route code before it would let a sailor anywhere near a
 /// map.
 ///
 /// The display name is not asked for at all any more. It is already known from
-/// onboarding, and asking again on every ride was the specific complaint in #431.
+/// onboarding, and asking again on every voyage was the specific complaint in #431.
 ///
 /// ## One thing is not Waze, on purpose
 ///
@@ -31,10 +31,10 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../domain/imported_route.dart' show GeoPoint;
-import '../../domain/ride_coordination_mode.dart';
+import '../../domain/voyage_coordination_mode.dart';
 import '../../services/road_routing.dart';
 
-/// What a rider picked out of the search.
+/// What a sailor picked out of the search.
 class DestinationChoice {
   const DestinationChoice({required this.label, required this.point});
 
@@ -42,30 +42,30 @@ class DestinationChoice {
   final GeoPoint point;
 }
 
-/// How the ride around a chosen destination is arranged.
-enum RideStartChoice {
+/// How the voyage around a chosen destination is arranged.
+enum VoyageStartChoice {
   solo,
   group;
 
   /// The coordination mode this implies.
   ///
-  /// Group means the drop-off system, which is what `createRide` has always
-  /// defaulted to and what the app is *for*; a rider who wants keep-together can
-  /// change it once the ride is running, which is the trade #431 asked for —
+  /// Group means the drop-off system, which is what `createVoyage` has always
+  /// defaulted to and what the app is *for*; a sailor who wants keep-together can
+  /// change it once the voyage is running, which is the trade #431 asked for —
   /// sensible defaults now, adjustable later, rather than four questions first.
-  RideCoordinationMode get coordinationMode => switch (this) {
-    RideStartChoice.solo => RideCoordinationMode.solo,
-    RideStartChoice.group => RideCoordinationMode.secondBikeDropOff,
+  VoyageCoordinationMode get coordinationMode => switch (this) {
+    VoyageStartChoice.solo => VoyageCoordinationMode.solo,
+    VoyageStartChoice.group => VoyageCoordinationMode.secondBikeDropOff,
   };
 
   String get label => switch (this) {
-    RideStartChoice.solo => 'Ride solo',
-    RideStartChoice.group => 'Ride as a group',
+    VoyageStartChoice.solo => 'Voyage solo',
+    VoyageStartChoice.group => 'Voyage as a group',
   };
 
   String get detail => switch (this) {
-    RideStartChoice.solo => 'Just you. No code and nobody to wait for.',
-    RideStartChoice.group =>
+    VoyageStartChoice.solo => 'Just you. No code and nobody to wait for.',
+    VoyageStartChoice.group =>
       'Gives you a code to share. Junction drop-off prompts on.',
   };
 }
@@ -117,15 +117,15 @@ sealed class HomeSearchOutcome {
   const HomeSearchOutcome();
 }
 
-/// A place was chosen, and how the ride around it should be arranged.
+/// A place was chosen, and how the voyage around it should be arranged.
 class HomeSearchDestination extends HomeSearchOutcome {
   const HomeSearchDestination({required this.choice, required this.start});
 
   final DestinationChoice choice;
-  final RideStartChoice start;
+  final VoyageStartChoice start;
 }
 
-/// The rider wants one of the code-driven ways in instead.
+/// The sailor wants one of the code-driven ways in instead.
 class HomeSearchHandoff extends HomeSearchOutcome {
   const HomeSearchHandoff(this.kind);
 
@@ -133,13 +133,13 @@ class HomeSearchHandoff extends HomeSearchOutcome {
 }
 
 enum HomeSearchHandoffKind {
-  /// Join somebody else's ride with their six-digit code.
+  /// Join somebody else's voyage with their six-digit code.
   joinWithCode,
 
   /// Recall a route planned on the web planner, by its code.
   plannedRouteCode,
 
-  /// Ride something already on the phone.
+  /// Voyage something already on the phone.
   storedRoute,
 }
 
@@ -155,7 +155,7 @@ class HomeDestinationSearchSheet extends StatefulWidget {
 
   /// False when the app has no position yet, which makes routing from "here"
   /// impossible. Said in the sheet rather than discovered as a failure after the
-  /// rider has chosen solo or group.
+  /// sailor has chosen solo or group.
   final bool hasPosition;
 
   static Future<HomeSearchOutcome?> show(
@@ -215,13 +215,13 @@ class _HomeDestinationSearchSheetState
     }
   }
 
-  /// A rider does not need to read a FormatException.
+  /// A sailor does not need to read a FormatException.
   static String _readable(Object error) => error is FormatException
       ? error.message
       : 'Could not search just now. Check your connection and try again.';
 
   Future<void> _choose(DestinationMatch match) async {
-    final start = await showModalBottomSheet<RideStartChoice>(
+    final start = await showModalBottomSheet<VoyageStartChoice>(
       context: context,
       backgroundColor: const Color(0xFF171D25),
       builder: (sheetContext) => SafeArea(
@@ -234,7 +234,7 @@ class _HomeDestinationSearchSheetState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Ride to',
+                    'Voyage to',
                     style: TextStyle(color: Color(0xFF8993A0), fontSize: 13),
                   ),
                   const SizedBox(height: 2),
@@ -250,11 +250,11 @@ class _HomeDestinationSearchSheetState
                 ],
               ),
             ),
-            for (final choice in RideStartChoice.values)
+            for (final choice in VoyageStartChoice.values)
               ListTile(
-                key: Key('ride-start-${choice.name}'),
+                key: Key('voyage-start-${choice.name}'),
                 leading: Icon(
-                  choice == RideStartChoice.solo
+                  choice == VoyageStartChoice.solo
                       ? Icons.person_outline
                       : Icons.group_outlined,
                 ),
@@ -358,7 +358,7 @@ class _HomeDestinationSearchSheetState
                 ListTile(
                   key: const Key('home-search-join-code'),
                   leading: const Icon(Icons.group_add_outlined),
-                  title: const Text('Join a ride with a code'),
+                  title: const Text('Join a voyage with a code'),
                   subtitle: const Text('Six digits from whoever is leading'),
                   onTap: () => Navigator.of(context).pop(
                     const HomeSearchHandoff(HomeSearchHandoffKind.joinWithCode),
@@ -368,7 +368,7 @@ class _HomeDestinationSearchSheetState
                   key: const Key('home-search-stored-route'),
                   leading: const Icon(Icons.bookmark_outline),
                   title: const Text('A route already on this phone'),
-                  subtitle: const Text('Previous rides and recorded routes'),
+                  subtitle: const Text('Previous voyages and recorded routes'),
                   onTap: () => Navigator.of(context).pop(
                     const HomeSearchHandoff(HomeSearchHandoffKind.storedRoute),
                   ),

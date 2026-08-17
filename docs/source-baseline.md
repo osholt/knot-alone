@@ -47,7 +47,7 @@ rather than renaming them. Removed so far:
   simulator helper. A projected chartplotter surface, if it is ever wanted, is a
   new marine design rather than a revival of this code.
 - **Road ratings and motorcycle discovery** — the rating controller/store/client
-  and its end-of-ride card, the road-facts and discovery sheets, the
+  and its end-of-voyage card, the road-facts and discovery sheets, the
   `MotorcycleDiscoveryCatalogue` map layers and suggestion queue, the 13.7 MB
   `discovery_catalogue.geojson` asset, and the `tools/discovery` catalogue
   pipeline (overlay build, enrichment, evidence index, publication, ratings).
@@ -76,11 +76,11 @@ rather than renaming them. Removed so far:
   **Kept, and why:**
 
   - `SituationalAwarenessController` survives minus its hazard half. It also
-    owns rider locations, live presence, the leader trail and route-deviation
+    owns sailor locations, live presence, the skipper trail and route-deviation
     alerts, all of which the marine product needs.
   - The Alerts screen survives as route alerts and location-sharing status.
-  - `RideEventType.hazardReported` / `hazardCleared` and `RideRole.marker` stay
-    in the journal so rides recorded by an earlier build still decode. Nothing
+  - `VoyageEventType.hazardReported` / `hazardCleared` and `VoyageRole.marker` stay
+    in the journal so voyages recorded by an earlier build still decode. Nothing
     writes them now. Replacing the event model is backlog #2's job.
   - `routePrimaryPath` was lifted out of the marker planner into
     `lib/services/route_primary_path.dart`: picking the travelled path out of a
@@ -88,7 +88,7 @@ rather than renaming them. Removed so far:
     and route reshaping both still need it.
   - The map compass took over the corner slot it used to share with the speed
     sign.
-  - Ride Lab keeps its marker simulation as a pure visual simulation; with the
+  - Voyage Lab keeps its marker simulation as a pure visual simulation; with the
     journal commands gone it records nothing.
 
   A marine hazard layer is P1 pilotage work (backlog #10) with licensed sources
@@ -96,7 +96,7 @@ rather than renaming them. Removed so far:
 
 ## Identifiers that do not follow the product name
 
-The `ride_relay` package rename deliberately stopped at these. They are opaque
+The `voyage_relay` package rename deliberately stopped at these. They are opaque
 identifiers whose value is stability, not branding, and moving them would be a
 silent protocol or data break rather than a rename:
 

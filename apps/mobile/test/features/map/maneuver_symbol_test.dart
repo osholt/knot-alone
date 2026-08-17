@@ -121,7 +121,7 @@ void main() {
       isTrue,
     );
     // And an engine claiming right-hand traffic no longer decides it at all.
-    // It said exactly that for two UK roundabouts on the 10 August ride, and
+    // It said exactly that for two UK roundabouts on the 10 August voyage, and
     // the ring mirrored itself to match while the exit number and the direction
     // word stayed correct — see #427 and _leftHandTraffic's own note.
     expect(
@@ -240,7 +240,7 @@ void main() {
   // roundabout to turn right". The arc was already correct - keeping left, a
   // right turn is three quarters of the way round, which on a clock face runs
   // 6 -> 9 -> 12 -> 3 and so leaves the bottom towards the *left* of the box.
-  // Nothing said which way along it the rider travels, so the eye supplied an
+  // Nothing said which way along it the sailor travels, so the eye supplied an
   // answer and supplied the wrong one. Flipping the sweep would have drawn the
   // illegal manoeuvre; this asserts the direction is stated instead.
   //

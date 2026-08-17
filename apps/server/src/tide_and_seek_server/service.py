@@ -21,9 +21,9 @@ from .models import (
     IdempotencyReplay,
     ObserverGrant,
     PreStartPosition,
-    Ride,
-    RideJoinCode,
-    RidePlan,
+    Voyage,
+    VoyageJoinCode,
+    VoyagePlan,
     StoredEvent,
 )
 from .schemas import PresenceSyncRequest, SyncRequest, SyncResponse
@@ -37,16 +37,16 @@ PLAN_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 PLAN_CODE_LENGTH = 8
 PLAN_CODE = re.compile(f"^[{PLAN_CODE_ALPHABET}]{{{PLAN_CODE_LENGTH}}}$")
 EVENT_TYPES = {
-    "rideCreated",
-    "riderJoined",
-    "riderLeft",
+    "voyageCreated",
+    "sailorJoined",
+    "sailorLeft",
     "roleChanged",
-    "rideStarted",
+    "voyageStarted",
     "markerStarted",
     "markerPass",
     "markerEnded",
     "statusMessage",
-    "riderLocationUpdated",
+    "sailorLocationUpdated",
     "hazardReported",
     "hazardCleared",
     "routeDeviationChanged",
@@ -54,31 +54,31 @@ EVENT_TYPES = {
     "routeRevisionChunk",
     "routeRevisionPublished",
     "routeCleared",
-    "ridePaused",
-    "rideResumed",
-    "rideEnded",
+    "voyagePaused",
+    "voyageResumed",
+    "voyageEnded",
     "iceInfoShared",
     "iceInfoViewed",
     # Issue #128. Additive: an older client that does not know these names skips
     # them per event and keeps the rest of the batch, so the relay may carry
     # them for the clients that do.
-    "tecRoleRequested",
-    "tecRoleResponded",
+    "sweeperRoleRequested",
+    "sweeperRoleResponded",
     "rejoinRouteShared",
-    # Issue #188. A rider's own phone number, addressed to the ride's
+    # Issue #188. A sailor's own phone number, addressed to the voyage's
     # coordination roles. Deliberately distinct from "iceInfoShared", which
-    # carries a rider's next of kin.
-    "riderContactShared",
-    # Issues #206/#207. The leader saying a ride that ended has not finished
-    # after all. Deliberately not "rideResumed", which is the other half of
-    # "ridePaused"; conflating them would make a pause look like a resurrection.
-    "rideReopened",
+    # carries a sailor's next of kin.
+    "sailorContactShared",
+    # Issues #206/#207. The skipper saying a voyage that ended has not finished
+    # after all. Deliberately not "voyageResumed", which is the other half of
+    # "voyagePaused"; conflating them would make a pause look like a resurrection.
+    "voyageReopened",
 }
 PRIORITIES = {"routine", "important", "critical"}
 EVENT_FIELDS = {
     "schemaVersion",
     "id",
-    "rideId",
+    "voyageId",
     "deviceId",
     "type",
     "priority",
@@ -115,13 +115,13 @@ class RelayService:
         self._cipher = cipher
         self._cursors = cursors
         self._pre_start_presence_ttl = timedelta(seconds=settings.pre_start_presence_ttl_seconds)
-        self._maximum_pre_start_presence_riders = settings.maximum_pre_start_presence_riders
+        self._maximum_pre_start_presence_sailors = settings.maximum_pre_start_presence_sailors
 
     def synchronize(
         self,
         session: Session,
         *,
-        ride_id: str,
+        voyage_id: str,
         bearer_token: str,
         idempotency_key: str,
         request_hash: bytes,
@@ -130,31 +130,31 @@ class RelayService:
         now: datetime | None = None,
     ) -> dict[str, Any]:
         now = now or datetime.now(UTC)
-        self._validate_identity(ride_id, request.deviceId, device_header)
+        self._validate_identity(voyage_id, request.deviceId, device_header)
         if not TOKEN.fullmatch(bearer_token):
-            raise RelayServiceError(401, "Ride credential rejected")
+            raise RelayServiceError(401, "Voyage credential rejected")
         if not IDEMPOTENCY_KEY.fullmatch(idempotency_key):
             raise RelayServiceError(400, "Invalid idempotency key")
         if len(request.events) > self._settings.maximum_upload_events:
             raise RelayServiceError(400, "Upload event limit exceeded")
 
         try:
-            cursor_sequence = self._cursors.decode(ride_id, request.cursor)
+            cursor_sequence = self._cursors.decode(voyage_id, request.cursor)
         except ValueError as error:
             raise RelayServiceError(400, "Invalid cursor") from error
 
-        events = [self._validate_event(value, ride_id, now) for value in request.events]
+        events = [self._validate_event(value, voyage_id, now) for value in request.events]
         if len({event.event_id for event in events}) != len(events):
             raise RelayServiceError(400, "A batch cannot repeat an event ID")
 
         with session.begin():
-            ride = self._get_or_claim_ride(session, ride_id, bearer_token, now)
-            ride = session.scalar(select(Ride).where(Ride.id == ride_id).with_for_update())
-            if ride is None:
-                raise RelayServiceError(500, "Claimed ride is unavailable")
-            if not hmac.compare_digest(ride.token_hash, token_hash(bearer_token)):
-                raise RelayServiceError(403, "Ride credential rejected")
-            self._purge_expired_for_ride(session, ride, now)
+            voyage = self._get_or_claim_voyage(session, voyage_id, bearer_token, now)
+            voyage = session.scalar(select(Voyage).where(Voyage.id == voyage_id).with_for_update())
+            if voyage is None:
+                raise RelayServiceError(500, "Claimed voyage is unavailable")
+            if not hmac.compare_digest(voyage.token_hash, token_hash(bearer_token)):
+                raise RelayServiceError(403, "Voyage credential rejected")
+            self._purge_expired_for_voyage(session, voyage, now)
 
             # Idempotency covers the upload only. Upload and download share one
             # request, and a device with nothing to send repeats a byte-identical
@@ -167,7 +167,7 @@ class RelayService:
             replay = (
                 session.scalar(
                     select(IdempotencyReplay).where(
-                        IdempotencyReplay.ride_id == ride_id,
+                        IdempotencyReplay.voyage_id == voyage_id,
                         IdempotencyReplay.idempotency_key == idempotency_key,
                         IdempotencyReplay.expires_at > now,
                     )
@@ -180,7 +180,7 @@ class RelayService:
                     raise RelayServiceError(409, "Idempotency key conflict")
                 stored = self._cipher.decrypt_json(
                     replay.response_ciphertext,
-                    associated_data=self._replay_aad(ride_id, idempotency_key),
+                    associated_data=self._replay_aad(voyage_id, idempotency_key),
                 )
                 accepted_ids = stored.get("acceptedEventIds") if isinstance(stored, dict) else None
                 if not isinstance(accepted_ids, list) or not all(
@@ -189,41 +189,41 @@ class RelayService:
                     raise RelayServiceError(500, "Stored replay is invalid")
                 response = self._build_response(
                     session,
-                    ride_id=ride_id,
+                    voyage_id=voyage_id,
                     cursor_sequence=cursor_sequence,
                     accepted_ids=accepted_ids,
                     now=now,
                 )
-                ride.last_seen_at = now
-                if ride.ended_at is None:
-                    ride.delete_after = now + timedelta(hours=self._settings.ride_retention_hours)
+                voyage.last_seen_at = now
+                if voyage.ended_at is None:
+                    voyage.delete_after = now + timedelta(hours=self._settings.voyage_retention_hours)
                 return response
 
-            existing_event_ids = self._validate_event_conflicts(session, ride_id, events)
+            existing_event_ids = self._validate_event_conflicts(session, voyage_id, events)
             accepted_ids = self._store_events(
                 session,
-                ride,
+                voyage,
                 events,
                 existing_event_ids,
                 now,
             )
-            # Only a finished ride discards live positions. Discarding them at
-            # `rideStarted` is what previously severed presence mid-ride and
-            # left a rider who joined afterwards with no live channel at all.
+            # Only a finished voyage discards live positions. Discarding them at
+            # `voyageStarted` is what previously severed presence mid-voyage and
+            # left a sailor who joined afterwards with no live channel at all.
             #
-            # A batch can carry both an end and the leader's reopen of it
+            # A batch can carry both an end and the skipper's reopen of it
             # (#206/#207), so the last one in the batch decides. Discarding on the
-            # end alone would cut presence for a ride that is running again.
+            # end alone would cut presence for a voyage that is running again.
             lifecycle = [
                 event.event_type
                 for event in events
-                if event.event_type in ("rideEnded", "rideReopened")
+                if event.event_type in ("voyageEnded", "voyageReopened")
             ]
-            if lifecycle and lifecycle[-1] == "rideEnded":
-                session.execute(delete(PreStartPosition).where(PreStartPosition.ride_id == ride_id))
+            if lifecycle and lifecycle[-1] == "voyageEnded":
+                session.execute(delete(PreStartPosition).where(PreStartPosition.voyage_id == voyage_id))
             response = self._build_response(
                 session,
-                ride_id=ride_id,
+                voyage_id=voyage_id,
                 cursor_sequence=cursor_sequence,
                 accepted_ids=accepted_ids,
                 now=now,
@@ -231,26 +231,26 @@ class RelayService:
             if events:
                 replay_ciphertext = self._cipher.encrypt_json(
                     response,
-                    associated_data=self._replay_aad(ride_id, idempotency_key),
+                    associated_data=self._replay_aad(voyage_id, idempotency_key),
                 )
                 self._store_replay(
                     session,
-                    ride_id=ride_id,
+                    voyage_id=voyage_id,
                     idempotency_key=idempotency_key,
                     request_hash=request_hash,
                     response_ciphertext=replay_ciphertext,
                     now=now,
                 )
-            ride.last_seen_at = now
-            if ride.ended_at is None:
-                ride.delete_after = now + timedelta(hours=self._settings.ride_retention_hours)
+            voyage.last_seen_at = now
+            if voyage.ended_at is None:
+                voyage.delete_after = now + timedelta(hours=self._settings.voyage_retention_hours)
             return response
 
     def synchronize_pre_start_presence(
         self,
         session: Session,
         *,
-        ride_id: str,
+        voyage_id: str,
         bearer_token: str,
         device_header: str,
         request: PresenceSyncRequest,
@@ -258,18 +258,18 @@ class RelayService:
         client_protocol: int = 1,
         now: datetime | None = None,
     ) -> dict[str, Any]:
-        """Ephemeral live positions plus a cursor-independent ride roster.
+        """Ephemeral live positions plus a cursor-independent voyage roster.
 
         ``live_presence`` is the caller's ``live-presence-v2`` capability. A
         caller without it keeps exactly the old read behaviour (no positions
-        once the ride has started) but no longer *destroys* the rows a
+        once the voyage has started) but no longer *destroys* the rows a
         live-presence peer depends on: a mixed-version group is the normal case,
         so an older build must never be able to blank a newer one.
         """
         now = now or datetime.now(UTC)
-        self._validate_identity(ride_id, request.deviceId, device_header)
+        self._validate_identity(voyage_id, request.deviceId, device_header)
         if not TOKEN.fullmatch(bearer_token):
-            raise RelayServiceError(401, "Ride credential rejected")
+            raise RelayServiceError(401, "Voyage credential rejected")
         position = (
             request.position.model_dump(mode="json") if request.position is not None else None
         )
@@ -280,38 +280,38 @@ class RelayService:
             if recorded_at > now + timedelta(minutes=2):
                 raise RelayServiceError(400, "Presence sample is from the future")
         with session.begin():
-            ride = session.scalar(select(Ride).where(Ride.id == ride_id).with_for_update())
-            if ride is None:
-                raise RelayServiceError(404, "Ride is not ready for presence")
-            if not hmac.compare_digest(ride.token_hash, token_hash(bearer_token)):
-                raise RelayServiceError(403, "Ride credential rejected")
+            voyage = session.scalar(select(Voyage).where(Voyage.id == voyage_id).with_for_update())
+            if voyage is None:
+                raise RelayServiceError(404, "Voyage is not ready for presence")
+            if not hmac.compare_digest(voyage.token_hash, token_hash(bearer_token)):
+                raise RelayServiceError(403, "Voyage credential rejected")
             session.execute(
                 delete(PreStartPosition).where(
-                    PreStartPosition.ride_id == ride_id,
+                    PreStartPosition.voyage_id == voyage_id,
                     PreStartPosition.expires_at <= now,
                 )
             )
-            phase = self._ride_presence_phase(session, ride_id)
-            members = self._presence_members(session, ride_id)
+            phase = self._voyage_presence_phase(session, voyage_id)
+            members = self._presence_members(session, voyage_id)
             if phase == "ended":
-                session.execute(delete(PreStartPosition).where(PreStartPosition.ride_id == ride_id))
+                session.execute(delete(PreStartPosition).where(PreStartPosition.voyage_id == voyage_id))
                 positions: list[dict[str, Any]] = []
             else:
                 existing = session.get(
                     PreStartPosition,
-                    (ride_id, request.deviceId),
+                    (voyage_id, request.deviceId),
                 )
                 if request.clear:
                     if existing is not None:
                         session.delete(existing)
                 elif position is not None:
                     if existing is None:
-                        rider_count = session.scalar(
-                            select(func.count(PreStartPosition.rider_id)).where(
-                                PreStartPosition.ride_id == ride_id
+                        sailor_count = session.scalar(
+                            select(func.count(PreStartPosition.sailor_id)).where(
+                                PreStartPosition.voyage_id == voyage_id
                             )
                         )
-                        if (rider_count or 0) >= self._maximum_pre_start_presence_riders:
+                        if (sailor_count or 0) >= self._maximum_pre_start_presence_sailors:
                             raise RelayServiceError(
                                 409,
                                 "Live presence capacity reached",
@@ -319,7 +319,7 @@ class RelayService:
                     expires_at = now + self._pre_start_presence_ttl
                     snapshot = {
                         **position,
-                        "riderId": request.deviceId,
+                        "sailorId": request.deviceId,
                         "receivedAt": now.isoformat(),
                         "expiresAt": expires_at.isoformat(),
                         "livePresence": live_presence,
@@ -328,15 +328,15 @@ class RelayService:
                     ciphertext = self._cipher.encrypt_json(
                         snapshot,
                         associated_data=self._pre_start_presence_aad(
-                            ride_id,
+                            voyage_id,
                             request.deviceId,
                         ),
                     )
                     if existing is None:
                         session.add(
                             PreStartPosition(
-                                ride_id=ride_id,
-                                rider_id=request.deviceId,
+                                voyage_id=voyage_id,
+                                sailor_id=request.deviceId,
                                 snapshot_ciphertext=ciphertext,
                                 received_at=now,
                                 expires_at=expires_at,
@@ -354,8 +354,8 @@ class RelayService:
                 else:
                     rows = session.scalars(
                         select(PreStartPosition)
-                        .where(PreStartPosition.ride_id == ride_id)
-                        .order_by(PreStartPosition.rider_id)
+                        .where(PreStartPosition.voyage_id == voyage_id)
+                        .order_by(PreStartPosition.sailor_id)
                     ).all()
                     positions = [self._decrypt_pre_start_position(row) for row in rows]
         return {
@@ -370,47 +370,47 @@ class RelayService:
         }
 
     @staticmethod
-    def _ride_presence_phase(session: Session, ride_id: str) -> str:
-        # Ordered, not a set: a reopen after an end means the ride is running
+    def _voyage_presence_phase(session: Session, voyage_id: str) -> str:
+        # Ordered, not a set: a reopen after an end means the voyage is running
         # again, and set membership cannot express "which came last" (#206/#207).
         lifecycle_types = list(
             session.scalars(
                 select(StoredEvent.event_type)
                 .where(
-                    StoredEvent.ride_id == ride_id,
-                    StoredEvent.event_type.in_(["rideStarted", "rideEnded", "rideReopened"]),
+                    StoredEvent.voyage_id == voyage_id,
+                    StoredEvent.event_type.in_(["voyageStarted", "voyageEnded", "voyageReopened"]),
                 )
                 .order_by(StoredEvent.sequence)
             ).all()
         )
-        ended = [name for name in lifecycle_types if name in ("rideEnded", "rideReopened")]
-        if ended and ended[-1] == "rideEnded":
+        ended = [name for name in lifecycle_types if name in ("voyageEnded", "voyageReopened")]
+        if ended and ended[-1] == "voyageEnded":
             return "ended"
-        return "started" if "rideStarted" in lifecycle_types else "open"
+        return "started" if "voyageStarted" in lifecycle_types else "open"
 
-    def _presence_members(self, session: Session, ride_id: str) -> list[dict[str, Any]]:
-        """The ride roster, read without consulting any caller's cursor.
+    def _presence_members(self, session: Session, voyage_id: str) -> list[dict[str, Any]]:
+        """The voyage roster, read without consulting any caller's cursor.
 
         Membership events are few and bounded, so this stays cheap. It exists
-        because ``riderJoined`` used to be visible only through the bulk event
+        because ``sailorJoined`` used to be visible only through the bulk event
         batch: one wedged or backed-off sync then hid a participant entirely
         from every other device.
         """
         rows = session.scalars(
             select(StoredEvent)
             .where(
-                StoredEvent.ride_id == ride_id,
-                StoredEvent.event_type.in_(["rideCreated", "riderJoined", "riderLeft"]),
+                StoredEvent.voyage_id == voyage_id,
+                StoredEvent.event_type.in_(["voyageCreated", "sailorJoined", "sailorLeft"]),
             )
             .order_by(StoredEvent.sequence)
-            .limit(self._maximum_pre_start_presence_riders * 4)
+            .limit(self._maximum_pre_start_presence_sailors * 4)
         ).all()
         members: dict[str, dict[str, Any]] = {}
         for row in rows:
             try:
                 body = self._cipher.decrypt_json(
                     row.body_ciphertext,
-                    associated_data=self._event_aad(ride_id, row.event_id),
+                    associated_data=self._event_aad(voyage_id, row.event_id),
                 )
             except ValueError:
                 continue
@@ -418,12 +418,12 @@ class RelayService:
                 continue
             payload = body.get("payload")
             payload = payload if isinstance(payload, dict) else {}
-            if row.event_type == "riderLeft":
+            if row.event_type == "sailorLeft":
                 member = members.get(row.device_id)
                 if member is not None:
                     member["left"] = True
                     # The departure time travels with the flag so a caller can
-                    # show *when* a rider left, and can order the departure
+                    # show *when* a sailor left, and can order the departure
                     # against a later rejoin, without waiting for the bulk event
                     # batch to deliver the membership events (issue #144).
                     member["leftAt"] = self._as_utc(row.created_at).isoformat()
@@ -435,7 +435,7 @@ class RelayService:
             if not isinstance(role, str) or not role.strip():
                 continue
             members[row.device_id] = {
-                "riderId": row.device_id,
+                "sailorId": row.device_id,
                 "displayName": display_name.strip()[:80],
                 "role": role.strip()[:40],
                 "joinedAt": self._as_utc(row.created_at).isoformat(),
@@ -444,8 +444,8 @@ class RelayService:
         return list(members.values())
 
     @staticmethod
-    def _pre_start_presence_aad(ride_id: str, rider_id: str) -> bytes:
-        return f"pre-start-presence-v1\n{ride_id}\n{rider_id}".encode()
+    def _pre_start_presence_aad(voyage_id: str, sailor_id: str) -> bytes:
+        return f"pre-start-presence-v1\n{voyage_id}\n{sailor_id}".encode()
 
     def _decrypt_pre_start_position(
         self,
@@ -454,8 +454,8 @@ class RelayService:
         value = self._cipher.decrypt_json(
             row.snapshot_ciphertext,
             associated_data=self._pre_start_presence_aad(
-                row.ride_id,
-                row.rider_id,
+                row.voyage_id,
+                row.sailor_id,
             ),
         )
         if not isinstance(value, dict):
@@ -466,41 +466,41 @@ class RelayService:
         self,
         session: Session,
         *,
-        ride_code: str,
-        ride_id: str,
+        voyage_code: str,
+        voyage_id: str,
         invite_secret: str,
         bearer_token: str,
         resolve_token: str,
         now: datetime | None = None,
     ) -> None:
         now = now or datetime.now(UTC)
-        self._validate_join_code(ride_code)
-        self._validate_join_credential(ride_id, invite_secret, bearer_token)
+        self._validate_join_code(voyage_code)
+        self._validate_join_credential(voyage_id, invite_secret, bearer_token)
         if not 16 <= len(resolve_token) <= 128:
-            raise RelayServiceError(400, "Invalid ride credential")
+            raise RelayServiceError(400, "Invalid voyage credential")
         credential_hash = token_hash(bearer_token)
         secret_ciphertext = self._cipher.encrypt_json(
             {"inviteSecret": invite_secret, "resolveToken": resolve_token},
-            associated_data=self._join_code_aad(ride_code),
+            associated_data=self._join_code_aad(voyage_code),
         )
         with session.begin():
-            session.execute(delete(RideJoinCode).where(RideJoinCode.expires_at <= now))
-            existing = session.get(RideJoinCode, ride_code)
+            session.execute(delete(VoyageJoinCode).where(VoyageJoinCode.expires_at <= now))
+            existing = session.get(VoyageJoinCode, voyage_code)
             if existing is not None:
-                same_ride = existing.ride_id == ride_id
+                same_voyage = existing.voyage_id == voyage_id
                 same_credential = hmac.compare_digest(existing.token_hash, credential_hash)
-                if same_ride and same_credential:
+                if same_voyage and same_credential:
                     existing.secret_ciphertext = secret_ciphertext
                     return
-                raise RelayServiceError(409, "Ride code is already in use")
+                raise RelayServiceError(409, "Voyage code is already in use")
             session.add(
-                RideJoinCode(
-                    code=ride_code,
-                    ride_id=ride_id,
+                VoyageJoinCode(
+                    code=voyage_code,
+                    voyage_id=voyage_id,
                     token_hash=credential_hash,
                     secret_ciphertext=secret_ciphertext,
                     created_at=now,
-                    expires_at=now + timedelta(hours=self._settings.ride_retention_hours),
+                    expires_at=now + timedelta(hours=self._settings.voyage_retention_hours),
                 )
             )
 
@@ -508,41 +508,41 @@ class RelayService:
         self,
         session: Session,
         *,
-        ride_code: str,
+        voyage_code: str,
         resolve_token: str | None = None,
         now: datetime | None = None,
     ) -> dict[str, str]:
         now = now or datetime.now(UTC)
-        self._validate_join_code(ride_code)
+        self._validate_join_code(voyage_code)
         with session.begin():
-            record = session.get(RideJoinCode, ride_code)
+            record = session.get(VoyageJoinCode, voyage_code)
             if record is None or self._as_utc(record.expires_at) <= now:
                 if record is not None:
                     session.delete(record)
-                raise RelayServiceError(404, "Ride code is not active")
+                raise RelayServiceError(404, "Voyage code is not active")
             try:
                 value = self._cipher.decrypt_json(
                     record.secret_ciphertext,
-                    associated_data=self._join_code_aad(ride_code),
+                    associated_data=self._join_code_aad(voyage_code),
                 )
             except ValueError as error:
-                raise RelayServiceError(500, "Ride code record is invalid") from error
+                raise RelayServiceError(500, "Voyage code record is invalid") from error
             secret = value.get("inviteSecret") if isinstance(value, dict) else None
             stored_resolve_token = value.get("resolveToken") if isinstance(value, dict) else None
             if not isinstance(secret, str) or not 16 <= len(secret) <= 512:
-                raise RelayServiceError(500, "Ride code record is invalid")
+                raise RelayServiceError(500, "Voyage code record is invalid")
             valid_resolve_token = (
                 isinstance(stored_resolve_token, str) and 16 <= len(stored_resolve_token) <= 128
             )
             if not valid_resolve_token:
-                raise RelayServiceError(500, "Ride code record is invalid")
+                raise RelayServiceError(500, "Voyage code record is invalid")
             if resolve_token is not None and not hmac.compare_digest(
                 stored_resolve_token, resolve_token
             ):
-                raise RelayServiceError(404, "Ride code is not active")
+                raise RelayServiceError(404, "Voyage code is not active")
             return {
-                "rideId": record.ride_id,
-                "rideCode": record.code,
+                "voyageId": record.voyage_id,
+                "voyageCode": record.code,
                 "inviteSecret": secret,
                 "resolveToken": stored_resolve_token,
             }
@@ -555,9 +555,9 @@ class RelayService:
         gpx: str,
         now: datetime | None = None,
     ) -> dict[str, str]:
-        """A plan is unrelated to the live ride/join-code tables: it never
-        carries a ride secret, and fetching one never claims a ride. The
-        phone that loads it still runs its own unchanged create-ride flow.
+        """A plan is unrelated to the live voyage/join-code tables: it never
+        carries a voyage secret, and fetching one never claims a voyage. The
+        phone that loads it still runs its own unchanged create-voyage flow.
         """
         now = now or datetime.now(UTC)
         if name is not None and len(name) > 200:
@@ -572,14 +572,14 @@ class RelayService:
             raise RelayServiceError(400, str(error)) from error
         expires_at = now + timedelta(days=self._settings.plan_retention_days)
         with session.begin():
-            session.execute(delete(RidePlan).where(RidePlan.expires_at <= now))
+            session.execute(delete(VoyagePlan).where(VoyagePlan.expires_at <= now))
             for _ in range(8):
                 code = self._generate_plan_code()
                 ciphertext = self._cipher.encrypt_json(gpx, associated_data=self._plan_aad(code))
                 try:
                     with session.begin_nested():
                         session.add(
-                            RidePlan(
+                            VoyagePlan(
                                 code=code,
                                 name=name,
                                 gpx_ciphertext=ciphertext,
@@ -604,7 +604,7 @@ class RelayService:
         if not PLAN_CODE.fullmatch(code):
             raise RelayServiceError(404, "Plan not found")
         with session.begin():
-            record = session.get(RidePlan, code)
+            record = session.get(VoyagePlan, code)
             if record is None or self._as_utc(record.expires_at) <= now:
                 if record is not None:
                     session.delete(record)
@@ -635,39 +635,39 @@ class RelayService:
         return f"plan:{code}".encode()
 
     @staticmethod
-    def _validate_join_code(ride_code: str) -> None:
-        if not JOIN_CODE.fullmatch(ride_code):
-            raise RelayServiceError(400, "Ride code must be six digits")
+    def _validate_join_code(voyage_code: str) -> None:
+        if not JOIN_CODE.fullmatch(voyage_code):
+            raise RelayServiceError(400, "Voyage code must be six digits")
 
     @staticmethod
     def _validate_join_credential(
-        ride_id: str,
+        voyage_id: str,
         invite_secret: str,
         bearer_token: str,
     ) -> None:
-        if not IDENTIFIER.fullmatch(ride_id):
-            raise RelayServiceError(400, "Invalid ride identity")
+        if not IDENTIFIER.fullmatch(voyage_id):
+            raise RelayServiceError(400, "Invalid voyage identity")
         if not 16 <= len(invite_secret) <= 512:
-            raise RelayServiceError(400, "Invalid ride credential")
+            raise RelayServiceError(400, "Invalid voyage credential")
         expected = "rr1_" + base64url(
             hmac.new(
                 invite_secret.encode(),
-                f"ride-relay-internet-token-v1\n{ride_id}".encode(),
+                f"ride-relay-internet-token-v1\n{voyage_id}".encode(),
                 "sha256",
             ).digest()
         )
         if not hmac.compare_digest(bearer_token, expected):
-            raise RelayServiceError(403, "Ride credential rejected")
+            raise RelayServiceError(403, "Voyage credential rejected")
 
     @staticmethod
-    def _join_code_aad(ride_code: str) -> bytes:
-        return f"join-code:{ride_code}".encode()
+    def _join_code_aad(voyage_code: str) -> bytes:
+        return f"join-code:{voyage_code}".encode()
 
     def _store_replay(
         self,
         session: Session,
         *,
-        ride_id: str,
+        voyage_id: str,
         idempotency_key: str,
         request_hash: bytes,
         response_ciphertext: bytes,
@@ -675,7 +675,7 @@ class RelayService:
     ) -> None:
         replay_count = (
             session.scalar(
-                select(func.count(IdempotencyReplay.id)).where(IdempotencyReplay.ride_id == ride_id)
+                select(func.count(IdempotencyReplay.id)).where(IdempotencyReplay.voyage_id == voyage_id)
             )
             or 0
         )
@@ -683,19 +683,19 @@ class RelayService:
             session.scalar(
                 select(
                     func.coalesce(func.sum(func.length(IdempotencyReplay.response_ciphertext)), 0)
-                ).where(IdempotencyReplay.ride_id == ride_id)
+                ).where(IdempotencyReplay.voyage_id == voyage_id)
             )
             or 0
         )
         if (
-            replay_count + 1 > self._settings.maximum_replays_per_ride
+            replay_count + 1 > self._settings.maximum_replays_per_voyage
             or replay_bytes + len(response_ciphertext)
-            > self._settings.maximum_replay_bytes_per_ride
+            > self._settings.maximum_replay_bytes_per_voyage
         ):
-            raise RelayServiceError(413, "Ride replay quota exceeded")
+            raise RelayServiceError(413, "Voyage replay quota exceeded")
         session.add(
             IdempotencyReplay(
-                ride_id=ride_id,
+                voyage_id=voyage_id,
                 idempotency_key=idempotency_key,
                 request_hash=request_hash,
                 response_ciphertext=response_ciphertext,
@@ -704,27 +704,27 @@ class RelayService:
             )
         )
 
-    def _get_or_claim_ride(
+    def _get_or_claim_voyage(
         self,
         session: Session,
-        ride_id: str,
+        voyage_id: str,
         bearer_token: str,
         now: datetime,
-    ) -> Ride:
-        ride = session.get(Ride, ride_id)
-        if ride is not None:
-            return ride
-        active_rides = (
-            session.scalar(select(func.count(Ride.id)).where(Ride.delete_after > now)) or 0
+    ) -> Voyage:
+        voyage = session.get(Voyage, voyage_id)
+        if voyage is not None:
+            return voyage
+        active_voyages = (
+            session.scalar(select(func.count(Voyage.id)).where(Voyage.delete_after > now)) or 0
         )
-        if active_rides >= self._settings.maximum_active_rides:
-            raise RelayServiceError(503, "Relay ride capacity reached")
-        claimed = Ride(
-            id=ride_id,
+        if active_voyages >= self._settings.maximum_active_voyages:
+            raise RelayServiceError(503, "Relay voyage capacity reached")
+        claimed = Voyage(
+            id=voyage_id,
             token_hash=token_hash(bearer_token),
             created_at=now,
             last_seen_at=now,
-            delete_after=now + timedelta(hours=self._settings.ride_retention_hours),
+            delete_after=now + timedelta(hours=self._settings.voyage_retention_hours),
             stored_event_count=0,
             stored_event_bytes=0,
             membership_projection_ready=True,
@@ -735,15 +735,15 @@ class RelayService:
                 session.flush()
             return claimed
         except IntegrityError:
-            ride = session.get(Ride, ride_id)
-            if ride is None:
+            voyage = session.get(Voyage, voyage_id)
+            if voyage is None:
                 raise
-            return ride
+            return voyage
 
     def _validate_event_conflicts(
         self,
         session: Session,
-        ride_id: str,
+        voyage_id: str,
         events: list[ValidatedEvent],
     ) -> set[str]:
         if not events:
@@ -752,7 +752,7 @@ class RelayService:
             row.event_id: row.body_hash
             for row in session.scalars(
                 select(StoredEvent).where(
-                    StoredEvent.ride_id == ride_id,
+                    StoredEvent.voyage_id == voyage_id,
                     StoredEvent.event_id.in_([event.event_id for event in events]),
                 )
             )
@@ -768,7 +768,7 @@ class RelayService:
     def _store_events(
         self,
         session: Session,
-        ride: Ride,
+        voyage: Voyage,
         events: list[ValidatedEvent],
         existing_event_ids: set[str],
         now: datetime,
@@ -783,22 +783,22 @@ class RelayService:
             expires_at = retention_expiry
             if event.client_expires_at is not None:
                 expires_at = min(expires_at, event.client_expires_at)
-            expires_at = min(expires_at, self._as_utc(ride.delete_after))
+            expires_at = min(expires_at, self._as_utc(voyage.delete_after))
             if expires_at <= now:
                 continue
             body_ciphertext = self._cipher.encrypt_json(
                 event.body,
-                associated_data=self._event_aad(ride.id, event.event_id),
+                associated_data=self._event_aad(voyage.id, event.event_id),
             )
-            projected_bytes = ride.stored_event_bytes + len(body_ciphertext)
+            projected_bytes = voyage.stored_event_bytes + len(body_ciphertext)
             if (
-                ride.stored_event_count + 1 > self._settings.maximum_events_per_ride
-                or projected_bytes > self._settings.maximum_stored_bytes_per_ride
+                voyage.stored_event_count + 1 > self._settings.maximum_events_per_voyage
+                or projected_bytes > self._settings.maximum_stored_bytes_per_voyage
             ):
-                raise RelayServiceError(413, "Ride storage quota exceeded")
+                raise RelayServiceError(413, "Voyage storage quota exceeded")
             session.add(
                 StoredEvent(
-                    ride_id=ride.id,
+                    voyage_id=voyage.id,
                     event_id=event.event_id,
                     device_id=event.device_id,
                     event_type=event.event_type,
@@ -808,8 +808,8 @@ class RelayService:
                     body_ciphertext=body_ciphertext,
                 )
             )
-            ride.stored_event_count += 1
-            ride.stored_event_bytes = projected_bytes
+            voyage.stored_event_count += 1
+            voyage.stored_event_bytes = projected_bytes
             membership_events.append(
                 MembershipEvent(
                     device_id=event.device_id,
@@ -818,22 +818,22 @@ class RelayService:
                     payload=event.body["payload"],
                 )
             )
-            if event.event_type == "rideEnded" and ride.ended_at is None:
-                ride.ended_at = now
-                ride.delete_after = min(
-                    self._as_utc(ride.delete_after),
-                    now + timedelta(hours=self._settings.ended_ride_grace_hours),
+            if event.event_type == "voyageEnded" and voyage.ended_at is None:
+                voyage.ended_at = now
+                voyage.delete_after = min(
+                    self._as_utc(voyage.delete_after),
+                    now + timedelta(hours=self._settings.ended_voyage_grace_hours),
                 )
-            elif event.event_type == "rideReopened" and ride.ended_at is not None:
-                # The end shortened this ride's life to the grace period. A ride
+            elif event.event_type == "voyageReopened" and voyage.ended_at is not None:
+                # The end shortened this voyage's life to the grace period. A voyage
                 # that is running again gets the full retention window back, or it
                 # would be deleted out from under the group (#206/#207).
-                ride.ended_at = None
-                ride.delete_after = max(
-                    self._as_utc(ride.delete_after),
-                    now + timedelta(hours=self._settings.ride_retention_hours),
+                voyage.ended_at = None
+                voyage.delete_after = max(
+                    self._as_utc(voyage.delete_after),
+                    now + timedelta(hours=self._settings.voyage_retention_hours),
                 )
-        project_membership_events(session, ride_id=ride.id, events=membership_events)
+        project_membership_events(session, voyage_id=voyage.id, events=membership_events)
         session.flush()
         return accepted_ids
 
@@ -841,7 +841,7 @@ class RelayService:
         self,
         session: Session,
         *,
-        ride_id: str,
+        voyage_id: str,
         cursor_sequence: int,
         accepted_ids: list[str],
         now: datetime,
@@ -849,7 +849,7 @@ class RelayService:
         rows = session.scalars(
             select(StoredEvent)
             .where(
-                StoredEvent.ride_id == ride_id,
+                StoredEvent.voyage_id == voyage_id,
                 StoredEvent.sequence > cursor_sequence,
                 StoredEvent.expires_at > now,
             )
@@ -861,13 +861,13 @@ class RelayService:
         for row in rows[: self._settings.maximum_download_events]:
             value = self._cipher.decrypt_json(
                 row.body_ciphertext,
-                associated_data=self._event_aad(ride_id, row.event_id),
+                associated_data=self._event_aad(voyage_id, row.event_id),
             )
             if not isinstance(value, dict):
                 raise RelayServiceError(500, "Stored event is invalid")
             candidate_events = [*result_events, value]
             candidate = SyncResponse(
-                cursor=self._cursors.encode(ride_id, row.sequence),
+                cursor=self._cursors.encode(voyage_id, row.sequence),
                 acceptedEventIds=accepted_ids,
                 events=candidate_events,
             ).model_dump()
@@ -877,7 +877,7 @@ class RelayService:
             result_events = candidate_events
             last_sequence = row.sequence
         return SyncResponse(
-            cursor=self._cursors.encode(ride_id, last_sequence),
+            cursor=self._cursors.encode(voyage_id, last_sequence),
             acceptedEventIds=accepted_ids,
             events=result_events,
         ).model_dump()
@@ -885,13 +885,13 @@ class RelayService:
     def _validate_event(
         self,
         value: dict[str, Any],
-        ride_id: str,
+        voyage_id: str,
         now: datetime,
     ) -> ValidatedEvent:
         if set(value) != EVENT_FIELDS:
             raise RelayServiceError(400, "Event fields are invalid")
-        if value.get("schemaVersion") != 1 or value.get("rideId") != ride_id:
-            raise RelayServiceError(400, "Event is invalid for this ride")
+        if value.get("schemaVersion") != 1 or value.get("voyageId") != voyage_id:
+            raise RelayServiceError(400, "Event is invalid for this voyage")
         event_id = value.get("id")
         device_id = value.get("deviceId")
         event_type = value.get("type")
@@ -938,9 +938,9 @@ class RelayService:
         )
 
     @staticmethod
-    def _validate_identity(ride_id: str, body_device: str, header_device: str) -> None:
-        if not IDENTIFIER.fullmatch(ride_id):
-            raise RelayServiceError(400, "Ride identity is invalid")
+    def _validate_identity(voyage_id: str, body_device: str, header_device: str) -> None:
+        if not IDENTIFIER.fullmatch(voyage_id):
+            raise RelayServiceError(400, "Voyage identity is invalid")
         if not IDENTIFIER.fullmatch(body_device) or body_device != header_device:
             raise RelayServiceError(400, "Device identity headers do not match")
 
@@ -982,7 +982,7 @@ class RelayService:
     @staticmethod
     def _maximum_event_retention(event_type: str) -> timedelta:
         return {
-            "riderLocationUpdated": timedelta(minutes=30),
+            "sailorLocationUpdated": timedelta(minutes=30),
             "statusMessage": timedelta(hours=2),
             "routeDeviationChanged": timedelta(hours=2),
             "routeAlertAcknowledged": timedelta(hours=2),
@@ -992,18 +992,18 @@ class RelayService:
             # of the client-supplied expiry, not left to the 72h default.
             "iceInfoShared": timedelta(hours=2),
             "iceInfoViewed": timedelta(hours=2),
-            # A rider's own phone number: the same cap an ICE share gets, for the
-            # same reason. The client purges its copy the moment the ride ends;
+            # A sailor's own phone number: the same cap an ICE share gets, for the
+            # same reason. The client purges its copy the moment the voyage ends;
             # this is the bound that applies whatever a client asks for.
-            "riderContactShared": timedelta(hours=2),
-            # A rider's intended path: the same retention band as where they
+            "sailorContactShared": timedelta(hours=2),
+            # A sailor's intended path: the same retention band as where they
             # actually are, capped here as well as on the client so a share
             # cannot outlive its usefulness even if a client asks it to.
             "rejoinRouteShared": timedelta(minutes=30),
             # Who was asked to cover the back of the group, and what they said.
-            # Ride-scoped coordination, not history worth keeping for days.
-            "tecRoleRequested": timedelta(hours=2),
-            "tecRoleResponded": timedelta(hours=2),
+            # Voyage-scoped coordination, not history worth keeping for days.
+            "sweeperRoleRequested": timedelta(hours=2),
+            "sweeperRoleResponded": timedelta(hours=2),
         }.get(event_type, timedelta(hours=72))
 
     @staticmethod
@@ -1011,38 +1011,38 @@ class RelayService:
         return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
     @staticmethod
-    def _purge_expired_for_ride(session: Session, ride: Ride, now: datetime) -> None:
+    def _purge_expired_for_voyage(session: Session, voyage: Voyage, now: datetime) -> None:
         expired_count, expired_bytes = session.execute(
             select(
                 func.count(StoredEvent.sequence),
                 func.coalesce(func.sum(func.length(StoredEvent.body_ciphertext)), 0),
             ).where(
-                StoredEvent.ride_id == ride.id,
+                StoredEvent.voyage_id == voyage.id,
                 StoredEvent.expires_at <= now,
             )
         ).one()
         session.execute(
             delete(StoredEvent).where(
-                StoredEvent.ride_id == ride.id,
+                StoredEvent.voyage_id == voyage.id,
                 StoredEvent.expires_at <= now,
             )
         )
-        ride.stored_event_count = max(0, ride.stored_event_count - int(expired_count or 0))
-        ride.stored_event_bytes = max(0, ride.stored_event_bytes - int(expired_bytes or 0))
+        voyage.stored_event_count = max(0, voyage.stored_event_count - int(expired_count or 0))
+        voyage.stored_event_bytes = max(0, voyage.stored_event_bytes - int(expired_bytes or 0))
         session.execute(
             delete(IdempotencyReplay).where(
-                IdempotencyReplay.ride_id == ride.id,
+                IdempotencyReplay.voyage_id == voyage.id,
                 IdempotencyReplay.expires_at <= now,
             )
         )
 
     @staticmethod
-    def _event_aad(ride_id: str, event_id: str) -> bytes:
-        return f"event:{ride_id}:{event_id}".encode()
+    def _event_aad(voyage_id: str, event_id: str) -> bytes:
+        return f"event:{voyage_id}:{event_id}".encode()
 
     @staticmethod
-    def _replay_aad(ride_id: str, idempotency_key: str) -> bytes:
-        return f"replay:{ride_id}:{idempotency_key}".encode()
+    def _replay_aad(voyage_id: str, idempotency_key: str) -> bytes:
+        return f"replay:{voyage_id}:{idempotency_key}".encode()
 
 
 def purge_expired(
@@ -1053,42 +1053,42 @@ def purge_expired(
     with session.begin():
         expired_usage = session.execute(
             select(
-                StoredEvent.ride_id,
+                StoredEvent.voyage_id,
                 func.count(StoredEvent.sequence),
                 func.coalesce(func.sum(func.length(StoredEvent.body_ciphertext)), 0),
             )
             .where(StoredEvent.expires_at <= now)
-            .group_by(StoredEvent.ride_id)
+            .group_by(StoredEvent.voyage_id)
         ).all()
         if expired_usage:
-            ride_ids = [ride_id for ride_id, _, _ in expired_usage]
-            rides_by_id = {
-                ride.id: ride
-                for ride in session.scalars(
-                    select(Ride).where(Ride.id.in_(ride_ids)).with_for_update()
+            voyage_ids = [voyage_id for voyage_id, _, _ in expired_usage]
+            voyages_by_id = {
+                voyage.id: voyage
+                for voyage in session.scalars(
+                    select(Voyage).where(Voyage.id.in_(voyage_ids)).with_for_update()
                 )
             }
-            for ride_id, expired_count, expired_bytes in expired_usage:
-                if ride := rides_by_id.get(ride_id):
-                    ride.stored_event_count = max(
+            for voyage_id, expired_count, expired_bytes in expired_usage:
+                if voyage := voyages_by_id.get(voyage_id):
+                    voyage.stored_event_count = max(
                         0,
-                        ride.stored_event_count - int(expired_count or 0),
+                        voyage.stored_event_count - int(expired_count or 0),
                     )
-                    ride.stored_event_bytes = max(
+                    voyage.stored_event_bytes = max(
                         0,
-                        ride.stored_event_bytes - int(expired_bytes or 0),
+                        voyage.stored_event_bytes - int(expired_bytes or 0),
                     )
         events = session.execute(delete(StoredEvent).where(StoredEvent.expires_at <= now))
         replays = session.execute(
             delete(IdempotencyReplay).where(IdempotencyReplay.expires_at <= now)
         )
-        rides = session.execute(
-            delete(Ride)
-            .where(Ride.delete_after <= now)
+        voyages = session.execute(
+            delete(Voyage)
+            .where(Voyage.delete_after <= now)
             .execution_options(synchronize_session=False)
         )
-        join_codes = session.execute(delete(RideJoinCode).where(RideJoinCode.expires_at <= now))
-        plans = session.execute(delete(RidePlan).where(RidePlan.expires_at <= now))
+        join_codes = session.execute(delete(VoyageJoinCode).where(VoyageJoinCode.expires_at <= now))
+        plans = session.execute(delete(VoyagePlan).where(VoyagePlan.expires_at <= now))
         observers = session.execute(delete(ObserverGrant).where(ObserverGrant.expires_at <= now))
         pre_start_positions = session.execute(
             delete(PreStartPosition).where(PreStartPosition.expires_at <= now)
@@ -1096,7 +1096,7 @@ def purge_expired(
     return (
         events.rowcount or 0,
         replays.rowcount or 0,
-        rides.rowcount or 0,
+        voyages.rowcount or 0,
         join_codes.rowcount or 0,
         plans.rowcount or 0,
         observers.rowcount or 0,

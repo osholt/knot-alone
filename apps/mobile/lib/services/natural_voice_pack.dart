@@ -169,7 +169,7 @@ class DownloadedNaturalVoicePackStore implements NaturalVoicePackStore {
 
   /// GitHub release assets are large enough that a radio handover or a CDN
   /// connection reset is normal rather than exceptional. Preserve verified
-  /// bytes and continue with HTTP Range instead of making the rider restart a
+  /// bytes and continue with HTTP Range instead of making the sailor restart a
   /// 103 MB download from zero.
   Future<void> _downloadArchive(
     http.Client client,

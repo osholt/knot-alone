@@ -992,7 +992,7 @@ bool _sameMapPoint(GeoPoint first, GeoPoint second) {
   return latitude * latitude + longitude * longitude < 1e-10;
 }
 
-/// How far the rider will actually travel: the length of the path that will be
+/// How far the sailor will actually travel: the length of the path that will be
 /// ridden and tracked, not the sum of every path in the file.
 ///
 /// Summing them reported a 23.4 mi MyRoute-app route as 47.4 mi, because that
@@ -1000,7 +1000,7 @@ bool _sameMapPoint(GeoPoint first, GeoPoint second) {
 /// waypoint route it came from (#180). The importer now drops a duplicate
 /// representation, so in practice there is one path; this measures the primary
 /// one regardless, because a file with two genuinely different paths must not
-/// add them together either. A rider reads one number and rides one route.
+/// add them together either. A sailor reads one number and voyages one route.
 ///
 /// "Primary" is the longest path, the same choice `RouteProgressTracker` makes,
 /// so the distance shown and the distance progress is measured against cannot

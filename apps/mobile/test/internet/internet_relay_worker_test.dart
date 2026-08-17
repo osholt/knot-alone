@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/data/in_memory_event_store.dart';
-import 'package:tide_and_seek/domain/ride_event.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/voyage_event.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/internet/internet_cursor_store.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 import 'package:tide_and_seek/internet/internet_relay_worker.dart';
-import 'package:tide_and_seek/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/services/voyage_event_authenticator.dart';
 
 void main() {
   test(
@@ -36,7 +36,7 @@ void main() {
         pollInterval: const Duration(days: 1),
         randomValue: () => 0.5,
       );
-      final received = <RideEvent>[];
+      final received = <VoyageEvent>[];
       final subscription = worker.receivedEvents.listen(received.add);
       final firstSuccess = worker.statuses.firstWhere(
         (status) => status.phase == InternetRelayPhase.synced,
@@ -46,17 +46,17 @@ void main() {
       await firstSuccess.timeout(const Duration(seconds: 1));
 
       expect(api.uploads.single.map((event) => event.id), ['local']);
-      expect(await eventStore.pendingEvents(_session.rideId), isEmpty);
+      expect(await eventStore.pendingEvents(_session.voyageId), isEmpty);
       expect(
-        (await eventStore.eventsForRide(_session.rideId)).map((e) => e.id),
+        (await eventStore.eventsForVoyage(_session.voyageId)).map((e) => e.id),
         ['local', 'remote'],
       );
-      expect(await cursorStore.load(_session.rideId), 'cursor-1');
+      expect(await cursorStore.load(_session.voyageId), 'cursor-1');
       expect(received.map((event) => event.id), ['remote']);
 
       await worker.synchronizeNow();
       expect(received.map((event) => event.id), ['remote']);
-      expect(await cursorStore.load(_session.rideId), 'cursor-2');
+      expect(await cursorStore.load(_session.voyageId), 'cursor-2');
 
       await subscription.cancel();
       await worker.close();
@@ -88,9 +88,9 @@ void main() {
       final cursorStore = InMemoryInternetCursorStore();
       await eventStore.append(_event(id: 'local'));
       final valid = _event(id: 'tampered', deviceId: 'remote-device');
-      final tampered = RideEvent(
+      final tampered = VoyageEvent(
         id: valid.id,
-        rideId: valid.rideId,
+        voyageId: valid.voyageId,
         deviceId: valid.deviceId,
         type: valid.type,
         priority: valid.priority,
@@ -121,16 +121,16 @@ void main() {
       await failure.timeout(const Duration(seconds: 1));
 
       expect(
-        (await eventStore.pendingEvents(_session.rideId)).single.id,
+        (await eventStore.pendingEvents(_session.voyageId)).single.id,
         'local',
       );
       expect(
-        (await eventStore.eventsForRide(
-          _session.rideId,
+        (await eventStore.eventsForVoyage(
+          _session.voyageId,
         )).map((event) => event.id),
         ['local'],
       );
-      expect(await cursorStore.load(_session.rideId), isNull);
+      expect(await cursorStore.load(_session.voyageId), isNull);
       await worker.close();
     },
   );
@@ -171,10 +171,10 @@ void main() {
   });
 
   test(
-    'clears an expired cursor and replays the ride from the start',
+    'clears an expired cursor and replays the voyage from the start',
     () async {
       final cursorStore = InMemoryInternetCursorStore();
-      await cursorStore.save(_session.rideId, 'expired');
+      await cursorStore.save(_session.voyageId, 'expired');
       final api = _ExpiredCursorApi();
       final worker = InternetRelayWorker(
         api: api,
@@ -190,7 +190,7 @@ void main() {
       await recovered.timeout(const Duration(seconds: 1));
 
       expect(api.cursors, ['expired', isNull]);
-      expect(await cursorStore.load(_session.rideId), 'fresh');
+      expect(await cursorStore.load(_session.voyageId), 'fresh');
       await worker.close();
     },
   );
@@ -224,7 +224,7 @@ void main() {
     await worker.start(_session);
     await initialSync.timeout(const Duration(seconds: 1));
     await eventStore.append(
-      _event(id: 'start', type: RideEventType.rideStarted),
+      _event(id: 'start', type: VoyageEventType.voyageStarted),
     );
     final upload = worker.statuses.firstWhere(
       (status) =>
@@ -242,10 +242,10 @@ void main() {
     final eventStore = InMemoryEventStore();
     await eventStore.append(_event(id: 'core'));
     await eventStore.append(
-      _event(id: 'departure', type: RideEventType.riderLeft),
+      _event(id: 'departure', type: VoyageEventType.sailorLeft),
     );
     await eventStore.append(
-      _event(id: 'route', type: RideEventType.routeCleared),
+      _event(id: 'route', type: VoyageEventType.routeCleared),
     );
     final api = _CompatibilityApi(
       compatibility: _compatibility(
@@ -271,7 +271,7 @@ void main() {
     expect(api.uploads.first.map((event) => event.id), ['core']);
     expect(
       (await eventStore.pendingEvents(
-        _session.rideId,
+        _session.voyageId,
       )).map((event) => event.id),
       containsAll(['departure', 'route']),
     );
@@ -317,14 +317,14 @@ class _FakeApi implements InternetRelayApi {
   @override
   final InternetRelayConfiguration configuration;
   final List<InternetSyncResult> _results;
-  final List<List<RideEvent>> uploads = [];
+  final List<List<VoyageEvent>> uploads = [];
   int callCount = 0;
 
   @override
   Future<InternetSyncResult> synchronize({
-    required RideSession session,
+    required VoyageSession session,
     required String? cursor,
-    required List<RideEvent> events,
+    required List<VoyageEvent> events,
   }) async {
     callCount += 1;
     uploads.add(List.of(events));
@@ -344,9 +344,9 @@ class _RecoveringApi implements InternetRelayApi {
 
   @override
   Future<InternetSyncResult> synchronize({
-    required RideSession session,
+    required VoyageSession session,
     required String? cursor,
-    required List<RideEvent> events,
+    required List<VoyageEvent> events,
   }) async {
     callCount += 1;
     if (callCount == 1) {
@@ -372,9 +372,9 @@ class _ExpiredCursorApi implements InternetRelayApi {
 
   @override
   Future<InternetSyncResult> synchronize({
-    required RideSession session,
+    required VoyageSession session,
     required String? cursor,
-    required List<RideEvent> events,
+    required List<VoyageEvent> events,
   }) async {
     cursors.add(cursor);
     if (cursor != null) {
@@ -400,7 +400,7 @@ class _CompatibilityApi implements InternetRelayApi, RelayCompatibilityApi {
   _CompatibilityApi({required this.compatibility});
 
   final RelayCompatibilityResult compatibility;
-  final List<List<RideEvent>> uploads = [];
+  final List<List<VoyageEvent>> uploads = [];
   int compatibilityChecks = 0;
   int callCount = 0;
 
@@ -416,9 +416,9 @@ class _CompatibilityApi implements InternetRelayApi, RelayCompatibilityApi {
 
   @override
   Future<InternetSyncResult> synchronize({
-    required RideSession session,
+    required VoyageSession session,
     required String? cursor,
-    required List<RideEvent> events,
+    required List<VoyageEvent> events,
   }) async {
     callCount += 1;
     uploads.add(List.of(events));
@@ -451,31 +451,31 @@ RelayCompatibilityResult _compatibility(
       : null,
 );
 
-final _session = RideSession(
-  rideId: 'ride-alpha',
-  rideCode: 'ALPHA1',
+final _session = VoyageSession(
+  voyageId: 'voyage-alpha',
+  voyageCode: 'ALPHA1',
   inviteSecret: '0123456789abcdef0123456789abcdef',
   joinToken: 'test-join-token-0123456789',
-  localRiderId: 'local-device',
+  localSailorId: 'local-device',
   displayName: 'Oliver',
-  role: RideRole.rider,
+  role: VoyageRole.sailor,
   joinedAt: DateTime.utc(2026, 7, 16),
 );
 
-RideEvent _event({
+VoyageEvent _event({
   required String id,
   String deviceId = 'local-device',
-  RideEventType type = RideEventType.statusMessage,
+  VoyageEventType type = VoyageEventType.statusMessage,
 }) => _signedEvent(id: id, deviceId: deviceId, type: type);
 
-RideEvent _signedEvent({
+VoyageEvent _signedEvent({
   required String id,
   required String deviceId,
-  RideEventType type = RideEventType.statusMessage,
+  VoyageEventType type = VoyageEventType.statusMessage,
 }) {
-  final unsigned = RideEvent(
+  final unsigned = VoyageEvent(
     id: id,
-    rideId: _session.rideId,
+    voyageId: _session.voyageId,
     deviceId: deviceId,
     type: type,
     priority: EventPriority.routine,
@@ -483,14 +483,14 @@ RideEvent _signedEvent({
     payload: const {'message': 'OK'},
     signature: '',
   );
-  return RideEvent(
+  return VoyageEvent(
     id: unsigned.id,
-    rideId: unsigned.rideId,
+    voyageId: unsigned.voyageId,
     deviceId: unsigned.deviceId,
     type: unsigned.type,
     priority: unsigned.priority,
     createdAt: unsigned.createdAt,
     payload: unsigned.payload,
-    signature: RideEventAuthenticator.sign(unsigned, _session.inviteSecret),
+    signature: VoyageEventAuthenticator.sign(unsigned, _session.inviteSecret),
   );
 }

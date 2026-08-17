@@ -1,4 +1,4 @@
-"""Add encrypted ride push registrations and delivery deduplication.
+"""Add encrypted voyage push registrations and delivery deduplication.
 
 Revision ID: 0005
 Revises: 0004
@@ -20,7 +20,7 @@ def upgrade() -> None:
     op.create_table(
         "push_registrations",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("ride_id", sa.String(length=128), nullable=False),
+        sa.Column("voyage_id", sa.String(length=128), nullable=False),
         sa.Column("installation_id", sa.String(length=128), nullable=False),
         sa.Column("platform", sa.String(length=16), nullable=False),
         sa.Column("provider", sa.String(length=16), nullable=False),
@@ -34,10 +34,10 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(["ride_id"], ["rides.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["voyage_id"], ["voyages.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
-            "ride_id",
+            "voyage_id",
             "installation_id",
             "provider",
             name="uq_push_registration_installation",
@@ -46,7 +46,7 @@ def upgrade() -> None:
     op.create_index(
         "ix_push_registrations_active",
         "push_registrations",
-        ["ride_id", "revoked_at"],
+        ["voyage_id", "revoked_at"],
     )
     op.create_index(
         "ix_push_registrations_token",
@@ -56,7 +56,7 @@ def upgrade() -> None:
     op.create_table(
         "push_deliveries",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("ride_id", sa.String(length=128), nullable=False),
+        sa.Column("voyage_id", sa.String(length=128), nullable=False),
         sa.Column("event_id", sa.String(length=128), nullable=False),
         sa.Column("registration_id", sa.Integer(), nullable=False),
         sa.Column("category", sa.String(length=24), nullable=False),
@@ -71,7 +71,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
-            "ride_id",
+            "voyage_id",
             "event_id",
             "registration_id",
             name="uq_push_delivery_event_recipient",

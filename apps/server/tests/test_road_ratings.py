@@ -1,4 +1,4 @@
-"""Anonymous rider road ratings (#159)."""
+"""Anonymous sailor road ratings (#159)."""
 
 from __future__ import annotations
 
@@ -54,11 +54,11 @@ def test_rating_is_accepted_without_any_credential(client):
     assert response.content == b""
 
 
-def test_relay_rejects_any_field_that_could_identify_a_rider(client):
+def test_relay_rejects_any_field_that_could_identify_a_sailor(client):
     for extra in (
-        {"riderId": "rider-a"},
+        {"sailorId": "sailor-a"},
         {"deviceId": "device-a"},
-        {"rideId": "ride-a"},
+        {"voyageId": "voyage-a"},
         {"installationId": "install-a"},
         {"createdAt": "2026-07-27T12:00:00Z"},
         {"latitude": 52.01},
@@ -94,7 +94,7 @@ def test_ratings_are_tallied_not_logged_per_submission(settings):
     assert entry["catalogueVersion"] == CATALOGUE
     assert entry["worthIncluding"] == 4
     assert entry["notWorthIncluding"] == 1
-    # Day granularity only: a receipt second could be lined up against the ride
+    # Day granularity only: a receipt second could be lined up against the voyage
     # journal's own sequence.
     assert entry["firstRatedOn"] == entry["lastRatedOn"]
     assert len(entry["firstRatedOn"]) == len("2026-07-28")

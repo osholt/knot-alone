@@ -8,11 +8,11 @@ import '../../domain/imported_route.dart' show GeoPoint;
 ///
 /// The framing used to be handed to MapLibre's `newLatLngBounds` and the result
 /// was not something any test could see - the mini-map is MapLibre-only, so no
-/// widget test exercises it, which is how it reached a rider framed on open sea:
+/// widget test exercises it, which is how it reached a sailor framed on open sea:
 ///
 /// > My mini map is somewhere in North Wales, with none of us in it.
 ///
-/// One rider was on the Isle of Man and the rest near Bristol, about 300 km
+/// One sailor was on the Isle of Man and the rest near Bristol, about 300 km
 /// apart, and the mini-map showed neither end. Computing the camera here instead
 /// makes the decision testable, and removes the dependence on how a bounds fit
 /// behaves in a 150 x 104 box (#172).
@@ -29,31 +29,31 @@ class GroupMiniMapFraming {
   /// Web Mercator zoom, clamped to [minimumZoom].
   final double zoom;
 
-  /// The greatest distance between any two framed riders, in metres. What the
+  /// The greatest distance between any two framed sailors, in metres. What the
   /// scale indicator reports, so a glance answers "how spread out are we" -
   /// half a mile, four miles or 195 miles, the case a tester named the "K-Lo
   /// edge case".
   final double spanMeters;
 
-  /// A lone rider gets a street-level view; there is no spread to show.
-  static const singleRiderZoom = 14.5;
+  /// A lone sailor gets a street-level view; there is no spread to show.
+  static const singleSailorZoom = 14.5;
 
-  /// Used when only one rider can be placed but the group is known to be larger.
+  /// Used when only one sailor can be placed but the group is known to be larger.
   ///
-  /// The rider count comes from the roster, while the framing only receives
-  /// riders the map can actually place, so the two disagree whenever someone has
+  /// The sailor count comes from the roster, while the framing only receives
+  /// sailors the map can actually place, so the two disagree whenever someone has
   /// joined but their first position has not arrived. Framing at
-  /// [singleRiderZoom] then reads as a street map of one rider while the caption
+  /// [singleSailorZoom] then reads as a street map of one sailor while the caption
   /// says two - which is what a tester photographed: "2 RIDERS", no markers, and
   /// a 200 m scale bar (#172).
   ///
   /// Chosen for the *shorter* axis: at UK latitudes this covers roughly 6 km
-  /// vertically in the portrait mini-map, so a rider a few kilometres away is
+  /// vertically in the portrait mini-map, so a sailor a few kilometres away is
   /// already inside the viewport when their first position arrives, rather than
   /// depending on a refit to become visible. Erring wide is right here because
   /// the state is temporary - the ordinary bounds fit takes over the moment there
   /// are two points to fit.
-  static const awaitingOtherRidersZoom = 10.0;
+  static const awaitingOtherSailorsZoom = 10.0;
 
   /// Web Mercator bottoms out at 0, where the whole world is 256 px wide. No
   /// group on one planet needs further out than this, so the framing never has
@@ -75,20 +75,22 @@ class GroupMiniMapFraming {
   /// [width] and [height] are the *usable* pixels - the caller subtracts its own
   /// padding first, because padding that exceeds the box is one of the ways the
   /// old fit produced nonsense.
-  /// [awaitingOtherRiders] is true when the roster holds riders the map cannot
+  /// [awaitingOtherSailors] is true when the roster holds sailors the map cannot
   /// place yet. It only affects the single-point case, where it is the difference
-  /// between "this rider is alone" and "this is the only rider we can draw".
+  /// between "this sailor is alone" and "this is the only sailor we can draw".
   factory GroupMiniMapFraming.forPoints(
     List<GeoPoint> points, {
     required double width,
     required double height,
-    bool awaitingOtherRiders = false,
+    bool awaitingOtherSailors = false,
   }) {
     assert(points.isNotEmpty, 'Framing needs at least one point');
     if (points.length == 1) {
       return GroupMiniMapFraming(
         centre: points.single,
-        zoom: awaitingOtherRiders ? awaitingOtherRidersZoom : singleRiderZoom,
+        zoom: awaitingOtherSailors
+            ? awaitingOtherSailorsZoom
+            : singleSailorZoom,
         spanMeters: 0,
       );
     }
@@ -105,7 +107,7 @@ class GroupMiniMapFraming {
     // Mercator stretches north-south with latitude, so both the centre and the
     // span are computed in projected units rather than degrees. The midpoint of
     // two latitudes is *not* their average once the span is large - centring on
-    // the average put the northern rider outside a viewport the arithmetic said
+    // the average put the northern sailor outside a viewport the arithmetic said
     // would hold both, which a 900 km test case caught.
     final topY = _mercatorY(maximumLatitude);
     final bottomY = _mercatorY(minimumLatitude);
@@ -138,7 +140,7 @@ class GroupMiniMapFraming {
 
   /// The zoom at which [fraction] of the world fills [pixels].
   ///
-  /// A degenerate span - every rider on the same spot in one axis - must not
+  /// A degenerate span - every sailor on the same spot in one axis - must not
   /// drive the zoom, so it yields the closest allowed view and lets the other
   /// axis decide.
   static double _zoomForFraction(double fraction, double pixels) {

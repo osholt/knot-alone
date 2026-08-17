@@ -8,24 +8,24 @@ import 'internet_cursor_store.dart';
 class SharedPreferencesInternetCursorStore implements InternetCursorStore {
   static const _prefix = 'internet_relay_cursor_v1_';
 
-  String _key(String rideId) =>
-      '$_prefix${sha256.convert(utf8.encode(rideId)).toString()}';
+  String _key(String voyageId) =>
+      '$_prefix${sha256.convert(utf8.encode(voyageId)).toString()}';
 
   @override
-  Future<void> clear(String rideId) async {
+  Future<void> clear(String voyageId) async {
     final preferences = await SharedPreferences.getInstance();
-    await preferences.remove(_key(rideId));
+    await preferences.remove(_key(voyageId));
   }
 
   @override
-  Future<String?> load(String rideId) async {
+  Future<String?> load(String voyageId) async {
     final preferences = await SharedPreferences.getInstance();
-    return preferences.getString(_key(rideId));
+    return preferences.getString(_key(voyageId));
   }
 
   @override
-  Future<void> save(String rideId, String cursor) async {
+  Future<void> save(String voyageId, String cursor) async {
     final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_key(rideId), cursor);
+    await preferences.setString(_key(voyageId), cursor);
   }
 }

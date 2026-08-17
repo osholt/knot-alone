@@ -3,22 +3,22 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../controllers/distance_unit_controller.dart';
-import '../controllers/completed_rides_controller.dart';
+import '../controllers/completed_voyages_controller.dart';
 import '../controllers/map_style_mode_controller.dart';
-import '../controllers/ride_code_preference_controller.dart';
-import '../controllers/ride_controller.dart';
-import '../controllers/ride_invitation_link_controller.dart';
+import '../controllers/voyage_code_preference_controller.dart';
+import '../controllers/voyage_controller.dart';
+import '../controllers/voyage_invitation_link_controller.dart';
 import '../controllers/route_progress_display_controller.dart';
-import '../controllers/rider_profile_controller.dart';
+import '../controllers/sailor_profile_controller.dart';
 import '../controllers/shared_route_controller.dart';
-import '../controllers/ride_diagnostics_controller.dart';
+import '../controllers/voyage_diagnostics_controller.dart';
 import '../controllers/spoken_guidance_controller.dart';
 import '../controllers/test_control_controller.dart';
 import '../domain/recorded_route_store.dart';
 import '../features/home/home_screen.dart';
-import 'ride_invitation_link_gate.dart';
+import 'voyage_invitation_link_gate.dart';
 import '../features/onboarding/onboarding_screen.dart';
-import '../features/ride/active_ride_shell.dart';
+import '../features/voyage/active_voyage_shell.dart';
 import '../internet/plan_directory.dart';
 import '../services/test_control_registry.dart';
 
@@ -28,36 +28,36 @@ class TideAndSeekApp extends StatelessWidget {
     required this.controller,
     required this.distanceUnits,
     required this.mapStyleMode,
-    required this.rideCodePreference,
-    required this.riderProfile,
+    required this.voyageCodePreference,
+    required this.sailorProfile,
     required this.sharedRoutes,
     this.routeProgressDisplay,
     required this.recordedRoutes,
-    required this.completedRides,
-    this.rideInvitationLinks,
+    required this.completedVoyages,
+    this.voyageInvitationLinks,
     this.planDirectory,
     this.testControl,
     this.testControlRegistry,
     this.spokenGuidance,
-    this.rideDiagnostics,
+    this.voyageDiagnostics,
     this.enableNativeServices = true,
     this.initializeController,
     this.startupFallbackAfter = const Duration(seconds: 2),
   });
 
-  final RideController controller;
+  final VoyageController controller;
   final DistanceUnitController distanceUnits;
   final MapStyleModeController mapStyleMode;
-  final RideCodePreferenceController rideCodePreference;
-  final RiderProfileController riderProfile;
+  final VoyageCodePreferenceController voyageCodePreference;
+  final SailorProfileController sailorProfile;
   final SharedRouteController sharedRoutes;
   final RouteProgressDisplayController? routeProgressDisplay;
   final RecordedRouteStore recordedRoutes;
-  final CompletedRidesController completedRides;
-  final RideInvitationLinkController? rideInvitationLinks;
+  final CompletedVoyagesController completedVoyages;
+  final VoyageInvitationLinkController? voyageInvitationLinks;
   final PlanDirectory? planDirectory;
 
-  /// Drives the end-of-ride catalogued-road rating card (#159).
+  /// Drives the end-of-voyage catalogued-road rating card (#159).
 
   /// Both null unless this build carries the test-control define. The settings
   /// row and the registry hand-off are the only two places they are used.
@@ -69,23 +69,23 @@ class TideAndSeekApp extends StatelessWidget {
 
   /// Records what the app said beside what the bike did, when an instrumented
   /// build has it switched on (#419). Null in an ordinary build.
-  final RideDiagnosticsController? rideDiagnostics;
+  final VoyageDiagnosticsController? voyageDiagnostics;
 
   final bool enableNativeServices;
 
   /// Production starts restoration after the first frame instead of holding the
-  /// native launch screen until the ride journal has loaded (#209).
+  /// native launch screen until the voyage journal has loaded (#209).
   ///
   /// Tests and embedders that provide an already-initialized controller leave
   /// this null and retain the existing immediate behavior.
   final Future<void> Function()? initializeController;
 
   /// How long the dedicated restore screen may own the app before the normal
-  /// home screen is exposed with the persisted ride named there.
+  /// home screen is exposed with the persisted voyage named there.
   final Duration startupFallbackAfter;
 
   @override
-  Widget build(BuildContext context) => _RideRestoreGate(app: this);
+  Widget build(BuildContext context) => _VoyageRestoreGate(app: this);
 
   Widget _buildApp({
     required bool restorationComplete,
@@ -100,36 +100,36 @@ class TideAndSeekApp extends StatelessWidget {
     const surface = Color(0xFF171D25);
     const orange = Color(0xFFFF7A1A);
 
-    final rideSurface = AnimatedBuilder(
+    final voyageSurface = AnimatedBuilder(
       animation: Listenable.merge([
         controller,
         distanceUnits,
         mapStyleMode,
-        completedRides,
+        completedVoyages,
         sharedRoutes,
-        riderProfile,
+        sailorProfile,
         ?routeProgressDisplay,
       ]),
       builder: (context, _) {
         if (!restorationComplete && !showRestorationFallback) {
-          return const _RideRestoreScreen();
+          return const _VoyageRestoreScreen();
         }
         if (!restorationComplete) {
           return HomeScreen(
             controller: controller,
             distanceUnits: distanceUnits,
             mapStyleMode: mapStyleMode,
-            rideCodePreference: rideCodePreference,
-            riderProfile: riderProfile,
+            voyageCodePreference: voyageCodePreference,
+            sailorProfile: sailorProfile,
             sharedRoutes: sharedRoutes,
             routeProgressDisplay: routeProgressDisplay,
             recordedRoutes: recordedRoutes,
-            completedRides: completedRides,
+            completedVoyages: completedVoyages,
             planDirectory: planDirectory,
             testControl: testControl,
             spokenGuidance: spokenGuidance,
-            rideDiagnostics: rideDiagnostics,
-            restoringRideCode: controller.session?.rideCode,
+            voyageDiagnostics: voyageDiagnostics,
+            restoringVoyageCode: controller.session?.voyageCode,
             restorationError: restorationError,
             onRetryRestoration: retryRestoration,
             openJoinGroup: openJoinGroup,
@@ -137,51 +137,51 @@ class TideAndSeekApp extends StatelessWidget {
             enableNativeServices: enableNativeServices,
           );
         }
-        // An ended ride the rider has stepped away from stays on the phone and
+        // An ended voyage the sailor has stepped away from stays on the phone and
         // stays archived; it just stops owning the whole screen (#207).
-        if (controller.hasActiveRide && !controller.endedRideSetAside) {
-          return ActiveRideShell(
-            key: ValueKey(controller.session!.rideId),
-            rideController: controller,
+        if (controller.hasActiveVoyage && !controller.endedVoyageSetAside) {
+          return ActiveVoyageShell(
+            key: ValueKey(controller.session!.voyageId),
+            voyageController: controller,
             distanceUnits: distanceUnits,
             mapStyleMode: mapStyleMode,
             eventStore: controller.eventStore,
             enableNativeServices: enableNativeServices,
-            riderProfile: riderProfile,
+            sailorProfile: sailorProfile,
             sharedRoutes: sharedRoutes,
             routeProgressDisplay: routeProgressDisplay,
-            completedRideStore: completedRides,
+            completedVoyageStore: completedVoyages,
             testControl: testControl,
             testControlRegistry: testControlRegistry,
             spokenGuidance: spokenGuidance,
-            rideDiagnostics: rideDiagnostics,
+            voyageDiagnostics: voyageDiagnostics,
             onJoinGroupRequested: requestJoinGroup,
           );
         }
-        if (riderProfile.needsOnboarding) {
-          return OnboardingScreen(riderProfile: riderProfile);
+        if (sailorProfile.needsOnboarding) {
+          return OnboardingScreen(sailorProfile: sailorProfile);
         }
         return HomeScreen(
           controller: controller,
           distanceUnits: distanceUnits,
           mapStyleMode: mapStyleMode,
-          rideCodePreference: rideCodePreference,
-          riderProfile: riderProfile,
+          voyageCodePreference: voyageCodePreference,
+          sailorProfile: sailorProfile,
           sharedRoutes: sharedRoutes,
           routeProgressDisplay: routeProgressDisplay,
           recordedRoutes: recordedRoutes,
-          completedRides: completedRides,
+          completedVoyages: completedVoyages,
           planDirectory: planDirectory,
           testControl: testControl,
           spokenGuidance: spokenGuidance,
-          rideDiagnostics: rideDiagnostics,
+          voyageDiagnostics: voyageDiagnostics,
           openJoinGroup: openJoinGroup,
           onJoinGroupOpened: consumeJoinGroupRequest,
           enableNativeServices: enableNativeServices,
         );
       },
     );
-    final links = rideInvitationLinks;
+    final links = voyageInvitationLinks;
 
     return MaterialApp(
       title: 'Tide and Seek',
@@ -251,29 +251,29 @@ class TideAndSeekApp extends StatelessWidget {
         ),
       ),
       home: links == null
-          ? rideSurface
-          : RideInvitationLinkGate(
+          ? voyageSurface
+          : VoyageInvitationLinkGate(
               links: links,
-              rideController: controller,
-              rideCodePreference: rideCodePreference,
-              riderProfile: riderProfile,
+              voyageController: controller,
+              voyageCodePreference: voyageCodePreference,
+              sailorProfile: sailorProfile,
               ready: restorationComplete,
-              child: rideSurface,
+              child: voyageSurface,
             ),
     );
   }
 }
 
-class _RideRestoreGate extends StatefulWidget {
-  const _RideRestoreGate({required this.app});
+class _VoyageRestoreGate extends StatefulWidget {
+  const _VoyageRestoreGate({required this.app});
 
   final TideAndSeekApp app;
 
   @override
-  State<_RideRestoreGate> createState() => _RideRestoreGateState();
+  State<_VoyageRestoreGate> createState() => _VoyageRestoreGateState();
 }
 
-class _RideRestoreGateState extends State<_RideRestoreGate> {
+class _VoyageRestoreGateState extends State<_VoyageRestoreGate> {
   Timer? _fallbackTimer;
   bool _restorationComplete = false;
   bool _showRestorationFallback = false;
@@ -352,8 +352,8 @@ class _RideRestoreGateState extends State<_RideRestoreGate> {
   );
 }
 
-class _RideRestoreScreen extends StatelessWidget {
-  const _RideRestoreScreen();
+class _VoyageRestoreScreen extends StatelessWidget {
+  const _VoyageRestoreScreen();
 
   @override
   Widget build(BuildContext context) => const Scaffold(
@@ -365,7 +365,7 @@ class _RideRestoreScreen extends StatelessWidget {
             Icon(Icons.flag_outlined, size: 42, color: Color(0xFFFF7A1A)),
             SizedBox(height: 18),
             Text(
-              'Restoring your ride…',
+              'Restoring your voyage…',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
             ),
             SizedBox(height: 18),

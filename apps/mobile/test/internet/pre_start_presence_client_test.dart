@@ -4,9 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:tide_and_seek/domain/geo_point.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
-import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
+import 'package:tide_and_seek/domain/sailor_location.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 
 void main() {
@@ -38,11 +38,11 @@ void main() {
             'ttlSeconds': 45,
             'positions': [
               {
-                'riderId': 'local',
+                'sailorId': 'local',
                 'displayName': 'Oliver',
                 'role': 'lead',
                 'motorcycleStyle': 'adventure',
-                'riderColor': 'blue',
+                'sailorColor': 'blue',
                 'sample': {
                   'position': {'latitude': 51.2, 'longitude': -2.4},
                   'recordedAt': now.toIso8601String(),
@@ -69,20 +69,20 @@ void main() {
         clock: () => now,
       );
       addTearDown(api.close);
-      final session = RideSession(
-        rideId: 'ride',
-        rideCode: '123456',
+      final session = VoyageSession(
+        voyageId: 'voyage',
+        voyageCode: '123456',
         inviteSecret: '0123456789abcdef0123456789abcdef',
         joinToken: 'test-join-token-0123456789',
-        localRiderId: 'local',
+        localSailorId: 'local',
         displayName: 'Oliver',
-        role: RideRole.lead,
+        role: VoyageRole.lead,
         joinedAt: now,
       );
-      final position = RiderLocation(
-        riderId: 'local',
+      final position = SailorLocation(
+        sailorId: 'local',
         displayName: 'Oliver',
-        role: RideRole.lead,
+        role: VoyageRole.lead,
         sample: LocationSample(
           position: const GeoPoint(latitude: 51.2, longitude: -2.4),
           recordedAt: now,
@@ -99,10 +99,10 @@ void main() {
 
       final presenceRequest = requests.last;
       final body = jsonDecode(presenceRequest.body) as Map<String, Object?>;
-      expect(presenceRequest.url.path, '/api/v1/rides/ride/presence:sync');
+      expect(presenceRequest.url.path, '/api/v1/voyages/voyage/presence:sync');
       expect(body, isNot(contains('events')));
       expect(body['position'], isA<Map>());
-      expect(result.locations.single.riderId, 'local');
+      expect(result.locations.single.sailorId, 'local');
       expect(result.ttl, const Duration(seconds: 45));
     },
   );
@@ -118,7 +118,7 @@ void main() {
               'serverProtocol': 1,
               'minimumClientProtocol': 1,
               'maximumClientProtocol': 1,
-              'capabilities': ['ride-start-v1'],
+              'capabilities': ['voyage-start-v1'],
               'requiredCapabilities': <String>[],
               'cacheSeconds': 300,
               'updateUrls': {'default': 'https://tideandseek.invalid'},
@@ -137,14 +137,14 @@ void main() {
         client: client,
       );
       addTearDown(api.close);
-      final session = RideSession(
-        rideId: 'ride',
-        rideCode: '123456',
+      final session = VoyageSession(
+        voyageId: 'voyage',
+        voyageCode: '123456',
         inviteSecret: '0123456789abcdef0123456789abcdef',
         joinToken: 'test-join-token-0123456789',
-        localRiderId: 'local',
+        localSailorId: 'local',
         displayName: 'Oliver',
-        role: RideRole.lead,
+        role: VoyageRole.lead,
         joinedAt: DateTime.utc(2026, 7, 23),
       );
 

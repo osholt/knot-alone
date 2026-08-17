@@ -34,7 +34,7 @@ void main() {
     expect(find.textContaining('Route ETA'), findsOneWidget);
     expect(find.text('Chippenham fuel stop'), findsOneWidget);
     expect(find.textContaining('5.0 mi'), findsOneWidget);
-    expect(find.byKey(const Key('ride-clock')), findsOneWidget);
+    expect(find.byKey(const Key('voyage-clock')), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const Key('route-progress-panel'))).width,
       lessThanOrEqualTo(230),

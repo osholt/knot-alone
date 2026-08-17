@@ -9,10 +9,10 @@
 /// `MLNMapView flyToCamera:` ← `MapLibreMapController.onMethodCall` (#359).
 ///
 /// So the coordinate is checked on this side, where a bad value can be dropped
-/// instead of crashing a rider's phone mid-ride.
+/// instead of crashing a sailor's phone mid-voyage.
 ///
 /// The follow camera is the likely source. Its target is a ground point
-/// projected ahead of the rider from the tilt, zoom and measured viewport
+/// projected ahead of the sailor from the tilt, zoom and measured viewport
 /// height, and a viewport height of zero - which is what a map that has not been
 /// laid out reports, including while another scene is connecting - divides
 /// through that geometry. Zoom, tilt and bearing are checked for the same
@@ -27,10 +27,10 @@ class MapCameraCommand {
   /// True when every value is finite and inside the range the renderer accepts.
   ///
   /// Deliberately not clamped. A camera aimed at a clamped guess of where the
-  /// rider might be is a map quietly pointing somewhere wrong, which on a
+  /// sailor might be is a map quietly pointing somewhere wrong, which on a
   /// riding surface is worse than a frame that does not move: the next position
   /// fix issues another command a fraction of a second later, so a dropped one
-  /// costs nothing a rider can see.
+  /// costs nothing a sailor can see.
   static bool isUsable({
     required double latitude,
     required double longitude,

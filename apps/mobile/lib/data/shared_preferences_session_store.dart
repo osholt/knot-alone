@@ -2,29 +2,29 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../domain/ride_session.dart';
-import '../domain/ride_secret_store.dart';
+import '../domain/voyage_session.dart';
+import '../domain/voyage_secret_store.dart';
 import '../domain/session_store.dart';
-import 'secure_ride_secret_store.dart';
+import 'secure_voyage_secret_store.dart';
 
 class SharedPreferencesSessionStore implements SessionStore {
-  SharedPreferencesSessionStore({RideSecretStore? secretStore})
-    : _secretStore = secretStore ?? const SecureRideSecretStore();
+  SharedPreferencesSessionStore({VoyageSecretStore? secretStore})
+    : _secretStore = secretStore ?? const SecureVoyageSecretStore();
 
-  static const _sessionKey = 'active_ride_session_v1';
-  final RideSecretStore _secretStore;
+  static const _sessionKey = 'active_voyage_session_v1';
+  final VoyageSecretStore _secretStore;
 
   @override
   Future<void> clear() async {
     final preferences = await SharedPreferences.getInstance();
     final metadata = _decodeMetadata(preferences.getString(_sessionKey));
     await preferences.remove(_sessionKey);
-    final rideId = metadata?['rideId'];
-    if (rideId is String) await _secretStore.delete(rideId);
+    final voyageId = metadata?['voyageId'];
+    if (voyageId is String) await _secretStore.delete(voyageId);
   }
 
   @override
-  Future<RideSession?> load() async {
+  Future<VoyageSession?> load() async {
     final preferences = await SharedPreferences.getInstance();
     final encoded = preferences.getString(_sessionKey);
     if (encoded == null) {
@@ -38,8 +38,8 @@ class SharedPreferencesSessionStore implements SessionStore {
     }
 
     try {
-      final rideId = metadata['rideId']! as String;
-      var secret = await _secretStore.read(rideId);
+      final voyageId = metadata['voyageId']! as String;
+      var secret = await _secretStore.read(voyageId);
       final secretFlag = metadata.remove('hasInviteSecret');
       final legacySecret = metadata.remove('inviteSecret');
       final expectsSecret = secretFlag is bool
@@ -50,10 +50,10 @@ class SharedPreferencesSessionStore implements SessionStore {
       if (legacySecret is String) {
         if (legacySecret.isNotEmpty) {
           secret = legacySecret;
-          await _secretStore.write(rideId, legacySecret);
+          await _secretStore.write(voyageId, legacySecret);
         } else {
           secret = '';
-          await _secretStore.delete(rideId);
+          await _secretStore.delete(voyageId);
         }
         metadata['hasInviteSecret'] = legacySecret.isNotEmpty;
         await preferences.setString(_sessionKey, jsonEncode(metadata));
@@ -62,7 +62,7 @@ class SharedPreferencesSessionStore implements SessionStore {
         await preferences.remove(_sessionKey);
         return null;
       }
-      return RideSession.fromJson({
+      return VoyageSession.fromJson({
         ...metadata,
         'inviteSecret': expectsSecret ? secret : '',
       });
@@ -76,12 +76,12 @@ class SharedPreferencesSessionStore implements SessionStore {
   }
 
   @override
-  Future<void> save(RideSession session) async {
+  Future<void> save(VoyageSession session) async {
     final preferences = await SharedPreferences.getInstance();
     if (session.inviteSecret.isEmpty) {
-      await _secretStore.delete(session.rideId);
+      await _secretStore.delete(session.voyageId);
     } else {
-      await _secretStore.write(session.rideId, session.inviteSecret);
+      await _secretStore.write(session.voyageId, session.inviteSecret);
     }
     final metadata = session.toJson()..remove('inviteSecret');
     metadata['hasInviteSecret'] = session.inviteSecret.isNotEmpty;

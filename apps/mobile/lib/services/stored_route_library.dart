@@ -1,7 +1,7 @@
 import 'package:uuid/uuid.dart';
 
-import '../domain/completed_ride.dart';
-import '../domain/completed_ride_store.dart';
+import '../domain/completed_voyage.dart';
+import '../domain/completed_voyage_store.dart';
 import '../domain/imported_route.dart';
 import '../domain/recorded_route_store.dart';
 import 'approximate_place_index.dart';
@@ -13,15 +13,15 @@ import 'recorded_track_cleaner.dart';
 /// a record of what a bike did. Presenting the second as the first is the
 /// dishonesty #155 exists to prevent.
 enum StoredRouteOrigin {
-  /// Deliberately recorded ahead of a ride, from `RouteRecorderController`
+  /// Deliberately recorded ahead of a voyage, from `RouteRecorderController`
   /// via [RecordedRouteStore].
   recordedRoute,
 
-  /// The route a previous ride was actually planned with.
-  previousRidePlan,
+  /// The route a previous voyage was actually planned with.
+  previousVoyagePlan,
 
-  /// The GPS trail a previous ride produced.
-  previousRideTrack,
+  /// The GPS trail a previous voyage produced.
+  previousVoyageTrack,
 }
 
 /// Whether a recording is offered tidied or exactly as it was recorded.
@@ -35,7 +35,7 @@ class StoredRouteCandidate {
     required this.title,
     required this.storedAt,
     required this.geometry,
-    this.rideCode,
+    this.voyageCode,
   });
 
   /// Stable within a listing, so the picker can key rows and compare
@@ -44,16 +44,16 @@ class StoredRouteCandidate {
 
   final StoredRouteOrigin origin;
 
-  /// Route name, or the ride's own title.
+  /// Route name, or the voyage's own title.
   final String title;
 
-  /// When this geometry came into being: the recording time, or the ride's
-  /// start. Never "when it was archived" — a rider chooses by when they rode.
+  /// When this geometry came into being: the recording time, or the voyage's
+  /// start. Never "when it was archived" — a sailor chooses by when they rode.
   final DateTime storedAt;
 
-  /// The ride code, for the two origins that have one. A rider who rode two
+  /// The voyage code, for the two origins that have one. A sailor who rode two
   /// similar loops on the same day has nothing else to tell them apart.
-  final String? rideCode;
+  final String? voyageCode;
 
   /// The stored geometry, exactly as persisted. Never pre-tidied: the raw
   /// track has to stay available.
@@ -61,7 +61,7 @@ class StoredRouteCandidate {
 
   /// True when this is a recording rather than a plan, and therefore when the
   /// tidied/raw choice applies.
-  bool get isRecording => origin != StoredRouteOrigin.previousRidePlan;
+  bool get isRecording => origin != StoredRouteOrigin.previousVoyagePlan;
 
   int get pointCount => geometry.pathPointCount;
 
@@ -76,7 +76,7 @@ class StoredRouteCandidate {
       _ridablePaths.isEmpty ? null : _ridablePaths.last.points.last;
 }
 
-/// A rider's answer to "which of these, and how".
+/// A sailor's answer to "which of these, and how".
 class StoredRouteSelection {
   const StoredRouteSelection({
     required this.candidate,
@@ -87,8 +87,8 @@ class StoredRouteSelection {
   final StoredRouteCandidate candidate;
   final StoredRouteVariant variant;
 
-  /// Ride it from the original finish back to the original start. Riding a
-  /// route home is the obvious second use of a previous ride.
+  /// Voyage it from the original finish back to the original start. Riding a
+  /// route home is the obvious second use of a previous voyage.
   final bool reversed;
 
   StoredRouteSelection copyWith({
@@ -102,7 +102,7 @@ class StoredRouteSelection {
 }
 
 /// A stored route turned into the same thing a GPX import produces, together
-/// with the plain statements the rider must see before confirming it.
+/// with the plain statements the sailor must see before confirming it.
 class PreparedStoredRoute {
   const PreparedStoredRoute({required this.route, required this.notes});
 
@@ -125,7 +125,7 @@ class PreparedStoredRoute {
 class StoredRouteLibrary {
   StoredRouteLibrary({
     required this.recordedRoutes,
-    required this.completedRides,
+    required this.completedVoyages,
     this.cleaner = const RecordedTrackCleaner(),
     this.approximatePlaceIndex,
     String Function()? idFactory,
@@ -134,17 +134,17 @@ class StoredRouteLibrary {
        _clock = clock ?? DateTime.now;
 
   final RecordedRouteStore recordedRoutes;
-  final CompletedRideStore completedRides;
+  final CompletedVoyageStore completedVoyages;
   final RecordedTrackCleaner cleaner;
   final ApproximatePlaceIndex? approximatePlaceIndex;
   final String Function() _idFactory;
   final DateTime Function() _clock;
 
-  /// Everything selectable, recorded routes first and then previous rides,
+  /// Everything selectable, recorded routes first and then previous voyages,
   /// each group newest first.
   ///
-  /// Retention is **not** extended to make this work. Ride geometry lives and
-  /// dies with the ride's own archive entry: a ride whose geometry was never
+  /// Retention is **not** extended to make this work. Voyage geometry lives and
+  /// dies with the voyage's own archive entry: a voyage whose geometry was never
   /// captured, was damaged on disk, or has been deleted simply produces no
   /// candidate, so it cannot be selected.
   Future<List<StoredRouteCandidate>> list() async {
@@ -161,40 +161,40 @@ class StoredRouteLibrary {
         ),
       );
     }
-    for (final ride in await completedRides.list()) {
-      // The plan first: where a ride had one it is a better route than the
+    for (final voyage in await completedVoyages.list()) {
+      // The plan first: where a voyage had one it is a better route than the
       // recording of riding it.
-      if (ride.plannedRoute case final plan? when _hasRidableGeometry(plan)) {
+      if (voyage.plannedRoute case final plan? when _hasRidableGeometry(plan)) {
         candidates.add(
-          _fromRide(ride, plan, StoredRouteOrigin.previousRidePlan),
+          _fromVoyage(voyage, plan, StoredRouteOrigin.previousVoyagePlan),
         );
       }
-      if (ride.traveledRoute case final track?
+      if (voyage.traveledRoute case final track?
           when _hasRidableGeometry(track)) {
         candidates.add(
-          _fromRide(ride, track, StoredRouteOrigin.previousRideTrack),
+          _fromVoyage(voyage, track, StoredRouteOrigin.previousVoyageTrack),
         );
       }
     }
     return List.unmodifiable(candidates);
   }
 
-  StoredRouteCandidate _fromRide(
-    CompletedRide ride,
+  StoredRouteCandidate _fromVoyage(
+    CompletedVoyage voyage,
     ImportedRoute geometry,
     StoredRouteOrigin origin,
   ) => StoredRouteCandidate(
     id:
-        'ride:${ride.rideId}:'
-        '${origin == StoredRouteOrigin.previousRidePlan ? 'plan' : 'track'}',
+        'voyage:${voyage.voyageId}:'
+        '${origin == StoredRouteOrigin.previousVoyagePlan ? 'plan' : 'track'}',
     origin: origin,
-    title: ride.title,
-    storedAt: ride.startedAt,
-    rideCode: ride.rideCode,
+    title: voyage.title,
+    storedAt: voyage.startedAt,
+    voyageCode: voyage.voyageCode,
     geometry: geometry,
   );
 
-  /// A route needs a line to ride, so a single fix or an empty path is not a
+  /// A route needs a line to voyage, so a single fix or an empty path is not a
   /// candidate. Waypoints alone are excluded too: turning them into geometry
   /// needs a routing engine, and a route offered here has to work offline.
   bool _hasRidableGeometry(ImportedRoute route) =>
@@ -240,7 +240,7 @@ class StoredRouteLibrary {
 
     return PreparedStoredRoute(
       route: ImportedRoute(
-        // A fresh identity: this is a new route for a new ride, and
+        // A fresh identity: this is a new route for a new voyage, and
         // `RouteProgressTracker` keys its progress on it.
         id: _idFactory(),
         name: selection.reversed
@@ -272,10 +272,10 @@ class StoredRouteLibrary {
   String _description(StoredRouteCandidate candidate) =>
       switch (candidate.origin) {
         StoredRouteOrigin.recordedRoute => 'Recorded on this phone.',
-        StoredRouteOrigin.previousRidePlan =>
-          'The planned route of ride ${candidate.rideCode}.',
-        StoredRouteOrigin.previousRideTrack =>
-          'Recorded while riding ride ${candidate.rideCode}.',
+        StoredRouteOrigin.previousVoyagePlan =>
+          'The planned route of voyage ${candidate.voyageCode}.',
+        StoredRouteOrigin.previousVoyageTrack =>
+          'Recorded while riding voyage ${candidate.voyageCode}.',
       };
 
   /// Stands in for the file name a GPX import carries, so every surface that
@@ -285,9 +285,10 @@ class StoredRouteLibrary {
   String _sourceLabel(StoredRouteCandidate candidate) =>
       switch (candidate.origin) {
         StoredRouteOrigin.recordedRoute => 'recorded-route',
-        StoredRouteOrigin.previousRidePlan => 'ride-${candidate.rideCode}-plan',
-        StoredRouteOrigin.previousRideTrack =>
-          'ride-${candidate.rideCode}-track',
+        StoredRouteOrigin.previousVoyagePlan =>
+          'voyage-${candidate.voyageCode}-plan',
+        StoredRouteOrigin.previousVoyageTrack =>
+          'voyage-${candidate.voyageCode}-track',
       };
 
   List<String> _notes(
@@ -296,8 +297,8 @@ class StoredRouteLibrary {
     required bool reversed,
   }) => [
     switch (candidate.origin) {
-      StoredRouteOrigin.previousRidePlan =>
-        'This is the route that ride was planned with, not a recording of it.',
+      StoredRouteOrigin.previousVoyagePlan =>
+        'This is the route that voyage was planned with, not a recording of it.',
       _ when tidied =>
         'This is a tidied recording, not a planned route. Stops and GPS '
             'wander were removed. Every road the bike actually took is kept, '

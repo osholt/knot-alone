@@ -67,9 +67,9 @@ void main() {
       _bytes('''
         <gpx version="1.1"
              xmlns="http://www.topografix.com/GPX/1/1"
-             xmlns:tec="https://tideandseek.invalid/gpx/1">
+             xmlns:sweeper="https://tideandseek.invalid/gpx/1">
           <trk>
-            <extensions><tec:road-route>true</tec:road-route></extensions>
+            <extensions><sweeper:road-route>true</sweeper:road-route></extensions>
             <trkseg>
               <trkpt lat="53.1" lon="-1.4" />
               <trkpt lat="53.2" lon="-1.5" />
@@ -90,13 +90,13 @@ void main() {
       _bytes('''
         <gpx version="1.1"
              xmlns="http://www.topografix.com/GPX/1/1"
-             xmlns:tec="https://tideandseek.invalid/gpx/1">
-          <metadata><extensions><tec:marker-review>
-            <tec:rejected id="old-maneuver" lat="51.1000000" lon="-2.1000000"
+             xmlns:sweeper="https://tideandseek.invalid/gpx/1">
+          <metadata><extensions><sweeper:marker-review>
+            <sweeper:rejected id="old-maneuver" lat="51.1000000" lon="-2.1000000"
               label="Turn right marker" />
-            <tec:added id="geometry-4" lat="51.1500000" lon="-2.1500000"
+            <sweeper:added id="geometry-4" lat="51.1500000" lon="-2.1500000"
               label="Missed junction" />
-          </tec:marker-review></extensions></metadata>
+          </sweeper:marker-review></extensions></metadata>
           <trk><trkseg>
             <trkpt lat="51.0" lon="-2.0" />
             <trkpt lat="51.2" lon="-2.2" />

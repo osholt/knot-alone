@@ -5,31 +5,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:tide_and_seek/controllers/foreground_location_controller.dart';
 import 'package:tide_and_seek/domain/geo_point.dart';
-import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/domain/sailor_location.dart';
 import 'package:tide_and_seek/services/device_location_source.dart';
 
 void main() {
-  // #205. A plain LocationSettings is foreground-only, so a rider with the phone
+  // #205. A plain LocationSettings is foreground-only, so a sailor with the phone
   // in a pocket or another navigation app in front contributed nothing to the
   // group and recorded a trail that jumped in a straight line across a bay.
-  group('ride location settings keep running in the background', () {
+  group('voyage location settings keep running in the background', () {
     test('iOS asks Core Location not to stop or pause', () {
-      final settings = GeolocatorDeviceLocationPlatform.rideLocationSettings(
+      final settings = GeolocatorDeviceLocationPlatform.voyageLocationSettings(
         TargetPlatform.iOS,
       );
 
       expect(settings, isA<AppleSettings>());
       final apple = settings as AppleSettings;
       expect(apple.allowBackgroundLocationUpdates, isTrue);
-      // A stop on a ride is a coffee stop, not the end of the journey.
+      // A stop on a voyage is a coffee stop, not the end of the journey.
       expect(apple.pauseLocationUpdatesAutomatically, isFalse);
-      // The honest signal to the rider that location is in use.
+      // The honest signal to the sailor that location is in use.
       expect(apple.showBackgroundLocationIndicator, isTrue);
       expect(apple.activityType, ActivityType.otherNavigation);
     });
 
-    test('Android runs a foreground service the rider can see', () {
-      final settings = GeolocatorDeviceLocationPlatform.rideLocationSettings(
+    test('Android runs a foreground service the sailor can see', () {
+      final settings = GeolocatorDeviceLocationPlatform.voyageLocationSettings(
         TargetPlatform.android,
       );
 
@@ -37,15 +37,15 @@ void main() {
       final config = (settings as AndroidSettings).foregroundNotificationConfig;
       expect(config, isNotNull);
       expect(config!.setOngoing, isTrue);
-      // It has to say what is happening and that it ends with the ride.
-      expect(config.notificationText, contains('ride'));
-      expect(config.notificationText, contains('stops when the ride ends'));
+      // It has to say what is happening and that it ends with the voyage.
+      expect(config.notificationText, contains('voyage'));
+      expect(config.notificationText, contains('stops when the voyage ends'));
     });
 
     test('every platform keeps the 10 m platform filter', () {
       for (final platform in TargetPlatform.values) {
         expect(
-          GeolocatorDeviceLocationPlatform.rideLocationSettings(
+          GeolocatorDeviceLocationPlatform.voyageLocationSettings(
             platform,
           ).distanceFilter,
           GeolocatorDeviceLocationPlatform.platformDistanceFilterMeters,
@@ -103,7 +103,7 @@ void main() {
       expect(platform.permissionRequests, 1);
       expect(platform.backgroundPermissionRequests, 1);
       expect(access.backgroundCapable, isTrue);
-      expect(access.message, contains('length of a ride'));
+      expect(access.message, contains('length of a voyage'));
       await source.dispose();
       await platform.dispose();
     },
@@ -130,7 +130,7 @@ void main() {
   );
 
   test(
-    'foreground controller forwards samples to ride event handler',
+    'foreground controller forwards samples to voyage event handler',
     () async {
       final platform = _FakeLocationPlatform(
         permission: DeviceLocationPermission.whileInUse,
@@ -187,7 +187,7 @@ void main() {
     },
   );
 
-  test('one failed ride write does not stop later GPS fixes', () async {
+  test('one failed voyage write does not stop later GPS fixes', () async {
     final platform = _FakeLocationPlatform(
       permission: DeviceLocationPermission.whileInUse,
     );
@@ -197,7 +197,7 @@ void main() {
     var attempts = 0;
     final controller = ForegroundLocationController(source, (sample) async {
       attempts += 1;
-      if (attempts == 1) throw StateError('ride state changed');
+      if (attempts == 1) throw StateError('voyage state changed');
       received.add(sample);
     }, onSampleError: (error, _) => errors.add(error));
     await controller.initialize();

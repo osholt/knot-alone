@@ -12,7 +12,7 @@
 			<key>Title</key>
 			<string>Field test control</string>
 			<key>FooterText</key>
-			<string>Only for a field test you are running yourself. When this is on, a computer on the same network can create rides, join, start them, report hazards, inject positions and read this ride's roster on this phone.
+			<string>Only for a field test you are running yourself. When this is on, a computer on the same network can create voyages, join, start them, report hazards, inject positions and read this voyage's roster on this phone.
 
 The screen will stay awake while it is on. Turn it off when the test is finished.</string>
 		</dict>

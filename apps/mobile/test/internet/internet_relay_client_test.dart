@@ -4,9 +4,9 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:tide_and_seek/domain/ride_event.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/voyage_event.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 
 void main() {
@@ -71,7 +71,7 @@ void main() {
       expect(requests.first.followRedirects, isFalse);
       expect(
         requests.first.url.path,
-        '/base/v1/rides/ride%2Falpha/events:sync',
+        '/base/v1/voyages/voyage%2Falpha/events:sync',
       );
       expect(
         requests.first.headers['authorization'],
@@ -89,32 +89,35 @@ void main() {
       client.close();
     });
 
-    test('rejects events for another ride in a successful response', () async {
-      final transport = MockClient(
-        (_) async => http.Response(
-          jsonEncode({
-            'protocolVersion': 1,
-            'cursor': 'cursor-2',
-            'acceptedEventIds': <String>[],
-            'events': [_event(id: 'foreign', rideId: 'other').toJson()],
-          }),
-          200,
-          headers: {'content-type': 'application/json'},
-        ),
-      );
-      final client = HttpInternetRelayClient(
-        configuration: InternetRelayConfiguration(
-          baseUri: Uri.parse('https://relay.example'),
-        ),
-        client: transport,
-      );
+    test(
+      'rejects events for another voyage in a successful response',
+      () async {
+        final transport = MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'protocolVersion': 1,
+              'cursor': 'cursor-2',
+              'acceptedEventIds': <String>[],
+              'events': [_event(id: 'foreign', voyageId: 'other').toJson()],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          ),
+        );
+        final client = HttpInternetRelayClient(
+          configuration: InternetRelayConfiguration(
+            baseUri: Uri.parse('https://relay.example'),
+          ),
+          client: transport,
+        );
 
-      await expectLater(
-        client.synchronize(session: _session, cursor: null, events: const []),
-        throwsA(isA<InternetRelayException>()),
-      );
-      client.close();
-    });
+        await expectLater(
+          client.synchronize(session: _session, cursor: null, events: const []),
+          throwsA(isA<InternetRelayException>()),
+        );
+        client.close();
+      },
+    );
 
     test('rejects an oversized response before decoding it', () async {
       final transport = MockClient(
@@ -299,7 +302,7 @@ void main() {
     });
   });
 
-  group('HttpRideCodeDirectory', () {
+  group('HttpVoyageCodeDirectory', () {
     test(
       'registers and resolves a six-digit code over the configured relay',
       () async {
@@ -314,8 +317,8 @@ void main() {
           }
           return http.Response(
             jsonEncode({
-              'rideId': _session.rideId,
-              'rideCode': '123456',
+              'voyageId': _session.voyageId,
+              'voyageCode': '123456',
               'inviteSecret': _session.inviteSecret,
               'resolveToken': _session.joinToken,
             }),
@@ -323,19 +326,19 @@ void main() {
             headers: {'content-type': 'application/json'},
           );
         });
-        final directory = HttpRideCodeDirectory(
+        final directory = HttpVoyageCodeDirectory(
           configuration: InternetRelayConfiguration(
             baseUri: Uri.parse('https://relay.example/base'),
           ),
           client: transport,
         );
-        final leader = _session.copyWith(rideCode: '123456');
+        final skipper = _session.copyWith(voyageCode: '123456');
 
-        await directory.register(leader);
+        await directory.register(skipper);
         final resolved = await directory.resolve('123456');
 
-        expect(resolved.rideId, _session.rideId);
-        expect(resolved.rideCode, '123456');
+        expect(resolved.voyageId, _session.voyageId);
+        expect(resolved.voyageCode, '123456');
         expect(resolved.inviteSecret, _session.inviteSecret);
         expect(resolved.joinToken, _session.joinToken);
         expect(requests, hasLength(3));
@@ -344,7 +347,7 @@ void main() {
         expect(requests[1].url.path, '/base/v1/join-codes/123456');
         expect(requests[1].followRedirects, isFalse);
         expect(jsonDecode(requests[1].body), {
-          'rideId': _session.rideId,
+          'voyageId': _session.voyageId,
           'inviteSecret': _session.inviteSecret,
           'resolveToken': _session.joinToken,
         });
@@ -366,8 +369,8 @@ void main() {
         }
         return http.Response(
           jsonEncode({
-            'rideId': _session.rideId,
-            'rideCode': '123456',
+            'voyageId': _session.voyageId,
+            'voyageCode': '123456',
             'inviteSecret': _session.inviteSecret,
             'resolveToken': _session.joinToken,
           }),
@@ -375,7 +378,7 @@ void main() {
           headers: {'content-type': 'application/json'},
         );
       });
-      final directory = HttpRideCodeDirectory(
+      final directory = HttpVoyageCodeDirectory(
         configuration: InternetRelayConfiguration(
           baseUri: Uri.parse('https://relay.example/base'),
         ),
@@ -393,7 +396,7 @@ void main() {
 
     // #208. A probe that never answers says nothing about compatibility, and it
     // used to abandon the join: a tester on working 4G could not rejoin her own
-    // ride, and was shown "Ride service compatibility check timed out".
+    // voyage, and was shown "Voyage service compatibility check timed out".
     test('a timed-out compatibility probe does not block a join', () async {
       final paths = <String>[];
       final transport = MockClient((request) async {
@@ -403,8 +406,8 @@ void main() {
         }
         return http.Response(
           jsonEncode({
-            'rideId': _session.rideId,
-            'rideCode': '123456',
+            'voyageId': _session.voyageId,
+            'voyageCode': '123456',
             'inviteSecret': _session.inviteSecret,
             'resolveToken': _session.joinToken,
           }),
@@ -412,7 +415,7 @@ void main() {
           headers: {'content-type': 'application/json'},
         );
       });
-      final directory = HttpRideCodeDirectory(
+      final directory = HttpVoyageCodeDirectory(
         configuration: InternetRelayConfiguration(
           baseUri: Uri.parse('https://relay.example/base'),
         ),
@@ -421,7 +424,7 @@ void main() {
 
       final resolved = await directory.resolve('123456');
 
-      expect(resolved.rideId, _session.rideId);
+      expect(resolved.voyageId, _session.voyageId);
       // Tried more than once before giving up on an answer, then went ahead.
       expect(
         paths.where((path) => path.endsWith('/v1/compatibility')),
@@ -441,7 +444,7 @@ void main() {
           // What package:http surfaces for a dead socket.
           throw http.ClientException('no route to host', request.url);
         });
-        final directory = HttpRideCodeDirectory(
+        final directory = HttpVoyageCodeDirectory(
           configuration: InternetRelayConfiguration(
             baseUri: Uri.parse('https://relay.example/base'),
           ),
@@ -451,7 +454,7 @@ void main() {
         await expectLater(
           directory.resolve('123456'),
           throwsA(
-            isA<RideCodeDirectoryException>()
+            isA<VoyageCodeDirectoryException>()
                 .having((error) => error.retryable, 'retryable', isTrue)
                 .having(
                   (error) => error.message,
@@ -471,7 +474,7 @@ void main() {
         }
         return http.Response('', 500);
       });
-      final directory = HttpRideCodeDirectory(
+      final directory = HttpVoyageCodeDirectory(
         configuration: InternetRelayConfiguration(
           baseUri: Uri.parse('https://relay.example/base'),
         ),
@@ -481,7 +484,7 @@ void main() {
       await expectLater(
         directory.resolve('123456'),
         throwsA(
-          isA<RideCodeDirectoryException>().having(
+          isA<VoyageCodeDirectoryException>().having(
             (error) => error.message,
             'message',
             contains('Update Tide and Seek'),
@@ -527,26 +530,26 @@ class _NeverRespondingClient extends http.BaseClient {
       Completer<http.StreamedResponse>().future;
 }
 
-final _session = RideSession(
-  rideId: 'ride/alpha',
-  rideCode: 'ALPHA1',
+final _session = VoyageSession(
+  voyageId: 'voyage/alpha',
+  voyageCode: 'ALPHA1',
   inviteSecret: '0123456789abcdef0123456789abcdef',
   joinToken: 'aTokenWithPlentyOfEntropy',
-  localRiderId: 'local-device',
+  localSailorId: 'local-device',
   displayName: 'Oliver',
-  role: RideRole.rider,
+  role: VoyageRole.sailor,
   joinedAt: DateTime.utc(2026, 7, 16),
 );
 
-RideEvent _event({
+VoyageEvent _event({
   required String id,
-  String rideId = 'ride/alpha',
+  String voyageId = 'voyage/alpha',
   String deviceId = 'local-device',
-}) => RideEvent(
+}) => VoyageEvent(
   id: id,
-  rideId: rideId,
+  voyageId: voyageId,
   deviceId: deviceId,
-  type: RideEventType.statusMessage,
+  type: VoyageEventType.statusMessage,
   priority: EventPriority.routine,
   createdAt: DateTime.utc(2026, 7, 16, 10),
   payload: const {'message': 'OK'},

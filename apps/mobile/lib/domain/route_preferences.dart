@@ -10,11 +10,11 @@
 /// rather than left to drift.
 ///
 /// Preferences belong to the route, not to the device: they travel with the
-/// route record and through its GPX, so a route shared into a ride still says
+/// route record and through its GPX, so a route shared into a voyage still says
 /// what it was planned for.
 library;
 
-/// How much extra time a rider will accept in exchange for bends.
+/// How much extra time a sailor will accept in exchange for bends.
 ///
 /// The API values are the web planner's `<select id="route-style">` values, and
 /// the detour limits are `routeDetourLimit` in `planner-core.mjs`.
@@ -34,7 +34,7 @@ enum RouteStyle {
   /// The most a chosen alternative may exceed the quickest route's duration.
   final double detourLimit;
 
-  /// A rider asking for bends wants the provider to offer alternatives to
+  /// A sailor asking for bends wants the provider to offer alternatives to
   /// score; the quickest route needs none.
   bool get prefersBends => this != RouteStyle.quickest;
 
@@ -66,7 +66,7 @@ enum BywaySurfacePreference {
   /// The default. See `docs/route-twistiness.md` for the reasoning.
   avoidUnsurfaced('avoid-unsurfaced', 'Avoid unsurfaced byways'),
 
-  /// For a trail rider who wants them: the road route may use ways
+  /// For a trail sailor who wants them: the road route may use ways
   /// OpenStreetMap tags as unsurfaced or as a track.
   allowUnsurfaced('allow-unsurfaced', 'Allow unsurfaced byways and tracks');
 
@@ -83,7 +83,7 @@ enum BywaySurfacePreference {
           .firstOrNull;
 }
 
-/// The route character a rider asked for.
+/// The route character a sailor asked for.
 class RoutePreferences {
   const RoutePreferences({
     this.style = RouteStyle.quickest,
@@ -145,7 +145,7 @@ class RoutePreferences {
     'exclude_unpaved': bywaySurface.avoidsUnsurfaced,
   };
 
-  /// One sentence a rider can check the route against, in the same order and
+  /// One sentence a sailor can check the route against, in the same order and
   /// wording as the web planner's status line.
   List<String> get appliedNotes => [
     if (style.prefersBends)
@@ -165,7 +165,7 @@ class RoutePreferences {
       'unsurfaced byways allowed',
   ];
 
-  /// The rider-facing summary. Never empty: the byway preference always says
+  /// The sailor-facing summary. Never empty: the byway preference always says
   /// which way round it is, because "we did not avoid them" and "we avoided
   /// them" are the difference between a Fireblade and a rutted BOAT.
   String get summary {

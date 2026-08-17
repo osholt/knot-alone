@@ -133,7 +133,7 @@ class InternetRelayStatusCard extends StatelessWidget {
           color: Color(0xFFFF5D73),
         ),
         InternetRelayPhase.serverUpgradeRequired => const _InternetPresentation(
-          title: 'Ride service update required',
+          title: 'Voyage service update required',
           icon: Icons.cloud_off_outlined,
           color: Color(0xFFFFC857),
         ),

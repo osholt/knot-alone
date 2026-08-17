@@ -50,7 +50,7 @@ class RoutePreviewReshapeStart {
 
 /// A small MapLibre route canvas for review/recording surfaces that do not own
 /// the app's main map dependencies. It resolves and normalises the remote style
-/// before mounting MapLibre, matching the production ride map.
+/// before mounting MapLibre, matching the production voyage map.
 class ResolvedRouteMapPreview extends StatefulWidget {
   const ResolvedRouteMapPreview({
     super.key,
@@ -132,7 +132,7 @@ class _ResolvedRouteMapPreviewState extends State<ResolvedRouteMapPreview> {
   void didUpdateWidget(ResolvedRouteMapPreview oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Parent state changes such as pressing Share used to re-fit the route here,
-    // discarding the framing the rider had just chosen before the snapshot.
+    // discarding the framing the sailor had just chosen before the snapshot.
     if (_styleReady &&
         (!_samePreviewPaths(oldWidget.paths, widget.paths) ||
             !_samePreviewPaths(
@@ -285,7 +285,7 @@ class _ResolvedRouteMapPreviewState extends State<ResolvedRouteMapPreview> {
       widget.basemapConfiguration,
     );
     try {
-      // A still preview of a route, not the live ride map: it has no chrome to
+      // A still preview of a route, not the live voyage map: it has no chrome to
       // report a basemap failure through, so the outcome is dropped here
       // deliberately rather than by omission (#281).
       return (await repository.resolve()).style;

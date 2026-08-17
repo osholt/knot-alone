@@ -12,7 +12,7 @@
 /// > distance or time values equal to 0; your app may display 0 as the user is
 /// > imminently arriving at their destination.
 ///
-/// So zero told the car the rider was *arriving now*, every update, and the car
+/// So zero told the car the sailor was *arriving now*, every update, and the car
 /// dutifully rendered an arrival time of the current clock. It only visibly moved
 /// when the estimates were refreshed after a route change, which is exactly what
 /// was reported:
@@ -31,8 +31,8 @@ library;
 /// Below this, a speed cannot carry an estimate.
 ///
 /// A bike at walking pace projects an absurd time — 400 m at 0.4 m/s is a
-/// quarter of an hour — and a rider stopped at lights would watch the estimate
-/// climb. Better "--" than a number that is wrong in a way the rider can see.
+/// quarter of an hour — and a sailor stopped at lights would watch the estimate
+/// climb. Better "--" than a number that is wrong in a way the sailor can see.
 ///
 /// The same 3 m/s the stopped-speed readout uses (#445), for the same reason: it
 /// is the speed below which a motorcycle is not really under way.

@@ -15,7 +15,7 @@ MapLibre fetches tiles and glyphs from a web worker. A worker has no document
 base URL, so a relative URL throws `Failed to construct 'Request'` inside the
 worker: no failed request in the network panel, no MapLibre error event, nothing
 in the console. The map simply never draws. To a safety contact that looks the
-same as a ride with no position yet, which is why #281 stayed open as "the map
+same as a voyage with no position yet, which is why #281 stayed open as "the map
 shows no roads".
 
 Every URL the style hands to MapLibre must be absolute by the time the browser
@@ -45,11 +45,11 @@ for JSON, and Go's template parser rejects the escaped form.
 
 ## Why the tiles are proxied
 
-The observer page shows a rider's live position, so the tiles it requests reveal
+The observer page shows a sailor's live position, so the tiles it requests reveal
 roughly where that person is. Fetching them straight from a third-party CDN
 would disclose that to the CDN. The relay proxies them instead, under
 `/maps/basemap` and `/maps/fonts`, which keeps the request inside a service that
-already holds the ride and lets the observer page keep its strict
+already holds the voyage and lets the observer page keep its strict
 `connect-src 'self'`.
 
 Attribution is required by the tile data's licence and lives in the style's

@@ -6,18 +6,18 @@ from tide_and_seek_server.app import create_app
 
 SECRET = "0123456789abcdef0123456789abcdef"
 CURRENT_CAPABILITIES = [
-    "ride-start-v1",
+    "voyage-start-v1",
     "live-presence-v2",
     "membership-v1",
     "observer-access-v1",
     "pre-start-presence-v1",
     "push-notifications-v1",
     "rejoin-route-sharing-v1",
-    "ride-reopen-v1",
-    "rider-contact-sharing-v1",
+    "voyage-reopen-v1",
+    "sailor-contact-sharing-v1",
     "road-ratings-v1",
     "route-revisions-v1",
-    "tec-role-assignment-v1",
+    "sweeper-role-assignment-v1",
     "traffic-incidents-v1",
     "traffic-reroutes-v1",
 ]
@@ -57,7 +57,7 @@ def test_sync_rejects_client_below_minimum_protocol(client, settings, synchroniz
 
     response = synchronize(
         client,
-        ride_id="ride-old-client",
+        voyage_id="voyage-old-client",
         secret=SECRET,
         client_protocol=1,
         platform="iOS",
@@ -71,7 +71,7 @@ def test_sync_rejects_client_below_minimum_protocol(client, settings, synchroniz
 def test_sync_rejects_client_newer_than_server(client, synchronize) -> None:
     response = synchronize(
         client,
-        ride_id="ride-new-client",
+        voyage_id="voyage-new-client",
         secret=SECRET,
         client_protocol=2,
     )
@@ -79,7 +79,7 @@ def test_sync_rejects_client_newer_than_server(client, synchronize) -> None:
     assert response.status_code == 409
     assert response.json() == {
         "code": "server_upgrade_required",
-        "message": "This app is newer than the configured ride service.",
+        "message": "This app is newer than the configured voyage service.",
         "serverProtocol": 1,
     }
 
@@ -89,10 +89,10 @@ def test_sync_rejects_missing_required_capability(settings, synchronize) -> None
     with TestClient(create_app(settings)) as client:
         response = synchronize(
             client,
-            ride_id="ride-missing-capability",
+            voyage_id="voyage-missing-capability",
             secret=SECRET,
             client_protocol=1,
-            capabilities=["ride-start-v1"],
+            capabilities=["voyage-start-v1"],
         )
 
     assert response.status_code == 426
@@ -103,7 +103,7 @@ def test_sync_rejects_missing_required_capability(settings, synchronize) -> None
 def test_current_client_protocol_and_capabilities_synchronize(client, synchronize) -> None:
     response = synchronize(
         client,
-        ride_id="ride-current-client",
+        voyage_id="voyage-current-client",
         secret=SECRET,
         client_protocol=1,
         capabilities=CURRENT_CAPABILITIES,

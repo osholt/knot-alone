@@ -1,36 +1,36 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tide_and_seek/domain/completed_ride.dart';
-import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/domain/completed_voyage.dart';
+import 'package:tide_and_seek/domain/completed_voyage_store.dart';
 import 'package:tide_and_seek/domain/imported_route.dart';
 import 'package:tide_and_seek/domain/recorded_route_store.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
 import 'package:tide_and_seek/services/stored_route_library.dart';
 
 void main() {
-  test('recorded routes and previous rides are both offered', () async {
+  test('recorded routes and previous voyages are both offered', () async {
     final recorded = InMemoryRecordedRouteStore();
     await recorded.save(_recordedRoute(id: 'scouted', name: 'Scouted loop'));
-    final rides = InMemoryCompletedRideStore();
-    await rides.save(
-      _completedRide(
-        rideId: 'ride-1',
-        rideCode: 'AB12CD',
+    final voyages = InMemoryCompletedVoyageStore();
+    await voyages.save(
+      _completedVoyage(
+        voyageId: 'voyage-1',
+        voyageCode: 'AB12CD',
         plannedRoute: _recordedRoute(id: 'plan', name: 'Planned'),
         traveledRoute: _recordedRoute(id: 'track', name: 'Travelled'),
       ),
     );
 
-    final candidates = await _library(recorded, rides).list();
+    final candidates = await _library(recorded, voyages).list();
 
     expect(candidates.map((candidate) => candidate.origin), [
       StoredRouteOrigin.recordedRoute,
       // The plan first: it is a better route than a recording of riding it.
-      StoredRouteOrigin.previousRidePlan,
-      StoredRouteOrigin.previousRideTrack,
+      StoredRouteOrigin.previousVoyagePlan,
+      StoredRouteOrigin.previousVoyageTrack,
     ]);
     expect(candidates.first.title, 'Scouted loop');
     expect(candidates[1].title, 'Sunday run');
-    expect(candidates[1].rideCode, 'AB12CD');
+    expect(candidates[1].voyageCode, 'AB12CD');
     expect(candidates[1].isRecording, isFalse);
     expect(candidates[2].isRecording, isTrue);
     expect(candidates.first.startPoint?.latitude, 51.45);
@@ -68,28 +68,32 @@ void main() {
 
     final candidate = (await _library(
       recorded,
-      InMemoryCompletedRideStore(),
+      InMemoryCompletedVoyageStore(),
     ).list()).single;
 
     expect(candidate.startPoint?.latitude, 51.45);
     expect(candidate.endPoint?.longitude, -1.5);
   });
 
-  test('a ride whose geometry is gone is not selectable', () async {
-    final rides = InMemoryCompletedRideStore();
-    await rides.save(
-      _completedRide(rideId: 'kept', rideCode: 'KEEP01', traveledRoute: null),
+  test('a voyage whose geometry is gone is not selectable', () async {
+    final voyages = InMemoryCompletedVoyageStore();
+    await voyages.save(
+      _completedVoyage(
+        voyageId: 'kept',
+        voyageCode: 'KEEP01',
+        traveledRoute: null,
+      ),
     );
-    await rides.save(
-      _completedRide(
-        rideId: 'single-fix',
-        rideCode: 'ONEFIX',
-        // A ride that produced one position is not a line anyone can ride.
+    await voyages.save(
+      _completedVoyage(
+        voyageId: 'single-fix',
+        voyageCode: 'ONEFIX',
+        // A voyage that produced one position is not a line anyone can voyage.
         traveledRoute: ImportedRoute(
           id: 'single',
           name: 'One fix',
           importedAt: DateTime.utc(2026, 7, 20),
-          sourceFileName: 'ride.gpx',
+          sourceFileName: 'voyage.gpx',
           paths: const [
             RoutePath(
               kind: RoutePathKind.track,
@@ -103,7 +107,7 @@ void main() {
 
     final candidates = await _library(
       InMemoryRecordedRouteStore(),
-      rides,
+      voyages,
     ).list();
 
     expect(candidates, isEmpty);
@@ -112,7 +116,7 @@ void main() {
   test('a tidied recording keeps its kind and loses its stops', () async {
     final recorded = InMemoryRecordedRouteStore();
     await recorded.save(_stopStartRecording());
-    final library = _library(recorded, InMemoryCompletedRideStore());
+    final library = _library(recorded, InMemoryCompletedVoyageStore());
     final candidate = (await library.list()).single;
 
     final prepared = library.prepare(
@@ -133,7 +137,7 @@ void main() {
     final recorded = InMemoryRecordedRouteStore();
     final recording = _stopStartRecording();
     await recorded.save(recording);
-    final library = _library(recorded, InMemoryCompletedRideStore());
+    final library = _library(recorded, InMemoryCompletedVoyageStore());
     final candidate = (await library.list()).single;
 
     final prepared = library.prepare(
@@ -148,7 +152,7 @@ void main() {
   });
 
   test('reversing runs the route the other way and drops its turns', () async {
-    final rides = InMemoryCompletedRideStore();
+    final voyages = InMemoryCompletedVoyageStore();
     final planned = ImportedRoute(
       id: 'plan',
       name: 'Out',
@@ -182,15 +186,15 @@ void main() {
         ),
       ],
     );
-    await rides.save(
-      _completedRide(
-        rideId: 'ride-1',
-        rideCode: 'AB12CD',
+    await voyages.save(
+      _completedVoyage(
+        voyageId: 'voyage-1',
+        voyageCode: 'AB12CD',
         plannedRoute: planned,
         traveledRoute: null,
       ),
     );
-    final library = _library(InMemoryRecordedRouteStore(), rides);
+    final library = _library(InMemoryRecordedRouteStore(), voyages);
     final candidate = (await library.list()).single;
 
     final prepared = library.prepare(
@@ -213,7 +217,7 @@ void main() {
   test('a reversed track does not claim to travel back through time', () async {
     final recorded = InMemoryRecordedRouteStore();
     await recorded.save(_stopStartRecording());
-    final library = _library(recorded, InMemoryCompletedRideStore());
+    final library = _library(recorded, InMemoryCompletedVoyageStore());
     final candidate = (await library.list()).single;
 
     final prepared = library.prepare(
@@ -235,7 +239,7 @@ void main() {
   test('a prepared route is a fresh route, not the stored one', () async {
     final recorded = InMemoryRecordedRouteStore();
     await recorded.save(_recordedRoute(id: 'scouted', name: 'Scouted loop'));
-    final library = _library(recorded, InMemoryCompletedRideStore());
+    final library = _library(recorded, InMemoryCompletedVoyageStore());
     final candidate = (await library.list()).single;
 
     final prepared = library.prepare(
@@ -253,10 +257,10 @@ void main() {
 
 StoredRouteLibrary _library(
   RecordedRouteStore recorded,
-  CompletedRideStore rides,
+  CompletedVoyageStore voyages,
 ) => StoredRouteLibrary(
   recordedRoutes: recorded,
-  completedRides: rides,
+  completedVoyages: voyages,
   idFactory: () => 'prepared-route-id',
   clock: () => DateTime.utc(2026, 7, 28),
 );
@@ -310,21 +314,21 @@ ImportedRoute _stopStartRecording() {
   );
 }
 
-CompletedRide _completedRide({
-  required String rideId,
-  required String rideCode,
+CompletedVoyage _completedVoyage({
+  required String voyageId,
+  required String voyageCode,
   ImportedRoute? plannedRoute,
   ImportedRoute? traveledRoute,
-}) => CompletedRide(
-  rideId: rideId,
-  rideCode: rideCode,
-  rideName: 'Sunday run',
+}) => CompletedVoyage(
+  voyageId: voyageId,
+  voyageCode: voyageCode,
+  voyageName: 'Sunday run',
   localDisplayName: 'Alex',
-  localRole: RideRole.lead,
+  localRole: VoyageRole.lead,
   startedAt: DateTime.utc(2026, 7, 26, 9),
   endedAt: DateTime.utc(2026, 7, 26, 12),
   archivedAt: DateTime.utc(2026, 7, 26, 12, 5),
-  riderCount: 3,
+  sailorCount: 3,
   eventCount: 40,
   totalDistanceMeters: 42000,
   markerSessions: const [],

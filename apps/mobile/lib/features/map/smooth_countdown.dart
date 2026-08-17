@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 /// > It would be good to count down distance more smoothly.
 ///
 /// Position fixes arrive about a second apart, so the distance drops in visible
-/// steps — 400, then 370, then 340. On a surface a rider glances at, a number
+/// steps — 400, then 370, then 340. On a surface a sailor glances at, a number
 /// that jumps is harder to read than one that moves.
 ///
 /// ## What this does *not* do
@@ -13,7 +13,7 @@ import 'package:flutter/widgets.dart';
 /// It does not touch the position the app reasons from. #449 warns about exactly
 /// that:
 ///
-/// > Interpolating between fixes is a claim about where the rider is *now*,
+/// > Interpolating between fixes is a claim about where the sailor is *now*,
 /// > which is #448's territory. […] a smooth countdown built on a position that
 /// > is 20 m behind is a smoothly wrong number.
 ///
@@ -43,14 +43,14 @@ class SmoothCountdown extends StatelessWidget {
   final double meters;
 
   /// Builds the text for an interpolated distance. The caller's formatter, so
-  /// what is drawn stays in the rider's own units.
+  /// what is drawn stays in the sailor's own units.
   final Widget Function(BuildContext context, double meters) builder;
 
   final Duration duration;
 
   /// Matched to the gap between position fixes.
   ///
-  /// Shorter and the number still steps; longer and it lags behind the rider,
+  /// Shorter and the number still steps; longer and it lags behind the sailor,
   /// which is the failure #449 explicitly does not want traded for smoothness.
   static const defaultDuration = Duration(milliseconds: 1000);
 

@@ -165,10 +165,10 @@ class SelectedTrailDirectionArrow<T> {
 /// Chooses which arrows are drawn, in order, within one budget.
 ///
 /// Separated from the map so the choice can be asserted rather than only
-/// eyeballed. It was previously inline in the ride map, where nothing could
+/// eyeballed. It was previously inline in the voyage map, where nothing could
 /// reach it — and the planned route was simply missing from the sources, so a
 /// route that had not been ridden yet carried no direction arrows at all
-/// (#363). Every source of them was something that only exists once the ride
+/// (#363). Every source of them was something that only exists once the voyage
 /// is moving.
 ///
 /// Sources are offered in priority order and take what is left of [budget],

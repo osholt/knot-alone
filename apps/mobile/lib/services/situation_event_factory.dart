@@ -1,6 +1,6 @@
-import '../domain/ride_event.dart';
-import '../domain/ride_session.dart';
-import 'ride_event_authenticator.dart';
+import '../domain/voyage_event.dart';
+import '../domain/voyage_session.dart';
+import 'voyage_event_authenticator.dart';
 
 typedef SituationClock = DateTime Function();
 typedef SituationIdFactory = String Function();
@@ -12,20 +12,20 @@ class SituationEventFactory {
     required this.idFactory,
   });
 
-  final RideSession session;
+  final VoyageSession session;
   final SituationClock clock;
   final SituationIdFactory idFactory;
 
-  RideEvent create({
-    required RideEventType type,
+  VoyageEvent create({
+    required VoyageEventType type,
     required Map<String, Object?> payload,
     EventPriority priority = EventPriority.routine,
     DateTime? expiresAt,
   }) {
-    final event = RideEvent(
+    final event = VoyageEvent(
       id: idFactory(),
-      rideId: session.rideId,
-      deviceId: session.localRiderId,
+      voyageId: session.voyageId,
+      deviceId: session.localSailorId,
       type: type,
       priority: priority,
       createdAt: clock(),
@@ -34,9 +34,9 @@ class SituationEventFactory {
       signature: '',
       schemaVersion: 1,
     );
-    return RideEvent(
+    return VoyageEvent(
       id: event.id,
-      rideId: event.rideId,
+      voyageId: event.voyageId,
       deviceId: event.deviceId,
       type: event.type,
       priority: event.priority,
@@ -48,9 +48,9 @@ class SituationEventFactory {
     );
   }
 
-  static String sign(RideEvent event, String secret) =>
-      RideEventAuthenticator.sign(event, secret);
+  static String sign(VoyageEvent event, String secret) =>
+      VoyageEventAuthenticator.sign(event, secret);
 
-  static bool verify(RideEvent event, String secret) =>
-      RideEventAuthenticator.verify(event, secret);
+  static bool verify(VoyageEvent event, String secret) =>
+      VoyageEventAuthenticator.verify(event, secret);
 }

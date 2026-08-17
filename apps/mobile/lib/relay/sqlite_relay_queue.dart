@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 
-import '../domain/ride_event.dart';
+import '../domain/voyage_event.dart';
 import 'relay_queue.dart';
 
 class SqliteRelayQueue implements RelayQueueStore {
@@ -27,7 +27,7 @@ class SqliteRelayQueue implements RelayQueueStore {
         await db.execute('''
           CREATE TABLE relay_queue (
             event_id TEXT PRIMARY KEY,
-            ride_id TEXT NOT NULL,
+            voyage_id TEXT NOT NULL,
             priority INTEGER NOT NULL,
             first_seen_at INTEGER NOT NULL,
             expires_at INTEGER NOT NULL,
@@ -38,7 +38,7 @@ class SqliteRelayQueue implements RelayQueueStore {
         ''');
         await db.execute('''
           CREATE INDEX relay_queue_pending_idx
-          ON relay_queue (ride_id, expires_at, priority, first_seen_at)
+          ON relay_queue (voyage_id, expires_at, priority, first_seen_at)
         ''');
       },
     );
@@ -99,12 +99,12 @@ class SqliteRelayQueue implements RelayQueueStore {
   }
 
   @override
-  Future<int> count(String rideId, {required DateTime now}) async {
+  Future<int> count(String voyageId, {required DateTime now}) async {
     final db = await _db;
     final result = await db.rawQuery(
       'SELECT COUNT(*) AS count FROM relay_queue '
-      'WHERE ride_id = ? AND expires_at > ?',
-      [rideId, now.millisecondsSinceEpoch],
+      'WHERE voyage_id = ? AND expires_at > ?',
+      [voyageId, now.millisecondsSinceEpoch],
     );
     return (result.single['count']! as num).toInt();
   }
@@ -114,7 +114,7 @@ class SqliteRelayQueue implements RelayQueueStore {
     final db = await _db;
     await db.insert('relay_queue', {
       'event_id': item.event.id,
-      'ride_id': item.event.rideId,
+      'voyage_id': item.event.voyageId,
       'priority': item.event.priority.index,
       'first_seen_at': item.firstSeenAt.millisecondsSinceEpoch,
       'expires_at': item.expiresAt.millisecondsSinceEpoch,
@@ -126,7 +126,7 @@ class SqliteRelayQueue implements RelayQueueStore {
 
   @override
   Future<List<QueuedRelayEvent>> pendingForPeer(
-    String rideId,
+    String voyageId,
     String peerId, {
     required DateTime now,
     required int limit,
@@ -134,8 +134,8 @@ class SqliteRelayQueue implements RelayQueueStore {
     final db = await _db;
     final rows = await db.query(
       'relay_queue',
-      where: 'ride_id = ? AND expires_at > ? AND hop_count < ?',
-      whereArgs: [rideId, now.millisecondsSinceEpoch, maxRelayHops],
+      where: 'voyage_id = ? AND expires_at > ? AND hop_count < ?',
+      whereArgs: [voyageId, now.millisecondsSinceEpoch, maxRelayHops],
       orderBy: 'priority DESC, first_seen_at ASC',
     );
     return rows
@@ -176,7 +176,7 @@ class SqliteRelayQueue implements RelayQueueStore {
   }
 
   QueuedRelayEvent _decode(Map<String, Object?> row) => QueuedRelayEvent(
-    event: RideEvent.fromJson(
+    event: VoyageEvent.fromJson(
       Map<String, Object?>.from(
         jsonDecode(row['event_body']! as String) as Map,
       ),

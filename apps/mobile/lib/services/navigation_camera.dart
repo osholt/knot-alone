@@ -16,33 +16,33 @@ const double navigationCameraMaximumTiltDegrees = 58;
 /// pushing the horizon away; it only makes the near field unreadable.
 const double navigationCameraFramingTopSpeedMetersPerSecond = 30;
 
-/// Vertical position of the rider in the map viewport, as a fraction of the
+/// Vertical position of the sailor in the map viewport, as a fraction of the
 /// viewport height measured from the top edge. 0.5 is dead centre, which is
-/// what a plain map does; a navigation view puts the rider low so most of the
+/// what a plain map does; a navigation view puts the sailor low so most of the
 /// screen shows the road ahead.
-const double navigationCameraRestRiderFractionPortrait = 0.62;
-const double navigationCameraFastRiderFractionPortrait = 0.70;
-const double navigationCameraRestRiderFractionLandscape = 0.64;
-const double navigationCameraFastRiderFractionLandscape = 0.72;
+const double navigationCameraRestSailorFractionPortrait = 0.62;
+const double navigationCameraFastSailorFractionPortrait = 0.70;
+const double navigationCameraRestSailorFractionLandscape = 0.64;
+const double navigationCameraFastSailorFractionLandscape = 0.72;
 
-/// Landscape puts the rider away from the screen centre so the road ahead has
+/// Landscape puts the sailor away from the screen centre so the road ahead has
 /// an unobstructed wide area. Left-hand traffic uses the right third, clear of
 /// the guidance/action rail shown in the supplied UK reference; right-hand
 /// traffic mirrors it. Portrait remains centred horizontally.
-const double navigationCameraLandscapeRiderFractionLeftTraffic = 2 / 3;
-const double navigationCameraLandscapeRiderFractionRightTraffic = 1 / 3;
+const double navigationCameraLandscapeSailorFractionLeftTraffic = 2 / 3;
+const double navigationCameraLandscapeSailorFractionRightTraffic = 1 / 3;
 
-/// Space kept between the rider's marker and the top of the bottom chrome
+/// Space kept between the sailor's marker and the top of the bottom chrome
 /// band, as a fraction of the viewport height. The marker is 38 logical
 /// pixels tall, so this leaves its full height plus a margin clear on an
 /// 800 pixel viewport.
-const double navigationCameraRiderChromeClearanceFraction = 0.06;
+const double navigationCameraSailorChromeClearanceFraction = 0.06;
 
-/// How high in the frame the rider may be pushed when a very tall chrome band
+/// How high in the frame the sailor may be pushed when a very tall chrome band
 /// would otherwise cover the centre of the viewport. Keeping the marker visible
 /// beats keeping the forward bias, so the framing gives up the bias - and, past
-/// this point, some of the road behind - rather than hiding the rider.
-const double navigationCameraMinimumRiderFraction = 0.35;
+/// this point, some of the road behind - rather than hiding the sailor.
+const double navigationCameraMinimumSailorFraction = 0.35;
 
 /// The look-ahead the camera is allowed to aim at, whatever the tilt and zoom
 /// geometry asks for. A bounded value keeps a mis-measured viewport or an
@@ -53,20 +53,20 @@ const double navigationCameraMaximumLookAheadMeters = 1200;
 /// camera counts as having *arrived* at the navigation viewport.
 ///
 /// This is an arrival test, not a licence to drift. It answers only "has the
-/// camera reached the framing this app just commanded", so the rider is not
+/// camera reached the framing this app just commanded", so the sailor is not
 /// offered a way back to a viewport the camera is still easing into (#141).
 /// Losing the viewport is never decided by distance: it happens when follow mode
 /// gives the camera up, which a single pan does immediately.
 ///
 /// Logical pixels rather than metres, because the same ground distance is a
 /// whole screen at navigation zoom and a thumbnail at route-overview zoom. 12 px
-/// sits above the ~5 px a camera easing after a moving rider lags by, and far
+/// sits above the ~5 px a camera easing after a moving sailor lags by, and far
 /// below the tens of pixels of the shortest deliberate pan.
 ///
 /// #133 used 56 px against a *freshly planned* framing rather than against the
 /// commanded one. Read off an SE on 26 July 2026, that tolerance was 1363 m of
 /// ground at the zoom the map actually sat at, so a map panned 468 m off the
-/// rider still reported itself framed.
+/// sailor still reported itself framed.
 const double navigationCameraViewportSettleTolerancePixels = 12;
 
 /// How far the reported zoom may sit from the commanded zoom and still count as
@@ -92,8 +92,8 @@ class NavigationCameraViewport {
     required this.bearing,
     required this.sourceViewportHeightPixels,
     required this.sourceViewportWidthPixels,
-    required this.riderViewportFraction,
-    required this.riderHorizontalViewportFraction,
+    required this.sailorViewportFraction,
+    required this.sailorHorizontalViewportFraction,
     required this.leftHandTraffic,
     required this.mapStyleUrl,
     required this.mapStyleJson,
@@ -108,9 +108,9 @@ class NavigationCameraViewport {
   final double sourceViewportWidthPixels;
 
   /// Exact phone anchors, projected so a differently shaped screen can
-  /// place the rider deliberately instead of inheriting a coincidental offset.
-  final double riderViewportFraction;
-  final double riderHorizontalViewportFraction;
+  /// place the sailor deliberately instead of inheriting a coincidental offset.
+  final double sailorViewportFraction;
+  final double sailorHorizontalViewportFraction;
 
   /// Route driving side independently of the phone's current orientation.
   /// A projected display is always landscape, even when the phone is portrait.
@@ -128,13 +128,13 @@ class NavigationCameraViewport {
   final String mapStyleJson;
 }
 
-/// A camera framing for one ride update.
+/// A camera framing for one voyage update.
 class NavigationCameraPlan {
   const NavigationCameraPlan({
     required this.zoom,
     required this.tilt,
-    required this.riderViewportFraction,
-    required this.riderHorizontalViewportFraction,
+    required this.sailorViewportFraction,
+    required this.sailorHorizontalViewportFraction,
     required this.forwardBiasPixels,
     required this.lateralBiasPixels,
     required this.lookAheadMeters,
@@ -143,15 +143,15 @@ class NavigationCameraPlan {
   final double zoom;
   final double tilt;
 
-  /// Where the rider's own marker sits vertically in the map viewport, as a
+  /// Where the sailor's own marker sits vertically in the map viewport, as a
   /// fraction of its height from the top edge. Always at or below the centre.
-  final double riderViewportFraction;
+  final double sailorViewportFraction;
 
-  /// Horizontal position of the rider from the left edge. Portrait is centred;
+  /// Horizontal position of the sailor from the left edge. Portrait is centred;
   /// landscape uses the traffic-side third of the viewport.
-  final double riderHorizontalViewportFraction;
+  final double sailorHorizontalViewportFraction;
 
-  /// Logical pixels between the viewport centre and the rider's marker.
+  /// Logical pixels between the viewport centre and the sailor's marker.
   /// Negative when the marker sits above the centre.
   ///
   /// This is the input to both look-ahead conversions rather than something to
@@ -161,16 +161,16 @@ class NavigationCameraPlan {
   /// [NavigationCameraPlanner.flatLookAheadMetersFor].
   final double forwardBiasPixels;
 
-  /// Logical horizontal pixels between the viewport centre and the rider.
-  /// Negative places the rider left of centre.
+  /// Logical horizontal pixels between the viewport centre and the sailor.
+  /// Negative places the sailor left of centre.
   final double lateralBiasPixels;
 
-  /// Ground distance from the rider to the point the camera is aimed at.
+  /// Ground distance from the sailor to the point the camera is aimed at.
   ///
   /// `maplibre_gl` 0.26 exposes no camera padding or anchor, so the forward
   /// bias is applied by aiming the camera at a point this far ahead along the
   /// current bearing. The distance is derived from the tilt, zoom and viewport
-  /// geometry, so the rider lands at [riderViewportFraction] by construction
+  /// geometry, so the sailor lands at [sailorViewportFraction] by construction
   /// rather than by guessing a look-ahead distance.
   final double lookAheadMeters;
 }
@@ -179,7 +179,7 @@ class NavigationCameraPlan {
 ///
 /// The framing is driven by one normalised speed curve so zoom, tilt and
 /// forward bias move together. The curve is a smoothstep, so its value *and*
-/// its gradient are continuous at both ends: nothing snaps when the rider
+/// its gradient are continuous at both ends: nothing snaps when the sailor
 /// crosses a speed threshold, and the framing simply stops changing above
 /// [navigationCameraFramingTopSpeedMetersPerSecond].
 ///
@@ -219,23 +219,23 @@ abstract final class NavigationCameraPlanner {
     final width = viewportWidthPixels.isFinite && viewportWidthPixels > 0
         ? viewportWidthPixels
         : 400.0;
-    final riderFraction = _riderViewportFraction(
+    final sailorFraction = _sailorViewportFraction(
       landscape: landscape,
       speedFactor: speedFactor,
       bottomChromeFraction: bottomChromeFraction,
     );
-    final forwardBiasPixels = (riderFraction - 0.5) * height;
+    final forwardBiasPixels = (sailorFraction - 0.5) * height;
     final horizontalFraction = landscape
         ? (leftHandTraffic
-              ? navigationCameraLandscapeRiderFractionLeftTraffic
-              : navigationCameraLandscapeRiderFractionRightTraffic)
+              ? navigationCameraLandscapeSailorFractionLeftTraffic
+              : navigationCameraLandscapeSailorFractionRightTraffic)
         : 0.5;
     final lateralBiasPixels = (horizontalFraction - 0.5) * width;
     return NavigationCameraPlan(
       zoom: zoom,
       tilt: tilt,
-      riderViewportFraction: riderFraction,
-      riderHorizontalViewportFraction: horizontalFraction,
+      sailorViewportFraction: sailorFraction,
+      sailorHorizontalViewportFraction: horizontalFraction,
       forwardBiasPixels: forwardBiasPixels,
       lateralBiasPixels: lateralBiasPixels,
       lookAheadMeters: lookAheadMetersFor(
@@ -248,36 +248,36 @@ abstract final class NavigationCameraPlanner {
     );
   }
 
-  /// The rider's vertical position, biased forward with speed and then pulled
+  /// The sailor's vertical position, biased forward with speed and then pulled
   /// back far enough to keep the marker clear of the bottom chrome band.
   ///
   /// [bottomChromeFraction] is the share of the viewport height occupied by
-  /// overlays directly below the rider. Portrait chrome sits in a bottom band
+  /// overlays directly below the sailor. Portrait chrome sits in a bottom band
   /// under the marker, so it constrains the bias; landscape chrome lives in
   /// side rails that the centred marker never reaches, so callers pass zero.
-  static double _riderViewportFraction({
+  static double _sailorViewportFraction({
     required bool landscape,
     required double speedFactor,
     required double bottomChromeFraction,
   }) {
     final rest = landscape
-        ? navigationCameraRestRiderFractionLandscape
-        : navigationCameraRestRiderFractionPortrait;
+        ? navigationCameraRestSailorFractionLandscape
+        : navigationCameraRestSailorFractionPortrait;
     final fast = landscape
-        ? navigationCameraFastRiderFractionLandscape
-        : navigationCameraFastRiderFractionPortrait;
+        ? navigationCameraFastSailorFractionLandscape
+        : navigationCameraFastSailorFractionPortrait;
     final preferred = rest + (fast - rest) * speedFactor;
     final chrome = bottomChromeFraction.isFinite
         ? bottomChromeFraction.clamp(0.0, 1.0)
         : 0.0;
-    final allowed = 1 - chrome - navigationCameraRiderChromeClearanceFraction;
+    final allowed = 1 - chrome - navigationCameraSailorChromeClearanceFraction;
     return math.max(
-      navigationCameraMinimumRiderFraction,
+      navigationCameraMinimumSailorFraction,
       math.min(preferred, allowed),
     );
   }
 
-  /// Ground distance from the rider to the camera target that places the rider
+  /// Ground distance from the sailor to the camera target that places the sailor
   /// [forwardBiasPixels] below the viewport centre. Negative when the bias is
   /// negative, which only happens when a very tall chrome band has pushed the
   /// marker above the centre of the frame.
@@ -318,7 +318,7 @@ abstract final class NavigationCameraPlanner {
     );
   }
 
-  /// Ground distance from the rider to the camera target for a flat, untilted
+  /// Ground distance from the sailor to the camera target for a flat, untilted
   /// map.
   ///
   /// `flutter_map` is 2D, so the bias is a straight ground offset at the map's
@@ -345,9 +345,9 @@ abstract final class NavigationCameraPlanner {
     );
   }
 
-  /// Lateral ground offset from the rider to the camera target.
+  /// Lateral ground offset from the sailor to the camera target.
   ///
-  /// A rider left of centre needs the camera target to their right, hence the
+  /// A sailor left of centre needs the camera target to their right, hence the
   /// inverted sign. [tileSize] keeps MapLibre (512) and FlutterMap (256) at the
   /// same requested viewport fraction despite their different zoom schemes.
   static double lateralTargetOffsetMetersFor({
@@ -371,11 +371,11 @@ abstract final class NavigationCameraPlanner {
   /// framing this app commanded has arrived at that framing.
   ///
   /// The question "Follow me" asks is whether the camera *is* the navigation
-  /// viewport - following the rider icon, at the planned zoom, showing the road
-  /// ahead - not whether the rider happens to be somewhere in frame. #125 asked
+  /// viewport - following the sailor icon, at the planned zoom, showing the road
+  /// ahead - not whether the sailor happens to be somewhere in frame. #125 asked
   /// instead whether a pan had interrupted an active follow, and follow mode
   /// needs movement, so a phone on a desk was never following and the button
-  /// never appeared (#133). #133 asked whether the rider was roughly in frame,
+  /// never appeared (#133). #133 asked whether the sailor was roughly in frame,
   /// which a route overview satisfies by accident (#141).
   ///
   /// Both parts matter. Comparing against the commanded framing rather than a

@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/domain/geo_point.dart';
 import 'package:tide_and_seek/domain/imported_route.dart' as route_domain;
-import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/domain/sailor_location.dart';
 import 'package:tide_and_seek/domain/route_alert.dart';
 import 'package:tide_and_seek/relay/live_presence.dart';
 import 'package:tide_and_seek/services/geo_calculations.dart';
@@ -12,11 +12,11 @@ import 'package:tide_and_seek/services/route_deviation_detector.dart';
 import 'package:tide_and_seek/services/trail_display_simplifier.dart';
 
 /// Issue #166: position reports follow distance travelled, and presence follows
-/// a keep-alive timer that does not care whether the rider has moved.
+/// a keep-alive timer that does not care whether the sailor has moved.
 ///
 /// The measurements here are the evidence the issue asks for, and every one of
 /// them measures *this* layer: how many durable position reports a path
-/// produces, how far the reported trail sits from the road the rider actually
+/// produces, how far the reported trail sits from the road the sailor actually
 /// rode, and how long off-course confirmation takes. Battery cannot be measured
 /// from a test and is not claimed anywhere in this file.
 ///
@@ -77,7 +77,7 @@ void main() {
       );
     });
 
-    test('travel alone is not enough — the rider has to end up somewhere', () {
+    test('travel alone is not enough — the sailor has to end up somewhere', () {
       final gate = PositionReportGate();
       gate.consider(_sample(0, 0, atSeconds: 0, speed: 10));
 
@@ -162,7 +162,7 @@ void main() {
       );
     });
 
-    test('the keep-alive reports a stationary rider on the timer alone', () {
+    test('the keep-alive reports a stationary sailor on the timer alone', () {
       final gate = PositionReportGate()..consider(_sample(0, 0, atSeconds: 0));
       final reasons = <PositionReportReason>[];
 
@@ -186,16 +186,16 @@ void main() {
 
       // A position older than `staleAfter` is reported as "no recent GPS
       // position", and at `coordinatorStaleAfter` it escalates to the
-      // coordinators. A rider standing still with a working receiver must never
+      // coordinators. A sailor standing still with a working receiver must never
       // produce either.
       expect(policy.keepAliveAfter, lessThan(deviation.staleAfter));
       expect(policy.keepAliveAfter, lessThan(deviation.coordinatorStaleAfter));
-      // Under `liveWithin`, so a stationary rider's marker stays "Live" instead
+      // Under `liveWithin`, so a stationary sailor's marker stays "Live" instead
       // of flickering to "Ageing" between keep-alives.
       expect(policy.keepAliveAfter, lessThan(freshness.liveWithin));
       // And far enough inside the membership reducer's `inactiveAfter` that
       // several consecutive missed keep-alives still do not describe a present
-      // rider as absent.
+      // sailor as absent.
       expect(policy.keepAliveAfter * 7, lessThan(const Duration(minutes: 2)));
     });
 
@@ -242,10 +242,10 @@ void main() {
     // delivering — a fix a second. That input model is a stated assumption, not
     // a field capture, and these numbers are only as good as it is.
     //
-    // "Before" is one durable `riderLocationUpdated` event per platform fix,
+    // "Before" is one durable `sailorLocationUpdated` event per platform fix,
     // which is what this code did prior to the change.
 
-    test('a stationary rider drops from 300 events to 20 over five '
+    test('a stationary sailor drops from 300 events to 20 over five '
         'minutes', () {
       final fixes = _stationaryFixes(seconds: 300);
 
@@ -256,7 +256,7 @@ void main() {
       expect(_savedFraction(fixes), closeTo(0.93, 0.005));
     });
 
-    test('a stationary rider costs the same whatever the receiver does', () {
+    test('a stationary sailor costs the same whatever the receiver does', () {
       // The saving must not depend on how badly the receiver wanders, or a phone
       // with a poor view of the sky pays for it.
       for (final wander in [3.0, 6.0, 10.0]) {
@@ -301,7 +301,7 @@ void main() {
       },
     );
 
-    test('a mixed ride hour saves about 40% of the durable events', () {
+    test('a mixed voyage hour saves about 40% of the durable events', () {
       // 20 minutes of A-road at 25 m/s, 20 minutes of town at 8.33 m/s, 10
       // minutes of twisty road at 13 m/s, 10 minutes stopped.
       final fixes = <LocationSample>[
@@ -321,7 +321,7 @@ void main() {
     });
 
     test('the payload, not just the count, is what shrinks', () {
-      // A signed `riderLocationUpdated` event is roughly 480 bytes on the wire
+      // A signed `sailorLocationUpdated` event is roughly 480 bytes on the wire
       // once the location payload, the event envelope and the signature are
       // counted. Stated in bytes because bytes are what the issue asks about.
       const bytesPerEvent = 480;
@@ -411,7 +411,7 @@ void main() {
     });
 
     test('a long twisty road keeps more trail in the same memory', () {
-      // `RiderTrailRecorder` keeps 120 points per rider. Measured on 40
+      // `SailorTrailRecorder` keeps 120 points per sailor. Measured on 40
       // hairpins, those 120 points hold 1,181 m of raw platform fixes and
       // 2,300 m of reported positions, so the sparser stream buys roughly twice
       // the visible trail rather than a worse one.
@@ -459,7 +459,7 @@ void main() {
       );
     });
 
-    test('a stationary rider off the route is confirmed by keep-alives '
+    test('a stationary sailor off the route is confirmed by keep-alives '
         'alone', () {
       final route = _straight(metres: 2000);
       // Parked 300 m off the route and not moving: the only samples are
@@ -468,25 +468,25 @@ void main() {
 
       final outcome = _confirmOffRoute(route, _reportedSamples(fixes));
 
-      // Nothing pretends the rider has stopped reporting: `gpsStale` never
+      // Nothing pretends the sailor has stopped reporting: `gpsStale` never
       // fires, because the keep-alive refreshes the position well inside the
       // 30 s staleness window.
       expect(outcome.confirmed, isTrue);
       expect(outcome.sawGpsStale, isFalse);
       // Three samples at 15 s. Slower than three 1 Hz fixes, and this is the
-      // trade: a parked rider off the route is flagged in tens of seconds rather
+      // trade: a parked sailor off the route is flagged in tens of seconds rather
       // than a few.
       expect(outcome.confirmedAfter, const Duration(seconds: 30));
     });
 
-    test('without the keep-alive a parked rider is reported as having no '
+    test('without the keep-alive a parked sailor is reported as having no '
         'GPS', () {
       final route = _straight(metres: 2000);
       final fixes = _stationaryFixes(seconds: 120, east: 300);
 
       // The regression the keep-alive exists to prevent, kept as a test so the
       // coupling between the keep-alive interval and `staleAfter` cannot be
-      // broken silently. Evaluated the way the ride shell does it — the newest
+      // broken silently. Evaluated the way the voyage shell does it — the newest
       // reported position, re-assessed on a 15 s timer — because that is what
       // produces the "No recent GPS position is available" alarm.
       final withKeepAlive = _refreshStaleness(route, _reportedSamples(fixes));
@@ -580,7 +580,7 @@ List<GeoPoint> _hairpins({required int count}) {
   return points;
 }
 
-/// A rider who follows the route for 300 m and then turns 90 degrees off it.
+/// A sailor who follows the route for 300 m and then turns 90 degrees off it.
 List<GeoPoint> _wrongTurnPath() => [
   for (var north = 0; north <= 300; north += 1) _at(0, north.toDouble()),
   for (var east = 1; east <= 400; east += 1) _at(east.toDouble(), 300),
@@ -677,7 +677,7 @@ double _savedFraction(
   PositionReportPolicy policy = const PositionReportPolicy(),
 }) => 1 - _reportCount(fixes, policy: policy) / fixes.length;
 
-/// The furthest any point of the road the rider actually rode sits from the
+/// The furthest any point of the road the sailor actually rode sits from the
 /// polyline drawn through [drawn]. This is the visible error of a threshold.
 ///
 /// Only the stretch the trail covers is measured: the path before the first
@@ -728,7 +728,7 @@ class _OffRouteOutcome {
 
 /// Feeds [samples] to a detector and reports when it confirmed an off-route
 /// state, measured from the first sample. `now` is each sample's own timestamp,
-/// so the elapsed figures are the rider's clock and nothing else.
+/// so the elapsed figures are the sailor's clock and nothing else.
 _OffRouteOutcome _confirmOffRoute(
   List<GeoPoint> route,
   List<LocationSample> samples,
@@ -766,7 +766,7 @@ _OffRouteOutcome _confirmOffRoute(
   );
 }
 
-/// Whether the ride shell's own staleness refresh would ever report `gpsStale`.
+/// Whether the voyage shell's own staleness refresh would ever report `gpsStale`.
 ///
 /// The shell re-assesses the newest held position every 15 s rather than only
 /// when a fix arrives, which is what turns an ageing position into a visible

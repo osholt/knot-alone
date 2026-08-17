@@ -20,7 +20,7 @@ void main() {
       expect(request.url.queryParameters['overview'], 'full');
       expect(request.url.queryParameters['steps'], 'true');
       expect(request.url.queryParameters['bearings'], isNull);
-      expect(request.headers['User-Agent'], contains('TailEndCharlie'));
+      expect(request.headers['User-Agent'], contains('Sweeper'));
       return http.Response(
         jsonEncode({
           'code': 'Ok',
@@ -594,7 +594,7 @@ void main() {
     group('the motorcycle router keeps its turn instructions (#303)', () {
       // `maneuvers: const []`. Every route planned with a motorcycle
       // preference — avoid motorways, prefer twisty roads (#182) — arrived with
-      // no turn instructions at all, so whether a rider got guidance depended
+      // no turn instructions at all, so whether a sailor got guidance depended
       // on whether they had set a preference. "Sometimes the navigation worked
       // well and sometimes it didn't."
 
@@ -634,7 +634,7 @@ void main() {
         // These strings are the OSRM vocabulary `navigation_guidance.dart`
         // already parses, so both engines converge before anything downstream
         // sees them. A mapping that drifted would silently produce `unstated`
-        // and the rider would be told a junction is coming with no direction.
+        // and the sailor would be told a junction is coming with no direction.
         const expected = <int, String>{
           9: 'slight right',
           10: 'right',

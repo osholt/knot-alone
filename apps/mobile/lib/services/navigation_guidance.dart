@@ -52,7 +52,7 @@ enum ManeuverKind {
   continueAhead,
 }
 
-/// One rider-facing instruction, which may cover several engine steps.
+/// One sailor-facing instruction, which may cover several engine steps.
 ///
 /// A roundabout is a single instruction even though the engine reports joining
 /// and leaving the ring separately.
@@ -72,7 +72,7 @@ class ManeuverInstruction {
     this.departureBearingDegrees,
   }) : standaloneText = standaloneText ?? text;
 
-  /// The engine step the rider acts on. Retained so route progress, positions
+  /// The engine step the sailor acts on. Retained so route progress, positions
   /// and object identity stay tied to the original persisted manoeuvre.
   final RouteManeuver maneuver;
   final ManeuverKind kind;
@@ -82,14 +82,14 @@ class ManeuverInstruction {
   /// one is known.
   ///
   /// A roundabout is not named here: the symbol beside it is a drawn roundabout,
-  /// and repeating the word spends the glance a rider has on something they can
+  /// and repeating the word spends the glance a sailor has on something they can
   /// already see.
   final String text;
 
   /// Wording for surfaces that show no symbol, where the junction is named
   /// because nothing else there says what it is.
   ///
-  /// Used for the banner's accessibility label, which a rider who cannot see the
+  /// Used for the banner's accessibility label, which a sailor who cannot see the
   /// symbol depends on, and for the projected instrument rows, which are
   /// plain text. Identical to [text] for every manoeuvre drawn from a glyph.
   final String standaloneText;
@@ -107,7 +107,7 @@ class ManeuverInstruction {
   /// comes from the approach bearing compared with *this*, across two merged
   /// steps, so the entry manoeuvre's own `bearingAfter` - the pair every other
   /// manoeuvre uses - is not the number the app reasoned from. Keeping it is
-  /// what lets a captured turn detail explain the instruction a rider saw
+  /// what lets a captured turn detail explain the instruction a sailor saw
   /// instead of showing a heading change that was never used (#360).
   final double? departureBearingDegrees;
 
@@ -199,7 +199,7 @@ enum NavigationGuidanceState {
   /// The route was meant to be routed and is not.
   ///
   /// Distinct from [noManeuvers] because the two need different things from a
-  /// rider: an imported track without prompts is working as intended and can be
+  /// sailor: an imported track without prompts is working as intended and can be
   /// followed, while this one lost its directions to a failure and can be made
   /// to work again (#303).
   routingUnfinished,
@@ -236,7 +236,7 @@ final _instructionCache = Expando<List<RouteInstructionStep>>(
 ///
 /// Progress is supplied by the map's monotonic route tracker so self-crossing
 /// routes do not jump backwards. A fresh geometric projection is still used to
-/// suppress guidance when the rider is clearly away from the route.
+/// suppress guidance when the sailor is clearly away from the route.
 class NavigationGuidancePlanner {
   const NavigationGuidancePlanner({
     this.maximumDistanceFromRouteMeters = 150,
@@ -251,7 +251,7 @@ class NavigationGuidancePlanner {
   /// Every announceable instruction for [route], in order, measured along the
   /// route's primary path.
   ///
-  /// This works entirely from persisted route data so the rider can review the
+  /// This works entirely from persisted route data so the sailor can review the
   /// whole route offline, and it is the same sequence [plan] announces from.
   List<RouteInstructionStep> instructions(ImportedRoute? route) {
     if (route == null || route.maneuvers.isEmpty || route.paths.isEmpty) {
@@ -301,10 +301,10 @@ class NavigationGuidancePlanner {
   /// Shown when the route has turnable geometry but no turn instructions.
   ///
   /// The old wording for this was "Turn guidance is unavailable for this route",
-  /// which a rider read as the route having failed - it was reported that way from
-  /// a ride where the line on the map was perfectly good (#303). The route is
+  /// which a sailor read as the route having failed - it was reported that way from
+  /// a voyage where the line on the map was perfectly good (#303). The route is
   /// followable; only the prompts are missing, and saying so is the difference
-  /// between a rider carrying on and a rider stopping to work out what broke.
+  /// between a sailor carrying on and a sailor stopping to work out what broke.
   ///
   /// The choice to road-match an imported track is made before route review,
   /// where the original can be preserved and compared safely (#325). This
@@ -314,7 +314,7 @@ class NavigationGuidancePlanner {
       'No turn prompts for this route — follow the line on the map.';
 
   /// Shown when there is no line to follow at all, which is a different problem:
-  /// the rider has nothing, rather than something without prompts. These two
+  /// the sailor has nothing, rather than something without prompts. These two
   /// shared one message until #303, which made a followable route and a broken
   /// one indistinguishable.
   static const noRouteLineMessage =
@@ -327,10 +327,10 @@ class NavigationGuidancePlanner {
   /// request fails. A surviving `route` path with no manoeuvres is therefore a
   /// routing failure that outlived the import it happened during: the enricher
   /// returns a warning, but nothing carried it onto the route, so by riding
-  /// time the rider saw the same words as an imported track (#303).
+  /// time the sailor saw the same words as an imported track (#303).
   ///
   /// They are not the same. One is working as intended and can be followed; the
-  /// other can be made to work again, and only this wording tells a rider which
+  /// other can be made to work again, and only this wording tells a sailor which
   /// they have.
   static const routingUnfinishedMessage =
       'Directions could not be built for this route — the line is the raw '
@@ -388,8 +388,8 @@ class NavigationGuidancePlanner {
         message: noRouteLineMessage,
       );
     }
-    final riderProjection = _project(position, path);
-    if (riderProjection.distanceMeters > maximumDistanceFromRouteMeters) {
+    final sailorProjection = _project(position, path);
+    if (sailorProjection.distanceMeters > maximumDistanceFromRouteMeters) {
       return const NavigationGuidanceAssessment(
         state: NavigationGuidanceState.offRoute,
         message: 'Off route — finding directions back.',
@@ -452,12 +452,12 @@ const _gyratoryMergeMeters = 25.0;
 
 /// How far from its entry a ring exit may be and still belong to that ring.
 ///
-/// Generous, because a large gyratory or a rotary can carry a rider a long way
+/// Generous, because a large gyratory or a rotary can carry a sailor a long way
 /// between joining and leaving - but not unbounded, which is what let an exit
 /// belonging to a later roundabout be absorbed into an earlier one.
 const _ringExitMeters = 400.0;
 
-/// Collapses routing-engine steps into rider-facing instructions.
+/// Collapses routing-engine steps into sailor-facing instructions.
 ///
 /// A roundabout or rotary is reported as joining the ring and then leaving it.
 /// Announcing both produces two instructions for one junction, each with a
@@ -503,7 +503,7 @@ List<ManeuverInstruction> collapseManeuvers(List<RouteManeuver> maneuvers) {
 /// The double roundabout on New Cheltenham Road is a pair of mini-roundabouts
 /// **42 m apart** (OpenStreetMap nodes 51.46705,-2.50050 and 51.46721,-2.50106),
 /// comfortably outside the 25 m threshold as centres and easily inside it as
-/// exit-to-entry. Merging them announces one junction where a rider meets two
+/// exit-to-entry. Merging them announces one junction where a sailor meets two
 /// (#163).
 ///
 /// An exit is likewise only absorbed while it plausibly belongs to this ring. It
@@ -559,7 +559,7 @@ ManeuverInstruction _roundaboutInstruction({
       namesJunction: true,
     ),
     exitNumber: exitNumber,
-    // The road the rider ends up on is named by the step that leaves the ring.
+    // The road the sailor ends up on is named by the step that leaves the ring.
     roadName: last.name ?? entry.name,
     roadRef: last.ref ?? entry.ref,
     lanes: entry.lanes,
@@ -569,7 +569,7 @@ ManeuverInstruction _roundaboutInstruction({
   );
 }
 
-/// The heading on the road taken as the rider leaves the ring.
+/// The heading on the road taken as the sailor leaves the ring.
 ///
 /// Split out of [_ringExitDirection] so the number and the direction read from
 /// it cannot come from different places, and so a captured turn detail can show
@@ -589,7 +589,7 @@ double? _ringDepartureBearing({
   return null;
 }
 
-/// Direction the rider leaves a roundabout, from the manoeuvre's own geometry.
+/// Direction the sailor leaves a roundabout, from the manoeuvre's own geometry.
 ///
 /// The engine's entry modifier describes joining the ring and its exit modifier
 /// describes leaving it relative to travel around the ring, so neither states
@@ -631,7 +631,7 @@ ManeuverInstruction _simpleInstruction(RouteManeuver maneuver) {
   final direction = switch (kind) {
     // Neither end of the route is a turn, and the engine's modifier there
     // describes which side the destination is on rather than a direction to
-    // ride, so no direction is claimed.
+    // voyage, so no direction is claimed.
     ManeuverKind.arrive || ManeuverKind.depart => ManeuverDirection.straight,
     // Staying on the same road through a name change or a notification is
     // riding straight on even when the engine reports no direction change.
@@ -673,7 +673,7 @@ ManeuverDirection _maneuverDirection(RouteManeuver maneuver) {
   //
   // A wider gap is not a judgement call. The same sweep found the engine
   // calling a 21 degree deviation `sharp right`, a 93 degree turn a `uturn`,
-  // and an 82 degree left `straight`. A rider rides the bearings, so past one
+  // and an 82 degree left `straight`. A sailor voyages the bearings, so past one
   // bucket they win. #302 was reported as an ordinary 90 degree right announced
   // as a sharp right, which is this shape exactly.
   return _bucketDistance(modifier, geometry) > 1 ? geometry : modifier;
@@ -739,7 +739,7 @@ bool _isRingExit(String type) {
 /// Whether the ring should be drawn for left-hand traffic, from what the engine
 /// said — and deliberately **not** believing it when it says right.
 ///
-/// Two screenshots from the 10 August ride settle why. A "3rd exit, right" was
+/// Two screenshots from the 10 August voyage settle why. A "3rd exit, right" was
 /// drawn as a short quarter-turn arc. Keeping left, that exit is three quarters
 /// of the way round and draws 270 degrees; a quarter is what keeping *right*
 /// draws. So the engine reported `right` for a UK roundabout and the symbol
@@ -810,7 +810,7 @@ const maneuverStraightBandDegrees = _straightBandDegrees;
 /// The straight band for a roundabout exit; see [_roundaboutStraightBandDegrees].
 const maneuverRoundaboutStraightBandDegrees = _roundaboutStraightBandDegrees;
 
-/// How far the rider's heading turns through [maneuver], positive clockwise,
+/// How far the sailor's heading turns through [maneuver], positive clockwise,
 /// or null where the engine reported no bearings for it.
 ///
 /// This is the number #302 asks to be captured before any threshold is moved:
@@ -846,14 +846,14 @@ ManeuverDirection directionFromHeadingChange(
 /// at a point: riding straight across a four-arm roundabout routinely shows an
 /// entry-to-exit heading change of 25 to 35 degrees purely from that offset. At
 /// the ordinary 20 degree band, crossing the A46 from the A420 was announced and
-/// drawn as a slight right, which is a junction the rider has been told to do
+/// drawn as a slight right, which is a junction the sailor has been told to do
 /// something at that they do not in fact have to do.
 ///
 /// It stops short of 45, which is where a genuine slight right begins to be a
 /// real change of direction rather than the ring's geometry.
 const _roundaboutStraightBandDegrees = 38.0;
 
-/// Buckets a heading change into a direction a rider can act on.
+/// Buckets a heading change into a direction a sailor can act on.
 ///
 /// The straight band is deliberately wide so a gentle curve on the road taken
 /// is not announced as a turn.
@@ -896,14 +896,14 @@ String _instructionText({
           : _ordinal(exitNumber);
       // Four words, not eight (#427). A UK direction sign names each exit by
       // where it points and does not distinguish a slight right from a right,
-      // because a rider approaching does not either. It also absorbs most of
-      // #412's "one off" error before it reaches the rider: slight and straight
+      // because a sailor approaching does not either. It also absorbs most of
+      // #412's "one off" error before it reaches the sailor: slight and straight
       // now say the same thing.
       final bucket = roundaboutExitBucket(direction);
       final roundaboutLabel = bucket?.label ?? label;
       // Beside the banner and the all-turns list is a drawn roundabout, so the
       // wording there leaves the junction to the symbol and states only what a
-      // rider still needs: which exit, and which way it goes. Where no symbol
+      // sailor still needs: which exit, and which way it goes. Where no symbol
       // is shown - a screen reader, any projected surface - it is named.
       if (ordinal != null && bucket != null) {
         return namesJunction

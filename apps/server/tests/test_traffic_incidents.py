@@ -143,7 +143,7 @@ def test_reroute_proxy_is_explicit_when_provider_is_unconfigured(client):
     }
 
 
-def test_reroute_proxy_returns_a_bounded_leader_preview(settings):
+def test_reroute_proxy_returns_a_bounded_skipper_preview(settings):
     provider = _FakeTrafficProvider()
     payload = {
         "path": [

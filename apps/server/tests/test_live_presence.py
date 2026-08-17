@@ -1,9 +1,9 @@
-"""Live presence that spans both ride phases, and joins that do not wait for
+"""Live presence that spans both voyage phases, and joins that do not wait for
 the bulk event batch.
 
 Every test here is written against the field failure in issue #99: a joiner
-could see the leader's route but never the leader's advancing position, and the
-leader never learned the joiner had joined at all.
+could see the skipper's route but never the skipper's advancing position, and the
+skipper never learned the joiner had joined at all.
 """
 
 from __future__ import annotations
@@ -12,10 +12,10 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 
-from tide_and_seek_server.models import PreStartPosition, Ride
+from tide_and_seek_server.models import PreStartPosition, Voyage
 from tide_and_seek_server.schemas import PresenceSyncRequest
 
-from .conftest import event, ride_token
+from .conftest import event, voyage_token
 
 SECRET = "0123456789abcdef0123456789abcdef"
 LIVE = ["pre-start-presence-v1", "live-presence-v2"]
@@ -25,9 +25,9 @@ LEGACY = ["pre-start-presence-v1"]
 def _position(latitude: float, *, name: str = "Alex", recorded_at: datetime | None = None) -> dict:
     return {
         "displayName": name,
-        "role": "rider",
+        "role": "sailor",
         "motorcycleStyle": "adventure",
-        "riderColor": "blue",
+        "sailorColor": "blue",
         "sample": {
             "position": {"latitude": latitude, "longitude": -2.4},
             "recordedAt": (recorded_at or datetime.now(UTC)).isoformat().replace("+00:00", "Z"),
@@ -40,7 +40,7 @@ def _position(latitude: float, *, name: str = "Alex", recorded_at: datetime | No
 
 def _presence(
     client,
-    ride_id: str,
+    voyage_id: str,
     device_id: str,
     *,
     capabilities: list[str] | None = None,
@@ -48,7 +48,7 @@ def _presence(
     **body,
 ):
     headers = {
-        "authorization": f"Bearer {ride_token(ride_id, SECRET)}",
+        "authorization": f"Bearer {voyage_token(voyage_id, SECRET)}",
         "x-tide-and-seek-device": device_id,
         "x-tailendcharlie-protocol": protocol,
         "x-tailendcharlie-capabilities": ",".join(
@@ -56,157 +56,157 @@ def _presence(
         ),
     }
     return client.post(
-        f"/api/v1/rides/{ride_id}/presence:sync",
+        f"/api/v1/voyages/{voyage_id}/presence:sync",
         json={"protocolVersion": 1, "deviceId": device_id, **body},
         headers=headers,
     )
 
 
-def _membership_event(ride_id: str, event_id: str, device_id: str, name: str, role: str) -> dict:
+def _membership_event(voyage_id: str, event_id: str, device_id: str, name: str, role: str) -> dict:
     return event(
-        ride_id,
+        voyage_id,
         event_id,
         device_id=device_id,
-        event_type="riderJoined",
+        event_type="sailorJoined",
         payload={"displayName": name, "role": role},
     )
 
 
-def _start(client, synchronize, ride_id: str, device_id: str = "leader"):
+def _start(client, synchronize, voyage_id: str, device_id: str = "skipper"):
     return synchronize(
         client,
-        ride_id=ride_id,
+        voyage_id=voyage_id,
         secret=SECRET,
         device_id=device_id,
         events=[
             event(
-                ride_id,
-                f"{ride_id}-started",
+                voyage_id,
+                f"{voyage_id}-started",
                 device_id=device_id,
-                event_type="rideStarted",
-                payload={"leaderRiderId": device_id},
+                event_type="voyageStarted",
+                payload={"skipperSailorId": device_id},
             )
         ],
     )
 
 
-def test_presence_survives_the_ride_started_transition(client, synchronize) -> None:
-    ride_id = "ride-continuity"
+def test_presence_survives_the_voyage_started_transition(client, synchronize) -> None:
+    voyage_id = "voyage-continuity"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
-    assert _presence(client, ride_id, "leader", position=_position(51.0, name="Lead")).status_code
-    before = _presence(client, ride_id, "rider-a", position=_position(51.5)).json()
-    assert {item["riderId"] for item in before["positions"]} == {"leader", "rider-a"}
+    assert _presence(client, voyage_id, "skipper", position=_position(51.0, name="Lead")).status_code
+    before = _presence(client, voyage_id, "sailor-a", position=_position(51.5)).json()
+    assert {item["sailorId"] for item in before["positions"]} == {"skipper", "sailor-a"}
     assert before["phase"] == "open"
 
-    assert _start(client, synchronize, ride_id).status_code == 200
+    assert _start(client, synchronize, voyage_id).status_code == 200
 
-    after = _presence(client, ride_id, "rider-a", position=_position(51.6)).json()
+    after = _presence(client, voyage_id, "sailor-a", position=_position(51.6)).json()
     assert after["phase"] == "started"
     # No gap and no duplicate identity across the transition.
-    assert {item["riderId"] for item in after["positions"]} == {"leader", "rider-a"}
+    assert {item["sailorId"] for item in after["positions"]} == {"skipper", "sailor-a"}
     assert len(after["positions"]) == 2
 
 
-def test_a_rider_joining_an_already_started_ride_appears_without_a_cursor(
+def test_a_sailor_joining_an_already_started_voyage_appears_without_a_cursor(
     client, synchronize
 ) -> None:
-    ride_id = "ride-late-join"
+    voyage_id = "voyage-late-join"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
     assert (
         synchronize(
             client,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             secret=SECRET,
-            device_id="leader",
-            events=[_membership_event(ride_id, "created", "leader", "Lead", "lead")],
+            device_id="skipper",
+            events=[_membership_event(voyage_id, "created", "skipper", "Lead", "lead")],
         ).status_code
         == 200
     )
-    assert _start(client, synchronize, ride_id).status_code == 200
+    assert _start(client, synchronize, voyage_id).status_code == 200
 
     # The joiner uploads only its own membership event.
     assert (
         synchronize(
             client,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             secret=SECRET,
-            device_id="rider-late",
-            events=[_membership_event(ride_id, "joined-late", "rider-late", "Bill", "rider")],
+            device_id="sailor-late",
+            events=[_membership_event(voyage_id, "joined-late", "sailor-late", "Bill", "sailor")],
         ).status_code
         == 200
     )
     assert (
-        _presence(client, ride_id, "rider-late", position=_position(51.9, name="Bill")).status_code
+        _presence(client, voyage_id, "sailor-late", position=_position(51.9, name="Bill")).status_code
         == 200
     )
 
-    # The leader never advances a cursor here: presence alone must reveal both
+    # The skipper never advances a cursor here: presence alone must reveal both
     # the new member and their live position.
-    observed = _presence(client, ride_id, "leader").json()
-    members = {item["riderId"]: item for item in observed["members"]}
-    assert members["rider-late"]["displayName"] == "Bill"
-    assert members["rider-late"]["left"] is False
-    assert members["leader"]["displayName"] == "Lead"
-    assert {item["riderId"] for item in observed["positions"]} == {"rider-late"}
+    observed = _presence(client, voyage_id, "skipper").json()
+    members = {item["sailorId"]: item for item in observed["members"]}
+    assert members["sailor-late"]["displayName"] == "Bill"
+    assert members["sailor-late"]["left"] is False
+    assert members["skipper"]["displayName"] == "Lead"
+    assert {item["sailorId"] for item in observed["positions"]} == {"sailor-late"}
 
 
 def test_roster_is_served_even_when_the_event_batch_never_advances(client, synchronize) -> None:
-    ride_id = "ride-wedged-batch"
+    voyage_id = "voyage-wedged-batch"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
     assert (
         synchronize(
             client,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             secret=SECRET,
-            device_id="rider-a",
-            events=[_membership_event(ride_id, "joined-a", "rider-a", "Alex", "rider")],
+            device_id="sailor-a",
+            events=[_membership_event(voyage_id, "joined-a", "sailor-a", "Alex", "sailor")],
         ).status_code
         == 200
     )
 
     # A wedged sync is modelled by simply never calling events:sync again.
-    observed = _presence(client, ride_id, "leader").json()
+    observed = _presence(client, voyage_id, "skipper").json()
 
-    assert [item["riderId"] for item in observed["members"]] == ["rider-a"]
+    assert [item["sailorId"] for item in observed["members"]] == ["sailor-a"]
 
 
-def test_rider_left_marks_the_member_rather_than_hiding_the_history(client, synchronize) -> None:
-    ride_id = "ride-left"
+def test_sailor_left_marks_the_member_rather_than_hiding_the_history(client, synchronize) -> None:
+    voyage_id = "voyage-left"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
     assert (
         synchronize(
             client,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             secret=SECRET,
-            device_id="rider-a",
+            device_id="sailor-a",
             events=[
-                _membership_event(ride_id, "joined-a", "rider-a", "Alex", "rider"),
+                _membership_event(voyage_id, "joined-a", "sailor-a", "Alex", "sailor"),
                 event(
-                    ride_id,
+                    voyage_id,
                     "left-a",
-                    device_id="rider-a",
-                    event_type="riderLeft",
-                    payload={"riderId": "rider-a", "reason": "left"},
+                    device_id="sailor-a",
+                    event_type="sailorLeft",
+                    payload={"sailorId": "sailor-a", "reason": "left"},
                 ),
             ],
         ).status_code
         == 200
     )
 
-    members = _presence(client, ride_id, "leader").json()["members"]
+    members = _presence(client, voyage_id, "skipper").json()["members"]
 
     assert len(members) == 1
-    assert members[0]["riderId"] == "rider-a"
+    assert members[0]["sailorId"] == "sailor-a"
     assert members[0]["left"] is True
-    # Issue #144: the record a departed rider leaves behind has to say *when*
+    # Issue #144: the record a departed sailor leaves behind has to say *when*
     # they went, and a caller must be able to order the departure against a later
     # rejoin without waiting for the bulk event batch to deliver either.
     assert members[0]["leftAt"] is not None
@@ -214,59 +214,59 @@ def test_rider_left_marks_the_member_rather_than_hiding_the_history(client, sync
 
 
 def test_a_rejoin_clears_the_departure_and_its_time(client, synchronize) -> None:
-    ride_id = "ride-left-then-back"
+    voyage_id = "voyage-left-then-back"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
     assert (
         synchronize(
             client,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             secret=SECRET,
-            device_id="rider-a",
+            device_id="sailor-a",
             events=[
-                _membership_event(ride_id, "joined-a", "rider-a", "Alex", "rider"),
+                _membership_event(voyage_id, "joined-a", "sailor-a", "Alex", "sailor"),
                 event(
-                    ride_id,
+                    voyage_id,
                     "left-a",
-                    device_id="rider-a",
-                    event_type="riderLeft",
-                    payload={"riderId": "rider-a", "reason": "left"},
+                    device_id="sailor-a",
+                    event_type="sailorLeft",
+                    payload={"sailorId": "sailor-a", "reason": "left"},
                 ),
-                _membership_event(ride_id, "rejoined-a", "rider-a", "Alex", "rider"),
+                _membership_event(voyage_id, "rejoined-a", "sailor-a", "Alex", "sailor"),
             ],
         ).status_code
         == 200
     )
 
-    members = _presence(client, ride_id, "leader").json()["members"]
+    members = _presence(client, voyage_id, "skipper").json()["members"]
 
     # One identity, and it is not carrying a stale departure that would let a
-    # client mark a rider who is back as gone.
+    # client mark a sailor who is back as gone.
     assert len(members) == 1
-    assert members[0]["riderId"] == "rider-a"
+    assert members[0]["sailorId"] == "sailor-a"
     assert members[0]["left"] is False
     assert members[0]["leftAt"] is None
 
 
-def test_ride_ended_discards_live_positions(client, synchronize) -> None:
-    ride_id = "ride-ended-presence"
+def test_voyage_ended_discards_live_positions(client, synchronize) -> None:
+    voyage_id = "voyage-ended-presence"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
-    assert _presence(client, ride_id, "rider-a", position=_position(51.0)).status_code == 200
+    assert _presence(client, voyage_id, "sailor-a", position=_position(51.0)).status_code == 200
     assert (
         synchronize(
             client,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             secret=SECRET,
-            device_id="leader",
+            device_id="skipper",
             events=[
                 event(
-                    ride_id,
+                    voyage_id,
                     "ended",
-                    device_id="leader",
-                    event_type="rideEnded",
+                    device_id="skipper",
+                    event_type="voyageEnded",
                     payload={},
                 )
             ],
@@ -276,34 +276,34 @@ def test_ride_ended_discards_live_positions(client, synchronize) -> None:
 
     with client.app.state.session_factory() as session:
         assert session.scalar(select(func.count()).select_from(PreStartPosition)) == 0
-    observed = _presence(client, ride_id, "leader").json()
+    observed = _presence(client, voyage_id, "skipper").json()
     assert observed["positions"] == []
     assert observed["phase"] == "ended"
 
 
-def test_reopening_a_ride_restores_its_running_phase(client, synchronize) -> None:
+def test_reopening_a_voyage_restores_its_running_phase(client, synchronize) -> None:
     """Issues #206/#207.
 
-    A ride the leader ends by mistake can be un-ended, and presence has to come
-    back with it: a reopened ride that still reported ``ended`` would leave every
-    rider's app refusing to publish a position to a ride that is running.
+    A voyage the skipper ends by mistake can be un-ended, and presence has to come
+    back with it: a reopened voyage that still reported ``ended`` would leave every
+    sailor's app refusing to publish a position to a voyage that is running.
     """
-    ride_id = "ride-reopened-presence"
+    voyage_id = "voyage-reopened-presence"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
-    for index, event_type in enumerate(("rideStarted", "rideEnded", "rideReopened")):
+    for index, event_type in enumerate(("voyageStarted", "voyageEnded", "voyageReopened")):
         assert (
             synchronize(
                 client,
-                ride_id=ride_id,
+                voyage_id=voyage_id,
                 secret=SECRET,
-                device_id="leader",
+                device_id="skipper",
                 events=[
                     event(
-                        ride_id,
+                        voyage_id,
                         f"lifecycle-{index}",
-                        device_id="leader",
+                        device_id="skipper",
                         event_type=event_type,
                         payload={},
                     )
@@ -312,34 +312,34 @@ def test_reopening_a_ride_restores_its_running_phase(client, synchronize) -> Non
             == 200
         )
 
-    assert _presence(client, ride_id, "leader").json()["phase"] == "started"
-    # A position published after the reopen is kept, because the ride is running.
-    assert _presence(client, ride_id, "rider-a", position=_position(51.0)).status_code == 200
+    assert _presence(client, voyage_id, "skipper").json()["phase"] == "started"
+    # A position published after the reopen is kept, because the voyage is running.
+    assert _presence(client, voyage_id, "sailor-a", position=_position(51.0)).status_code == 200
     with client.app.state.session_factory() as session:
         assert session.scalar(select(func.count()).select_from(PreStartPosition)) == 1
-        ride = session.get(Ride, ride_id)
-        assert ride is not None
-        assert ride.ended_at is None
+        voyage = session.get(Voyage, voyage_id)
+        assert voyage is not None
+        assert voyage.ended_at is None
 
 
-def test_ending_after_a_reopen_ends_the_ride_again(client, synchronize) -> None:
-    ride_id = "ride-reended-presence"
+def test_ending_after_a_reopen_ends_the_voyage_again(client, synchronize) -> None:
+    voyage_id = "voyage-reended-presence"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
-    assert _presence(client, ride_id, "rider-a", position=_position(51.0)).status_code == 200
-    for index, event_type in enumerate(("rideEnded", "rideReopened", "rideEnded")):
+    assert _presence(client, voyage_id, "sailor-a", position=_position(51.0)).status_code == 200
+    for index, event_type in enumerate(("voyageEnded", "voyageReopened", "voyageEnded")):
         assert (
             synchronize(
                 client,
-                ride_id=ride_id,
+                voyage_id=voyage_id,
                 secret=SECRET,
-                device_id="leader",
+                device_id="skipper",
                 events=[
                     event(
-                        ride_id,
+                        voyage_id,
                         f"lifecycle-{index}",
-                        device_id="leader",
+                        device_id="skipper",
                         event_type=event_type,
                         payload={},
                     )
@@ -348,12 +348,12 @@ def test_ending_after_a_reopen_ends_the_ride_again(client, synchronize) -> None:
             == 200
         )
 
-    assert _presence(client, ride_id, "leader").json()["phase"] == "ended"
+    assert _presence(client, voyage_id, "skipper").json()["phase"] == "ended"
     with client.app.state.session_factory() as session:
         assert session.scalar(select(func.count()).select_from(PreStartPosition)) == 0
-        ride = session.get(Ride, ride_id)
-        assert ride is not None
-        assert ride.ended_at is not None
+        voyage = session.get(Voyage, voyage_id)
+        assert voyage is not None
+        assert voyage.ended_at is not None
 
 
 def test_a_legacy_publisher_stays_visible_to_a_live_presence_peer_and_is_flagged(
@@ -361,55 +361,55 @@ def test_a_legacy_publisher_stays_visible_to_a_live_presence_peer_and_is_flagged
 ) -> None:
     """Older client to newer client: the position still arrives, and the newer
     device is told the peer's build is older."""
-    ride_id = "ride-mixed-versions"
+    voyage_id = "voyage-mixed-versions"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
     assert (
         _presence(
-            client, ride_id, "rider-old", capabilities=LEGACY, position=_position(51.3, name="Bill")
+            client, voyage_id, "sailor-old", capabilities=LEGACY, position=_position(51.3, name="Bill")
         ).status_code
         == 200
     )
     assert (
-        _presence(client, ride_id, "leader", position=_position(51.0, name="Lead")).status_code
+        _presence(client, voyage_id, "skipper", position=_position(51.0, name="Lead")).status_code
         == 200
     )
-    assert _start(client, synchronize, ride_id).status_code == 200
+    assert _start(client, synchronize, voyage_id).status_code == 200
 
-    observed = _presence(client, ride_id, "leader", position=_position(51.01, name="Lead")).json()
+    observed = _presence(client, voyage_id, "skipper", position=_position(51.01, name="Lead")).json()
 
-    flags = {item["riderId"]: item["livePresence"] for item in observed["positions"]}
-    assert flags["rider-old"] is False
-    assert flags["leader"] is True
+    flags = {item["sailorId"]: item["livePresence"] for item in observed["positions"]}
+    assert flags["sailor-old"] is False
+    assert flags["skipper"] is True
 
 
 def test_a_legacy_reader_after_start_does_not_destroy_a_live_peers_position(
     client, synchronize
 ) -> None:
-    ride_id = "ride-legacy-nondestructive"
+    voyage_id = "voyage-legacy-nondestructive"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
-    assert _presence(client, ride_id, "rider-a", position=_position(51.4)).status_code == 200
-    assert _start(client, synchronize, ride_id).status_code == 200
+    assert _presence(client, voyage_id, "sailor-a", position=_position(51.4)).status_code == 200
+    assert _start(client, synchronize, voyage_id).status_code == 200
 
-    assert _presence(client, ride_id, "rider-old", capabilities=LEGACY).json()["positions"] == []
+    assert _presence(client, voyage_id, "sailor-old", capabilities=LEGACY).json()["positions"] == []
 
-    still_there = _presence(client, ride_id, "leader").json()["positions"]
-    assert [item["riderId"] for item in still_there] == ["rider-a"]
+    still_there = _presence(client, voyage_id, "skipper").json()["positions"]
+    assert [item["sailorId"] for item in still_there] == ["sailor-a"]
 
 
 def test_unknown_capability_strings_are_ignored(client, synchronize) -> None:
-    ride_id = "ride-unknown-capability"
+    voyage_id = "voyage-unknown-capability"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
 
     response = _presence(
         client,
-        ride_id,
-        "rider-a",
+        voyage_id,
+        "sailor-a",
         capabilities=[*LIVE, "teleportation-v9", "", "  "],
         position=_position(51.0),
     )
@@ -419,42 +419,42 @@ def test_unknown_capability_strings_are_ignored(client, synchronize) -> None:
 
 
 def test_presence_requires_at_least_one_presence_capability(client, synchronize) -> None:
-    ride_id = "ride-no-capability"
+    voyage_id = "voyage-no-capability"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
 
-    response = _presence(client, ride_id, "rider-a", capabilities=["ride-start-v1"])
+    response = _presence(client, voyage_id, "sailor-a", capabilities=["voyage-start-v1"])
 
     assert response.status_code == 400
     assert response.json() == {"error": "A live presence capability is required"}
 
 
 def test_presence_rejects_a_client_below_the_minimum_protocol(client, synchronize) -> None:
-    ride_id = "ride-presence-old-client"
+    voyage_id = "voyage-presence-old-client"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
     client.app.state.settings.minimum_client_protocol = 2
 
-    response = _presence(client, ride_id, "rider-a", position=_position(51.0))
+    response = _presence(client, voyage_id, "sailor-a", position=_position(51.0))
 
     assert response.status_code == 426
     assert response.json()["code"] == "update_required"
 
 
 def test_presence_rejects_a_client_newer_than_the_service(client, synchronize) -> None:
-    ride_id = "ride-presence-new-client"
+    voyage_id = "voyage-presence-new-client"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
 
     response = client.post(
-        f"/api/v1/rides/{ride_id}/presence:sync",
-        json={"protocolVersion": 1, "deviceId": "rider-a"},
+        f"/api/v1/voyages/{voyage_id}/presence:sync",
+        json={"protocolVersion": 1, "deviceId": "sailor-a"},
         headers={
-            "authorization": f"Bearer {ride_token(ride_id, SECRET)}",
-            "x-tide-and-seek-device": "rider-a",
+            "authorization": f"Bearer {voyage_token(voyage_id, SECRET)}",
+            "x-tide-and-seek-device": "sailor-a",
             "x-tailendcharlie-protocol": "2",
             "x-tailendcharlie-capabilities": ",".join(LIVE),
         },
@@ -464,23 +464,23 @@ def test_presence_rejects_a_client_newer_than_the_service(client, synchronize) -
     assert response.json()["code"] == "server_upgrade_required"
 
 
-def test_a_started_ride_still_expires_a_position_by_ttl(client, synchronize) -> None:
-    ride_id = "ride-started-ttl"
+def test_a_started_voyage_still_expires_a_position_by_ttl(client, synchronize) -> None:
+    voyage_id = "voyage-started-ttl"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
-    assert _presence(client, ride_id, "rider-a", position=_position(51.0)).status_code == 200
-    assert _start(client, synchronize, ride_id).status_code == 200
+    assert _presence(client, voyage_id, "sailor-a", position=_position(51.0)).status_code == 200
+    assert _start(client, synchronize, voyage_id).status_code == 200
     ttl = client.app.state.settings.pre_start_presence_ttl_seconds
 
     service = client.app.state.service
     with client.app.state.session_factory() as session:
         observed = service.synchronize_pre_start_presence(
             session,
-            ride_id=ride_id,
-            bearer_token=ride_token(ride_id, SECRET),
-            device_header="leader",
-            request=PresenceSyncRequest(protocolVersion=1, deviceId="leader"),
+            voyage_id=voyage_id,
+            bearer_token=voyage_token(voyage_id, SECRET),
+            device_header="skipper",
+            request=PresenceSyncRequest(protocolVersion=1, deviceId="skipper"),
             live_presence=True,
             now=datetime.now(UTC) + timedelta(seconds=ttl + 1),
         )
@@ -490,67 +490,67 @@ def test_a_started_ride_still_expires_a_position_by_ttl(client, synchronize) -> 
 
 
 def test_members_are_withheld_from_a_legacy_reader(client, synchronize) -> None:
-    ride_id = "ride-legacy-members"
+    voyage_id = "voyage-legacy-members"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
     assert (
         synchronize(
             client,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             secret=SECRET,
-            device_id="rider-a",
-            events=[_membership_event(ride_id, "joined-a", "rider-a", "Alex", "rider")],
+            device_id="sailor-a",
+            events=[_membership_event(voyage_id, "joined-a", "sailor-a", "Alex", "sailor")],
         ).status_code
         == 200
     )
 
-    legacy = _presence(client, ride_id, "leader", capabilities=LEGACY).json()
+    legacy = _presence(client, voyage_id, "skipper", capabilities=LEGACY).json()
 
     assert legacy["members"] == []
 
 
 def test_a_membership_event_without_a_usable_payload_is_skipped(client, synchronize) -> None:
-    ride_id = "ride-bad-membership"
+    voyage_id = "voyage-bad-membership"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
     assert (
         synchronize(
             client,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             secret=SECRET,
-            device_id="rider-a",
+            device_id="sailor-a",
             events=[
                 event(
-                    ride_id,
+                    voyage_id,
                     "joined-nameless",
-                    device_id="rider-a",
-                    event_type="riderJoined",
-                    payload={"role": "rider"},
+                    device_id="sailor-a",
+                    event_type="sailorJoined",
+                    payload={"role": "sailor"},
                 )
             ],
         ).status_code
         == 200
     )
 
-    observed = _presence(client, ride_id, "leader").json()
+    observed = _presence(client, voyage_id, "skipper").json()
 
     assert observed["members"] == []
     assert observed["phase"] == "open"
 
 
 def test_a_repeated_publish_replaces_rather_than_duplicating(client, synchronize) -> None:
-    ride_id = "ride-duplicate-publish"
+    voyage_id = "voyage-duplicate-publish"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
     body = _position(51.0)
 
     for _ in range(4):
-        assert _presence(client, ride_id, "rider-a", position=body).status_code == 200
+        assert _presence(client, voyage_id, "sailor-a", position=body).status_code == 200
 
-    observed = _presence(client, ride_id, "leader").json()["positions"]
+    observed = _presence(client, voyage_id, "skipper").json()["positions"]
     assert len(observed) == 1
     with client.app.state.session_factory() as session:
         assert session.scalar(select(func.count()).select_from(PreStartPosition)) == 1
@@ -564,14 +564,14 @@ def test_presence_reports_the_relay_clock_alongside_its_arrival_stamps(client, s
     the age. The relay's arrival stamp and its current time are one clock, so a
     caller can age a peer's position honestly.
     """
-    ride_id = "ride-server-time"
+    voyage_id = "voyage-server-time"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
-    assert _presence(client, ride_id, "rider-a", position=_position(51.0)).status_code == 200
+    assert _presence(client, voyage_id, "sailor-a", position=_position(51.0)).status_code == 200
 
     before = datetime.now(UTC)
-    body = _presence(client, ride_id, "leader").json()
+    body = _presence(client, voyage_id, "skipper").json()
     after = datetime.now(UTC)
 
     server_time = datetime.fromisoformat(body["serverTime"])
@@ -584,21 +584,21 @@ def test_presence_reports_the_relay_clock_alongside_its_arrival_stamps(client, s
 
 def test_presence_serves_a_position_whose_publisher_clock_is_behind(client, synchronize) -> None:
     """A phone with a wrong clock still publishes, and is still served."""
-    ride_id = "ride-skewed-publisher"
+    voyage_id = "voyage-skewed-publisher"
     assert (
-        synchronize(client, ride_id=ride_id, secret=SECRET, device_id="leader").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
     )
     recorded_at = datetime.now(UTC) - timedelta(minutes=4)
 
     published = _presence(
         client,
-        ride_id,
-        "rider-a",
+        voyage_id,
+        "sailor-a",
         position=_position(51.0, recorded_at=recorded_at),
     )
 
     assert published.status_code == 200
-    served = _presence(client, ride_id, "leader").json()["positions"][0]
+    served = _presence(client, voyage_id, "skipper").json()["positions"][0]
     # The publisher's own timestamp is preserved, and the relay's arrival stamp
     # is what a reader can age it by.
     assert datetime.fromisoformat(served["sample"]["recordedAt"]) == recorded_at

@@ -5,10 +5,10 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import delete, func, select
 
 from tide_and_seek_server.crypto import sha256
-from tide_and_seek_server.models import PushDelivery, PushRegistration, Ride, RideMember, StoredEvent
+from tide_and_seek_server.models import PushDelivery, PushRegistration, Voyage, VoyageMember, StoredEvent
 from tide_and_seek_server.push import PushMessage, PushProviderResult
 
-from .conftest import ride_token
+from .conftest import voyage_token
 
 SECRET = "0123456789abcdef0123456789abcdef"
 
@@ -48,25 +48,25 @@ class _EventDecryptCounter:
         return self._delegate.decrypt_json(value, associated_data=associated_data)
 
 
-def _headers(ride_id: str, installation_id: str) -> dict[str, str]:
+def _headers(voyage_id: str, installation_id: str) -> dict[str, str]:
     return {
-        "authorization": f"Bearer {ride_token(ride_id, SECRET)}",
+        "authorization": f"Bearer {voyage_token(voyage_id, SECRET)}",
         "x-tide-and-seek-device": installation_id,
     }
 
 
 def _register(
     client,
-    ride_id: str,
+    voyage_id: str,
     installation_id: str,
     *,
-    role: str = "rider",
+    role: str = "sailor",
     token: str | None = None,
     preferences: dict[str, bool] | None = None,
 ):
     return client.put(
-        f"/api/v1/rides/{ride_id}/push-registrations/{installation_id}",
-        headers=_headers(ride_id, installation_id),
+        f"/api/v1/voyages/{voyage_id}/push-registrations/{installation_id}",
+        headers=_headers(voyage_id, installation_id),
         json={
             "platform": "android",
             "provider": "fcm",
@@ -81,11 +81,11 @@ def test_registration_is_encrypted_rotated_and_revoked(
     client,
     synchronize,
 ) -> None:
-    ride_id = "ride-push-registration"
-    assert synchronize(client, ride_id=ride_id, secret=SECRET).status_code == 200
+    voyage_id = "voyage-push-registration"
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET).status_code == 200
 
-    first = _register(client, ride_id, "rider-a", token="first-token-1234567890")
-    second = _register(client, ride_id, "rider-a", token="second-token-123456789")
+    first = _register(client, voyage_id, "sailor-a", token="first-token-1234567890")
+    second = _register(client, voyage_id, "sailor-a", token="second-token-123456789")
 
     assert first.status_code == 200
     assert second.status_code == 200
@@ -98,8 +98,8 @@ def test_registration_is_encrypted_rotated_and_revoked(
         assert registrations[0].revoked_at is None
 
     revoked = client.delete(
-        f"/api/v1/rides/{ride_id}/push-registrations/rider-a",
-        headers=_headers(ride_id, "rider-a"),
+        f"/api/v1/voyages/{voyage_id}/push-registrations/sailor-a",
+        headers=_headers(voyage_id, "sailor-a"),
     )
     assert revoked.status_code == 204
     with factory() as session:
@@ -111,57 +111,57 @@ def test_urgent_alert_targets_current_coordinators_once(
     synchronize,
     make_event,
 ) -> None:
-    ride_id = "ride-push-targeting"
+    voyage_id = "voyage-push-targeting"
     joined = [
         make_event(
-            ride_id,
-            f"joined-{rider_id}",
-            device_id=rider_id,
-            event_type="riderJoined",
-            payload={"displayName": rider_id, "role": role},
+            voyage_id,
+            f"joined-{sailor_id}",
+            device_id=sailor_id,
+            event_type="sailorJoined",
+            payload={"displayName": sailor_id, "role": role},
         )
-        for rider_id, role in [
+        for sailor_id, role in [
             ("lead", "lead"),
-            ("tec", "tailEndCharlie"),
-            ("sender", "rider"),
+            ("sweeper", "sweeper"),
+            ("sender", "sailor"),
             ("left", "lead"),
         ]
     ]
     joined.append(
         make_event(
-            ride_id,
+            voyage_id,
             "left-departed",
             device_id="left",
-            event_type="riderLeft",
+            event_type="sailorLeft",
         )
     )
-    assert synchronize(client, ride_id=ride_id, secret=SECRET, events=joined).status_code == 200
-    for rider_id, role in [
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=joined).status_code == 200
+    for sailor_id, role in [
         ("lead", "lead"),
-        ("tec", "tailEndCharlie"),
-        ("sender", "rider"),
+        ("sweeper", "sweeper"),
+        ("sender", "sailor"),
         ("left", "lead"),
     ]:
-        assert _register(client, ride_id, rider_id, role=role).status_code == 200
+        assert _register(client, voyage_id, sailor_id, role=role).status_code == 200
 
     provider = _RecordingProvider()
     client.app.state.push_dispatcher._providers["fcm"] = provider
     alert = make_event(
-        ride_id,
+        voyage_id,
         "urgent-alert",
         device_id="sender",
         event_type="statusMessage",
         payload={"message": "emergencyStop", "label": "Emergency stop"},
     )
 
-    first = synchronize(client, ride_id=ride_id, secret=SECRET, events=[alert])
-    replay = synchronize(client, ride_id=ride_id, secret=SECRET, events=[alert])
+    first = synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[alert])
+    replay = synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[alert])
 
     assert first.status_code == 200
     assert replay.status_code == 200
     assert set(provider.tokens) == {
         "fcm-token-lead-123456789",
-        "fcm-token-tec-123456789",
+        "fcm-token-sweeper-123456789",
     }
     assert len(provider.tokens) == 2
     assert all("coordinate" not in message.body.lower() for message in provider.messages)
@@ -177,53 +177,53 @@ def test_push_membership_projection_does_not_decrypt_large_event_history(
     synchronize,
     make_event,
 ) -> None:
-    ride_id = "ride-push-projection"
+    voyage_id = "voyage-push-projection"
     joined = [
         make_event(
-            ride_id,
+            voyage_id,
             "joined-lead",
             device_id="lead",
-            event_type="riderJoined",
+            event_type="sailorJoined",
             payload={"displayName": "Lead", "role": "lead"},
         ),
         make_event(
-            ride_id,
+            voyage_id,
             "joined-sender",
             device_id="sender",
-            event_type="riderJoined",
-            payload={"displayName": "Sender", "role": "rider"},
+            event_type="sailorJoined",
+            payload={"displayName": "Sender", "role": "sailor"},
         ),
     ]
-    assert synchronize(client, ride_id=ride_id, secret=SECRET, events=joined).status_code == 200
-    assert _register(client, ride_id, "lead", role="lead").status_code == 200
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=joined).status_code == 200
+    assert _register(client, voyage_id, "lead", role="lead").status_code == 200
 
     now = datetime.now(UTC)
     cipher = client.app.state.service._cipher
     with client.app.state.session_factory() as session, session.begin():
-        ride = session.get(Ride, ride_id)
-        assert ride is not None
+        voyage = session.get(Voyage, voyage_id)
+        assert voyage is not None
         rows = []
         total_bytes = 0
         for index in range(2_000):
             event_id = f"position-{index:04d}"
             body = make_event(
-                ride_id,
+                voyage_id,
                 event_id,
                 device_id="sender",
-                event_type="riderLocationUpdated",
+                event_type="sailorLocationUpdated",
                 created_at=now,
             )
             body_ciphertext = cipher.encrypt_json(
                 body,
-                associated_data=f"event:{ride_id}:{event_id}".encode(),
+                associated_data=f"event:{voyage_id}:{event_id}".encode(),
             )
             total_bytes += len(body_ciphertext)
             rows.append(
                 StoredEvent(
-                    ride_id=ride_id,
+                    voyage_id=voyage_id,
                     event_id=event_id,
                     device_id="sender",
-                    event_type="riderLocationUpdated",
+                    event_type="sailorLocationUpdated",
                     created_at=now,
                     expires_at=now + timedelta(minutes=20),
                     body_hash=sha256(b"position" + index.to_bytes(4, "big")),
@@ -231,133 +231,133 @@ def test_push_membership_projection_does_not_decrypt_large_event_history(
                 )
             )
         session.add_all(rows)
-        ride.stored_event_count += len(rows)
-        ride.stored_event_bytes += total_bytes
+        voyage.stored_event_count += len(rows)
+        voyage.stored_event_bytes += total_bytes
 
     provider = _RecordingProvider()
     counter = _EventDecryptCounter(client.app.state.push_dispatcher._cipher)
     client.app.state.push_dispatcher._providers["fcm"] = provider
     client.app.state.push_dispatcher._cipher = counter
     alert = make_event(
-        ride_id,
+        voyage_id,
         "projection-alert",
         device_id="sender",
         event_type="statusMessage",
         payload={"message": "emergencyStop", "label": "Emergency stop"},
     )
 
-    assert synchronize(client, ride_id=ride_id, secret=SECRET, events=[alert]).status_code == 200
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[alert]).status_code == 200
 
     assert counter.event_decryptions == 0
     assert provider.tokens == ["fcm-token-lead-123456789"]
 
 
-def test_existing_ride_backfills_membership_projection_only_once(
+def test_existing_voyage_backfills_membership_projection_only_once(
     client,
     synchronize,
     make_event,
 ) -> None:
-    ride_id = "ride-push-projection-upgrade"
+    voyage_id = "voyage-push-projection-upgrade"
     joined = [
         make_event(
-            ride_id,
+            voyage_id,
             "joined-lead",
             device_id="lead",
-            event_type="riderJoined",
+            event_type="sailorJoined",
             payload={"displayName": "Lead", "role": "lead"},
         ),
         make_event(
-            ride_id,
+            voyage_id,
             "joined-sender",
             device_id="sender",
-            event_type="riderJoined",
-            payload={"displayName": "Sender", "role": "rider"},
+            event_type="sailorJoined",
+            payload={"displayName": "Sender", "role": "sailor"},
         ),
     ]
-    assert synchronize(client, ride_id=ride_id, secret=SECRET, events=joined).status_code == 200
-    assert _register(client, ride_id, "lead", role="lead").status_code == 200
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=joined).status_code == 200
+    assert _register(client, voyage_id, "lead", role="lead").status_code == 200
     with client.app.state.session_factory() as session, session.begin():
-        ride = session.get(Ride, ride_id)
-        assert ride is not None
-        ride.membership_projection_ready = False
-        session.execute(delete(RideMember).where(RideMember.ride_id == ride_id))
+        voyage = session.get(Voyage, voyage_id)
+        assert voyage is not None
+        voyage.membership_projection_ready = False
+        session.execute(delete(VoyageMember).where(VoyageMember.voyage_id == voyage_id))
 
     provider = _RecordingProvider()
     counter = _EventDecryptCounter(client.app.state.push_dispatcher._cipher)
     client.app.state.push_dispatcher._providers["fcm"] = provider
     client.app.state.push_dispatcher._cipher = counter
     first = make_event(
-        ride_id,
+        voyage_id,
         "upgrade-alert-1",
         device_id="sender",
         event_type="statusMessage",
         payload={"message": "emergencyStop"},
     )
     second = make_event(
-        ride_id,
+        voyage_id,
         "upgrade-alert-2",
         device_id="sender",
         event_type="statusMessage",
         payload={"message": "emergencyStop"},
     )
 
-    assert synchronize(client, ride_id=ride_id, secret=SECRET, events=[first]).status_code == 200
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[first]).status_code == 200
     after_backfill = counter.event_decryptions
     assert after_backfill == 3
-    assert synchronize(client, ride_id=ride_id, secret=SECRET, events=[second]).status_code == 200
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[second]).status_code == 200
     assert counter.event_decryptions == after_backfill
     with client.app.state.session_factory() as session:
-        ride = session.get(Ride, ride_id)
-        assert ride is not None and ride.membership_projection_ready
+        voyage = session.get(Voyage, voyage_id)
+        assert voyage is not None and voyage.membership_projection_ready
         assert (
             session.scalar(
-                select(func.count(RideMember.device_id)).where(RideMember.ride_id == ride_id)
+                select(func.count(VoyageMember.device_id)).where(VoyageMember.voyage_id == voyage_id)
             )
             == 2
         )
 
 
-def test_nested_off_course_alert_targets_coordinators_and_affected_rider(
+def test_nested_off_course_alert_targets_coordinators_and_affected_sailor(
     client,
     synchronize,
     make_event,
 ) -> None:
-    ride_id = "ride-push-off-course"
+    voyage_id = "voyage-push-off-course"
     joined = [
         make_event(
-            ride_id,
-            f"joined-{rider_id}",
-            device_id=rider_id,
-            event_type="riderJoined",
-            payload={"displayName": rider_id, "role": role},
+            voyage_id,
+            f"joined-{sailor_id}",
+            device_id=sailor_id,
+            event_type="sailorJoined",
+            payload={"displayName": sailor_id, "role": role},
         )
-        for rider_id, role in [
-            ("observer", "rider"),
-            ("affected", "rider"),
+        for sailor_id, role in [
+            ("observer", "sailor"),
+            ("affected", "sailor"),
             ("lead", "lead"),
-            ("tec", "tailEndCharlie"),
+            ("sweeper", "sweeper"),
         ]
     ]
-    assert synchronize(client, ride_id=ride_id, secret=SECRET, events=joined).status_code == 200
-    for rider_id, role in [
-        ("observer", "rider"),
-        ("affected", "rider"),
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=joined).status_code == 200
+    for sailor_id, role in [
+        ("observer", "sailor"),
+        ("affected", "sailor"),
         ("lead", "lead"),
-        ("tec", "tailEndCharlie"),
+        ("sweeper", "sweeper"),
     ]:
-        assert _register(client, ride_id, rider_id, role=role).status_code == 200
+        assert _register(client, voyage_id, sailor_id, role=role).status_code == 200
     provider = _RecordingProvider()
     client.app.state.push_dispatcher._providers["fcm"] = provider
 
     alert = make_event(
-        ride_id,
+        voyage_id,
         "off-course-alert",
         device_id="observer",
         event_type="routeDeviationChanged",
         payload={
             "alert": {
-                "riderId": "affected",
-                "displayName": "Affected rider",
+                "sailorId": "affected",
+                "displayName": "Affected sailor",
                 "assessment": {
                     "state": "offRoute",
                     "alertLevel": "urgent",
@@ -369,12 +369,12 @@ def test_nested_off_course_alert_targets_coordinators_and_affected_rider(
             }
         },
     )
-    assert synchronize(client, ride_id=ride_id, secret=SECRET, events=[alert]).status_code == 200
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[alert]).status_code == 200
 
     assert set(provider.tokens) == {
         "fcm-token-affected-123456789",
         "fcm-token-lead-123456789",
-        "fcm-token-tec-123456789",
+        "fcm-token-sweeper-123456789",
     }
 
 
@@ -383,28 +383,28 @@ def test_preferences_filter_noncritical_but_not_critical_safety(
     synchronize,
     make_event,
 ) -> None:
-    ride_id = "ride-push-preferences"
+    voyage_id = "voyage-push-preferences"
     events = [
         make_event(
-            ride_id,
+            voyage_id,
             "joined-lead",
             device_id="lead",
-            event_type="riderJoined",
+            event_type="sailorJoined",
             payload={"displayName": "Lead", "role": "lead"},
         ),
         make_event(
-            ride_id,
-            "joined-rider",
-            device_id="rider",
-            event_type="riderJoined",
-            payload={"displayName": "Rider", "role": "rider"},
+            voyage_id,
+            "joined-sailor",
+            device_id="sailor",
+            event_type="sailorJoined",
+            payload={"displayName": "Sailor", "role": "sailor"},
         ),
     ]
-    assert synchronize(client, ride_id=ride_id, secret=SECRET, events=events).status_code == 200
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=events).status_code == 200
     assert (
         _register(
             client,
-            ride_id,
+            voyage_id,
             "lead",
             role="lead",
             preferences={
@@ -419,21 +419,21 @@ def test_preferences_filter_noncritical_but_not_critical_safety(
     client.app.state.push_dispatcher._providers["fcm"] = provider
 
     noncritical = make_event(
-        ride_id,
+        voyage_id,
         "mechanical",
-        device_id="rider",
+        device_id="sailor",
         event_type="statusMessage",
         payload={"message": "mechanical"},
     )
     critical = make_event(
-        ride_id,
+        voyage_id,
         "sos",
-        device_id="rider",
+        device_id="sailor",
         event_type="statusMessage",
         payload={"message": "emergencyStop"},
     )
-    synchronize(client, ride_id=ride_id, secret=SECRET, events=[noncritical])
-    synchronize(client, ride_id=ride_id, secret=SECRET, events=[critical])
+    synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[noncritical])
+    synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[critical])
 
     assert [message.event_id for message in provider.messages] == ["sos"]
 
@@ -443,38 +443,38 @@ def test_permanently_invalid_provider_token_is_revoked(
     synchronize,
     make_event,
 ) -> None:
-    ride_id = "ride-push-invalid-token"
+    voyage_id = "voyage-push-invalid-token"
     joined = [
         make_event(
-            ride_id,
+            voyage_id,
             "joined-lead",
             device_id="lead",
-            event_type="riderJoined",
+            event_type="sailorJoined",
             payload={"displayName": "Lead", "role": "lead"},
         ),
         make_event(
-            ride_id,
-            "joined-rider",
-            device_id="rider",
-            event_type="riderJoined",
-            payload={"displayName": "Rider", "role": "rider"},
+            voyage_id,
+            "joined-sailor",
+            device_id="sailor",
+            event_type="sailorJoined",
+            payload={"displayName": "Sailor", "role": "sailor"},
         ),
     ]
-    synchronize(client, ride_id=ride_id, secret=SECRET, events=joined)
-    _register(client, ride_id, "lead", role="lead")
+    synchronize(client, voyage_id=voyage_id, secret=SECRET, events=joined)
+    _register(client, voyage_id, "lead", role="lead")
     client.app.state.push_dispatcher._providers["fcm"] = _RecordingProvider(
         permanently_invalid=True
     )
 
     synchronize(
         client,
-        ride_id=ride_id,
+        voyage_id=voyage_id,
         secret=SECRET,
         events=[
             make_event(
-                ride_id,
+                voyage_id,
                 "alert-invalid",
-                device_id="rider",
+                device_id="sailor",
                 event_type="statusMessage",
                 payload={"message": "emergencyStop"},
             )

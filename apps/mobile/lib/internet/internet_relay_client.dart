@@ -6,9 +6,9 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-import '../domain/ride_event.dart';
-import '../domain/rider_location.dart';
-import '../domain/ride_session.dart';
+import '../domain/voyage_event.dart';
+import '../domain/sailor_location.dart';
+import '../domain/voyage_session.dart';
 import '../relay/relay_event_compatibility.dart';
 
 class InternetRelayConfiguration {
@@ -56,12 +56,12 @@ class InternetRelayConfiguration {
 }
 
 abstract final class RelayProtocolCapabilities {
-  static const rideStart = 'ride-start-v1';
+  static const voyageStart = 'voyage-start-v1';
   static const membership = 'membership-v1';
   static const preStartPresence = 'pre-start-presence-v1';
 
   /// Presence that spans the pre-start and started phases and reports a
-  /// cursor-independent ride roster. Supersedes [preStartPresence]; both are
+  /// cursor-independent voyage roster. Supersedes [preStartPresence]; both are
   /// advertised so an older relay keeps working.
   static const livePresence = 'live-presence-v2';
   static const routeRevisions = 'route-revisions-v1';
@@ -70,29 +70,29 @@ abstract final class RelayProtocolCapabilities {
   static const trafficIncidents = 'traffic-incidents-v1';
   static const trafficReroutes = 'traffic-reroutes-v1';
 
-  /// The leader asking a named rider to take the Sweeper role, and
-  /// that rider's answer (issue #128 part 1).
-  static const tecRoleAssignment = 'tec-role-assignment-v1';
+  /// The skipper asking a named sailor to take the Sweeper role, and
+  /// that sailor's answer (issue #128 part 1).
+  static const sweeperRoleAssignment = 'sweeper-role-assignment-v1';
 
-  /// A separated rider's advisory rejoin route, relayed to the ride leader only
+  /// A separated sailor's advisory rejoin route, relayed to the voyage skipper only
   /// (issue #128 part 2).
   static const rejoinRouteSharing = 'rejoin-route-sharing-v1';
 
-  /// A rider's own phone number, addressed to the ride's coordination roles
-  /// (issue #188). Named so a client can say "the ride service cannot carry
+  /// A sailor's own phone number, addressed to the voyage's coordination roles
+  /// (issue #188). Named so a client can say "the voyage service cannot carry
   /// this" instead of appearing to have shared a number that went nowhere.
-  static const riderContactSharing = 'rider-contact-sharing-v1';
+  static const sailorContactSharing = 'sailor-contact-sharing-v1';
 
-  /// The leader un-ending a ride that ended by mistake (#206, #207).
+  /// The skipper un-ending a voyage that ended by mistake (#206, #207).
   ///
   /// Named so a client can refuse to offer the action rather than record a
-  /// reopen that never leaves the phone: a leader back on the map while every
-  /// other rider still sees a finished ride is worse than being told it cannot
+  /// reopen that never leaves the phone: a skipper back on the map while every
+  /// other sailor still sees a finished voyage is worse than being told it cannot
   /// be done.
-  static const rideReopen = 'ride-reopen-v1';
+  static const voyageReopen = 'voyage-reopen-v1';
 
   static const current = {
-    rideStart,
+    voyageStart,
     membership,
     preStartPresence,
     livePresence,
@@ -101,10 +101,10 @@ abstract final class RelayProtocolCapabilities {
     observerAccess,
     trafficIncidents,
     trafficReroutes,
-    tecRoleAssignment,
+    sweeperRoleAssignment,
     rejoinRouteSharing,
-    riderContactSharing,
-    rideReopen,
+    sailorContactSharing,
+    voyageReopen,
   };
 }
 
@@ -245,11 +245,11 @@ class InternetSyncResult {
 
   final String cursor;
   final Set<String> acceptedEventIds;
-  final List<RideEvent> events;
+  final List<VoyageEvent> events;
 
   /// Events in the batch this build does not understand. They are skipped, the
   /// cursor still advances past them, and the rest of the batch is delivered:
-  /// one future event type must never stall the whole ride.
+  /// one future event type must never stall the whole voyage.
   final int ignoredEventCount;
 
   /// The sanitised type names that were skipped, for a named diagnostic. Only
@@ -284,9 +284,9 @@ abstract interface class InternetRelayApi {
   InternetRelayConfiguration get configuration;
 
   Future<InternetSyncResult> synchronize({
-    required RideSession session,
+    required VoyageSession session,
     required String? cursor,
-    required List<RideEvent> events,
+    required List<VoyageEvent> events,
   });
 
   void close();
@@ -296,26 +296,26 @@ abstract interface class PreStartPresenceApi {
   InternetRelayConfiguration get configuration;
 
   Future<PreStartPresenceResult> synchronizePreStartPresence({
-    required RideSession session,
-    required RiderLocation? position,
+    required VoyageSession session,
+    required SailorLocation? position,
     required bool clear,
   });
 
   void close();
 }
 
-/// The ride phase the presence channel reports, so the client never has to
+/// The voyage phase the presence channel reports, so the client never has to
 /// infer continuity from its own journal cursor.
-enum RidePresencePhase { open, started, ended, unknown }
+enum VoyagePresencePhase { open, started, ended, unknown }
 
-/// One rider the presence channel says is in the ride.
+/// One sailor the presence channel says is in the voyage.
 ///
 /// Derived by the relay from durable membership events without consulting the
 /// caller's cursor, so a wedged or backed-off batch sync cannot hide a
 /// participant.
 class PresenceRosterEntry {
   const PresenceRosterEntry({
-    required this.riderId,
+    required this.sailorId,
     required this.displayName,
     required this.role,
     required this.joinedAt,
@@ -323,7 +323,7 @@ class PresenceRosterEntry {
     this.leftAt,
   });
 
-  final String riderId;
+  final String sailorId;
   final String displayName;
   final String role;
   final DateTime joinedAt;
@@ -338,15 +338,15 @@ class PreStartPresenceResult {
   const PreStartPresenceResult({
     required this.locations,
     required this.ttl,
-    this.phase = RidePresencePhase.unknown,
+    this.phase = VoyagePresencePhase.unknown,
     this.roster = const [],
-    this.legacyPeerRiderIds = const {},
+    this.legacyPeerSailorIds = const {},
     this.livePresenceServed = false,
     this.serverTime,
     this.unreadablePositionCount = 0,
   });
 
-  final List<RiderLocation> locations;
+  final List<SailorLocation> locations;
   final Duration ttl;
 
   /// The relay's own clock at the moment it built this reply, when it reports
@@ -356,53 +356,53 @@ class PreStartPresenceResult {
 
   /// Positions in the reply this build could not decode. They are skipped
   /// individually: one unreadable position must never discard the whole reply,
-  /// which is how a single bad row used to hide every rider at once.
+  /// which is how a single bad row used to hide every sailor at once.
   final int unreadablePositionCount;
 
-  /// The phase the relay reports for this ride.
-  final RidePresencePhase phase;
+  /// The phase the relay reports for this voyage.
+  final VoyagePresencePhase phase;
 
-  /// Riders the relay knows about, independent of the event batch.
+  /// Sailors the relay knows about, independent of the event batch.
   final List<PresenceRosterEntry> roster;
 
-  /// Riders whose presence was published by a build without live-presence
-  /// support, so their position will stop once the ride starts.
-  final Set<String> legacyPeerRiderIds;
+  /// Sailors whose presence was published by a build without live-presence
+  /// support, so their position will stop once the voyage starts.
+  final Set<String> legacyPeerSailorIds;
 
   /// True when the relay served positions under the live-presence contract
   /// rather than the legacy pre-start-only one.
   final bool livePresenceServed;
 }
 
-/// The short-lived server directory that turns a six-digit ride code into the
-/// ride credentials needed by the authenticated relays.
-abstract interface class RideCodeDirectory {
-  Future<void> register(RideSession session);
+/// The short-lived server directory that turns a six-digit voyage code into the
+/// voyage credentials needed by the authenticated relays.
+abstract interface class VoyageCodeDirectory {
+  Future<void> register(VoyageSession session);
 
-  Future<RideCodeCredentials> resolve(String rideCode, {String? joinToken});
+  Future<VoyageCodeCredentials> resolve(String voyageCode, {String? joinToken});
 
   void close();
 }
 
-class RideCodeCredentials {
-  const RideCodeCredentials({
-    required this.rideId,
-    required this.rideCode,
+class VoyageCodeCredentials {
+  const VoyageCodeCredentials({
+    required this.voyageId,
+    required this.voyageCode,
     required this.inviteSecret,
     required this.joinToken,
   });
 
-  final String rideId;
-  final String rideCode;
+  final String voyageId;
+  final String voyageCode;
   final String inviteSecret;
 
-  /// So a rider who joins can also re-share a fully hardened invite later,
-  /// not just the ride creator.
+  /// So a sailor who joins can also re-share a fully hardened invite later,
+  /// not just the voyage creator.
   final String joinToken;
 }
 
-class RideCodeDirectoryException implements Exception {
-  const RideCodeDirectoryException(
+class VoyageCodeDirectoryException implements Exception {
+  const VoyageCodeDirectoryException(
     this.message, {
     this.codeConflict = false,
     this.retryable = false,
@@ -413,28 +413,28 @@ class RideCodeDirectoryException implements Exception {
   final bool retryable;
 
   @override
-  String toString() => 'RideCodeDirectoryException: $message';
+  String toString() => 'VoyageCodeDirectoryException: $message';
 }
 
-class HttpRideCodeDirectory implements RideCodeDirectory {
-  factory HttpRideCodeDirectory.fromEnvironment() => HttpRideCodeDirectory(
+class HttpVoyageCodeDirectory implements VoyageCodeDirectory {
+  factory HttpVoyageCodeDirectory.fromEnvironment() => HttpVoyageCodeDirectory(
     configuration: InternetRelayConfiguration.fromEnvironment(),
     client: http.Client(),
   );
 
-  factory HttpRideCodeDirectory({
+  factory HttpVoyageCodeDirectory({
     required InternetRelayConfiguration configuration,
     required http.Client client,
     RelayClientDescriptor? clientDescriptor,
     DateTime Function()? clock,
-  }) => HttpRideCodeDirectory._(
+  }) => HttpVoyageCodeDirectory._(
     configuration,
     client,
     clientDescriptor ?? RelayClientDescriptor.current(),
     clock ?? DateTime.now,
   );
 
-  HttpRideCodeDirectory._(
+  HttpVoyageCodeDirectory._(
     this.configuration,
     this._client,
     this._clientDescriptor,
@@ -453,21 +453,21 @@ class HttpRideCodeDirectory implements RideCodeDirectory {
   static const _compatibilityRetryBackoff = Duration(milliseconds: 300);
 
   @override
-  Future<void> register(RideSession session) async {
+  Future<void> register(VoyageSession session) async {
     _validateConfiguration();
     _validateSession(session);
     await _ensureCompatibility();
     final response = await _send(
-      http.Request('PUT', _joinCodeUri(session.rideCode))
+      http.Request('PUT', _joinCodeUri(session.voyageCode))
         ..followRedirects = false
         ..headers.addAll({
           'accept': 'application/json',
-          'authorization': 'Bearer ${_rideBearerToken(session)}',
+          'authorization': 'Bearer ${_voyageBearerToken(session)}',
           'content-type': 'application/json',
           ..._clientDescriptor.headers,
         })
         ..body = jsonEncode({
-          'rideId': session.rideId,
+          'voyageId': session.voyageId,
           'inviteSecret': session.inviteSecret,
           'resolveToken': session.joinToken,
         }),
@@ -477,13 +477,13 @@ class HttpRideCodeDirectory implements RideCodeDirectory {
   }
 
   @override
-  Future<RideCodeCredentials> resolve(
-    String rideCode, {
+  Future<VoyageCodeCredentials> resolve(
+    String voyageCode, {
     String? joinToken,
   }) async {
     _validateConfiguration();
     await _ensureCompatibility();
-    final normalizedCode = _normaliseCode(rideCode);
+    final normalizedCode = _normaliseCode(voyageCode);
     final response = await _send(
       http.Request('GET', _joinCodeUri(normalizedCode))
         ..followRedirects = false
@@ -499,8 +499,8 @@ class HttpRideCodeDirectory implements RideCodeDirectory {
     }
     final contentType = response.headers['content-type']?.toLowerCase();
     if (contentType == null || !contentType.contains('application/json')) {
-      throw const RideCodeDirectoryException(
-        'Ride code service returned an invalid response.',
+      throw const VoyageCodeDirectoryException(
+        'Voyage code service returned an invalid response.',
       );
     }
     try {
@@ -509,13 +509,13 @@ class HttpRideCodeDirectory implements RideCodeDirectory {
         throw const FormatException('Response is not an object.');
       }
       final json = Map<String, Object?>.from(value);
-      final rideId = json['rideId'];
-      final returnedCode = json['rideCode'];
+      final voyageId = json['voyageId'];
+      final returnedCode = json['voyageCode'];
       final secret = json['inviteSecret'];
       final returnedJoinToken = json['resolveToken'];
-      if (rideId is! String ||
-          rideId.isEmpty ||
-          rideId.length > 128 ||
+      if (voyageId is! String ||
+          voyageId.isEmpty ||
+          voyageId.length > 128 ||
           returnedCode is! String ||
           returnedCode != normalizedCode ||
           secret is! String ||
@@ -526,17 +526,17 @@ class HttpRideCodeDirectory implements RideCodeDirectory {
           returnedJoinToken.length > 128) {
         throw const FormatException('Response fields are invalid.');
       }
-      return RideCodeCredentials(
-        rideId: rideId,
-        rideCode: returnedCode,
+      return VoyageCodeCredentials(
+        voyageId: voyageId,
+        voyageCode: returnedCode,
         inviteSecret: secret,
         joinToken: returnedJoinToken,
       );
     } on Object {
       // Deliberately not interpolated: a transport or TLS error message can
       // carry the relay hostname and port.
-      throw const RideCodeDirectoryException(
-        'Ride code service returned an invalid response.',
+      throw const VoyageCodeDirectoryException(
+        'Voyage code service returned an invalid response.',
       );
     }
   }
@@ -545,13 +545,13 @@ class HttpRideCodeDirectory implements RideCodeDirectory {
     try {
       return await _client.send(request).timeout(configuration.headerTimeout);
     } on TimeoutException {
-      throw const RideCodeDirectoryException(
-        'Ride code service timed out. Check your connection and try again.',
+      throw const VoyageCodeDirectoryException(
+        'Voyage code service timed out. Check your connection and try again.',
         retryable: true,
       );
     } on http.ClientException {
-      throw const RideCodeDirectoryException(
-        'Ride code service is temporarily unavailable. Check your connection and try again.',
+      throw const VoyageCodeDirectoryException(
+        'Voyage code service is temporarily unavailable. Check your connection and try again.',
         retryable: true,
       );
     }
@@ -561,8 +561,8 @@ class HttpRideCodeDirectory implements RideCodeDirectory {
   /// a definite answer that the two ends disagree.
   ///
   /// A probe that times out says nothing about compatibility, and it used to be
-  /// fatal: a tester on a working 4G connection could not rejoin her own ride,
-  /// and the sentence she was shown was "Ride service compatibility check timed
+  /// fatal: a tester on a working 4G connection could not rejoin her own voyage,
+  /// and the sentence she was shown was "Voyage service compatibility check timed
   /// out" (#208). Treating silence as incompatible is the wrong default for an
   /// offline-first app — and it is not even the safe one, because
   /// `InternetRelayWorker`'s `updateRequired` phase is what actually stops an
@@ -589,8 +589,9 @@ class HttpRideCodeDirectory implements RideCodeDirectory {
         }
         // A real disagreement about the protocol. Updating the app is the only
         // way through it, so saying so now beats a confusing failure later.
-        throw RideCodeDirectoryException(
-          result.message ?? 'This app and the ride service are not compatible.',
+        throw VoyageCodeDirectoryException(
+          result.message ??
+              'This app and the voyage service are not compatible.',
         );
       } on InternetRelayException {
         if (attempt >= _compatibilityProbeAttempts - 1) return;
@@ -602,8 +603,8 @@ class HttpRideCodeDirectory implements RideCodeDirectory {
   Future<Uint8List> _readBoundedResponse(http.StreamedResponse response) async {
     final declaredLength = response.contentLength;
     if (declaredLength != null && declaredLength > 2048) {
-      throw const RideCodeDirectoryException(
-        'Ride code service returned an oversized response.',
+      throw const VoyageCodeDirectoryException(
+        'Voyage code service returned an oversized response.',
       );
     }
     final bytes = BytesBuilder(copy: false);
@@ -612,15 +613,15 @@ class HttpRideCodeDirectory implements RideCodeDirectory {
         configuration.bodyTimeout,
       )) {
         if (bytes.length + chunk.length > 2048) {
-          throw const RideCodeDirectoryException(
-            'Ride code service returned an oversized response.',
+          throw const VoyageCodeDirectoryException(
+            'Voyage code service returned an oversized response.',
           );
         }
         bytes.add(chunk);
       }
     } on TimeoutException {
-      throw const RideCodeDirectoryException(
-        'Ride code service timed out. Check your connection and try again.',
+      throw const VoyageCodeDirectoryException(
+        'Voyage code service timed out. Check your connection and try again.',
         retryable: true,
       );
     }
@@ -630,65 +631,66 @@ class HttpRideCodeDirectory implements RideCodeDirectory {
   void _validateConfiguration() {
     final error = configuration.configurationError;
     if (error != null) {
-      throw const RideCodeDirectoryException(
-        'Joining by ride code needs the Tide and Seek service to be connected.',
+      throw const VoyageCodeDirectoryException(
+        'Joining by voyage code needs the Tide and Seek service to be connected.',
       );
     }
   }
 
-  void _validateSession(RideSession session) {
-    _normaliseCode(session.rideCode);
-    if (session.rideId.isEmpty ||
-        session.rideId.length > 128 ||
+  void _validateSession(VoyageSession session) {
+    _normaliseCode(session.voyageCode);
+    if (session.voyageId.isEmpty ||
+        session.voyageId.length > 128 ||
         session.inviteSecret.length < 16 ||
         session.joinToken.length < 16) {
-      throw const RideCodeDirectoryException(
-        'This ride cannot be shared with a code.',
+      throw const VoyageCodeDirectoryException(
+        'This voyage cannot be shared with a code.',
       );
     }
   }
 
-  RideCodeDirectoryException _directoryFailure(int status) => switch (status) {
-    400 => const RideCodeDirectoryException(
-      'Enter a valid six-digit ride code.',
-    ),
-    404 => const RideCodeDirectoryException(
-      'That ride code is not active. Check it with the ride lead.',
-    ),
-    409 => const RideCodeDirectoryException(
-      'That ride code is already in use. A new code will be chosen.',
-      codeConflict: true,
-    ),
-    429 => const RideCodeDirectoryException(
-      'Too many ride-code attempts. Please wait a moment and try again.',
-      retryable: true,
-    ),
-    401 || 403 => const RideCodeDirectoryException(
-      'Ride code service rejected this ride.',
-    ),
-    _ => RideCodeDirectoryException(
-      'Ride code service returned HTTP $status.',
-      retryable: status >= 500,
-    ),
-  };
+  VoyageCodeDirectoryException _directoryFailure(int status) =>
+      switch (status) {
+        400 => const VoyageCodeDirectoryException(
+          'Enter a valid six-digit voyage code.',
+        ),
+        404 => const VoyageCodeDirectoryException(
+          'That voyage code is not active. Check it with the voyage lead.',
+        ),
+        409 => const VoyageCodeDirectoryException(
+          'That voyage code is already in use. A new code will be chosen.',
+          codeConflict: true,
+        ),
+        429 => const VoyageCodeDirectoryException(
+          'Too many voyage-code attempts. Please wait a moment and try again.',
+          retryable: true,
+        ),
+        401 || 403 => const VoyageCodeDirectoryException(
+          'Voyage code service rejected this voyage.',
+        ),
+        _ => VoyageCodeDirectoryException(
+          'Voyage code service returned HTTP $status.',
+          retryable: status >= 500,
+        ),
+      };
 
   String _normaliseCode(String value) {
     final code = value.trim();
     if (!RegExp(r'^\d{6}$').hasMatch(code)) {
-      throw const RideCodeDirectoryException(
-        'Enter a valid six-digit ride code.',
+      throw const VoyageCodeDirectoryException(
+        'Enter a valid six-digit voyage code.',
       );
     }
     return code;
   }
 
-  Uri _joinCodeUri(String rideCode) {
+  Uri _joinCodeUri(String voyageCode) {
     final base = configuration.baseUri!;
     final baseText = base.toString().endsWith('/')
         ? base.toString().substring(0, base.toString().length - 1)
         : base.toString();
     return Uri.parse(
-      '$baseText/v1/join-codes/${Uri.encodeComponent(rideCode)}',
+      '$baseText/v1/join-codes/${Uri.encodeComponent(voyageCode)}',
     );
   }
 
@@ -739,9 +741,9 @@ class HttpInternetRelayClient
 
   @override
   Future<InternetSyncResult> synchronize({
-    required RideSession session,
+    required VoyageSession session,
     required String? cursor,
-    required List<RideEvent> events,
+    required List<VoyageEvent> events,
   }) async {
     final configurationError = configuration.configurationError;
     if (configurationError != null) {
@@ -749,14 +751,16 @@ class HttpInternetRelayClient
     }
     if (session.inviteSecret.length < 16) {
       throw const InternetRelayException(
-        'Internet relay requires an authenticated ride invitation.',
+        'Internet relay requires an authenticated voyage invitation.',
       );
     }
-    if (session.rideId.isEmpty ||
-        session.rideId.length > 128 ||
-        session.localRiderId.isEmpty ||
-        session.localRiderId.length > 128) {
-      throw const InternetRelayException('Ride or device identity is invalid.');
+    if (session.voyageId.isEmpty ||
+        session.voyageId.length > 128 ||
+        session.localSailorId.isEmpty ||
+        session.localSailorId.length > 128) {
+      throw const InternetRelayException(
+        'Voyage or device identity is invalid.',
+      );
     }
     if (events.length > configuration.maximumUploadEvents) {
       throw const InternetRelayException('Upload event limit exceeded.');
@@ -765,7 +769,7 @@ class HttpInternetRelayClient
       throw const InternetRelayException('Stored cursor is invalid.');
     }
     for (final event in events) {
-      _validateEventForRide(event, session.rideId);
+      _validateEventForVoyage(event, session.voyageId);
       if (utf8.encode(jsonEncode(event.toJson())).length >
           configuration.maximumEventBytes) {
         throw InternetRelayException(
@@ -777,7 +781,7 @@ class HttpInternetRelayClient
     final bodyBytes = utf8.encode(
       jsonEncode({
         'protocolVersion': 1,
-        'deviceId': session.localRiderId,
+        'deviceId': session.localSailorId,
         'cursor': cursor,
         'events': events.map((event) => event.toJson()).toList(growable: false),
       }),
@@ -788,14 +792,14 @@ class HttpInternetRelayClient
       );
     }
 
-    final request = http.Request('POST', _syncUri(session.rideId))
+    final request = http.Request('POST', _syncUri(session.voyageId))
       ..followRedirects = false
       ..headers.addAll({
         'accept': 'application/json',
-        'authorization': 'Bearer ${_rideBearerToken(session)}',
+        'authorization': 'Bearer ${_voyageBearerToken(session)}',
         'content-type': 'application/json',
         'idempotency-key': _idempotencyKey(bodyBytes),
-        'x-tide-and-seek-device': session.localRiderId,
+        'x-tide-and-seek-device': session.localSailorId,
         ..._clientDescriptor.headers,
       })
       ..bodyBytes = bodyBytes;
@@ -869,7 +873,7 @@ class HttpInternetRelayClient
         }
         return value;
       }).toSet();
-      final remoteEvents = <RideEvent>[];
+      final remoteEvents = <VoyageEvent>[];
       final ignoredTypes = <String>{};
       var ignoredCount = 0;
       for (final value in eventValues) {
@@ -883,15 +887,15 @@ class HttpInternetRelayClient
         }
         // A newer peer's event type, schema version or added field must be
         // skipped, not treated as a corrupt batch. Failing the whole response
-        // would stall the cursor forever and hide every rider.
+        // would stall the cursor forever and hide every sailor.
         final unsupported = describeUnsupportedRelayEvent(raw);
         if (unsupported != null) {
           ignoredCount += 1;
           ignoredTypes.add(unsupported);
           continue;
         }
-        final event = RideEvent.fromJson(raw);
-        _validateEventForRide(event, session.rideId);
+        final event = VoyageEvent.fromJson(raw);
+        _validateEventForVoyage(event, session.voyageId);
         remoteEvents.add(event);
       }
       return InternetSyncResult(
@@ -958,7 +962,7 @@ class HttpInternetRelayClient
     return InternetRelayException(
       serverMessage ??
           (unauthorized
-              ? 'Internet relay rejected this ride credential.'
+              ? 'Internet relay rejected this voyage credential.'
               : 'Internet relay returned HTTP $status.'),
       retryable: retryable,
       unauthorized: unauthorized,
@@ -975,22 +979,22 @@ class HttpInternetRelayClient
     return Duration(seconds: seconds.clamp(0, 300));
   }
 
-  Uri _syncUri(String rideId) {
+  Uri _syncUri(String voyageId) {
     final base = configuration.baseUri!;
     final baseText = base.toString().endsWith('/')
         ? base.toString().substring(0, base.toString().length - 1)
         : base.toString();
     return Uri.parse(
-      '$baseText/v1/rides/${Uri.encodeComponent(rideId)}/events:sync',
+      '$baseText/v1/voyages/${Uri.encodeComponent(voyageId)}/events:sync',
     );
   }
 
   String _idempotencyKey(List<int> bodyBytes) =>
       'rr1-${base64Url.encode(sha256.convert(bodyBytes).bytes).replaceAll('=', '')}';
 
-  void _validateEventForRide(RideEvent event, String rideId) {
+  void _validateEventForVoyage(VoyageEvent event, String voyageId) {
     if (event.schemaVersion != 1 ||
-        event.rideId != rideId ||
+        event.voyageId != voyageId ||
         event.id.isEmpty ||
         event.id.length > 128 ||
         event.deviceId.isEmpty ||
@@ -998,7 +1002,7 @@ class HttpInternetRelayClient
         event.signature.isEmpty ||
         event.signature.length > 256) {
       throw InternetRelayException(
-        'Event ${event.id} is invalid for this ride.',
+        'Event ${event.id} is invalid for this voyage.',
       );
     }
   }
@@ -1036,8 +1040,8 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
 
   @override
   Future<PreStartPresenceResult> synchronizePreStartPresence({
-    required RideSession session,
-    required RiderLocation? position,
+    required VoyageSession session,
+    required SailorLocation? position,
     required bool clear,
   }) async {
     final compatibility = await _fetchCompatibility(
@@ -1054,7 +1058,7 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
     if (!servesLivePresence &&
         !compatibility.supports(RelayProtocolCapabilities.preStartPresence)) {
       throw const InternetRelayException(
-        'This ride service does not support live rider positions yet.',
+        'This voyage service does not support live sailor positions yet.',
         code: 'feature_unsupported',
       );
     }
@@ -1063,33 +1067,33 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
         'A pre-start position cannot be published and cleared together.',
       );
     }
-    if (session.rideId.isEmpty ||
-        session.rideId.length > 128 ||
-        session.localRiderId.isEmpty ||
-        session.localRiderId.length > 128 ||
+    if (session.voyageId.isEmpty ||
+        session.voyageId.length > 128 ||
+        session.localSailorId.isEmpty ||
+        session.localSailorId.length > 128 ||
         session.inviteSecret.length < 16) {
       throw const InternetRelayException(
-        'Ride identity is invalid for pre-start positions.',
+        'Voyage identity is invalid for pre-start positions.',
       );
     }
-    if (position != null && position.riderId != session.localRiderId) {
+    if (position != null && position.sailorId != session.localSailorId) {
       throw const InternetRelayException(
-        'A rider can only publish their own pre-start position.',
+        'A sailor can only publish their own pre-start position.',
       );
     }
     final bodyBytes = utf8.encode(
       jsonEncode({
         'protocolVersion': 1,
-        'deviceId': session.localRiderId,
+        'deviceId': session.localSailorId,
         'position': position == null
             ? null
             : {
                 'displayName': position.displayName,
                 'role': position.role.name,
-                'motorcycleStyle': position.riderSymbol.wireValue(
+                'motorcycleStyle': position.sailorSymbol.wireValue(
                   position.motorcycleStyle,
                 ),
-                'riderColor': position.riderColor.name,
+                'sailorColor': position.sailorColor.name,
                 'sample': position.sample.toJson(),
               },
         'clear': clear,
@@ -1100,13 +1104,13 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
         'Pre-start position request exceeds the size limit.',
       );
     }
-    final request = http.Request('POST', _presenceUri(session.rideId))
+    final request = http.Request('POST', _presenceUri(session.voyageId))
       ..followRedirects = false
       ..headers.addAll({
         'accept': 'application/json',
-        'authorization': 'Bearer ${_rideBearerToken(session)}',
+        'authorization': 'Bearer ${_voyageBearerToken(session)}',
         'content-type': 'application/json',
-        'x-tide-and-seek-device': session.localRiderId,
+        'x-tide-and-seek-device': session.localSailorId,
         ..._clientDescriptor.headers,
       })
       ..bodyBytes = bodyBytes;
@@ -1175,12 +1179,12 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
       final serverTime = DateTime.tryParse(
         decoded['serverTime'] as String? ?? '',
       )?.toLocal();
-      final locations = <RiderLocation>[];
+      final locations = <SailorLocation>[];
       final legacyPeers = <String>{};
       var unreadable = 0;
       for (final value in values) {
         // One unusable position is skipped, never fatal. Discarding the whole
-        // reply took every other rider's position and the roster with it, and a
+        // reply took every other sailor's position and the roster with it, and a
         // device whose clock ran ahead of the relay hit that on every single
         // poll: the relay had already deleted every expired row on its own
         // clock, so the local re-check could only ever be measuring skew.
@@ -1200,11 +1204,11 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
           }
           // Unknown response fields from a newer relay are ignored rather than
           // rejected, so only the fields this build knows are decoded.
-          final location = RiderLocation.fromJson({
+          final location = SailorLocation.fromJson({
             for (final field in _presenceLocationFields)
               if (raw.containsKey(field)) field: raw[field],
           });
-          if (raw['livePresence'] == false) legacyPeers.add(location.riderId);
+          if (raw['livePresence'] == false) legacyPeers.add(location.sailorId);
           locations.add(location);
         } on Object {
           unreadable += 1;
@@ -1215,7 +1219,7 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
         ttl: Duration(seconds: ttlSeconds),
         phase: _presencePhase(decoded['phase']),
         roster: _presenceRoster(decoded['members']),
-        legacyPeerRiderIds: Set.unmodifiable(legacyPeers),
+        legacyPeerSailorIds: Set.unmodifiable(legacyPeers),
         livePresenceServed: servesLivePresence,
         serverTime: serverTime,
         unreadablePositionCount: unreadable,
@@ -1230,23 +1234,23 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
   }
 
   static const _presenceLocationFields = {
-    'riderId',
+    'sailorId',
     'displayName',
     'role',
     'sample',
     'receivedAt',
     'motorcycleStyle',
-    'riderColor',
+    'sailorColor',
   };
 
   /// An absent or unrecognised phase degrades to
-  /// [RidePresencePhase.unknown] rather than failing: an older relay does not
+  /// [VoyagePresencePhase.unknown] rather than failing: an older relay does not
   /// report one, and a newer relay may add one this build has never seen.
-  static RidePresencePhase _presencePhase(Object? value) => switch (value) {
-    'open' => RidePresencePhase.open,
-    'started' => RidePresencePhase.started,
-    'ended' => RidePresencePhase.ended,
-    _ => RidePresencePhase.unknown,
+  static VoyagePresencePhase _presencePhase(Object? value) => switch (value) {
+    'open' => VoyagePresencePhase.open,
+    'started' => VoyagePresencePhase.started,
+    'ended' => VoyagePresencePhase.ended,
+    _ => VoyagePresencePhase.unknown,
   };
 
   static List<PresenceRosterEntry> _presenceRoster(Object? value) {
@@ -1254,13 +1258,13 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
     final entries = <PresenceRosterEntry>[];
     for (final item in value.take(1000)) {
       if (item is! Map) continue;
-      final riderId = item['riderId'];
+      final sailorId = item['sailorId'];
       final displayName = item['displayName'];
       final role = item['role'];
       final joinedAt = DateTime.tryParse(item['joinedAt'] as String? ?? '');
-      if (riderId is! String ||
-          riderId.isEmpty ||
-          riderId.length > 128 ||
+      if (sailorId is! String ||
+          sailorId.isEmpty ||
+          sailorId.length > 128 ||
           displayName is! String ||
           displayName.isEmpty ||
           displayName.length > 80 ||
@@ -1270,7 +1274,7 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
       }
       entries.add(
         PresenceRosterEntry(
-          riderId: riderId,
+          sailorId: sailorId,
           displayName: displayName,
           role: role,
           joinedAt: joinedAt.toLocal(),
@@ -1282,13 +1286,13 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
     return List.unmodifiable(entries);
   }
 
-  Uri _presenceUri(String rideId) {
+  Uri _presenceUri(String voyageId) {
     final base = configuration.baseUri!;
     final baseText = base.toString().endsWith('/')
         ? base.toString().substring(0, base.toString().length - 1)
         : base.toString();
     return Uri.parse(
-      '$baseText/v1/rides/${Uri.encodeComponent(rideId)}/presence:sync',
+      '$baseText/v1/voyages/${Uri.encodeComponent(voyageId)}/presence:sync',
     );
   }
 
@@ -1339,7 +1343,7 @@ Future<RelayCompatibilityResult> _fetchCompatibility({
         capabilities: const {},
         checkedAt: now,
         validUntil: now.add(const Duration(minutes: 5)),
-        message: 'Legacy protocol-1 relay; newer ride features stay local.',
+        message: 'Legacy protocol-1 relay; newer voyage features stay local.',
       );
     }
     final body = bytes.takeBytes();
@@ -1358,7 +1362,7 @@ Future<RelayCompatibilityResult> _fetchCompatibility({
         // Fall through to the bounded status message.
       }
       throw InternetRelayException(
-        message ?? 'Ride service compatibility check failed.',
+        message ?? 'Voyage service compatibility check failed.',
         retryable: response.statusCode == 429 || response.statusCode >= 500,
         statusCode: response.statusCode,
         code: code,
@@ -1400,9 +1404,9 @@ Future<RelayCompatibilityResult> _fetchCompatibility({
         : RelayCompatibilityDisposition.compatible;
     final message = switch (disposition) {
       RelayCompatibilityDisposition.updateRequired =>
-        'Update Tide and Seek before joining or synchronizing this ride.',
+        'Update Tide and Seek before joining or synchronizing this voyage.',
       RelayCompatibilityDisposition.serverUpgradeRequired =>
-        'This app is newer than the configured ride service. Try again after the service is updated.',
+        'This app is newer than the configured voyage service. Try again after the service is updated.',
       _ => null,
     };
     return RelayCompatibilityResult(
@@ -1420,13 +1424,13 @@ Future<RelayCompatibilityResult> _fetchCompatibility({
   } on TimeoutException {
     if (cached != null && now.isBefore(cached.validUntil)) return cached;
     throw const InternetRelayException(
-      'Ride service compatibility check timed out.',
+      'Voyage service compatibility check timed out.',
       retryable: true,
       code: 'temporarily_unavailable',
     );
   } on FormatException {
     throw const InternetRelayException(
-      'The ride service compatibility response could not be read.',
+      'The voyage service compatibility response could not be read.',
     );
   } on Object {
     // A transport or TLS failure message can name the relay host and port, so
@@ -1434,7 +1438,7 @@ Future<RelayCompatibilityResult> _fetchCompatibility({
     // class of failure, not a protocol disagreement.
     if (cached != null && now.isBefore(cached.validUntil)) return cached;
     throw const InternetRelayException(
-      'Ride service is temporarily unavailable. Check your connection and try again.',
+      'Voyage service is temporarily unavailable. Check your connection and try again.',
       retryable: true,
       code: 'temporarily_unavailable',
     );
@@ -1452,10 +1456,10 @@ Uri? _safeUri(Object? value) {
   return uri;
 }
 
-String _rideBearerToken(RideSession session) {
+String _voyageBearerToken(VoyageSession session) {
   final digest = Hmac(
     sha256,
     utf8.encode(session.inviteSecret),
-  ).convert(utf8.encode('ride-relay-internet-token-v1\n${session.rideId}'));
+  ).convert(utf8.encode('ride-relay-internet-token-v1\n${session.voyageId}'));
   return 'rr1_${base64Url.encode(digest.bytes).replaceAll('=', '')}';
 }

@@ -13,7 +13,7 @@ import 'route_trail_style.dart';
 ///
 /// Unlike MapLibre's native platform view, this widget is included by
 /// `RepaintBoundary.toImage`, so the recap PNG contains the same basemap and
-/// route the rider can see on screen (#157).
+/// route the sailor can see on screen (#157).
 class FlutterVectorRoutePreview extends StatefulWidget {
   const FlutterVectorRoutePreview({
     super.key,

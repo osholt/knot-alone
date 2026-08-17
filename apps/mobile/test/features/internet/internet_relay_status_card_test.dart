@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/controllers/internet_relay_controller.dart';
 import 'package:tide_and_seek/data/in_memory_event_store.dart';
-import 'package:tide_and_seek/domain/ride_event.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/voyage_event.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/features/internet/internet_relay_status_card.dart';
 import 'package:tide_and_seek/internet/internet_cursor_store.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
@@ -48,22 +48,22 @@ class _UnconfiguredApi implements InternetRelayApi {
 
   @override
   Future<InternetSyncResult> synchronize({
-    required RideSession session,
+    required VoyageSession session,
     required String? cursor,
-    required List<RideEvent> events,
+    required List<VoyageEvent> events,
   }) => throw StateError('Unconfigured API must not be called.');
 
   @override
   void close() {}
 }
 
-final _session = RideSession(
-  rideId: 'ride-alpha',
-  rideCode: 'ALPHA1',
+final _session = VoyageSession(
+  voyageId: 'voyage-alpha',
+  voyageCode: 'ALPHA1',
   inviteSecret: '0123456789abcdef0123456789abcdef',
   joinToken: 'test-join-token-0123456789',
-  localRiderId: 'local-device',
+  localSailorId: 'local-device',
   displayName: 'Oliver',
-  role: RideRole.rider,
+  role: VoyageRole.sailor,
   joinedAt: DateTime.utc(2026, 7, 16),
 );

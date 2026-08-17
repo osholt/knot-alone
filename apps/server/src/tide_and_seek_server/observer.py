@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from .config import Settings
 from .crypto import DataCipher, base64url, token_hash
-from .models import ObserverGrant, Ride
+from .models import ObserverGrant, Voyage
 from .schemas import CreateObserverGrantRequest, PublishObserverSnapshotRequest
 from .service import RelayServiceError
 
@@ -30,7 +30,7 @@ def create_observer_grant(
     session: Session,
     *,
     settings: Settings,
-    ride_id: str,
+    voyage_id: str,
     bearer_token: str,
     request: CreateObserverGrantRequest,
     now: datetime | None = None,
@@ -39,37 +39,37 @@ def create_observer_grant(
     label = " ".join(request.label.split())
     if not label:
         raise RelayServiceError(400, "Observer label is required")
-    lock_index = int.from_bytes(ride_id.encode()[:8].ljust(8, b"\0")) % len(_CREATE_LOCKS)
+    lock_index = int.from_bytes(voyage_id.encode()[:8].ljust(8, b"\0")) % len(_CREATE_LOCKS)
     with _CREATE_LOCKS[lock_index]:
         with session.begin():
-            ride = _authenticated_ride(
+            voyage = _authenticated_voyage(
                 session,
-                ride_id,
+                voyage_id,
                 bearer_token,
                 lock_for_update=True,
             )
             active_count = (
                 session.scalar(
                     select(func.count(ObserverGrant.id)).where(
-                        ObserverGrant.ride_id == ride_id,
+                        ObserverGrant.voyage_id == voyage_id,
                         ObserverGrant.revoked_at.is_(None),
                         ObserverGrant.expires_at > now,
                     )
                 )
                 or 0
             )
-            if active_count >= settings.maximum_observer_grants_per_ride:
+            if active_count >= settings.maximum_observer_grants_per_voyage:
                 raise RelayServiceError(409, "Active observer limit reached")
             management_token = _new_token("om1")
             publisher_token = _new_token("op1")
             observer_token = _new_token("ro1")
             expires_at = min(
                 now + timedelta(minutes=request.durationMinutes),
-                _as_utc(ride.delete_after),
+                _as_utc(voyage.delete_after),
             )
             grant = ObserverGrant(
                 id=str(uuid.uuid4()),
-                ride_id=ride_id,
+                voyage_id=voyage_id,
                 label=label,
                 scope=request.scope,
                 management_token_hash=token_hash(management_token),
@@ -200,7 +200,7 @@ def publish_observer_snapshot(
         merged = {
             "scope": grant.scope,
             "subjectName": incoming["subjectName"],
-            "rideStatus": current.get("rideStatus", "waiting"),
+            "voyageStatus": current.get("voyageStatus", "waiting"),
             "statusUpdatedAt": current.get("statusUpdatedAt"),
             "position": current.get("position"),
             "participants": current.get("participants", []),
@@ -210,7 +210,7 @@ def publish_observer_snapshot(
         }
         current_status_at = _timestamp(current.get("statusUpdatedAt"))
         if current_status_at is None or request.statusUpdatedAt >= current_status_at:
-            merged["rideStatus"] = incoming["rideStatus"]
+            merged["voyageStatus"] = incoming["voyageStatus"]
             merged["statusUpdatedAt"] = incoming["statusUpdatedAt"]
 
         current_position = current.get("position")
@@ -290,8 +290,8 @@ def observer_snapshot(
                 raise RelayServiceError(500, "Stored observer state is invalid")
             snapshot = value
 
-        scope = grant.scope if grant.scope in {"rider", "group"} else "rider"
-        position = snapshot.get("position") if scope == "rider" else None
+        scope = grant.scope if grant.scope in {"sailor", "group"} else "sailor"
+        position = snapshot.get("position") if scope == "sailor" else None
         recorded_at = _timestamp(position.get("recordedAt")) if isinstance(position, dict) else None
         freshness = "unavailable"
         if recorded_at is not None:
@@ -358,7 +358,7 @@ def observer_snapshot(
             "scope": scope,
             "label": grant.label,
             "subjectName": snapshot.get("subjectName"),
-            "rideStatus": snapshot.get("rideStatus", "waiting"),
+            "voyageStatus": snapshot.get("voyageStatus", "waiting"),
             "statusUpdatedAt": snapshot.get("statusUpdatedAt"),
             "freshness": freshness,
             "serverTime": now,
@@ -374,33 +374,33 @@ def grant_json(grant: ObserverGrant) -> dict[str, Any]:
     return {
         "id": grant.id,
         "label": grant.label,
-        "scope": grant.scope if grant.scope in {"rider", "group"} else "rider",
+        "scope": grant.scope if grant.scope in {"sailor", "group"} else "sailor",
         "createdAt": _as_utc(grant.created_at),
         "expiresAt": _as_utc(grant.expires_at),
         "revokedAt": _as_utc(grant.revoked_at) if grant.revoked_at else None,
     }
 
 
-def _authenticated_ride(
+def _authenticated_voyage(
     session: Session,
-    ride_id: str,
+    voyage_id: str,
     bearer_token: str,
     *,
     lock_for_update: bool = False,
-) -> Ride:
-    if not IDENTIFIER.fullmatch(ride_id):
-        raise RelayServiceError(400, "Ride identity is invalid")
+) -> Voyage:
+    if not IDENTIFIER.fullmatch(voyage_id):
+        raise RelayServiceError(400, "Voyage identity is invalid")
     if not RIDE_TOKEN.fullmatch(bearer_token):
-        raise RelayServiceError(403, "Ride credential rejected")
-    statement = select(Ride).where(Ride.id == ride_id)
+        raise RelayServiceError(403, "Voyage credential rejected")
+    statement = select(Voyage).where(Voyage.id == voyage_id)
     if lock_for_update:
         statement = statement.with_for_update()
-    ride = session.scalar(statement)
-    if ride is None:
-        raise RelayServiceError(404, "Ride is not ready for observer access")
-    if not hmac.compare_digest(ride.token_hash, token_hash(bearer_token)):
-        raise RelayServiceError(403, "Ride credential rejected")
-    return ride
+    voyage = session.scalar(statement)
+    if voyage is None:
+        raise RelayServiceError(404, "Voyage is not ready for observer access")
+    if not hmac.compare_digest(voyage.token_hash, token_hash(bearer_token)):
+        raise RelayServiceError(403, "Voyage credential rejected")
+    return voyage
 
 
 def _authorized_grant(

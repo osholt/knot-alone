@@ -4,22 +4,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/app/tide_and_seek_app.dart';
 import 'package:tide_and_seek/controllers/distance_unit_controller.dart';
-import 'package:tide_and_seek/controllers/completed_rides_controller.dart';
+import 'package:tide_and_seek/controllers/completed_voyages_controller.dart';
 import 'package:tide_and_seek/controllers/map_style_mode_controller.dart';
-import 'package:tide_and_seek/controllers/ride_code_preference_controller.dart';
-import 'package:tide_and_seek/controllers/ride_controller.dart';
-import 'package:tide_and_seek/controllers/rider_profile_controller.dart';
+import 'package:tide_and_seek/controllers/voyage_code_preference_controller.dart';
+import 'package:tide_and_seek/controllers/voyage_controller.dart';
+import 'package:tide_and_seek/controllers/sailor_profile_controller.dart';
 import 'package:tide_and_seek/controllers/shared_route_controller.dart';
 import 'package:tide_and_seek/data/in_memory_event_store.dart';
 import 'package:tide_and_seek/data/in_memory_session_store.dart';
 import 'package:tide_and_seek/domain/distance_unit.dart';
 import 'package:tide_and_seek/domain/map_style_mode.dart';
-import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/domain/completed_voyage_store.dart';
 import 'package:tide_and_seek/domain/recorded_route_store.dart';
-import 'package:tide_and_seek/domain/ride_event.dart';
-import 'package:tide_and_seek/domain/ride_coordination_mode.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/voyage_event.dart';
+import 'package:tide_and_seek/domain/voyage_coordination_mode.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/features/home/home_map_backdrop.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 import 'package:tide_and_seek/internet/plan_directory.dart';
@@ -29,54 +29,57 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   setUpAll(() async {
     SharedPreferences.setMockInitialValues({});
-    _riderProfile = await RiderProfileController.load();
-    await _riderProfile.completeOnboarding(
+    _sailorProfile = await SailorProfileController.load();
+    await _sailorProfile.completeOnboarding(
       displayName: 'Oliver',
-      motorcycleStyle: _riderProfile.motorcycleStyle,
-      riderColor: _riderProfile.riderColor,
+      motorcycleStyle: _sailorProfile.motorcycleStyle,
+      sailorColor: _sailorProfile.sailorColor,
       educationSkipped: false,
-      rideChoice: OnboardingRideChoice.create,
+      voyageChoice: OnboardingVoyageChoice.create,
     );
-    _riderProfile.takePendingRideChoice();
+    _sailorProfile.takePendingVoyageChoice();
     _sharedRoutes = await SharedRouteController.load();
     _mapStyleMode = await MapStyleModeController.load();
-    _rideCodePreference = RideCodePreferenceController.memory();
-    _completedRides = await CompletedRidesController.load(
-      InMemoryCompletedRideStore(),
+    _voyageCodePreference = VoyageCodePreferenceController.memory();
+    _completedVoyages = await CompletedVoyagesController.load(
+      InMemoryCompletedVoyageStore(),
     );
   });
 
-  testWidgets('the app opens on the map, with the ride actions on it (#405)', (
+  testWidgets(
+    'the app opens on the map, with the voyage actions on it (#405)',
+    (tester) async {
+      // It used to open on this form alone, so the one surface that is useful
+      // before any decision has been taken sat behind the decision. The actions
+      // did not move; they stand on the map now.
+      final controller = await _controller();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_app(controller));
+
+      expect(find.byType(HomeMapBackdrop), findsOneWidget);
+      expect(find.text('Create a voyage'), findsOneWidget);
+      expect(find.text('Join a voyage'), findsOneWidget);
+    },
+  );
+
+  testWidgets('home screen exposes the two voyage entry points', (
     tester,
   ) async {
-    // It used to open on this form alone, so the one surface that is useful
-    // before any decision has been taken sat behind the decision. The actions
-    // did not move; they stand on the map now.
-    final controller = await _controller();
-    addTearDown(controller.dispose);
-
-    await tester.pumpWidget(_app(controller));
-
-    expect(find.byType(HomeMapBackdrop), findsOneWidget);
-    expect(find.text('Create a ride'), findsOneWidget);
-    expect(find.text('Join a ride'), findsOneWidget);
-  });
-
-  testWidgets('home screen exposes the two ride entry points', (tester) async {
     final controller = await _controller();
     await tester.pumpWidget(_app(controller));
 
-    expect(find.text('Create a ride'), findsOneWidget);
-    expect(find.text('Join a ride'), findsOneWidget);
+    expect(find.text('Create a voyage'), findsOneWidget);
+    expect(find.text('Join a voyage'), findsOneWidget);
     // The simulator is behind "More" now, and there is no heading or paragraph
     // at all: #426 removed the start panel rather than shrinking it, because
     // "I don't want the start screen at all" leaves no room for a smaller one.
-    expect(find.text('Ready to ride?'), findsNothing);
-    expect(find.text('Try a simulated ride'), findsNothing);
+    expect(find.text('Ready to voyage?'), findsNothing);
+    expect(find.text('Try a simulated voyage'), findsNothing);
 
     await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
-    expect(find.text('Try a simulated ride'), findsOneWidget);
+    expect(find.text('Try a simulated voyage'), findsOneWidget);
 
     controller.dispose();
   });
@@ -91,7 +94,9 @@ void main() {
     await tester.pumpWidget(_app(controller));
 
     final screen = tester.getRect(find.byType(HomeMapBackdrop));
-    final actions = tester.getRect(find.byKey(const Key('home-ride-actions')));
+    final actions = tester.getRect(
+      find.byKey(const Key('home-voyage-actions')),
+    );
 
     expect(
       actions.height,
@@ -106,23 +111,23 @@ void main() {
   });
 
   testWidgets(
-    'a stalled saved-ride journal falls back to an interactive home screen',
+    'a stalled saved-voyage journal falls back to an interactive home screen',
     (tester) async {
       final eventStore = _FirstRestoreBlockingEventStore();
       final sessionStore = InMemorySessionStore();
       await sessionStore.save(
-        RideSession(
-          rideId: 'ride-994954',
-          rideCode: '994954',
+        VoyageSession(
+          voyageId: 'voyage-994954',
+          voyageCode: '994954',
           inviteSecret: '0123456789abcdef',
           joinToken: 'join-token-0123456789',
-          localRiderId: 'rider-android',
+          localSailorId: 'sailor-android',
           displayName: 'Android tester',
-          role: RideRole.rider,
+          role: VoyageRole.sailor,
           joinedAt: DateTime(2026, 7, 28, 9),
         ),
       );
-      final controller = RideController(
+      final controller = VoyageController(
         eventStore,
         sessionStore,
         const _FakeNearbyBridge(),
@@ -138,17 +143,20 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Restoring your ride…'), findsOneWidget);
+      expect(find.text('Restoring your voyage…'), findsOneWidget);
 
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.byKey(const Key('ride-restoration-banner')), findsOneWidget);
-      expect(find.text('Still restoring ride 994954'), findsOneWidget);
+      expect(
+        find.byKey(const Key('voyage-restoration-banner')),
+        findsOneWidget,
+      );
+      expect(find.text('Still restoring voyage 994954'), findsOneWidget);
       expect(find.byTooltip('Settings'), findsOneWidget);
       expect(
         tester
             .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'Create a ride'),
+              find.widgetWithText(FilledButton, 'Create a voyage'),
             )
             .onPressed,
         isNull,
@@ -156,7 +164,7 @@ void main() {
       expect(
         tester
             .widget<OutlinedButton>(
-              find.widgetWithText(OutlinedButton, 'Join a ride'),
+              find.widgetWithText(OutlinedButton, 'Join a voyage'),
             )
             .onPressed,
         isNull,
@@ -165,15 +173,15 @@ void main() {
       eventStore.completeFirstRestore(const []);
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('ride-restoration-banner')), findsNothing);
+      expect(find.byKey(const Key('voyage-restoration-banner')), findsNothing);
       expect(find.text('Navigation map'), findsOneWidget);
-      // ActiveRideShell must project the controller's already-restored events,
+      // ActiveVoyageShell must project the controller's already-restored events,
       // not begin a second full SQLite journal read behind another spinner.
-      expect(eventStore.eventsForRideCalls, 1);
+      expect(eventStore.eventsForVoyageCalls, 1);
     },
   );
 
-  testWidgets('create ride accepts a web-planner route code', (tester) async {
+  testWidgets('create voyage accepts a web-planner route code', (tester) async {
     final controller = await _controller();
     addTearDown(controller.dispose);
     _sharedRoutes.clearPending();
@@ -181,7 +189,7 @@ void main() {
     final plans = _FakePlanDirectory();
 
     await tester.pumpWidget(_app(controller, planDirectory: plans));
-    await tester.tap(find.text('Create a ride'));
+    await tester.tap(find.text('Create a voyage'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('planned-route-code-field')), findsOneWidget);
@@ -191,45 +199,45 @@ void main() {
       'AB12CD34',
     );
     await tester.scrollUntilVisible(
-      find.widgetWithText(FilledButton, 'Create ride'),
+      find.widgetWithText(FilledButton, 'Create voyage'),
       180,
-      scrollable: _rideFormScrollable,
+      scrollable: _voyageFormScrollable,
     );
-    await tester.tap(find.widgetWithText(FilledButton, 'Create ride'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Create voyage'));
     await tester.pumpAndSettle();
 
     expect(plans.requestedCode, 'AB12CD34');
-    expect(find.text('Continue to ride'), findsOneWidget);
+    expect(find.text('Continue to voyage'), findsOneWidget);
 
-    await tester.tap(find.text('Continue to ride'));
+    await tester.tap(find.text('Continue to voyage'));
     expect(_sharedRoutes.pending?.name, 'Peak Loop.gpx');
   });
 
-  testWidgets('a solo ride skips the group share-code step', (tester) async {
+  testWidgets('a solo voyage skips the group share-code step', (tester) async {
     final controller = await _controller();
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(_app(controller));
-    await tester.tap(find.text('Create a ride'));
+    await tester.tap(find.text('Create a voyage'));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('ride-scope-selector')), findsOneWidget);
+    expect(find.byKey(const Key('voyage-scope-selector')), findsOneWidget);
     expect(find.text('Second-bike drop-off'), findsOneWidget);
     expect(find.text('Keep-together group'), findsOneWidget);
 
     await tester.tap(find.text('Solo'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.widgetWithText(FilledButton, 'Create ride'),
+      find.widgetWithText(FilledButton, 'Create voyage'),
       180,
-      scrollable: _rideFormScrollable,
+      scrollable: _voyageFormScrollable,
     );
-    await tester.tap(find.widgetWithText(FilledButton, 'Create ride'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Create voyage'));
     await tester.pumpAndSettle();
 
-    expect(controller.coordinationMode, RideCoordinationMode.solo);
-    expect(find.text('Continue to ride'), findsNothing);
-    expect(find.text('Ready for solo ride'), findsOneWidget);
+    expect(controller.coordinationMode, VoyageCoordinationMode.solo);
+    expect(find.text('Continue to voyage'), findsNothing);
+    expect(find.text('Ready for solo voyage'), findsOneWidget);
   });
 
   testWidgets('a solo pre-start map can switch straight to joining a group', (
@@ -241,15 +249,15 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final controller = await _controller();
     addTearDown(controller.dispose);
-    await controller.createRide(
+    await controller.createVoyage(
       'Oliver',
-      coordinationMode: RideCoordinationMode.solo,
+      coordinationMode: VoyageCoordinationMode.solo,
     );
 
     await tester.pumpWidget(_app(controller));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('start-ride-button')), findsOneWidget);
+    expect(find.byKey(const Key('start-voyage-button')), findsOneWidget);
     expect(
       find.byKey(const Key('join-group-before-start-button')),
       findsOneWidget,
@@ -258,7 +266,7 @@ void main() {
       find.byKey(const Key('join-group-before-start-button')),
     );
     final startButton = tester.getRect(
-      find.byKey(const Key('start-ride-button')),
+      find.byKey(const Key('start-voyage-button')),
     );
     expect(joinButton.top, startButton.top);
     expect(joinButton.right, lessThan(startButton.left));
@@ -266,16 +274,16 @@ void main() {
     await tester.tap(find.byKey(const Key('join-group-before-start-button')));
     await tester.pumpAndSettle();
 
-    expect(controller.hasActiveRide, isFalse);
+    expect(controller.hasActiveVoyage, isFalse);
     expect(find.text('Join your group'), findsOneWidget);
-    expect(find.byKey(const Key('ride-code-field')), findsOneWidget);
+    expect(find.byKey(const Key('voyage-code-field')), findsOneWidget);
     expect(
       find.byKey(const Key('scan-invitation-labelled-button')),
       findsOneWidget,
     );
   });
 
-  testWidgets('join form keeps the active ride code above an iOS keyboard', (
+  testWidgets('join form keeps the active voyage code above an iOS keyboard', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(375, 667);
@@ -287,56 +295,58 @@ void main() {
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(_app(controller));
-    await tester.tap(find.text('Join a ride'));
+    await tester.tap(find.text('Join a voyage'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.byKey(const Key('ride-code-field')),
+      find.byKey(const Key('voyage-code-field')),
       180,
-      scrollable: _rideFormScrollable,
+      scrollable: _voyageFormScrollable,
     );
-    await tester.tap(find.byKey(const Key('ride-code-field')));
+    await tester.tap(find.byKey(const Key('voyage-code-field')));
     tester.view.viewInsets = const FakeViewPadding(bottom: 290);
     await tester.pumpAndSettle();
 
     final keyboardTop = tester.view.physicalSize.height - 290;
     expect(
-      tester.getRect(find.byKey(const Key('ride-code-field'))).bottom,
+      tester.getRect(find.byKey(const Key('voyage-code-field'))).bottom,
       lessThanOrEqualTo(keyboardTop),
     );
     expect(tester.takeException(), isNull);
 
     await tester.scrollUntilVisible(
-      find.widgetWithText(FilledButton, 'Join ride'),
+      find.widgetWithText(FilledButton, 'Join voyage'),
       160,
-      scrollable: _rideFormScrollable,
+      scrollable: _voyageFormScrollable,
     );
-    expect(find.widgetWithText(FilledButton, 'Join ride'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Join voyage'), findsOneWidget);
   });
 
-  testWidgets('join form explains and clears a remembered ride code', (
+  testWidgets('join form explains and clears a remembered voyage code', (
     tester,
   ) async {
     final controller = await _controller();
     addTearDown(controller.dispose);
-    final preference = RideCodePreferenceController.memory(savedCode: '123456');
+    final preference = VoyageCodePreferenceController.memory(
+      savedCode: '123456',
+    );
     addTearDown(preference.dispose);
 
-    await tester.pumpWidget(_app(controller, rideCodePreference: preference));
-    await tester.tap(find.text('Join a ride'));
+    await tester.pumpWidget(_app(controller, voyageCodePreference: preference));
+    await tester.tap(find.text('Join a voyage'));
     await tester.pumpAndSettle();
 
     final codeField = tester.widget<TextField>(
-      find.byKey(const Key('ride-code-field')),
+      find.byKey(const Key('voyage-code-field')),
     );
     expect(codeField.controller?.text, '123456');
     expect(find.text('Saved from your last successful join'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.byKey(const Key('forget-saved-ride-code')),
+      find.byKey(const Key('forget-saved-voyage-code')),
       160,
-      scrollable: _rideFormScrollable,
+      scrollable: _voyageFormScrollable,
     );
-    await tester.tap(find.byKey(const Key('forget-saved-ride-code')));
+    await tester.tap(find.byKey(const Key('forget-saved-voyage-code')));
     await tester.pump();
 
     expect(preference.savedCode, isNull);
@@ -347,77 +357,91 @@ void main() {
   testWidgets('only a successful join replaces the remembered code', (
     tester,
   ) async {
-    final preference = RideCodePreferenceController.memory(savedCode: '111111');
+    final preference = VoyageCodePreferenceController.memory(
+      savedCode: '111111',
+    );
     addTearDown(preference.dispose);
     final controller = await _controller(
-      rideCodeDirectory: const _SuccessfulRideCodeDirectory(),
+      voyageCodeDirectory: const _SuccessfulVoyageCodeDirectory(),
     );
     addTearDown(controller.dispose);
 
-    await tester.pumpWidget(_app(controller, rideCodePreference: preference));
-    await tester.tap(find.text('Join a ride'));
+    await tester.pumpWidget(_app(controller, voyageCodePreference: preference));
+    await tester.tap(find.text('Join a voyage'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('rider-name-field')), 'Oliver');
-    await tester.enterText(find.byKey(const Key('ride-code-field')), '123');
-    await tester.scrollUntilVisible(
-      find.widgetWithText(FilledButton, 'Join ride'),
-      180,
-      scrollable: _rideFormScrollable,
+    await tester.enterText(
+      find.byKey(const Key('sailor-name-field')),
+      'Oliver',
     );
-    await tester.tap(find.widgetWithText(FilledButton, 'Join ride'));
+    await tester.enterText(find.byKey(const Key('voyage-code-field')), '123');
+    await tester.scrollUntilVisible(
+      find.widgetWithText(FilledButton, 'Join voyage'),
+      180,
+      scrollable: _voyageFormScrollable,
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Join voyage'));
     await tester.pumpAndSettle();
     expect(preference.savedCode, '111111');
-    expect(find.text('Enter a valid six-digit ride code.'), findsOneWidget);
+    expect(find.text('Enter a valid six-digit voyage code.'), findsOneWidget);
 
-    await tester.enterText(find.byKey(const Key('ride-code-field')), '222222');
-    await tester.scrollUntilVisible(
-      find.widgetWithText(FilledButton, 'Join ride'),
-      180,
-      scrollable: _rideFormScrollable,
+    await tester.enterText(
+      find.byKey(const Key('voyage-code-field')),
+      '222222',
     );
-    await tester.tap(find.widgetWithText(FilledButton, 'Join ride'));
+    await tester.scrollUntilVisible(
+      find.widgetWithText(FilledButton, 'Join voyage'),
+      180,
+      scrollable: _voyageFormScrollable,
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Join voyage'));
     await tester.pumpAndSettle();
 
     expect(preference.savedCode, '222222');
-    expect(controller.hasActiveRide, isTrue);
+    expect(controller.hasActiveVoyage, isTrue);
   });
 
   // #208: a transient relay failure left a sentence on screen and nothing to
-  // press, so a tester at a coffee stop could not get back into her own ride.
+  // press, so a tester at a coffee stop could not get back into her own voyage.
   testWidgets('a transient join failure offers a retry that works', (
     tester,
   ) async {
-    final directory = _FlakyRideCodeDirectory();
-    final controller = await _controller(rideCodeDirectory: directory);
+    final directory = _FlakyVoyageCodeDirectory();
+    final controller = await _controller(voyageCodeDirectory: directory);
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(_app(controller));
-    await tester.tap(find.text('Join a ride'));
+    await tester.tap(find.text('Join a voyage'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('rider-name-field')), 'Oliver');
+    await tester.enterText(
+      find.byKey(const Key('sailor-name-field')),
+      'Oliver',
+    );
 
     // A local validation failure is not worth retrying unchanged, so it offers
     // no retry.
-    await tester.enterText(find.byKey(const Key('ride-code-field')), '123');
+    await tester.enterText(find.byKey(const Key('voyage-code-field')), '123');
     await _tapJoin(tester);
-    expect(find.text('Enter a valid six-digit ride code.'), findsOneWidget);
-    expect(find.byKey(const Key('retry-ride-submit')), findsNothing);
+    expect(find.text('Enter a valid six-digit voyage code.'), findsOneWidget);
+    expect(find.byKey(const Key('retry-voyage-submit')), findsNothing);
 
-    await tester.enterText(find.byKey(const Key('ride-code-field')), '994954');
+    await tester.enterText(
+      find.byKey(const Key('voyage-code-field')),
+      '994954',
+    );
     await _tapJoin(tester);
 
     expect(find.textContaining('temporarily unavailable'), findsOneWidget);
-    expect(controller.hasActiveRide, isFalse);
+    expect(controller.hasActiveVoyage, isFalse);
 
     await tester.scrollUntilVisible(
-      find.byKey(const Key('retry-ride-submit')),
+      find.byKey(const Key('retry-voyage-submit')),
       180,
-      scrollable: _rideFormScrollable,
+      scrollable: _voyageFormScrollable,
     );
-    await tester.tap(find.byKey(const Key('retry-ride-submit')));
+    await tester.tap(find.byKey(const Key('retry-voyage-submit')));
     await tester.pumpAndSettle();
 
-    expect(controller.hasActiveRide, isTrue);
+    expect(controller.hasActiveVoyage, isTrue);
     expect(directory.attempts, 2);
   });
 
@@ -434,11 +458,11 @@ void main() {
         controller: controller,
         distanceUnits: distanceUnits,
         mapStyleMode: _mapStyleMode,
-        rideCodePreference: _rideCodePreference,
-        riderProfile: _riderProfile,
+        voyageCodePreference: _voyageCodePreference,
+        sailorProfile: _sailorProfile,
         sharedRoutes: _sharedRoutes,
         recordedRoutes: _recordedRoutes,
-        completedRides: _completedRides,
+        completedVoyages: _completedVoyages,
         enableNativeServices: false,
       ),
     );
@@ -456,10 +480,10 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('active ride shows coordination controls', (tester) async {
+  testWidgets('active voyage shows coordination controls', (tester) async {
     final controller = await _controller();
-    await controller.createRide('Oliver');
-    await controller.startRide();
+    await controller.createVoyage('Oliver');
+    await controller.startVoyage();
     await tester.pumpWidget(_app(controller));
     await tester.pumpAndSettle();
 
@@ -473,14 +497,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Oliver'), findsOneWidget);
-    expect(find.text('Ride actions'), findsOneWidget);
+    expect(find.text('Voyage actions'), findsOneWidget);
     expect(find.text('Alerts and reports'), findsOneWidget);
-    expect(find.text('Share ride summary'), findsOneWidget);
-    expect(find.text('Ride roster'), findsWidgets);
+    expect(find.text('Share voyage summary'), findsOneWidget);
+    expect(find.text('Voyage roster'), findsWidgets);
     expect(find.text('Navigation map'), findsNothing);
-    expect(find.text('End ride'), findsNothing);
+    expect(find.text('End voyage'), findsNothing);
 
-    expect(find.byKey(const Key('open-ride-actions')), findsNothing);
+    expect(find.byKey(const Key('open-voyage-actions')), findsNothing);
 
     await tester.scrollUntilVisible(
       find.text('QUICK MESSAGES'),
@@ -506,12 +530,12 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('alerts are a Ride action rather than a primary destination', (
+  testWidgets('alerts are a Voyage action rather than a primary destination', (
     tester,
   ) async {
     final controller = await _controller();
-    await controller.createRide('Oliver');
-    await controller.startRide();
+    await controller.createVoyage('Oliver');
+    await controller.startVoyage();
     addTearDown(controller.dispose);
     await tester.pumpWidget(_app(controller));
     await tester.pumpAndSettle();
@@ -519,7 +543,7 @@ void main() {
     expect(find.text('Alerts'), findsNothing);
     await tester.tap(find.byIcon(Icons.two_wheeler_outlined));
     await tester.pumpAndSettle();
-    final alerts = find.byKey(const Key('ride-actions-alerts'));
+    final alerts = find.byKey(const Key('voyage-actions-alerts'));
     await tester.scrollUntilVisible(
       alerts,
       260,
@@ -533,36 +557,37 @@ void main() {
     expect(find.text('RIDER STATUS'), findsNothing);
   });
 
-  testWidgets('embedded Settings keeps the active ride behind nested editors', (
+  testWidgets(
+    'embedded Settings keeps the active voyage behind nested editors',
+    (tester) async {
+      final controller = await _controller();
+      await controller.createVoyage('Oliver');
+      await controller.startVoyage();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(_app(controller));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.settings_outlined));
+      await tester.pumpAndSettle();
+      expect(find.text('DISTANCE UNITS'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('open-sailor-profile')));
+      await tester.pumpAndSettle();
+      expect(find.text('Sailor profile'), findsOneWidget);
+      Navigator.of(tester.element(find.text('Sailor profile'))).pop();
+      await tester.pumpAndSettle();
+
+      expect(find.text('DISTANCE UNITS'), findsOneWidget);
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(controller.session, isNotNull);
+    },
+  );
+
+  testWidgets('skipper confirms start while pre-start roster stays private', (
     tester,
   ) async {
     final controller = await _controller();
-    await controller.createRide('Oliver');
-    await controller.startRide();
-    addTearDown(controller.dispose);
-    await tester.pumpWidget(_app(controller));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byIcon(Icons.settings_outlined));
-    await tester.pumpAndSettle();
-    expect(find.text('DISTANCE UNITS'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('open-rider-profile')));
-    await tester.pumpAndSettle();
-    expect(find.text('Rider profile'), findsOneWidget);
-    Navigator.of(tester.element(find.text('Rider profile'))).pop();
-    await tester.pumpAndSettle();
-
-    expect(find.text('DISTANCE UNITS'), findsOneWidget);
-    expect(find.byType(NavigationRail), findsOneWidget);
-    expect(controller.session, isNotNull);
-  });
-
-  testWidgets('leader confirms start while pre-start roster stays private', (
-    tester,
-  ) async {
-    final controller = await _controller();
-    await controller.createRide('Oliver');
+    await controller.createVoyage('Oliver');
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(_app(controller));
@@ -576,33 +601,33 @@ void main() {
       find.byKey(const Key('join-group-before-start-button')),
       findsNothing,
     );
-    expect(controller.rideStarted, isFalse);
+    expect(controller.voyageStarted, isFalse);
 
-    await tester.tap(find.byKey(const Key('start-ride-button')));
+    await tester.tap(find.byKey(const Key('start-voyage-button')));
     await tester.pumpAndSettle();
-    expect(find.text('Start this ride?'), findsOneWidget);
+    expect(find.text('Start this voyage?'), findsOneWidget);
     expect(find.textContaining('No route is selected'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('start-without-route-button')));
     await tester.pumpAndSettle();
 
-    // This solo ride has no Sweeper, so the safety warning stands
+    // This solo voyage has no Sweeper, so the safety warning stands
     // between the confirmation and the start. Its own behaviour is covered by
-    // ride_start_tec_warning_test.dart.
-    expect(controller.rideStarted, isFalse);
-    await tester.tap(find.byKey(const Key('start-without-tec-button')));
+    // voyage_start_sweeper_warning_test.dart.
+    expect(controller.voyageStarted, isFalse);
+    await tester.tap(find.byKey(const Key('start-without-sweeper-button')));
     await tester.pumpAndSettle();
 
-    expect(controller.rideStarted, isTrue);
+    expect(controller.voyageStarted, isTrue);
     expect(find.text('Waiting to start'), findsNothing);
     expect(find.text('Navigation map'), findsOneWidget);
   });
 
-  testWidgets('simulated bikes wait for the leader to start the ride', (
+  testWidgets('simulated bikes wait for the skipper to start the voyage', (
     tester,
   ) async {
     final controller = await _controller();
-    await controller.createSimulationRide();
+    await controller.createSimulationVoyage();
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(_app(controller));
@@ -631,9 +656,9 @@ void main() {
       isNull,
     );
 
-    await tester.tap(find.byKey(const Key('start-ride-button')));
+    await tester.tap(find.byKey(const Key('start-voyage-button')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('confirm-start-ride-button')));
+    await tester.tap(find.byKey(const Key('confirm-start-voyage-button')));
     await tester.pump();
     for (
       var attempt = 0;
@@ -643,7 +668,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
 
-    expect(controller.rideStarted, isTrue);
+    expect(controller.voyageStarted, isTrue);
     expect(find.text('RUNNING'), findsOneWidget);
     expect(find.text('Pause'), findsOneWidget);
 
@@ -651,12 +676,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
   });
 
-  testWidgets('the ride navigation bar names its destinations (#306)', (
+  testWidgets('the voyage navigation bar names its destinations (#306)', (
     tester,
   ) async {
     // It was `alwaysHide`, which made the app's primary navigation four
     // unlabelled icons — the thing #306 says no feature may be reachable only
-    // through. The bar is hidden while the rider is moving, so the height the
+    // through. The bar is hidden while the sailor is moving, so the height the
     // labels cost is only ever paid at a standstill.
     //
     // Portrait explicitly: the default test viewport is landscape, where the
@@ -666,14 +691,14 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final controller = await _controller();
-    await controller.createRide('Oliver');
+    await controller.createVoyage('Oliver');
 
     await tester.pumpWidget(_app(controller));
     await tester.pumpAndSettle();
 
     final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
     expect(bar.labelBehavior, NavigationDestinationLabelBehavior.alwaysShow);
-    for (final label in ['Map', 'Ride', 'Settings']) {
+    for (final label in ['Map', 'Voyage', 'Settings']) {
       expect(find.text(label), findsWidgets, reason: label);
     }
 
@@ -683,14 +708,14 @@ void main() {
   });
 
   testWidgets(
-    'active ride moves navigation chrome to a left rail in landscape',
+    'active voyage moves navigation chrome to a left rail in landscape',
     (tester) async {
       tester.view.physicalSize = const Size(844, 390);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final controller = await _controller();
-      await controller.createRide('Oliver');
+      await controller.createVoyage('Oliver');
 
       await tester.pumpWidget(_app(controller));
       await tester.pumpAndSettle();
@@ -702,11 +727,11 @@ void main() {
       );
       final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
       // Named destinations, not four bare icons (#306). The rail is hidden
-      // while the rider is moving, so the width the labels cost is only ever
+      // while the sailor is moving, so the width the labels cost is only ever
       // paid at a standstill.
       expect(rail.minWidth, 72);
       expect(rail.labelType, NavigationRailLabelType.all);
-      for (final label in ['Map', 'Ride', 'Settings']) {
+      for (final label in ['Map', 'Voyage', 'Settings']) {
         expect(find.text(label), findsWidgets, reason: label);
       }
 
@@ -714,154 +739,156 @@ void main() {
     },
   );
 
-  testWidgets('active ride can be left to choose another ride', (tester) async {
+  testWidgets('active voyage can be left to choose another voyage', (
+    tester,
+  ) async {
     final controller = await _controller();
-    await controller.createRide('Oliver');
+    await controller.createVoyage('Oliver');
     await tester.pumpWidget(_app(controller));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.two_wheeler_outlined));
     await tester.pumpAndSettle();
-    final leaveOrEnd = find.byKey(const Key('ride-actions-leave-or-end'));
+    final leaveOrEnd = find.byKey(const Key('voyage-actions-leave-or-end'));
     await tester.ensureVisible(leaveOrEnd);
     await tester.pumpAndSettle();
     await tester.tap(leaveOrEnd);
     await tester.pumpAndSettle();
-    expect(find.text('Leave or end this ride?'), findsOneWidget);
+    expect(find.text('Leave or end this voyage?'), findsOneWidget);
 
     await tester.tap(find.text('Leave only'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Create a ride'), findsOneWidget);
-    expect(find.text('Join a ride'), findsOneWidget);
-    expect(controller.hasActiveRide, isFalse);
+    expect(find.text('Create a voyage'), findsOneWidget);
+    expect(find.text('Join a voyage'), findsOneWidget);
+    expect(controller.hasActiveVoyage, isFalse);
 
     controller.dispose();
   });
 
-  testWidgets('ended ride retains relay recovery until removal', (
+  testWidgets('ended voyage retains relay recovery until removal', (
     tester,
   ) async {
     final controller = await _controller();
-    await controller.createRide('Oliver');
+    await controller.createVoyage('Oliver');
     await tester.pumpWidget(_app(controller));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.two_wheeler_outlined));
     await tester.pumpAndSettle();
-    final leaveOrEnd = find.byKey(const Key('ride-actions-leave-or-end'));
+    final leaveOrEnd = find.byKey(const Key('voyage-actions-leave-or-end'));
     await tester.ensureVisible(leaveOrEnd);
     await tester.pumpAndSettle();
     await tester.tap(leaveOrEnd);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('end-ride-for-everyone')));
+    await tester.tap(find.byKey(const Key('end-voyage-for-everyone')));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'End ride'));
+    await tester.tap(find.widgetWithText(FilledButton, 'End voyage'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ride summary ready'), findsOneWidget);
-    // Renamed in #156: the button files the ride to Previous rides, and the old
+    expect(find.text('Voyage summary ready'), findsOneWidget);
+    // Renamed in #156: the button files the voyage to Previous voyages, and the old
     // label said it was removed from the phone.
-    expect(find.text('Finish and file in Previous rides'), findsOneWidget);
-    expect(controller.rideEnded, isTrue);
-    expect(controller.hasActiveRide, isTrue);
+    expect(find.text('Finish and file in Previous voyages'), findsOneWidget);
+    expect(controller.voyageEnded, isTrue);
+    expect(controller.hasActiveVoyage, isTrue);
 
-    await tester.tap(find.text('Share ride recap image'));
+    await tester.tap(find.text('Share voyage recap image'));
     await tester.pumpAndSettle();
-    expect(find.text('Ride recap'), findsOneWidget);
+    expect(find.text('Voyage recap'), findsOneWidget);
     expect(find.byKey(const Key('share-recap-image-button')), findsOneWidget);
 
     controller.dispose();
   });
 
-  // #207: the ride-ended screen used to be the whole app with no way back, so
-  // the only exit filed the ride and stopped relay recovery.
-  testWidgets('ended ride can be closed and reopened without filing it', (
+  // #207: the voyage-ended screen used to be the whole app with no way back, so
+  // the only exit filed the voyage and stopped relay recovery.
+  testWidgets('ended voyage can be closed and reopened without filing it', (
     tester,
   ) async {
     final controller = await _controller();
-    await controller.createRide('Oliver');
-    await controller.endRide();
+    await controller.createVoyage('Oliver');
+    await controller.endVoyage();
     await tester.pumpWidget(_app(controller));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ride summary ready'), findsOneWidget);
-    final rideCode = controller.session!.rideCode;
+    expect(find.text('Voyage summary ready'), findsOneWidget);
+    final voyageCode = controller.session!.voyageCode;
 
-    await tester.tap(find.byKey(const Key('leave-ended-ride-button')));
+    await tester.tap(find.byKey(const Key('leave-ended-voyage-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Create a ride'), findsOneWidget);
-    expect(find.byKey(const Key('set-aside-ride-banner')), findsOneWidget);
-    expect(find.text('Ride $rideCode has ended'), findsOneWidget);
+    expect(find.text('Create a voyage'), findsOneWidget);
+    expect(find.byKey(const Key('set-aside-voyage-banner')), findsOneWidget);
+    expect(find.text('Voyage $voyageCode has ended'), findsOneWidget);
     // Nothing was given up to get here.
-    expect(controller.hasActiveRide, isTrue);
-    expect(controller.rideEnded, isTrue);
+    expect(controller.hasActiveVoyage, isTrue);
+    expect(controller.voyageEnded, isTrue);
 
-    await tester.tap(find.byKey(const Key('reopen-set-aside-ride')));
+    await tester.tap(find.byKey(const Key('reopen-set-aside-voyage')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ride summary ready'), findsOneWidget);
+    expect(find.text('Voyage summary ready'), findsOneWidget);
 
     // The app-bar close is the other way out, and it behaves the same.
-    await tester.tap(find.byKey(const Key('leave-ended-ride-screen-button')));
+    await tester.tap(find.byKey(const Key('leave-ended-voyage-screen-button')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('set-aside-ride-banner')), findsOneWidget);
+    expect(find.byKey(const Key('set-aside-voyage-banner')), findsOneWidget);
 
     controller.dispose();
   });
 
-  testWidgets('creating after a set-aside ended ride opens the new ride', (
+  testWidgets('creating after a set-aside ended voyage opens the new voyage', (
     tester,
   ) async {
     final controller = await _controller();
     addTearDown(controller.dispose);
-    await controller.createRide('Oliver');
-    final endedRideId = controller.session!.rideId;
-    await controller.endRide();
-    controller.setEndedRideAside();
+    await controller.createVoyage('Oliver');
+    final endedVoyageId = controller.session!.voyageId;
+    await controller.endVoyage();
+    controller.setEndedVoyageAside();
 
     await tester.pumpWidget(_app(controller));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('set-aside-ride-banner')), findsOneWidget);
+    expect(find.byKey(const Key('set-aside-voyage-banner')), findsOneWidget);
 
-    await tester.tap(find.text('Create a ride'));
+    await tester.tap(find.text('Create a voyage'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.widgetWithText(FilledButton, 'Create ride'),
+      find.widgetWithText(FilledButton, 'Create voyage'),
       180,
-      scrollable: _rideFormScrollable,
+      scrollable: _voyageFormScrollable,
     );
-    await tester.tap(find.widgetWithText(FilledButton, 'Create ride'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Create voyage'));
     await tester.pumpAndSettle();
-    expect(find.text('Continue to ride'), findsOneWidget);
+    expect(find.text('Continue to voyage'), findsOneWidget);
 
-    await tester.tap(find.text('Continue to ride'));
+    await tester.tap(find.text('Continue to voyage'));
     await tester.pumpAndSettle();
 
-    expect(controller.session?.rideId, isNot(endedRideId));
-    expect(controller.rideEnded, isFalse);
-    expect(controller.endedRideSetAside, isFalse);
+    expect(controller.session?.voyageId, isNot(endedVoyageId));
+    expect(controller.voyageEnded, isFalse);
+    expect(controller.endedVoyageSetAside, isFalse);
     expect(find.text('Navigation map'), findsOneWidget);
   });
 }
 
-late RiderProfileController _riderProfile;
+late SailorProfileController _sailorProfile;
 late SharedRouteController _sharedRoutes;
 late MapStyleModeController _mapStyleMode;
-late RideCodePreferenceController _rideCodePreference;
-late CompletedRidesController _completedRides;
+late VoyageCodePreferenceController _voyageCodePreference;
+late CompletedVoyagesController _completedVoyages;
 final _recordedRoutes = InMemoryRecordedRouteStore();
-final _rideFormScrollable = find
+final _voyageFormScrollable = find
     .descendant(
-      of: find.byKey(const Key('ride-form-scroll-view')),
+      of: find.byKey(const Key('voyage-form-scroll-view')),
       matching: find.byType(Scrollable),
     )
     .first;
 
 TideAndSeekApp _app(
-  RideController controller, {
-  RideCodePreferenceController? rideCodePreference,
+  VoyageController controller, {
+  VoyageCodePreferenceController? voyageCodePreference,
   PlanDirectory? planDirectory,
   Future<void> Function()? initializeController,
   Duration startupFallbackAfter = const Duration(seconds: 2),
@@ -869,25 +896,25 @@ TideAndSeekApp _app(
   controller: controller,
   distanceUnits: DistanceUnitController.forLocale(const Locale('en', 'GB')),
   mapStyleMode: _mapStyleMode,
-  rideCodePreference: rideCodePreference ?? _rideCodePreference,
-  riderProfile: _riderProfile,
+  voyageCodePreference: voyageCodePreference ?? _voyageCodePreference,
+  sailorProfile: _sailorProfile,
   sharedRoutes: _sharedRoutes,
   recordedRoutes: _recordedRoutes,
-  completedRides: _completedRides,
+  completedVoyages: _completedVoyages,
   planDirectory: planDirectory,
   enableNativeServices: false,
   initializeController: initializeController,
   startupFallbackAfter: startupFallbackAfter,
 );
 
-Future<RideController> _controller({
-  RideCodeDirectory? rideCodeDirectory,
+Future<VoyageController> _controller({
+  VoyageCodeDirectory? voyageCodeDirectory,
 }) async {
-  final controller = RideController(
+  final controller = VoyageController(
     InMemoryEventStore(),
     InMemorySessionStore(),
     const _FakeNearbyBridge(),
-    rideCodeDirectory: rideCodeDirectory,
+    voyageCodeDirectory: voyageCodeDirectory,
   );
   await controller.initialize();
   return controller;
@@ -895,40 +922,40 @@ Future<RideController> _controller({
 
 Future<void> _tapJoin(WidgetTester tester) async {
   await tester.scrollUntilVisible(
-    find.widgetWithText(FilledButton, 'Join ride'),
+    find.widgetWithText(FilledButton, 'Join voyage'),
     180,
-    scrollable: _rideFormScrollable,
+    scrollable: _voyageFormScrollable,
   );
-  await tester.tap(find.widgetWithText(FilledButton, 'Join ride'));
+  await tester.tap(find.widgetWithText(FilledButton, 'Join voyage'));
   await tester.pumpAndSettle();
 }
 
 /// Fails the first resolve the way an unreachable relay does, then succeeds.
-class _FlakyRideCodeDirectory implements RideCodeDirectory {
+class _FlakyVoyageCodeDirectory implements VoyageCodeDirectory {
   int attempts = 0;
 
   @override
   void close() {}
 
   @override
-  Future<void> register(RideSession session) async {}
+  Future<void> register(VoyageSession session) async {}
 
   @override
-  Future<RideCodeCredentials> resolve(
-    String rideCode, {
+  Future<VoyageCodeCredentials> resolve(
+    String voyageCode, {
     String? joinToken,
   }) async {
     attempts += 1;
     if (attempts == 1) {
-      throw const RideCodeDirectoryException(
-        'Ride code service is temporarily unavailable. Check your connection '
+      throw const VoyageCodeDirectoryException(
+        'Voyage code service is temporarily unavailable. Check your connection '
         'and try again.',
         retryable: true,
       );
     }
-    return RideCodeCredentials(
-      rideId: 'ride-$rideCode',
-      rideCode: rideCode,
+    return VoyageCodeCredentials(
+      voyageId: 'voyage-$voyageCode',
+      voyageCode: voyageCode,
       inviteSecret: 'test-invite-secret-0123456789',
       joinToken: 'test-join-token-0123456789',
     );
@@ -936,37 +963,37 @@ class _FlakyRideCodeDirectory implements RideCodeDirectory {
 }
 
 class _FirstRestoreBlockingEventStore extends InMemoryEventStore {
-  final _firstRestore = Completer<List<RideEvent>>();
-  int eventsForRideCalls = 0;
+  final _firstRestore = Completer<List<VoyageEvent>>();
+  int eventsForVoyageCalls = 0;
 
   @override
-  Future<List<RideEvent>> eventsForRide(String rideId) {
-    eventsForRideCalls += 1;
-    if (eventsForRideCalls == 1) return _firstRestore.future;
-    return Completer<List<RideEvent>>().future;
+  Future<List<VoyageEvent>> eventsForVoyage(String voyageId) {
+    eventsForVoyageCalls += 1;
+    if (eventsForVoyageCalls == 1) return _firstRestore.future;
+    return Completer<List<VoyageEvent>>().future;
   }
 
-  void completeFirstRestore(List<RideEvent> events) {
+  void completeFirstRestore(List<VoyageEvent> events) {
     _firstRestore.complete(events);
   }
 }
 
-class _SuccessfulRideCodeDirectory implements RideCodeDirectory {
-  const _SuccessfulRideCodeDirectory();
+class _SuccessfulVoyageCodeDirectory implements VoyageCodeDirectory {
+  const _SuccessfulVoyageCodeDirectory();
 
   @override
   void close() {}
 
   @override
-  Future<void> register(RideSession session) async {}
+  Future<void> register(VoyageSession session) async {}
 
   @override
-  Future<RideCodeCredentials> resolve(
-    String rideCode, {
+  Future<VoyageCodeCredentials> resolve(
+    String voyageCode, {
     String? joinToken,
-  }) async => RideCodeCredentials(
-    rideId: 'ride-$rideCode',
-    rideCode: rideCode,
+  }) async => VoyageCodeCredentials(
+    voyageId: 'voyage-$voyageCode',
+    voyageCode: voyageCode,
     inviteSecret: 'test-invite-secret-0123456789',
     joinToken: 'test-join-token-0123456789',
   );

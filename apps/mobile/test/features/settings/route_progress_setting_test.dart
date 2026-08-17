@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/controllers/distance_unit_controller.dart';
 import 'package:tide_and_seek/controllers/map_style_mode_controller.dart';
-import 'package:tide_and_seek/controllers/rider_profile_controller.dart';
+import 'package:tide_and_seek/controllers/sailor_profile_controller.dart';
 import 'package:tide_and_seek/controllers/route_progress_display_controller.dart';
 import 'package:tide_and_seek/features/settings/unit_settings_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,10 +13,10 @@ void main() {
   testWidgets('settings can hide and restore route progress', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final mapStyle = await MapStyleModeController.load();
-    final riderProfile = await RiderProfileController.load();
+    final sailorProfile = await SailorProfileController.load();
     final routeProgress = RouteProgressDisplayController.inMemory();
     addTearDown(mapStyle.dispose);
-    addTearDown(riderProfile.dispose);
+    addTearDown(sailorProfile.dispose);
     addTearDown(routeProgress.dispose);
 
     await tester.pumpWidget(
@@ -27,7 +27,7 @@ void main() {
               const Locale('en', 'GB'),
             ),
             mapStyleMode: mapStyle,
-            riderProfile: riderProfile,
+            sailorProfile: sailorProfile,
             routeProgressDisplay: routeProgress,
             embedded: true,
           ),

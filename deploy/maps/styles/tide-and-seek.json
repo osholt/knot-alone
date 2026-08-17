@@ -2,9 +2,9 @@
   "version": 8,
   "name": "Tide and Seek observer",
   "metadata": {
-    "tec:purpose": "Observer map. Deliberately low-contrast so rider markers dominate.",
-    "tec:sources": "Vector tiles proxied by the relay under /maps/basemap and /maps/fonts, so an observer's viewport is never disclosed to a third-party CDN.",
-    "tec:templated": "Caddy renders the placeholder calls below per request, so this one file is correct on production, preproduction and localhost. The URLs must come out absolute: MapLibre fetches tiles and glyphs from a worker with no document base, so a relative URL throws 'Failed to parse URL' and draws an empty map with no error at all. Serving this file without the templates directive is therefore a silent breakage - tools/check-observer-basemap.sh checks for it. Note this whole file is a Go template, so any text added here that looks like a template action will fail to parse."
+    "sweeper:purpose": "Observer map. Deliberately low-contrast so sailor markers dominate.",
+    "sweeper:sources": "Vector tiles proxied by the relay under /maps/basemap and /maps/fonts, so an observer's viewport is never disclosed to a third-party CDN.",
+    "sweeper:templated": "Caddy renders the placeholder calls below per request, so this one file is correct on production, preproduction and localhost. The URLs must come out absolute: MapLibre fetches tiles and glyphs from a worker with no document base, so a relative URL throws 'Failed to parse URL' and draws an empty map with no error at all. Serving this file without the templates directive is therefore a silent breakage - tools/check-observer-basemap.sh checks for it. Note this whole file is a Go template, so any text added here that looks like a template action will fail to parse."
   },
   "glyphs": "{{placeholder `http.request.scheme`}}://{{placeholder `http.request.hostport`}}/maps/fonts/{fontstack}/{range}.pbf",
   "sources": {

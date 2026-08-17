@@ -22,10 +22,11 @@ class InMemoryRelayQueue implements RelayQueueStore {
   Future<bool> contains(String eventId) async => _items.containsKey(eventId);
 
   @override
-  Future<int> count(String rideId, {required DateTime now}) async => _items
+  Future<int> count(String voyageId, {required DateTime now}) async => _items
       .values
       .where(
-        (item) => item.event.rideId == rideId && item.expiresAt.isAfter(now),
+        (item) =>
+            item.event.voyageId == voyageId && item.expiresAt.isAfter(now),
       )
       .length;
 
@@ -36,7 +37,7 @@ class InMemoryRelayQueue implements RelayQueueStore {
 
   @override
   Future<List<QueuedRelayEvent>> pendingForPeer(
-    String rideId,
+    String voyageId,
     String peerId, {
     required DateTime now,
     required int limit,
@@ -44,7 +45,7 @@ class InMemoryRelayQueue implements RelayQueueStore {
     final result = _items.values
         .where(
           (item) =>
-              item.event.rideId == rideId &&
+              item.event.voyageId == voyageId &&
               item.expiresAt.isAfter(now) &&
               item.hopCount < maxRelayHops &&
               !item.acknowledgedPeers.contains(peerId),

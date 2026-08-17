@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
-import '../domain/rider_location.dart';
-import '../domain/ride_event.dart';
+import '../domain/sailor_location.dart';
+import '../domain/voyage_event.dart';
 import 'relay_event_compatibility.dart';
 import 'relay_queue.dart';
 import 'relay_presence.dart';
@@ -14,7 +14,7 @@ enum RelayFrameKind { events, acknowledgement, presence }
 class RelayFrame {
   const RelayFrame({
     required this.kind,
-    required this.rideId,
+    required this.voyageId,
     required this.senderId,
     required this.frameId,
     required this.sentAt,
@@ -25,7 +25,7 @@ class RelayFrame {
   });
 
   final RelayFrameKind kind;
-  final String rideId;
+  final String voyageId;
   final String senderId;
   final String frameId;
   final DateTime sentAt;
@@ -101,7 +101,7 @@ class RelayProtocol {
   RelayFrame decode(
     Uint8List bytes, {
     required String secret,
-    required String expectedRideId,
+    required String expectedVoyageId,
     required DateTime now,
   }) {
     _requireSecret(secret);
@@ -128,9 +128,9 @@ class RelayProtocol {
     if (json['version'] != protocolVersion) {
       throw const RelayProtocolException('Unsupported protocol version');
     }
-    final rideId = _boundedString(json['rideId'], 'rideId', 128);
-    if (rideId != expectedRideId) {
-      throw const RelayProtocolException('Frame belongs to another ride');
+    final voyageId = _boundedString(json['voyageId'], 'voyageId', 128);
+    if (voyageId != expectedVoyageId) {
+      throw const RelayProtocolException('Frame belongs to another voyage');
     }
     final senderId = _boundedString(json['senderId'], 'senderId', 128);
     final frameId = _boundedString(json['frameId'], 'frameId', 128);
@@ -160,7 +160,7 @@ class RelayProtocol {
       }
       return RelayFrame(
         kind: kind,
-        rideId: rideId,
+        voyageId: voyageId,
         senderId: senderId,
         frameId: frameId,
         sentAt: sentAt,
@@ -176,14 +176,14 @@ class RelayProtocol {
         throw const RelayProtocolException('Invalid presence body');
       }
       final presence = Map<String, Object?>.from(rawPresence);
-      final riderId = _boundedString(
-        presence['riderId'],
-        'presence riderId',
+      final sailorId = _boundedString(
+        presence['sailorId'],
+        'presence sailorId',
         128,
       );
-      if (riderId != senderId) {
+      if (sailorId != senderId) {
         throw const RelayProtocolException(
-          'Presence rider does not match sender',
+          'Presence sailor does not match sender',
         );
       }
       final expiresAt = _date(presence['expiresAt'], 'presence expiresAt');
@@ -199,19 +199,19 @@ class RelayProtocol {
       if (clear != (rawPosition == null)) {
         throw const RelayProtocolException('Invalid presence payload');
       }
-      RiderLocation? position;
+      SailorLocation? position;
       if (rawPosition != null) {
         if (rawPosition is! Map<Object?, Object?>) {
           throw const RelayProtocolException('Invalid presence position');
         }
         try {
-          position = RiderLocation.fromJson(
+          position = SailorLocation.fromJson(
             Map<String, Object?>.from(rawPosition),
           );
         } on Object {
           throw const RelayProtocolException('Invalid presence position');
         }
-        if (position.riderId != riderId ||
+        if (position.sailorId != sailorId ||
             position.displayName.isEmpty ||
             position.displayName.length > 80 ||
             position.sample.accuracyMeters > 10000 ||
@@ -223,25 +223,25 @@ class RelayProtocol {
             )) {
           throw const RelayProtocolException('Invalid presence position');
         }
-        position = RiderLocation(
-          riderId: position.riderId,
+        position = SailorLocation(
+          sailorId: position.sailorId,
           displayName: position.displayName,
           role: position.role,
           sample: position.sample,
           receivedAt: sentAt.toLocal(),
           motorcycleStyle: position.motorcycleStyle,
-          riderSymbol: position.riderSymbol,
-          riderColor: position.riderColor,
+          sailorSymbol: position.sailorSymbol,
+          sailorColor: position.sailorColor,
         );
       }
       return RelayFrame(
         kind: kind,
-        rideId: rideId,
+        voyageId: voyageId,
         senderId: senderId,
         frameId: frameId,
         sentAt: sentAt,
         presence: RelayPresenceUpdate(
-          riderId: riderId,
+          sailorId: sailorId,
           sentAt: sentAt,
           expiresAt: expiresAt,
           clear: clear,
@@ -277,14 +277,14 @@ class RelayProtocol {
         ignoredEvents += 1;
         continue;
       }
-      final RideEvent event;
+      final VoyageEvent event;
       try {
-        event = RideEvent.fromJson(eventBody);
+        event = VoyageEvent.fromJson(eventBody);
       } on Object {
         throw const RelayProtocolException('Event schema is invalid');
       }
-      if (event.rideId != rideId) {
-        throw const RelayProtocolException('Event ride does not match frame');
+      if (event.voyageId != voyageId) {
+        throw const RelayProtocolException('Event voyage does not match frame');
       }
       final firstSeenAt = _date(queued['firstSeenAt'], 'firstSeenAt');
       final expiresAt = _date(queued['expiresAt'], 'expiresAt');
@@ -309,7 +309,7 @@ class RelayProtocol {
     }
     return RelayFrame(
       kind: kind,
-      rideId: rideId,
+      voyageId: voyageId,
       senderId: senderId,
       frameId: frameId,
       sentAt: sentAt,
@@ -321,7 +321,7 @@ class RelayProtocol {
   Map<String, Object?> _unsignedMap(RelayFrame frame) => {
     'version': protocolVersion,
     'kind': frame.kind.name,
-    'rideId': frame.rideId,
+    'voyageId': frame.voyageId,
     'senderId': frame.senderId,
     'frameId': frame.frameId,
     'sentAt': frame.sentAt.toUtc().toIso8601String(),
@@ -340,7 +340,7 @@ class RelayProtocol {
       'acknowledgedEventIds': frame.acknowledgedEventIds,
     if (frame.kind == RelayFrameKind.presence)
       'presence': {
-        'riderId': frame.presence!.riderId,
+        'sailorId': frame.presence!.sailorId,
         'expiresAt': frame.presence!.expiresAt.toUtc().toIso8601String(),
         'clear': frame.presence!.clear,
         if (frame.presence!.position case final position?)
@@ -353,16 +353,16 @@ class RelayProtocol {
     if (presence == null ||
         frame.events.isNotEmpty ||
         frame.acknowledgedEventIds.isNotEmpty ||
-        presence.riderId != frame.senderId ||
-        presence.riderId.isEmpty ||
-        presence.riderId.length > 128 ||
+        presence.sailorId != frame.senderId ||
+        presence.sailorId.isEmpty ||
+        presence.sailorId.length > 128 ||
         presence.clear != (presence.position == null) ||
         presence.expiresAt.isAfter(
           frame.sentAt.add(const Duration(minutes: 5)),
         ) ||
         !presence.expiresAt.isAfter(frame.sentAt) ||
         (presence.position != null &&
-            presence.position!.riderId != presence.riderId)) {
+            presence.position!.sailorId != presence.sailorId)) {
       throw const RelayProtocolException('Invalid presence update');
     }
   }
@@ -412,7 +412,7 @@ class RelayProtocol {
 
   void _requireSecret(String secret) {
     if (secret.length < 16 || secret.length > 512) {
-      throw const RelayProtocolException('Ride secret is unavailable');
+      throw const RelayProtocolException('Voyage secret is unavailable');
     }
   }
 }

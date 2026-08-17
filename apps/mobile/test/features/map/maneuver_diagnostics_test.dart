@@ -44,7 +44,7 @@ void main() {
     // with the heading on the road *taken*, across two merged steps. The readout
     // was showing the entry manoeuvre's own bearingAfter instead - the pair
     // every other manoeuvre uses - so a captured roundabout could not explain
-    // the instruction the rider saw, which is exactly what the Tennis Court Road
+    // the instruction the sailor saw, which is exactly what the Tennis Court Road
     // and Syston Common reports need it to do.
     test('a roundabout reports the bearings its direction was read from', () {
       final planner = const NavigationGuidancePlanner();
@@ -183,7 +183,7 @@ void main() {
       expect(
         report,
         contains('Geometry reads as: right'),
-        reason: 'and this is what the rider was told instead',
+        reason: 'and this is what the sailor was told instead',
       );
     });
 

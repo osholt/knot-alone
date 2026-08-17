@@ -114,10 +114,10 @@ void main() {
     );
     addTearDown(controller.dispose);
     final route = ImportedRoute(
-      id: 'ride-again',
-      name: 'Ride again',
+      id: 'voyage-again',
+      name: 'Voyage again',
       importedAt: DateTime.utc(2026, 7, 29),
-      sourceFileName: 'previous-ride',
+      sourceFileName: 'previous-voyage',
       paths: const [
         RoutePath(
           kind: RoutePathKind.route,
@@ -132,12 +132,12 @@ void main() {
 
     controller.stagePendingInAppRoute(
       route,
-      reviewNotes: const ['Previous ride plan'],
+      reviewNotes: const ['Previous voyage plan'],
     );
 
     expect(controller.pending, isNull);
     expect(controller.pendingInAppRoute?.route, same(route));
-    expect(controller.pendingInAppRoute?.reviewNotes, ['Previous ride plan']);
+    expect(controller.pendingInAppRoute?.reviewNotes, ['Previous voyage plan']);
     controller.clearPending();
     expect(controller.pendingInAppRoute, isNull);
   });

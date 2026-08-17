@@ -98,7 +98,7 @@ object GroupPipSnapshotStore {
         val label = (value["label"] as? String)?.trim()?.take(40).orEmpty()
         val colourArgb = (value["colourArgb"] as? Number)?.toInt() ?: Color.CYAN
         val kind = (value["kind"] as? String)
-            ?.takeIf { it == "rider" || it == "hazard" }
+            ?.takeIf { it == "sailor" || it == "hazard" }
             ?: "hazard"
         return GroupPipMarker(
             point = point,
@@ -248,7 +248,7 @@ class GroupPipView @JvmOverloads constructor(
         }
         for (marker in snapshot.markers) {
             val (x, y) = project(marker.point)
-            val radius = if (marker.kind == "rider") 8f else 7f
+            val radius = if (marker.kind == "sailor") 8f else 7f
             paint.style = Paint.Style.FILL
             paint.color = marker.colourArgb
             canvas.drawCircle(x, y, radius, paint)

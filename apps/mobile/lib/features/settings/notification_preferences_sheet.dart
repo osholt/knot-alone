@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../../controllers/ride_push_notification_controller.dart';
+import '../../controllers/voyage_push_notification_controller.dart';
 
 class NotificationPreferencesSheet extends StatefulWidget {
   const NotificationPreferencesSheet({super.key, required this.controller});
 
-  final RidePushNotificationController controller;
+  final VoyagePushNotificationController controller;
 
   static Future<void> show(
     BuildContext context,
-    RidePushNotificationController controller,
+    VoyagePushNotificationController controller,
   ) => showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -39,13 +39,13 @@ class _NotificationPreferencesSheetState
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Ride notifications',
+            'Voyage notifications',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 8),
           Text(
             widget.controller.statusMessage ??
-                'Choose which background ride updates this phone receives.',
+                'Choose which background voyage updates this phone receives.',
             style: const TextStyle(color: Color(0xFFABB5C1), height: 1.4),
           ),
           const SizedBox(height: 18),
@@ -66,7 +66,7 @@ class _NotificationPreferencesSheetState
             contentPadding: EdgeInsets.zero,
             value: _status,
             onChanged: (value) => setState(() => _status = value),
-            title: const Text('Ride and marker status'),
+            title: const Text('Voyage and marker status'),
             subtitle: const Text('Resolved, all-passed and marker changes.'),
           ),
           SwitchListTile(
@@ -75,7 +75,7 @@ class _NotificationPreferencesSheetState
             value: _administrative,
             onChanged: (value) => setState(() => _administrative = value),
             title: const Text('Administrative changes'),
-            subtitle: const Text('Ride paused, resumed or ended.'),
+            subtitle: const Text('Voyage paused, resumed or ended.'),
           ),
           const SizedBox(height: 14),
           FilledButton(
@@ -121,7 +121,7 @@ class _NotificationPreferencesSheetState
 class _StatusCard extends StatelessWidget {
   const _StatusCard({required this.controller});
 
-  final RidePushNotificationController controller;
+  final VoyagePushNotificationController controller;
 
   @override
   Widget build(BuildContext context) {

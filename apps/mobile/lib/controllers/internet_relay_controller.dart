@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../domain/ride_event.dart';
-import '../domain/ride_session.dart';
+import '../domain/voyage_event.dart';
+import '../domain/voyage_session.dart';
 import '../internet/internet_relay_worker.dart';
 
 class InternetRelayController extends ChangeNotifier {
@@ -19,18 +19,18 @@ class InternetRelayController extends ChangeNotifier {
   InternetRelayStatus _status;
 
   InternetRelayStatus get status => _status;
-  Stream<RideEvent> get receivedEvents => _worker.receivedEvents;
+  Stream<VoyageEvent> get receivedEvents => _worker.receivedEvents;
 
   /// Whether the negotiated relay contract can carry [capability].
   ///
   /// Null until the first negotiation, so a feature whose whole point is a
   /// relayed event can say "not checked yet" rather than guessing. Used by the
-  /// leader-assigned TEC role and the leader-visible rejoin route (#128) to name
+  /// skipper-assigned TEC role and the skipper-visible rejoin route (#128) to name
   /// the limitation instead of appearing to have worked.
   bool? supportsCapability(String capability) =>
       _worker.supportsCapability(capability);
 
-  Future<void> start(RideSession session) => _worker.start(session);
+  Future<void> start(VoyageSession session) => _worker.start(session);
 
   void wake() => _worker.wake();
 

@@ -2,12 +2,12 @@
 //
 // > My mini map is somewhere in North Wales, with none of us in it.
 //
-// One rider on the Isle of Man, the rest near Bristol, and the mini-map framed
+// One sailor on the Isle of Man, the rest near Bristol, and the mini-map framed
 // open sea between them. The framing was `newLatLngBounds` in a 150 x 104 box and
 // nothing could test it - the mini-map is MapLibre-only, so no widget test
 // touches it. Computing the camera makes it checkable, and these are the checks.
 //
-// The invariant every case shares: **every framed rider is inside the viewport.**
+// The invariant every case shares: **every framed sailor is inside the viewport.**
 
 import 'dart:math' as math;
 
@@ -39,24 +39,24 @@ void main() {
   }
 
   group('the K-Lo edge case', () {
-    // Isle of Man to Bristol: the ride that produced the report.
+    // Isle of Man to Bristol: the voyage that produced the report.
     const isleOfMan = GeoPoint(latitude: 54.1509, longitude: -4.4816);
     const bristol = GeoPoint(latitude: 51.4545, longitude: -2.5879);
     const swindon = GeoPoint(latitude: 51.5558, longitude: -1.7797);
 
-    test('every rider is inside the viewport, 300 km apart', () {
-      const riders = [isleOfMan, bristol, swindon];
+    test('every sailor is inside the viewport, 300 km apart', () {
+      const sailors = [isleOfMan, bristol, swindon];
       final framing = GroupMiniMapFraming.forPoints(
-        riders,
+        sailors,
         width: width,
         height: height,
       );
 
-      for (final rider in riders) {
+      for (final sailor in sailors) {
         expect(
-          isVisible(framing, rider),
+          isVisible(framing, sailor),
           isTrue,
-          reason: 'a mini-map with no rider in view is never correct',
+          reason: 'a mini-map with no sailor in view is never correct',
         );
       }
     });
@@ -85,9 +85,9 @@ void main() {
     });
   });
 
-  group('spreads a rider should be able to tell apart at a glance', () {
+  group('spreads a sailor should be able to tell apart at a glance', () {
     GroupMiniMapFraming framingSpanning(double kilometres) {
-      // Two riders due north-south, so the vertical axis binds.
+      // Two sailors due north-south, so the vertical axis binds.
       const start = GeoPoint(latitude: 51.5, longitude: -2.5);
       final end = GeoPoint(
         latitude: 51.5 + kilometres / 111.32,
@@ -116,7 +116,7 @@ void main() {
       );
     });
 
-    test('every spread still contains both riders', () {
+    test('every spread still contains both sailors', () {
       for (final kilometres in [0.2, 0.8, 6.4, 40.0, 314.0, 900.0]) {
         const start = GeoPoint(latitude: 51.5, longitude: -2.5);
         final end = GeoPoint(
@@ -132,25 +132,25 @@ void main() {
         expect(
           isVisible(framing, start) && isVisible(framing, end),
           isTrue,
-          reason: 'both riders must be framed at a $kilometres km spread',
+          reason: 'both sailors must be framed at a $kilometres km spread',
         );
       }
     });
   });
 
   group('degenerate inputs', () {
-    test('a lone rider gets a street-level view, not a world view', () {
+    test('a lone sailor gets a street-level view, not a world view', () {
       final framing = GroupMiniMapFraming.forPoints(
         const [GeoPoint(latitude: 51.5, longitude: -2.5)],
         width: width,
         height: height,
       );
 
-      expect(framing.zoom, GroupMiniMapFraming.singleRiderZoom);
+      expect(framing.zoom, GroupMiniMapFraming.singleSailorZoom);
       expect(framing.spanMeters, 0);
     });
 
-    test('riders on the same spot do not zoom to infinity', () {
+    test('sailors on the same spot do not zoom to infinity', () {
       final framing = GroupMiniMapFraming.forPoints(
         const [
           GeoPoint(latitude: 51.5, longitude: -2.5),
@@ -193,52 +193,52 @@ void main() {
 
   // The 2 August 2026 report: the caption read "2 RIDERS", the mini-map drew no
   // markers at all, and the scale bar said 200 m. The caption counts the roster
-  // while the framing only receives riders the map can place, so a rider who has
+  // while the framing only receives sailors the map can place, so a sailor who has
   // joined without a first position leaves one point here and two in the caption.
-  group('a rider who has joined but cannot be placed yet', () {
+  group('a sailor who has joined but cannot be placed yet', () {
     const warmley = GeoPoint(latitude: 51.4569, longitude: -2.4735);
-    // Where the other rider turned out to be, about 4 km away.
+    // Where the other sailor turned out to be, about 4 km away.
     const oldlandCommon = GeoPoint(latitude: 51.4372, longitude: -2.4560);
 
-    test('one placeable rider alone still gets the street-level view', () {
+    test('one placeable sailor alone still gets the street-level view', () {
       final framing = GroupMiniMapFraming.forPoints(
         const [warmley],
         width: width,
         height: height,
       );
 
-      expect(framing.zoom, GroupMiniMapFraming.singleRiderZoom);
+      expect(framing.zoom, GroupMiniMapFraming.singleSailorZoom);
     });
 
-    test('one placeable rider in a larger group is framed wider', () {
+    test('one placeable sailor in a larger group is framed wider', () {
       final framing = GroupMiniMapFraming.forPoints(
         const [warmley],
         width: width,
         height: height,
-        awaitingOtherRiders: true,
+        awaitingOtherSailors: true,
       );
 
-      expect(framing.zoom, GroupMiniMapFraming.awaitingOtherRidersZoom);
+      expect(framing.zoom, GroupMiniMapFraming.awaitingOtherSailorsZoom);
       expect(
         framing.zoom,
-        lessThan(GroupMiniMapFraming.singleRiderZoom),
+        lessThan(GroupMiniMapFraming.singleSailorZoom),
         reason:
             'a group that cannot all be drawn must not be framed on one '
-            'rider at street level',
+            'sailor at street level',
       );
     });
 
     test(
-      'the wider view already holds a rider who appears kilometres away',
+      'the wider view already holds a sailor who appears kilometres away',
       () {
         // The point of the wider zoom: the first position to arrive should
-        // usually already be inside the viewport, so the rider becomes visible
+        // usually already be inside the viewport, so the sailor becomes visible
         // even if the refit that would have framed them is late.
         final framing = GroupMiniMapFraming.forPoints(
           const [warmley],
           width: width,
           height: height,
-          awaitingOtherRiders: true,
+          awaitingOtherSailors: true,
         );
 
         expect(isVisible(framing, oldlandCommon), isTrue);
@@ -256,14 +256,14 @@ void main() {
       expect(isVisible(framing, oldlandCommon), isFalse);
     });
 
-    test('both riders are framed once the second position arrives', () {
+    test('both sailors are framed once the second position arrives', () {
       final framing = GroupMiniMapFraming.forPoints(
         const [warmley, oldlandCommon],
         width: width,
         height: height,
         // Still set, because the roster and the placeable count can disagree
         // for other reasons. With two points it must not change the outcome.
-        awaitingOtherRiders: true,
+        awaitingOtherSailors: true,
       );
 
       expect(isVisible(framing, warmley), isTrue);

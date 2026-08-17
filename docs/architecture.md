@@ -20,20 +20,20 @@ Passage plan + observations + context -> calculations and explicit alerts
 
 ## Domain migration
 
-The inherited implementation calls a session a `ride` and uses Dart/Python
+The inherited implementation calls a session a `voyage` and uses Dart/Python
 packages named `tide_and_seek`. Keep those internal names until the core domain
 boundaries are covered by tests; a broad rename is not a product feature.
 
 | Target concept | Inherited basis | Required change |
 |---|---|---|
-| Solo/shared voyage | Ride session/lifecycle | Solo path without membership; marine roles |
+| Solo/shared voyage | Voyage session/lifecycle | Solo path without membership; marine roles |
 | Passage plan | GPX route/revisions | Waypoint legs, notes, assumptions, authority |
-| Vessel track | Rider trail/recorder | Marine sampling, gaps, COG/SOG and quality |
+| Vessel track | Sailor trail/recorder | Marine sampling, gaps, COG/SOG and quality |
 | Nautical chart | MapLibre/offline cache | Licensed marine formats, editions, coverage |
 | Crew state | Roster and quick messages | Same-vessel roles, handover, observations |
 | Tides/weather | Hazard/provider interfaces | Source/validity-aware marine provider contracts |
 | Discovery/pilotage | Discovery catalogue | Attributable marine schema and offline packs |
-| Voyage recap | Ride recap/GPX | Marine metrics, legs, logbook-style export |
+| Voyage recap | Voyage recap/GPX | Marine metrics, legs, logbook-style export |
 
 ## Local-first and shared state
 

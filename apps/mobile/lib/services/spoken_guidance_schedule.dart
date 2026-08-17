@@ -10,10 +10,10 @@
 ///
 /// - the prompt for a junction arrived **after** it (#409);
 /// - it carried **no distance at all** — never "in 1 mile, turn right" (#410);
-/// - and on a large roundabout the *next* instruction arrived while the rider was
+/// - and on a large roundabout the *next* instruction arrived while the sailor was
 ///   still on the ring, part-way through the manoeuvre they were told about
 ///   (#429), because a roundabout is two engine steps merged into one instruction
-///   and the manoeuvre point is behind the rider long before they are clear of it.
+///   and the manoeuvre point is behind the sailor long before they are clear of it.
 ///
 /// ## Staged on time, not on road class
 ///
@@ -22,7 +22,7 @@
 /// 70 mph is about two minutes, and two miles at 30 mph is four minutes of
 /// pointless early warning.
 ///
-/// So the stages are times to the junction, converted through the rider's own
+/// So the stages are times to the junction, converted through the sailor's own
 /// speed. At 70 mph that puts the first prompt at about 2.3 miles and the second
 /// at about 0.6 — which is what was asked for — and on a B road at 30 mph it
 /// pulls in to about a mile and 400 yards without a road-classification lookup
@@ -47,7 +47,7 @@ enum GuidanceStage {
 /// The time-to-junction each stage fires at, and the furthest out it may be said.
 ///
 /// Times rather than distances so one set of numbers works at every speed; see
-/// the library note. The ceilings stop a slow-moving rider being warned absurdly
+/// the library note. The ceilings stop a slow-moving sailor being warned absurdly
 /// early — two minutes stuck at 10 mph is a third of a mile, which is fine, but
 /// two minutes of *stationary* is unbounded without them.
 const guidanceStageSeconds = <GuidanceStage, double>{
@@ -66,12 +66,12 @@ const guidanceStageCeilingMeters = <GuidanceStage, double>{
 ///
 /// A junction 200 m away does not need three announcements; it needs one. Saying
 /// "in 200 yards" and then "in 100 yards" and then the turn itself is the noise
-/// that trains a rider to stop listening.
+/// that trains a sailor to stop listening.
 const guidanceEarliestStageMeters = 500.0;
 
-/// How far past a junction the rider must be before the *next* one is spoken.
+/// How far past a junction the sailor must be before the *next* one is spoken.
 ///
-/// #429: a rider on a large roundabout is still executing the manoeuvre they were
+/// #429: a sailor on a large roundabout is still executing the manoeuvre they were
 /// told about when its point falls behind them. Nothing new is said until they
 /// are clear.
 const guidanceJunctionClearanceMeters = 60.0;
@@ -144,7 +144,7 @@ GuidanceAnnouncement? nextGuidanceAnnouncement({
   return GuidanceAnnouncement(
     key: '$maneuverIdentity|${stage.name}',
     // The immediate prompt carries no distance: at eight seconds out, "in 90
-    // yards" is a number the rider has no use for and a syllable they have no
+    // yards" is a number the sailor has no use for and a syllable they have no
     // time for.
     phrase: stage == GuidanceStage.immediate
         ? subject
@@ -167,11 +167,11 @@ GuidanceAnnouncement? nextGuidanceAnnouncement({
 ///   *"sometimes only when at the junction"*, and the one that is genuinely late.
 ///
 /// A general lookahead would be the wrong answer and would make it worse:
-/// announcing B early while A is still 200 m ahead tells the rider about the wrong
+/// announcing B early while A is still 200 m ahead tells the sailor about the wrong
 /// junction.
 ///
 /// Instead the pair is named in the prompt for the *first* of them — the one
-/// moment the rider still has time to act on both. The banner has shown pairs like
+/// moment the sailor still has time to act on both. The banner has shown pairs like
 /// this since #163; speech simply ignored the following instruction it was already
 /// being given.
 String guidanceSubject({
@@ -187,7 +187,7 @@ String guidanceSubject({
 
 /// The nearest stage that is due and has not been said.
 ///
-/// Walked from the closest outwards so a rider who joins a route already inside
+/// Walked from the closest outwards so a sailor who joins a route already inside
 /// the early band, or whose GPS jumps, gets the *right* prompt rather than a
 /// backlog of the ones they missed.
 GuidanceStage? _dueStage({
@@ -217,11 +217,11 @@ GuidanceStage? _dueStage({
   return null;
 }
 
-/// Where a stage fires, in metres, for the speed the rider is doing.
+/// Where a stage fires, in metres, for the speed the sailor is doing.
 ///
-/// A rider with no usable speed — stopped, or a fix without one — falls back to
+/// A sailor with no usable speed — stopped, or a fix without one — falls back to
 /// the ceiling, which is the most warning the stage will ever give. Better early
-/// than never: a stationary rider is about to move.
+/// than never: a stationary sailor is about to move.
 double _stageTriggerMeters(GuidanceStage stage, double? speedMetersPerSecond) {
   final ceiling = guidanceStageCeilingMeters[stage]!;
   final speed = speedMetersPerSecond;

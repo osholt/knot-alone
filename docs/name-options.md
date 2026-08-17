@@ -13,8 +13,8 @@ has to escape an ampersand.
 
 The back-of-fleet safety role is **Sweeper** — the flotilla and
 cruising-in-company term for the boat that stays at the back and accounts for
-everyone. It replaces the inherited `Tail End Charlie` (still `RideRole.tailEndCharlie`
-and `tec*` in code; see [backlog.md](backlog.md)).
+everyone. It replaces the inherited `Tail End Charlie` (still `VoyageRole.sweeper`
+and `sweeper*` in code; see [backlog.md](backlog.md)).
 
 The role name is deliberately separate from the product name. The initial
 scaffold conflated the two, producing strings such as `Be Knot Alone?`.

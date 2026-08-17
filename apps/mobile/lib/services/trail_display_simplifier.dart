@@ -4,10 +4,10 @@ import '../domain/imported_route.dart' show GeoPoint;
 
 /// Reduces a recorded trail to the points worth drawing.
 ///
-/// A two-hour ride records a position roughly every 10 m — the platform
-/// `distanceFilter` — so one rider arrives at several thousand points and a
+/// A two-hour voyage records a position roughly every 10 m — the platform
+/// `distanceFilter` — so one sailor arrives at several thousand points and a
 /// group at tens of thousands. Drawing every one of them costs the same on
-/// every frame, which is why the map got slower the longer the ride went on
+/// every frame, which is why the map got slower the longer the voyage went on
 /// (#165).
 ///
 /// Simplification is deliberately here, in the shared data path, rather than in
@@ -21,9 +21,9 @@ class TrailDisplaySimplifier {
   }) : assert(toleranceMeters > 0),
        assert(maximumPoints >= 2);
 
-  /// 5 m, chosen against what a rider can see rather than what looks tidy in a
+  /// 5 m, chosen against what a sailor can see rather than what looks tidy in a
   /// test. Trail lines are several logical pixels wide and at the most
-  /// zoomed-in ride camera a pixel is still more than a metre of ground, so a
+  /// zoomed-in voyage camera a pixel is still more than a metre of ground, so a
   /// 5 m deviation cannot move the drawn line clear of where it would otherwise
   /// be. It is also small enough to keep the geometry that matters: a 30 m
   /// hairpin — the tightest case #166 raises — keeps its shape, because its
@@ -40,7 +40,7 @@ class TrailDisplaySimplifier {
   final int maximumPoints;
 
   /// The trail as it should be drawn. The first and last points are always
-  /// kept, so a trail never appears to start or stop somewhere the rider was
+  /// kept, so a trail never appears to start or stop somewhere the sailor was
   /// not.
   List<GeoPoint> simplify(List<GeoPoint> points) {
     if (points.length <= 2) return points;
@@ -48,7 +48,7 @@ class TrailDisplaySimplifier {
     var simplified = _reduce(points, tolerance);
     // Doubling converges in a handful of passes and keeps the result a true
     // simplification of the recorded trail, rather than a windowed sample that
-    // could cut a corner the rider actually took.
+    // could cut a corner the sailor actually took.
     while (simplified.length > maximumPoints) {
       tolerance *= 2;
       simplified = _reduce(points, tolerance);
@@ -62,7 +62,7 @@ class TrailDisplaySimplifier {
     final keep = List<bool>.filled(points.length, false);
     keep[0] = true;
     keep[points.length - 1] = true;
-    // Metres per degree, evaluated once at the trail's own latitude. A ride
+    // Metres per degree, evaluated once at the trail's own latitude. A voyage
     // never spans enough latitude for this to drift meaningfully, and it turns
     // every distance below into flat arithmetic instead of trigonometry.
     const metresPerDegreeLatitude = 111132.0;

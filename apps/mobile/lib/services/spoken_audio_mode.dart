@@ -1,7 +1,7 @@
 /// What the app is allowed to say out loud (#415).
 ///
-/// One switch was not enough. A rider off route does not want turn-by-turn for a
-/// route they are not on, and a rider who has silenced the chatter still wants to
+/// One switch was not enough. A sailor off route does not want turn-by-turn for a
+/// route they are not on, and a sailor who has silenced the chatter still wants to
 /// be told about a speed camera — so "spoken guidance on or off" cannot express
 /// what is actually wanted.
 ///
@@ -20,7 +20,7 @@ enum SpokenAudioMode {
   /// to survive.
   alertsOnly,
 
-  /// Nothing at all, including warnings. A rider who chooses this has chosen it.
+  /// Nothing at all, including warnings. A sailor who chooses this has chosen it.
   silent,
 }
 
@@ -29,8 +29,8 @@ enum SpokenAudioClass {
   /// Turn-by-turn: where to go. Useful, and never urgent.
   navigation,
 
-  /// Something the rider needs to know about the road or the group, whether or
-  /// not they asked for directions. A camera, a hazard, a rider in trouble.
+  /// Something the sailor needs to know about the road or the group, whether or
+  /// not they asked for directions. A camera, a hazard, a sailor in trouble.
   safety,
 }
 
@@ -47,15 +47,15 @@ bool spokenAudioAllows(SpokenAudioMode mode, SpokenAudioClass audioClass) =>
       (SpokenAudioMode.alertsOnly, SpokenAudioClass.navigation) => false,
     };
 
-/// The mode a rider lands in when they go off route, unless they have chosen
+/// The mode a sailor lands in when they go off route, unless they have chosen
 /// silence.
 ///
-/// Turn-by-turn for a route the rider is not on is worse than nothing: it names
+/// Turn-by-turn for a route the sailor is not on is worse than nothing: it names
 /// junctions that are not coming. Warnings still apply, because a camera does not
-/// care whether the rider is on the planned route.
+/// care whether the sailor is on the planned route.
 ///
-/// A rider who chose [SpokenAudioMode.silent] stays there. The mapped speed limit
-/// follows the same rule for a rider who turned it off, and for the same reason:
+/// A sailor who chose [SpokenAudioMode.silent] stays there. The mapped speed limit
+/// follows the same rule for a sailor who turned it off, and for the same reason:
 /// an explicit choice outranks an automatic one.
 SpokenAudioMode spokenAudioModeOffRoute(SpokenAudioMode chosen) =>
     switch (chosen) {
@@ -63,7 +63,7 @@ SpokenAudioMode spokenAudioModeOffRoute(SpokenAudioMode chosen) =>
       _ => SpokenAudioMode.alertsOnly,
     };
 
-/// What the control on the map says it will do next, so a rider pressing it by
+/// What the control on the map says it will do next, so a sailor pressing it by
 /// feel knows what they are getting.
 String spokenAudioModeLabel(SpokenAudioMode mode) => switch (mode) {
   SpokenAudioMode.everything => 'Voice on',
@@ -75,7 +75,7 @@ String spokenAudioModeLabel(SpokenAudioMode mode) => switch (mode) {
 ///
 /// Everything → alerts only → muted → everything. Three states on one control
 /// because a mounted phone in gloves has room for one, and the order goes from
-/// most to least talkative so a rider who wants quiet presses in one direction.
+/// most to least talkative so a sailor who wants quiet presses in one direction.
 SpokenAudioMode nextSpokenAudioMode(SpokenAudioMode mode) => switch (mode) {
   SpokenAudioMode.everything => SpokenAudioMode.alertsOnly,
   SpokenAudioMode.alertsOnly => SpokenAudioMode.silent,

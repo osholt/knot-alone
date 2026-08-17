@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/domain/geo_point.dart';
-import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/domain/sailor_location.dart';
 import 'package:tide_and_seek/domain/route_alert.dart';
 import 'package:tide_and_seek/services/geo_calculations.dart';
 import 'package:tide_and_seek/services/route_deviation_detector.dart';
@@ -104,7 +104,7 @@ void main() {
     expect(firstValid.state, RouteTrackingState.suspectedOffRoute);
   });
 
-  test('prolonged confirmed deviation escalates to all riders', () {
+  test('prolonged confirmed deviation escalates to all sailors', () {
     final detector = RouteDeviationDetector(
       route,
       config: const RouteDeviationConfig(
@@ -120,7 +120,7 @@ void main() {
       start.add(const Duration(minutes: 2)),
     );
     expect(escalated.alertLevel, RouteAlertLevel.critical);
-    expect(escalated.audience, RouteAlertAudience.allRiders);
+    expect(escalated.audience, RouteAlertAudience.allSailors);
   });
 
   test('missing route disables deviation alerts', () {
@@ -152,8 +152,8 @@ void main() {
     );
     expect(confirmed.state, RouteTrackingState.offRoute);
 
-    // A new comparison route - e.g. the ride leader's live trail having
-    // extended past this point - now runs through the rider's actual
+    // A new comparison route - e.g. the voyage skipper's live trail having
+    // extended past this point - now runs through the sailor's actual
     // position. Recovery hysteresis still applies rather than the state
     // snapping straight back to onRoute.
     detector.updateRouteSegments(const [
@@ -203,7 +203,7 @@ void main() {
     expect(assessment.state, RouteTrackingState.offRoute);
   });
 
-  test('the leader-follow exemption resets the off-route clock', () {
+  test('the skipper-follow exemption resets the off-route clock', () {
     final detector = RouteDeviationDetector(
       route,
       config: const RouteDeviationConfig(
@@ -222,7 +222,7 @@ void main() {
     expect(detector.stableState, RouteTrackingState.offRoute);
     expect(detector.offRouteSince, start.add(const Duration(seconds: 5)));
 
-    // The rider turns out to have been following the leader's own track all
+    // The sailor turns out to have been following the skipper's own track all
     // along, so the caller exempts them. Four minutes later - past the critical
     // escalation - a genuine new deviation must start from scratch, not arrive
     // pre-escalated.
@@ -244,17 +244,17 @@ void main() {
     expect(reconfirmed.audience, RouteAlertAudience.coordinators);
   });
 
-  test('a rider following the leader reads as on route with no alert', () {
-    final assessment = RouteDeviationDetector.followingLeaderTrackAssessment(
+  test('a sailor following the skipper reads as on route with no alert', () {
+    final assessment = RouteDeviationDetector.followingSkipperTrackAssessment(
       evaluatedAt: DateTime.utc(2026, 7, 25, 12),
       distanceFromRouteMeters: 4200,
     );
 
     expect(assessment.state, RouteTrackingState.onRoute);
     expect(assessment.alertLevel, RouteAlertLevel.none);
-    expect(assessment.audience, RouteAlertAudience.rider);
+    expect(assessment.audience, RouteAlertAudience.sailor);
     expect(assessment.coordinatorActionRequired, isFalse);
-    // The measured distance is kept: the rider is a long way from the GPX and
+    // The measured distance is kept: the sailor is a long way from the GPX and
     // the roster should still be able to say so.
     expect(assessment.distanceFromRouteMeters, 4200);
   });

@@ -41,7 +41,7 @@
 		# The proxied tiles and glyphs already answer with a wildcard from
 		# upstream; without the same here the style fetch fails and only that
 		# deployment of the observer draws a blank map. The style is public and
-		# holds nothing about any ride.
+		# holds nothing about any voyage.
 		header Access-Control-Allow-Origin "*"
 		header Cache-Control "public, max-age=300"
 		file_server
@@ -140,7 +140,7 @@
 		# The proxied tiles and glyphs already answer with a wildcard from
 		# upstream; without the same here the style fetch fails and only that
 		# deployment of the observer draws a blank map. The style is public and
-		# holds nothing about any ride.
+		# holds nothing about any voyage.
 		header Access-Control-Allow-Origin "*"
 		header Cache-Control "public, max-age=300"
 		file_server

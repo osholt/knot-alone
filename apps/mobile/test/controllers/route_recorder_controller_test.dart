@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/controllers/route_recorder_controller.dart';
 import 'package:tide_and_seek/domain/geo_point.dart';
 import 'package:tide_and_seek/domain/imported_route.dart' show RoutePathKind;
-import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/domain/sailor_location.dart';
 import 'package:tide_and_seek/services/device_location_source.dart';
 
 void main() {

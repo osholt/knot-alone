@@ -29,7 +29,7 @@ class MeasurementFormatter {
 
   /// Navigation-grade short distances, without exposing unit conversion noise.
   ///
-  /// A rider can use "150 yards" or "20 metres" at a glance; 151 or 22 is
+  /// A sailor can use "150 yards" or "20 metres" at a glance; 151 or 22 is
   /// spurious precision from converting the same route geometry. Below ten,
   /// whole-unit precision still matters and prevents four becoming zero.
   static int _naturalShortDistance(double value) {

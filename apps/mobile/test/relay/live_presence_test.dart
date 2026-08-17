@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/domain/geo_point.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/sailor_location.dart';
 import 'package:tide_and_seek/relay/live_presence.dart';
 
 void main() {
@@ -33,7 +33,7 @@ void main() {
         PresenceFreshness.stale,
       );
       // Age alone never produces "no position": a stale fix is demoted, not
-      // deleted, because where a rider stopped is what the group needs.
+      // deleted, because where a sailor stopped is what the group needs.
       expect(
         policy.classify(const Duration(hours: 3)),
         PresenceFreshness.stale,
@@ -48,10 +48,10 @@ void main() {
     });
   });
 
-  test('merges both transports and keeps the newest sample per rider', () {
+  test('merges both transports and keeps the newest sample per sailor', () {
     final result = const LivePresenceReconciler().reconcile(
       now: now,
-      localRiderId: 'local',
+      localSailorId: 'local',
       journal: [
         _location(
           'alex',
@@ -83,12 +83,12 @@ void main() {
       LivePresenceSource.internetPresence,
       LivePresenceSource.nearbyPresence,
     });
-    // The oldest observation still dates when the rider became known, so the
+    // The oldest observation still dates when the sailor became known, so the
     // roster order does not jitter as fresher samples arrive.
     expect(alex.knownSince, now.subtract(const Duration(seconds: 90)));
   });
 
-  test('an out-of-order or duplicated delivery never rewinds a rider', () {
+  test('an out-of-order or duplicated delivery never rewinds a sailor', () {
     final newest = _location(
       'alex',
       'Alex',
@@ -104,7 +104,7 @@ void main() {
 
     final result = const LivePresenceReconciler().reconcile(
       now: now,
-      localRiderId: 'local',
+      localSailorId: 'local',
       internetPresence: [newest, stale, newest, stale],
     );
 
@@ -113,14 +113,14 @@ void main() {
   });
 
   test('a stale position is demoted but never dropped', () {
-    RiderLocation at(Duration age) =>
+    SailorLocation at(Duration age) =>
         _location('alex', 'Alex', recordedAt: now.subtract(age));
 
     PresenceFreshness freshnessAfter(Duration age) =>
         const LivePresenceReconciler()
             .reconcile(
               now: now,
-              localRiderId: 'local',
+              localSailorId: 'local',
               internetPresence: [at(age)],
             )
             .single
@@ -136,7 +136,7 @@ void main() {
     final ancient = const LivePresenceReconciler()
         .reconcile(
           now: now,
-          localRiderId: 'local',
+          localSailorId: 'local',
           internetPresence: [at(const Duration(minutes: 30))],
         )
         .single;
@@ -150,34 +150,34 @@ void main() {
   test('a roster member with no position is reported, not omitted', () {
     final result = const LivePresenceReconciler().reconcile(
       now: now,
-      localRiderId: 'local',
+      localSailorId: 'local',
       roster: [
         PresenceRosterMember(
-          riderId: 'bill',
+          sailorId: 'bill',
           displayName: 'Bill',
-          role: RideRole.rider,
+          role: VoyageRole.sailor,
           joinedAt: now.subtract(const Duration(minutes: 3)),
         ),
       ],
     );
 
     final bill = result.single;
-    expect(bill.riderId, 'bill');
+    expect(bill.sailorId, 'bill');
     expect(bill.hasPosition, isFalse);
     expect(bill.freshness, PresenceFreshness.none);
     expect(bill.sources, isEmpty);
     expect(bill.knownSince, now.subtract(const Duration(minutes: 3)));
   });
 
-  test('a rider who has left the roster is not resurrected', () {
+  test('a sailor who has left the roster is not resurrected', () {
     final result = const LivePresenceReconciler().reconcile(
       now: now,
-      localRiderId: 'local',
+      localSailorId: 'local',
       roster: [
         PresenceRosterMember(
-          riderId: 'gone',
+          sailorId: 'gone',
           displayName: 'Gone',
-          role: RideRole.rider,
+          role: VoyageRole.sailor,
           joinedAt: now,
           left: true,
         ),
@@ -190,28 +190,28 @@ void main() {
   test('roster identity wins over a self-described position payload', () {
     final result = const LivePresenceReconciler().reconcile(
       now: now,
-      localRiderId: 'local',
+      localSailorId: 'local',
       internetPresence: [
-        _location('bill', 'Impostor', recordedAt: now, role: RideRole.lead),
+        _location('bill', 'Impostor', recordedAt: now, role: VoyageRole.lead),
       ],
       roster: [
         PresenceRosterMember(
-          riderId: 'bill',
+          sailorId: 'bill',
           displayName: 'Bill',
-          role: RideRole.rider,
+          role: VoyageRole.sailor,
           joinedAt: now.subtract(const Duration(minutes: 1)),
         ),
       ],
     );
 
     expect(result.single.displayName, 'Bill');
-    expect(result.single.role, RideRole.rider);
+    expect(result.single.role, VoyageRole.sailor);
   });
 
-  test('the local rider is flagged and gains a local-device source', () {
+  test('the local sailor is flagged and gains a local-device source', () {
     final result = const LivePresenceReconciler().reconcile(
       now: now,
-      localRiderId: 'local',
+      localSailorId: 'local',
       internetPresence: [_location('local', 'Me', recordedAt: now)],
     );
 
@@ -225,10 +225,10 @@ void main() {
     );
   });
 
-  test('reconcileLocations returns one drawable position per rider', () {
+  test('reconcileLocations returns one drawable position per sailor', () {
     final locations = const LivePresenceReconciler().reconcileLocations(
       now: now,
-      localRiderId: 'local',
+      localSailorId: 'local',
       journal: [
         _location(
           'alex',
@@ -246,9 +246,9 @@ void main() {
       ],
     );
 
-    // One entry per rider, each the newest known fix. An hour-old fix is still
+    // One entry per sailor, each the newest known fix. An hour-old fix is still
     // returned: the caller demotes it, it is not silently withheld.
-    expect(locations.map((location) => location.riderId), ['alex', 'bill']);
+    expect(locations.map((location) => location.sailorId), ['alex', 'bill']);
     expect(locations.first.sample.position.latitude, 49);
   });
 
@@ -256,7 +256,7 @@ void main() {
     final ageing = const LivePresenceReconciler()
         .reconcile(
           now: now,
-          localRiderId: 'local',
+          localSailorId: 'local',
           internetPresence: [
             _location(
               'alex',
@@ -274,9 +274,9 @@ void main() {
     expect(formatPresenceAge(const Duration(seconds: -5)), '0s');
   });
 
-  test('a peer limitation names the rider without leaking anything else', () {
+  test('a peer limitation names the sailor without leaking anything else', () {
     final limitation = PresenceLimitation.peerAppOlder(
-      riderId: 'bill',
+      sailorId: 'bill',
       displayName: 'Bill',
     );
 
@@ -287,14 +287,14 @@ void main() {
   });
 }
 
-RiderLocation _location(
-  String riderId,
+SailorLocation _location(
+  String sailorId,
   String displayName, {
   required DateTime recordedAt,
   double latitude = 51.5,
-  RideRole role = RideRole.rider,
-}) => RiderLocation(
-  riderId: riderId,
+  VoyageRole role = VoyageRole.sailor,
+}) => SailorLocation(
+  sailorId: sailorId,
   displayName: displayName,
   role: role,
   sample: LocationSample(

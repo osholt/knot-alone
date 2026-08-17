@@ -26,14 +26,14 @@ double _groundPixelsFromCentre(
 double _metersPerPixel(double zoom, double latitude) =>
     78271.5169 * math.cos(latitude * math.pi / 180) / math.pow(2, zoom);
 
-/// Visible ground distance ahead of and behind the rider for a plan.
+/// Visible ground distance ahead of and behind the sailor for a plan.
 ({double ahead, double behind}) _visibleDepth(
   NavigationCameraPlan plan,
   double viewportHeight,
   double latitude,
 ) {
   final scale = _metersPerPixel(plan.zoom, latitude);
-  final rider = _groundPixelsFromCentre(
+  final sailor = _groundPixelsFromCentre(
     -plan.forwardBiasPixels,
     plan.tilt,
     viewportHeight,
@@ -48,7 +48,7 @@ double _metersPerPixel(double zoom, double latitude) =>
     plan.tilt,
     viewportHeight,
   );
-  return (ahead: (top - rider) * scale, behind: (rider - bottom) * scale);
+  return (ahead: (top - sailor) * scale, behind: (sailor - bottom) * scale);
 }
 
 NavigationCameraPlan _plan(
@@ -113,7 +113,7 @@ void main() {
     );
 
     expect(invalid.zoom, missing.zoom);
-    expect(invalid.riderViewportFraction, missing.riderViewportFraction);
+    expect(invalid.sailorViewportFraction, missing.sailorViewportFraction);
     expect(extreme.zoom, greaterThanOrEqualTo(13.8));
     expect(extreme.tilt, lessThanOrEqualTo(navigationCameraMaximumTiltDegrees));
     expect(
@@ -133,20 +133,20 @@ void main() {
     }
   });
 
-  test('the rider is biased low in the frame, more so with speed', () {
+  test('the sailor is biased low in the frame, more so with speed', () {
     final restPortrait = _plan(0, landscape: false);
     final urbanPortrait = _plan(13, landscape: false);
     final roadPortrait = _plan(29, landscape: false);
 
-    expect(restPortrait.riderViewportFraction, closeTo(0.62, 0.001));
-    expect(urbanPortrait.riderViewportFraction, closeTo(0.652, 0.005));
-    expect(roadPortrait.riderViewportFraction, closeTo(0.70, 0.005));
+    expect(restPortrait.sailorViewportFraction, closeTo(0.62, 0.001));
+    expect(urbanPortrait.sailorViewportFraction, closeTo(0.652, 0.005));
+    expect(roadPortrait.sailorViewportFraction, closeTo(0.70, 0.005));
     expect(roadPortrait.forwardBiasPixels, closeTo(168, 2));
 
     final restLandscape = _plan(0, landscape: true);
     final roadLandscape = _plan(29, landscape: true);
-    expect(restLandscape.riderViewportFraction, closeTo(0.64, 0.001));
-    expect(roadLandscape.riderViewportFraction, closeTo(0.72, 0.005));
+    expect(restLandscape.sailorViewportFraction, closeTo(0.64, 0.001));
+    expect(roadLandscape.sailorViewportFraction, closeTo(0.72, 0.005));
     // The landscape viewport is shorter, so the same fraction is fewer pixels.
     expect(
       roadLandscape.forwardBiasPixels,
@@ -159,7 +159,7 @@ void main() {
         final fraction = _plan(
           speed,
           landscape: landscape,
-        ).riderViewportFraction;
+        ).sailorViewportFraction;
         expect(fraction, greaterThanOrEqualTo(previous));
         expect(fraction, greaterThanOrEqualTo(0.5));
         expect(fraction, lessThanOrEqualTo(0.75));
@@ -193,14 +193,17 @@ void main() {
         leftHandTraffic: false,
       );
 
-      expect(leftTraffic.riderHorizontalViewportFraction, closeTo(2 / 3, 1e-9));
       expect(
-        rightTraffic.riderHorizontalViewportFraction,
+        leftTraffic.sailorHorizontalViewportFraction,
+        closeTo(2 / 3, 1e-9),
+      );
+      expect(
+        rightTraffic.sailorHorizontalViewportFraction,
         closeTo(1 / 3, 1e-9),
       );
       expect(leftTraffic.lateralBiasPixels, closeTo(140, 0.01));
       expect(rightTraffic.lateralBiasPixels, closeTo(-140, 0.01));
-      expect(portrait.riderHorizontalViewportFraction, 0.5);
+      expect(portrait.sailorHorizontalViewportFraction, 0.5);
       expect(portrait.lateralBiasPixels, 0);
     },
   );
@@ -223,26 +226,26 @@ void main() {
     expect(_plan(29, landscape: true).lookAheadMeters, closeTo(589, 15));
   });
 
-  test('the look-ahead lands the rider exactly on the planned fraction', () {
+  test('the look-ahead lands the sailor exactly on the planned fraction', () {
     for (final landscape in [false, true]) {
       final height = landscape ? _landscapeHeight : _portraitHeight;
       for (final speed in [0.0, 8.0, 17.0, 29.0]) {
         final plan = _plan(speed, landscape: landscape);
-        // Reconstruct the rider's screen row from the look-ahead distance the
+        // Reconstruct the sailor's screen row from the look-ahead distance the
         // planner produced. It has to be the fraction that was asked for,
         // otherwise the forward bias is a guess rather than geometry.
         final scale = _metersPerPixel(plan.zoom, 53);
         final lookAheadPixels = plan.lookAheadMeters / scale;
         final cameraToCentre = 0.5 * height / math.tan(_fieldOfView / 2);
         final tilt = plan.tilt * math.pi / 180;
-        final riderRayTangent =
+        final sailorRayTangent =
             math.tan(tilt) -
             lookAheadPixels / (cameraToCentre * math.cos(tilt));
-        final riderAngle = math.atan(riderRayTangent) - tilt;
-        final riderPixelsBelowCentre = -cameraToCentre * math.tan(riderAngle);
+        final sailorAngle = math.atan(sailorRayTangent) - tilt;
+        final sailorPixelsBelowCentre = -cameraToCentre * math.tan(sailorAngle);
         expect(
-          0.5 + riderPixelsBelowCentre / height,
-          closeTo(plan.riderViewportFraction, 0.002),
+          0.5 + sailorPixelsBelowCentre / height,
+          closeTo(plan.sailorViewportFraction, 0.002),
         );
       }
     }
@@ -269,21 +272,21 @@ void main() {
   test(
     'the bottom chrome band pulls the bias back, never under an overlay',
     () {
-      // Portrait chrome sits directly under the rider, so a tall band has to
+      // Portrait chrome sits directly under the sailor, so a tall band has to
       // reduce the bias rather than hide the marker.
       final light = _plan(29, landscape: false, bottomChromeFraction: 0.2);
       final medium = _plan(29, landscape: false, bottomChromeFraction: 0.3);
       final heavy = _plan(29, landscape: false, bottomChromeFraction: 0.42);
       final absurd = _plan(29, landscape: false, bottomChromeFraction: 0.9);
 
-      expect(light.riderViewportFraction, closeTo(0.70, 0.005));
-      expect(medium.riderViewportFraction, closeTo(0.64, 0.005));
-      expect(heavy.riderViewportFraction, closeTo(0.52, 0.005));
+      expect(light.sailorViewportFraction, closeTo(0.70, 0.005));
+      expect(medium.sailorViewportFraction, closeTo(0.64, 0.005));
+      expect(heavy.sailorViewportFraction, closeTo(0.52, 0.005));
       // A band tall enough to cover the centre of the frame gives up the
-      // forward bias entirely rather than hiding the rider's own marker.
+      // forward bias entirely rather than hiding the sailor's own marker.
       expect(
-        absurd.riderViewportFraction,
-        navigationCameraMinimumRiderFraction,
+        absurd.sailorViewportFraction,
+        navigationCameraMinimumSailorFraction,
       );
       expect(absurd.forwardBiasPixels, lessThan(0));
       expect(absurd.lookAheadMeters, lessThan(0));
@@ -291,17 +294,17 @@ void main() {
       for (var chrome = 0.0; chrome <= 0.9; chrome += 0.01) {
         final plan = _plan(29, landscape: false, bottomChromeFraction: chrome);
         final visibleLimit = math.max(
-          navigationCameraMinimumRiderFraction,
-          1 - chrome - navigationCameraRiderChromeClearanceFraction,
+          navigationCameraMinimumSailorFraction,
+          1 - chrome - navigationCameraSailorChromeClearanceFraction,
         );
         expect(
-          plan.riderViewportFraction,
+          plan.sailorViewportFraction,
           lessThanOrEqualTo(visibleLimit + 1e-9),
           reason: 'chrome fraction $chrome',
         );
         // Whatever the band does, the marker stays well inside the viewport.
-        expect(plan.riderViewportFraction, greaterThan(0.3));
-        expect(plan.riderViewportFraction, lessThan(0.95));
+        expect(plan.sailorViewportFraction, greaterThan(0.3));
+        expect(plan.sailorViewportFraction, lessThan(0.95));
       }
     },
   );
@@ -412,7 +415,7 @@ void main() {
       );
       // #133's 56 px band called this framed. Measured on an SE, that band was
       // 1363 m at the zoom the phone sat at, so a map panned hundreds of metres
-      // off the rider reported itself framed and offered nothing (#141).
+      // off the sailor reported itself framed and offered nothing (#141).
       expect(
         NavigationCameraPlanner.settledOnViewport(
           driftMeters: 468,
@@ -478,7 +481,7 @@ void main() {
       );
     });
 
-    test('a camera easing after a moving rider still counts as arrived', () {
+    test('a camera easing after a moving sailor still counts as arrived', () {
       // The window has to clear the ground a bike covers inside one 560 ms camera
       // transition at every riding speed, or the control would flicker back on
       // during ordinary following. The lag stays a handful of pixels because the
@@ -564,7 +567,7 @@ void main() {
         expect((plan.zoom - previous.zoom).abs(), lessThan(0.01));
         expect((plan.tilt - previous.tilt).abs(), lessThan(0.05));
         expect(
-          (plan.riderViewportFraction - previous.riderViewportFraction).abs(),
+          (plan.sailorViewportFraction - previous.sailorViewportFraction).abs(),
           lessThan(0.002),
         );
         expect(

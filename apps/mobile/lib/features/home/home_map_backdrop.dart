@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../../controllers/foreground_location_controller.dart';
 import '../../controllers/map_style_mode_controller.dart';
 import '../../domain/distance_unit.dart';
-import '../../domain/completed_ride_store.dart';
+import '../../domain/completed_voyage_store.dart';
 import '../../domain/imported_route.dart' as route_domain;
 import '../../domain/map_style_mode.dart';
 import '../../services/device_location_source.dart';
-import '../map/ride_map_feature.dart';
+import '../map/voyage_map_feature.dart';
 
 /// The live map the app opens on (#405).
 ///
@@ -15,11 +15,11 @@ import '../map/ride_map_feature.dart';
 /// decision has been made — where am I, what is this road — was behind the
 /// decision. This puts the map underneath the home actions instead.
 ///
-/// **It never asks for location on open.** A rider who has already granted
-/// access sees themselves immediately; a rider who has not sees the map with no
+/// **It never asks for location on open.** A sailor who has already granted
+/// access sees themselves immediately; a sailor who has not sees the map with no
 /// position and a labelled control that asks. Opening an app straight into a
 /// permission prompt, before it has shown what it is for, is the thing this
-/// deliberately does not do — and the ride flows that genuinely need location
+/// deliberately does not do — and the voyage flows that genuinely need location
 /// still ask at the point they need it.
 class HomeMapBackdrop extends StatefulWidget {
   const HomeMapBackdrop({
@@ -30,7 +30,7 @@ class HomeMapBackdrop extends StatefulWidget {
     this.locationController,
     this.bottomInset = 0,
     this.position,
-    this.completedRideStore,
+    this.completedVoyageStore,
     this.onMapStyleResolved,
   });
 
@@ -40,7 +40,7 @@ class HomeMapBackdrop extends StatefulWidget {
   /// control has to sit above it rather than behind it.
   final double bottomInset;
 
-  /// Where the rider is, published for the screen above to use.
+  /// Where the sailor is, published for the screen above to use.
   ///
   /// Supplied by [HomeScreen] so a searched destination can be routed from *here*
   /// without this widget owning a position nothing else can reach (#431). When
@@ -49,7 +49,7 @@ class HomeMapBackdrop extends StatefulWidget {
 
   final MapStyleModeController mapStyleMode;
   final DistanceUnit distanceUnit;
-  final CompletedRideStore? completedRideStore;
+  final CompletedVoyageStore? completedVoyageStore;
   final ValueChanged<String>? onMapStyleResolved;
 
   /// False in widget tests and on any build without the platform plugins, where
@@ -128,10 +128,10 @@ class _HomeMapBackdropState extends State<HomeMapBackdrop> {
       fit: StackFit.expand,
       children: [
         if (widget.enableNativeServices)
-          RideMapFeature.fromEnvironment(
+          VoyageMapFeature.fromEnvironment(
             key: const Key('home-map'),
             currentPosition: _position,
-            completedRideStore: widget.completedRideStore,
+            completedVoyageStore: widget.completedVoyageStore,
             darkMapStyle: widget.mapStyleMode.resolveDark(
               MediaQuery.platformBrightnessOf(context),
             ),
@@ -139,8 +139,8 @@ class _HomeMapBackdropState extends State<HomeMapBackdrop> {
                 widget.mapStyleMode.dayStyle == DayMapStyle.restrained,
             distanceUnit: widget.distanceUnit,
             onMapStyleResolved: widget.onMapStyleResolved,
-            // No ride yet, so nothing may edit a ride's route from here and no
-            // ride surface has anything to say.
+            // No voyage yet, so nothing may edit a voyage's route from here and no
+            // voyage surface has anything to say.
             canEditRoute: false,
             markerFeaturesEnabled: false,
           )

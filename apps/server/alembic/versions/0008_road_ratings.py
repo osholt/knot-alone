@@ -1,11 +1,11 @@
-"""Add anonymous rider road-rating tallies.
+"""Add anonymous sailor road-rating tallies.
 
 A tally table, not a submission log. There is deliberately no row that
 represents one rating: the primary key is
 (feature_id, catalogue_version, verdict) and a submission increments a counter,
 so the relay cannot reconstruct who rated what even from a full database dump.
 Dates rather than timestamps for the same reason - a receipt second is a
-correlation handle against the ride journal, a receipt day is not (issue #159).
+correlation handle against the voyage journal, a receipt day is not (issue #159).
 
 Revision ID: 0008
 Revises: 0007

@@ -21,7 +21,7 @@ void main() {
         "places": [
           {
             "sourceId": 42,
-            "name": "Rider Cafe",
+            "name": "Sailor Cafe",
             "address": "High Street",
             "latitude": 51.5,
             "longitude": -2.5,
@@ -34,7 +34,7 @@ void main() {
 
     expect(catalogue.checkedAt, '2026-07-22');
     expect(catalogue.places.single.id, '42');
-    expect(catalogue.places.single.name, 'Rider Cafe');
+    expect(catalogue.places.single.name, 'Sailor Cafe');
     expect(catalogue.places.single.point.latitude, 51.5);
     expect(catalogue.places.single.point.longitude, -2.5);
   });

@@ -35,16 +35,16 @@ class RelayStatusCard extends StatelessWidget {
         child: ListTile(
           leading: Icon(icon),
           title: Text(label),
-          // "development alpha" was a build channel leaking into a rider-facing
+          // "development alpha" was a build channel leaking into a sailor-facing
           // card, and a bare count told a tester nothing about whether 106 was
           // normal (#174). The nearby transport genuinely does not carry events
           // yet, so say that instead - it is the useful half of what the build
           // channel was standing in for.
           subtitle: Text(
             status.queuedEventCount == 0
-                ? 'Not carrying ride events yet'
+                ? 'Not carrying voyage events yet'
                 : '${status.queuedEventCount} held for nearby, which does not '
-                      'carry ride events yet',
+                      'carry voyage events yet',
           ),
         ),
       );

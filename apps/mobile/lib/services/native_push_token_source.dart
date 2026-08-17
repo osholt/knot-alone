@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-import '../controllers/ride_push_notification_controller.dart';
+import '../controllers/voyage_push_notification_controller.dart';
 import '../internet/push_registration_client.dart';
 
 class NativePushConfiguration {
@@ -177,16 +177,20 @@ class NativePushTokenSource implements PushTokenSource {
   }
 
   void _addOpened(Map<String, Object?> value) {
-    final rideId = value['rideId'];
+    final voyageId = value['voyageId'];
     final eventId = value['eventId'];
     final category = value['category'];
-    if (rideId is String &&
+    if (voyageId is String &&
         eventId is String &&
         category is String &&
-        rideId.isNotEmpty &&
+        voyageId.isNotEmpty &&
         eventId.isNotEmpty) {
       _opened.add(
-        PushOpenRequest(rideId: rideId, eventId: eventId, category: category),
+        PushOpenRequest(
+          voyageId: voyageId,
+          eventId: eventId,
+          category: category,
+        ),
       );
     }
   }

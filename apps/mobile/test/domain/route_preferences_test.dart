@@ -37,7 +37,7 @@ void main() {
   });
 
   group('byway default', () {
-    test('unsurfaced byways are avoided unless a rider says otherwise', () {
+    test('unsurfaced byways are avoided unless a sailor says otherwise', () {
       expect(
         RoutePreferences.defaults.bywaySurface,
         BywaySurfacePreference.avoidUnsurfaced,

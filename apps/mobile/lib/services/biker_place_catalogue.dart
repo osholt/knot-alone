@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../domain/imported_route.dart';
 
-/// A rider-friendly stop published by the same curated catalogue as the web
+/// A sailor-friendly stop published by the same curated catalogue as the web
 /// route planner.
 class BikerPlace {
   const BikerPlace({

@@ -1,19 +1,19 @@
 import '../domain/geo_point.dart';
 import '../domain/quick_message.dart';
-import '../domain/ride_event.dart';
+import '../domain/voyage_event.dart';
 import 'geo_calculations.dart';
-import 'ride_event_authenticator.dart';
-import 'ride_lifecycle.dart';
+import 'voyage_event_authenticator.dart';
+import 'voyage_lifecycle.dart';
 
-/// One rider's acknowledgement of another rider's quick message.
+/// One sailor's acknowledgement of another sailor's quick message.
 class QuickMessageAcknowledgement {
   const QuickMessageAcknowledgement({
-    required this.riderId,
+    required this.sailorId,
     required this.displayName,
     required this.acknowledgedAt,
   });
 
-  final String riderId;
+  final String sailorId;
   final String displayName;
   final DateTime acknowledgedAt;
 }
@@ -22,27 +22,27 @@ class QuickMessageAcknowledgement {
 /// what they raised, when, and whether anybody has said they have seen it.
 ///
 /// The send path has always worked; nothing rendered the result anywhere except
-/// one row in the dashboard event log, on a tab the rider was not looking at
+/// one row in the dashboard event log, on a tab the sailor was not looking at
 /// (#151). This is the model every receive surface reads, so the map card, the
 /// interrupt and the sender's own receipt cannot disagree.
 class ReceivedQuickMessage {
   const ReceivedQuickMessage({
     required this.eventId,
-    required this.senderRiderId,
+    required this.senderSailorId,
     required this.senderDisplayName,
     required this.label,
     required this.priority,
     required this.raisedAt,
-    required this.raisedFromLocalRider,
+    required this.raisedFromLocalSailor,
     this.message,
     this.raisedAtPosition,
-    this.addressedToLocalRider = false,
+    this.addressedToLocalSailor = false,
     this.acknowledgements = const [],
   });
 
   /// The journal event this came from — the identity an acknowledgement names.
   final String eventId;
-  final String senderRiderId;
+  final String senderSailorId;
   final String senderDisplayName;
 
   /// The kind, or null when a newer build raised a kind this one has never
@@ -57,19 +57,19 @@ class ReceivedQuickMessage {
 
   /// Where the sender was when they raised it, when they relayed one.
   ///
-  /// Deliberately the raised-at fix rather than a live one: a rider who has
+  /// Deliberately the raised-at fix rather than a live one: a sailor who has
   /// stopped for fuel is not moving, and this position survives their location
   /// events ageing out of the 30-minute retention band.
   final GeoPoint? raisedAtPosition;
 
   /// True when this phone raised it, so its own surfaces show a receipt rather
   /// than an alert.
-  final bool raisedFromLocalRider;
+  final bool raisedFromLocalSailor;
 
-  /// True when the sender addressed it to this rider specifically (the leader
+  /// True when the sender addressed it to this sailor specifically (the skipper
   /// and TEC recipient list the map's SOS and issue controls build), rather
   /// than to the whole group.
-  final bool addressedToLocalRider;
+  final bool addressedToLocalSailor;
 
   final List<QuickMessageAcknowledgement> acknowledgements;
 
@@ -88,38 +88,38 @@ class ReceivedQuickMessage {
   QuickMessageAcknowledgement? get firstAcknowledgement =>
       acknowledgements.isEmpty ? null : acknowledgements.first;
 
-  /// The sentence a rider reads: "Bill needs fuel".
+  /// The sentence a sailor reads: "Bill needs fuel".
   ///
   /// Falls back to the sender's own label for a kind this build does not know.
   String get headline =>
       message?.sentenceFor(senderDisplayName) ?? '$senderDisplayName: $label';
 
-  bool acknowledgedBy(String riderId) =>
-      acknowledgements.any((entry) => entry.riderId == riderId);
+  bool acknowledgedBy(String sailorId) =>
+      acknowledgements.any((entry) => entry.sailorId == sailorId);
 
   ReceivedQuickMessage withAcknowledgements(
     List<QuickMessageAcknowledgement> entries,
   ) => ReceivedQuickMessage(
     eventId: eventId,
-    senderRiderId: senderRiderId,
+    senderSailorId: senderSailorId,
     senderDisplayName: senderDisplayName,
     label: label,
     priority: priority,
     raisedAt: raisedAt,
-    raisedFromLocalRider: raisedFromLocalRider,
+    raisedFromLocalSailor: raisedFromLocalSailor,
     message: message,
     raisedAtPosition: raisedAtPosition,
-    addressedToLocalRider: addressedToLocalRider,
+    addressedToLocalSailor: addressedToLocalSailor,
     acknowledgements: List.unmodifiable(entries),
   );
 }
 
-/// Where the rider who raised a quick message is, relative to the rider reading
+/// Where the sailor who raised a quick message is, relative to the sailor reading
 /// it.
 ///
 /// Two forms, because only one of them is ever honest: along the loaded route
-/// when both riders are demonstrably on it, and a straight line with a compass
-/// bearing when they are not. A distance along a route neither rider is on is a
+/// when both sailors are demonstrably on it, and a straight line with a compass
+/// bearing when they are not. A distance along a route neither sailor is on is a
 /// number that means nothing.
 class QuickMessageOrigin {
   const QuickMessageOrigin({
@@ -150,7 +150,7 @@ class QuickMessageOrigin {
 
   /// The eight-point compass label for [bearingDegrees].
   ///
-  /// Eight points, not sixteen: a rider glancing at a phone on a mount needs
+  /// Eight points, not sixteen: a sailor glancing at a phone on a mount needs
   /// "NE", and "NNE" costs reading time for precision a straight-line bearing
   /// does not have anyway.
   String? get compassLabel {
@@ -163,7 +163,7 @@ class QuickMessageOrigin {
   /// Resolves the honest form for one pair of positions.
   ///
   /// [maximumOnRouteDistanceMeters] mirrors
-  /// `LeaderRideStatusCalculator.maximumOnRouteDistanceMeters`, so "on the
+  /// `SkipperVoyageStatusCalculator.maximumOnRouteDistanceMeters`, so "on the
   /// route" means the same thing here as it does in the TEC gap.
   static QuickMessageOrigin? between({
     required GeoPoint? readerPosition,
@@ -204,9 +204,9 @@ class QuickMessageOrigin {
 }
 
 /// A received quick message together with where its sender is — everything the
-/// ride surfaces need to present one, and nothing they have to work out.
-class RideQuickMessageAlert {
-  const RideQuickMessageAlert({
+/// voyage surfaces need to present one, and nothing they have to work out.
+class VoyageQuickMessageAlert {
+  const VoyageQuickMessageAlert({
     required this.message,
     this.origin,
     this.repeats = const [],
@@ -214,12 +214,12 @@ class RideQuickMessageAlert {
 
   final ReceivedQuickMessage message;
 
-  /// The other outstanding messages this alert stands for: the same rider saying
+  /// The other outstanding messages this alert stands for: the same sailor saying
   /// the same thing again, with [message] the one presented.
   ///
   /// One card is shown at a time and acknowledging it reveals the next, so three
-  /// `Stopped` messages from one rider produced three identical prompts and read
-  /// as one prompt that would not go away (#178). Three `Stopped` from one rider
+  /// `Stopped` messages from one sailor produced three identical prompts and read
+  /// as one prompt that would not go away (#178). Three `Stopped` from one sailor
   /// is one fact, so they are collapsed into a single alert and acknowledged
   /// together - which is why the messages are carried rather than counted.
   final List<ReceivedQuickMessage> repeats;
@@ -241,22 +241,22 @@ class RideQuickMessageAlert {
 /// Every rule lives here so the map card, the critical interrupt, the sender's
 /// receipt and any later companion surface cannot disagree:
 ///
-/// * signature-verified for this ride, like every other relayed fact;
-/// * addressed to the local rider, or group-visible — a message with a
-///   recipient list this rider is not on is not theirs to see;
+/// * signature-verified for this voyage, like every other relayed fact;
+/// * addressed to the local sailor, or group-visible — a message with a
+///   recipient list this sailor is not on is not theirs to see;
 /// * inside its own expiry;
-/// * retired by a later "Resolved" from the same rider, and by that rider
-///   leaving the ride;
+/// * retired by a later "Resolved" from the same sailor, and by that sailor
+///   leaving the voyage;
 /// * acknowledgements folded onto the message they name.
 ///
 /// ### Why an acknowledgement is itself a `statusMessage`
 ///
 /// It carries `acknowledgesQuickMessageEventId`, exactly as `iceInfoViewed`
-/// carries `sharedEventId`. A new `RideEventType` would have needed the relay's
+/// carries `sharedEventId`. A new `VoyageEventType` would have needed the relay's
 /// own event-type allowlist and a capability to negotiate, so acknowledgement
 /// would have silently not relayed until a server deploy reached production. A
 /// `statusMessage` is already allowlisted, already capped at two hours'
-/// retention and already carries `recipientRiderIds`, so this works on the relay
+/// retention and already carries `recipientSailorIds`, so this works on the relay
 /// that is running today. An older build shows it in the event log as its label
 /// and otherwise ignores it.
 class ReceivedQuickMessageReducer {
@@ -267,27 +267,27 @@ class ReceivedQuickMessageReducer {
   static const acknowledgesKey = 'acknowledgesQuickMessageEventId';
 
   List<ReceivedQuickMessage> fromEvents({
-    required String rideId,
+    required String voyageId,
     required String inviteSecret,
-    required Iterable<RideEvent> events,
-    required String localRiderId,
+    required Iterable<VoyageEvent> events,
+    required String localSailorId,
     required DateTime now,
     Map<String, String> displayNames = const {},
-    Iterable<String> departedRiderIds = const [],
-    bool rideEnded = false,
+    Iterable<String> departedSailorIds = const [],
+    bool voyageEnded = false,
   }) {
-    if (rideEnded) return const [];
+    if (voyageEnded) return const [];
     final ordered =
         events
             .where(
               (event) =>
-                  event.rideId == rideId &&
-                  event.type == RideEventType.statusMessage &&
-                  RideEventAuthenticator.verify(event, inviteSecret),
+                  event.voyageId == voyageId &&
+                  event.type == VoyageEventType.statusMessage &&
+                  VoyageEventAuthenticator.verify(event, inviteSecret),
             )
             .toList(growable: false)
-          ..sort(RideLifecycleReducer.compareEvents);
-    final departed = departedRiderIds.toSet();
+          ..sort(VoyageLifecycleReducer.compareEvents);
+    final departed = departedSailorIds.toSet();
     final messages = <String, ReceivedQuickMessage>{};
     final acknowledgements = <String, List<QuickMessageAcknowledgement>>{};
     for (final event in ordered) {
@@ -295,45 +295,45 @@ class ReceivedQuickMessageReducer {
       if (acknowledged is String) {
         (acknowledgements[acknowledged] ??= []).add(
           QuickMessageAcknowledgement(
-            riderId: event.deviceId,
+            sailorId: event.deviceId,
             displayName: _nameFor(event, displayNames),
             acknowledgedAt: event.createdAt,
           ),
         );
         continue;
       }
-      if (!_isVisibleTo(event, localRiderId)) continue;
+      if (!_isVisibleTo(event, localSailorId)) continue;
       final message = tryParseQuickMessage(event.payload['message']);
       final label = event.payload['label'];
       if (label is! String || label.isEmpty) continue;
       if (message?.retiresEarlierMessages ?? false) {
-        // The rider says the thing they raised is dealt with. That clears their
+        // The sailor says the thing they raised is dealt with. That clears their
         // card rather than adding a second one to it.
         messages.removeWhere(
-          (_, existing) => existing.senderRiderId == event.deviceId,
+          (_, existing) => existing.senderSailorId == event.deviceId,
         );
         continue;
       }
       messages[event.id] = ReceivedQuickMessage(
         eventId: event.id,
-        senderRiderId: event.deviceId,
+        senderSailorId: event.deviceId,
         senderDisplayName: _nameFor(event, displayNames),
         label: label,
         // The sender's own priority is authoritative when this build knows the
         // kind; otherwise the relayed envelope priority is what there is.
         priority: message?.priority ?? event.priority,
         raisedAt: event.createdAt,
-        raisedFromLocalRider: event.deviceId == localRiderId,
+        raisedFromLocalSailor: event.deviceId == localSailorId,
         message: message,
         raisedAtPosition: _positionFrom(event.payload['position']),
-        addressedToLocalRider: _recipients(event).contains(localRiderId),
+        addressedToLocalSailor: _recipients(event).contains(localSailorId),
       );
     }
     final live =
         messages.values
             .where(
               (message) =>
-                  !departed.contains(message.senderRiderId) &&
+                  !departed.contains(message.senderSailorId) &&
                   !_isExpired(message, ordered, now),
             )
             .map(
@@ -346,7 +346,7 @@ class ReceivedQuickMessageReducer {
     return List.unmodifiable(live);
   }
 
-  /// The payload one rider records to tell the sender their message was seen.
+  /// The payload one sailor records to tell the sender their message was seen.
   ///
   /// Addressed to the sender, so an acknowledgement is not group noise, and
   /// labelled so the dashboard event log reads as a sentence on both phones.
@@ -355,12 +355,12 @@ class ReceivedQuickMessageReducer {
   }) => {
     acknowledgesKey: message.eventId,
     'label': 'Seen: ${message.label}',
-    'recipientRiderIds': [message.senderRiderId],
+    'recipientSailorIds': [message.senderSailorId],
   };
 
   /// Whether [event] is an acknowledgement rather than a new quick message.
-  static bool isAcknowledgement(RideEvent event) =>
-      event.type == RideEventType.statusMessage &&
+  static bool isAcknowledgement(VoyageEvent event) =>
+      event.type == VoyageEventType.statusMessage &&
       event.payload[acknowledgesKey] is String;
 
   static int _mostUrgentFirst(
@@ -377,25 +377,25 @@ class ReceivedQuickMessageReducer {
   }
 
   /// A quick message with no recipient list is group-visible, which is what the
-  /// dashboard grid sends. One with a list is only for the riders on it —
+  /// dashboard grid sends. One with a list is only for the sailors on it —
   /// deliberately the opposite default from a rejoin share, because the sender
   /// chose the whole group when they left the list off.
-  static bool _isVisibleTo(RideEvent event, String localRiderId) {
-    if (event.deviceId == localRiderId) return true;
+  static bool _isVisibleTo(VoyageEvent event, String localSailorId) {
+    if (event.deviceId == localSailorId) return true;
     final recipients = _recipients(event);
-    return recipients.isEmpty || recipients.contains(localRiderId);
+    return recipients.isEmpty || recipients.contains(localSailorId);
   }
 
-  static Set<String> _recipients(RideEvent event) {
-    final recipients = event.payload['recipientRiderIds'];
+  static Set<String> _recipients(VoyageEvent event) {
+    final recipients = event.payload['recipientSailorIds'];
     if (recipients is! List) return const {};
     return recipients.whereType<String>().toSet();
   }
 
-  static String _nameFor(RideEvent event, Map<String, String> displayNames) {
+  static String _nameFor(VoyageEvent event, Map<String, String> displayNames) {
     final relayed = event.payload['senderDisplayName'];
     if (relayed is String && relayed.trim().isNotEmpty) return relayed.trim();
-    return displayNames[event.deviceId] ?? 'A rider';
+    return displayNames[event.deviceId] ?? 'A sailor';
   }
 
   static GeoPoint? _positionFrom(Object? value) {
@@ -412,7 +412,7 @@ class ReceivedQuickMessageReducer {
 
   static bool _isExpired(
     ReceivedQuickMessage message,
-    List<RideEvent> events,
+    List<VoyageEvent> events,
     DateTime now,
   ) {
     for (final event in events) {

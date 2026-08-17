@@ -16,9 +16,9 @@ class RouteProgressGeometry {
       progressMeters = 0,
       totalMeters = 0;
 
-  /// The planned route behind the rider. This is a split of the *plan*, not a
-  /// record of where anyone has been: it is route geometry the rider is deemed
-  /// to have covered. Travelled trails come from `RiderTrailRecorder`.
+  /// The planned route behind the sailor. This is a split of the *plan*, not a
+  /// record of where anyone has been: it is route geometry the sailor is deemed
+  /// to have covered. Travelled trails come from `SailorTrailRecorder`.
   final List<List<GeoPoint>> riddenPaths;
 
   final List<List<GeoPoint>> remainingPaths;
@@ -58,7 +58,7 @@ List<double> routeWaypointProgressMeters(ImportedRoute route) {
 /// segment.
 ///
 /// This is independent of progress: callers can distinguish "the route starts
-/// elsewhere" from "the rider is already somewhere on this route" even when
+/// elsewhere" from "the sailor is already somewhere on this route" even when
 /// the GPX has only a few widely spaced points.
 double distanceToRouteMeters(ImportedRoute route, GeoPoint position) {
   var nearest = double.infinity;
@@ -84,12 +84,12 @@ double distanceToRouteMeters(ImportedRoute route, GeoPoint position) {
 /// Maintains monotonic progress along the primary route path.
 ///
 /// A stateful tracker avoids a closed loop's finish point being mistaken for
-/// completed progress while the rider is still at its coincident start point.
+/// completed progress while the sailor is still at its coincident start point.
 ///
-/// Progress deliberately stops advancing while the rider is further than
+/// Progress deliberately stops advancing while the sailor is further than
 /// [maximumTrackingDistanceMeters] from the route: there is no route to be
-/// progressed along out there. Nothing about drawing where a rider has been may
-/// depend on this class - that mistake is what removed a leader's trail at the
+/// progressed along out there. Nothing about drawing where a sailor has been may
+/// depend on this class - that mistake is what removed a skipper's trail at the
 /// moment they left the plan (#100).
 class RouteProgressTracker {
   RouteProgressTracker({this.maximumTrackingDistanceMeters = 150});

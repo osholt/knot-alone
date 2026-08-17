@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:tide_and_seek/domain/completed_ride.dart';
-import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/domain/completed_voyage.dart';
+import 'package:tide_and_seek/domain/completed_voyage_store.dart';
 import 'package:tide_and_seek/domain/imported_route.dart';
 import 'package:tide_and_seek/domain/recorded_route_store.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
 import 'package:tide_and_seek/domain/route_store.dart';
-import 'package:tide_and_seek/features/map/ride_map.dart';
+import 'package:tide_and_seek/features/map/voyage_map.dart';
 import 'package:tide_and_seek/services/basemap_configuration.dart';
 import 'package:tide_and_seek/services/gpx_import_source.dart';
 import 'package:tide_and_seek/services/imported_track_matcher.dart';
@@ -20,7 +20,7 @@ import 'package:tide_and_seek/services/approximate_place_index.dart';
 import 'package:tide_and_seek/services/route_importer.dart';
 import 'package:tide_and_seek/services/stored_route_library.dart';
 
-/// A rider who has just ridden a route, or recorded one, can ride it again
+/// A sailor who has just ridden a route, or recorded one, can voyage it again
 /// without exporting a GPX and importing it back (#155). These drive the real
 /// map screen, because the point of the feature is that the route it produces
 /// goes through the same pipeline as an imported file: the same review step,
@@ -44,7 +44,7 @@ void main() {
     await tester.tap(find.byKey(const Key('use-stored-route-empty-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ride library'), findsWidgets);
+    expect(find.text('Voyage library'), findsWidgets);
     expect(find.text('RECORDED ROUTES'), findsOneWidget);
     expect(find.text('Scouted loop'), findsOneWidget);
 
@@ -53,7 +53,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // The rider is told plainly what they are about to ride.
+    // The sailor is told plainly what they are about to voyage.
     expect(find.textContaining('Tidied: a recording'), findsOneWidget);
     await tester.tap(find.byKey(const Key('use-stored-route')));
     await _followOriginalTrack(tester);
@@ -69,14 +69,14 @@ void main() {
     expect(store.savedRoutes.single.sourceFileName, 'recorded-route');
   });
 
-  testWidgets('a previous ride is selectable from route selection', (
+  testWidgets('a previous voyage is selectable from route selection', (
     tester,
   ) async {
-    final rides = InMemoryCompletedRideStore();
-    await rides.save(
-      _completedRide(
-        rideId: 'ride-1',
-        rideCode: 'AB12CD',
+    final voyages = InMemoryCompletedVoyageStore();
+    await voyages.save(
+      _completedVoyage(
+        voyageId: 'voyage-1',
+        voyageCode: 'AB12CD',
         traveledRoute: _recording(id: 'trail', name: 'Trail'),
       ),
     );
@@ -85,7 +85,7 @@ void main() {
     await _pumpMap(
       tester,
       store: store,
-      rides: rides,
+      voyages: voyages,
       openChangeRouteSheet: true,
     );
 
@@ -94,12 +94,12 @@ void main() {
     await tester.tap(find.byKey(const Key('use-stored-route-sheet-item')));
     await tester.pumpAndSettle();
 
-    expect(find.text('PREVIOUS RIDES'), findsOneWidget);
+    expect(find.text('PREVIOUS VOYAGES'), findsOneWidget);
     expect(find.text('Sunday run'), findsOneWidget);
-    expect(find.textContaining('ride AB12CD'), findsOneWidget);
+    expect(find.textContaining('voyage AB12CD'), findsOneWidget);
 
     await tester.tap(
-      find.byKey(const Key('stored-route-candidate-ride:ride-1:track')),
+      find.byKey(const Key('stored-route-candidate-voyage:voyage-1:track')),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('use-stored-route')));
@@ -108,28 +108,28 @@ void main() {
     await _confirmReview(tester);
 
     expect(store.savedRoutes.single.name, 'Sunday run');
-    expect(store.savedRoutes.single.sourceFileName, 'ride-AB12CD-track');
+    expect(store.savedRoutes.single.sourceFileName, 'voyage-AB12CD-track');
   });
 
-  testWidgets('a previous ride can be ridden in the opposite direction', (
+  testWidgets('a previous voyage can be ridden in the opposite direction', (
     tester,
   ) async {
-    final rides = InMemoryCompletedRideStore();
-    await rides.save(
-      _completedRide(
-        rideId: 'ride-1',
-        rideCode: 'AB12CD',
+    final voyages = InMemoryCompletedVoyageStore();
+    await voyages.save(
+      _completedVoyage(
+        voyageId: 'voyage-1',
+        voyageCode: 'AB12CD',
         traveledRoute: _recording(id: 'trail', name: 'Trail'),
       ),
     );
     final store = _RecordingRouteStore();
 
-    await _pumpMap(tester, store: store, rides: rides);
+    await _pumpMap(tester, store: store, voyages: voyages);
 
     await tester.tap(find.byKey(const Key('use-stored-route-empty-button')));
     await tester.pumpAndSettle();
     await tester.tap(
-      find.byKey(const Key('stored-route-candidate-ride:ride-1:track')),
+      find.byKey(const Key('stored-route-candidate-voyage:voyage-1:track')),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('stored-route-reverse')));
@@ -154,13 +154,13 @@ void main() {
   });
 
   testWidgets(
-    'a reversed previous ride ignores a one-fix fragment when adding directions',
+    'a reversed previous voyage ignores a one-fix fragment when adding directions',
     (tester) async {
-      final rides = InMemoryCompletedRideStore();
-      await rides.save(
-        _completedRide(
-          rideId: 'ride-392725',
-          rideCode: '392725',
+      final voyages = InMemoryCompletedVoyageStore();
+      await voyages.save(
+        _completedVoyage(
+          voyageId: 'voyage-392725',
+          voyageCode: '392725',
           traveledRoute: _recordingWithTrailingFix(),
         ),
       );
@@ -170,14 +170,16 @@ void main() {
       await _pumpMap(
         tester,
         store: store,
-        rides: rides,
+        voyages: voyages,
         importedTrackMatcher: matcher,
       );
 
       await tester.tap(find.byKey(const Key('use-stored-route-empty-button')));
       await tester.pumpAndSettle();
       await tester.tap(
-        find.byKey(const Key('stored-route-candidate-ride:ride-392725:track')),
+        find.byKey(
+          const Key('stored-route-candidate-voyage:voyage-392725:track'),
+        ),
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('stored-route-reverse')));
@@ -207,28 +209,28 @@ void main() {
     },
   );
 
-  testWidgets('a ride whose data has been removed is not offered', (
+  testWidgets('a voyage whose data has been removed is not offered', (
     tester,
   ) async {
-    final rides = InMemoryCompletedRideStore();
-    await rides.save(
-      _completedRide(
-        rideId: 'ride-gone',
-        rideCode: 'GONE01',
-        // Retention is ride-scoped and is not being extended: with no
-        // geometry left there is nothing to ride.
+    final voyages = InMemoryCompletedVoyageStore();
+    await voyages.save(
+      _completedVoyage(
+        voyageId: 'voyage-gone',
+        voyageCode: 'GONE01',
+        // Retention is voyage-scoped and is not being extended: with no
+        // geometry left there is nothing to voyage.
         traveledRoute: null,
       ),
     );
 
-    await _pumpMap(tester, store: _RecordingRouteStore(), rides: rides);
+    await _pumpMap(tester, store: _RecordingRouteStore(), voyages: voyages);
 
     await tester.tap(find.byKey(const Key('use-stored-route-empty-button')));
     await tester.pumpAndSettle();
 
     expect(find.text('No saved routes yet'), findsOneWidget);
     expect(find.text('Sunday run'), findsNothing);
-    expect(find.text('PREVIOUS RIDES'), findsNothing);
+    expect(find.text('PREVIOUS VOYAGES'), findsNothing);
   });
 
   testWidgets('the raw recorded track stays available and is labelled', (
@@ -279,11 +281,11 @@ Future<void> _pumpMap(
   WidgetTester tester, {
   required _RecordingRouteStore store,
   RecordedRouteStore? recorded,
-  CompletedRideStore? rides,
+  CompletedVoyageStore? voyages,
   ValueChanged<ImportedRoute?>? onRouteCommitted,
   ImportedTrackMatcher? importedTrackMatcher,
-  // The Ride page's "Change route" asks the map to open its route-change sheet.
-  // Left off, the empty-route card is what a rider sees, and its own controls
+  // The Voyage page's "Change route" asks the map to open its route-change sheet.
+  // Left off, the empty-route card is what a sailor sees, and its own controls
   // are the ones under test.
   bool openChangeRouteSheet = false,
 }) async {
@@ -300,17 +302,17 @@ Future<void> _pumpMap(
   await tester.pumpWidget(
     MaterialApp(
       theme: ThemeData.dark(useMaterial3: true),
-      home: RideMapScreen(
-        // These tests exercise the pre-ride route chooser. A live route-less
-        // ride deliberately dismisses that chooser so it cannot block the map.
-        rideStarted: false,
+      home: VoyageMapScreen(
+        // These tests exercise the pre-voyage route chooser. A live route-less
+        // voyage deliberately dismisses that chooser so it cannot block the map.
+        voyageStarted: false,
         routeStore: store,
         routeImporter: RouteImporter(source: const _NoFileSource()),
         offlineTileCache: cache,
         recordedRouteStore: recordedStore,
         storedRouteLibrary: StoredRouteLibrary(
           recordedRoutes: recordedStore,
-          completedRides: rides ?? InMemoryCompletedRideStore(),
+          completedVoyages: voyages ?? InMemoryCompletedVoyageStore(),
           idFactory: () => 'stored-route-id',
           clock: () => DateTime.utc(2026, 7, 28),
           approximatePlaceIndex: _testPlaces,
@@ -400,20 +402,20 @@ ImportedRoute _recordingWithTrailingFix() {
   );
 }
 
-CompletedRide _completedRide({
-  required String rideId,
-  required String rideCode,
+CompletedVoyage _completedVoyage({
+  required String voyageId,
+  required String voyageCode,
   ImportedRoute? traveledRoute,
-}) => CompletedRide(
-  rideId: rideId,
-  rideCode: rideCode,
-  rideName: 'Sunday run',
+}) => CompletedVoyage(
+  voyageId: voyageId,
+  voyageCode: voyageCode,
+  voyageName: 'Sunday run',
   localDisplayName: 'Alex',
-  localRole: RideRole.lead,
+  localRole: VoyageRole.lead,
   startedAt: DateTime.utc(2026, 7, 26, 9),
   endedAt: DateTime.utc(2026, 7, 26, 12),
   archivedAt: DateTime.utc(2026, 7, 26, 12, 5),
-  riderCount: 3,
+  sailorCount: 3,
   eventCount: 40,
   totalDistanceMeters: 42000,
   markerSessions: const [],

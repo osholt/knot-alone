@@ -14,9 +14,9 @@ import 'basemap_configuration.dart';
 /// [MapStyleRepository.resolve] used to answer with a bare style string, so a
 /// provider that could not be reached and a provider that answered were
 /// indistinguishable to every caller: both got a `String`, and the failure was
-/// swallowed by the `catch` that produced the fallback. On the ride map that
+/// swallowed by the `catch` that produced the fallback. On the voyage map that
 /// fallback draws as a plain dark rectangle, which is pixel-identical to a
-/// working map of empty countryside — the rider sees "just a blob or dot where
+/// working map of empty countryside — the sailor sees "just a blob or dot where
 /// you are and a tail where you been" and has no way to tell us which one it
 /// was (#281). The outcome travels with the style so the map can say.
 enum MapStyleOutcome {
@@ -48,12 +48,12 @@ class MapStyleResolution {
 
   final MapStyleOutcome outcome;
 
-  /// Why the fetch failed, when it did. Carried so a rider can report the
+  /// Why the fetch failed, when it did. Carried so a sailor can report the
   /// actual fault rather than "the map was blank".
   final Object? error;
 
   /// Whether [style] carries real basemap data. False means the map will render
-  /// the rider's own overlays over an empty background.
+  /// the sailor's own overlays over an empty background.
   bool get hasBasemap =>
       outcome == MapStyleOutcome.live || outcome == MapStyleOutcome.cached;
 }
@@ -138,7 +138,7 @@ class MapStyleRepository {
 
   /// Without persistent caching (the default until a build opts in), every
   /// cold launch needs a fresh fetch to show real tiles at all - one failed
-  /// attempt on a slow ride-start connection otherwise commits the whole
+  /// attempt on a slow voyage-start connection otherwise commits the whole
   /// session to the tile-less fallback. A couple of quick retries covers the
   /// common transient case without meaningfully delaying a genuine failure.
   Future<String> _downloadWithRetries() async {
@@ -268,7 +268,7 @@ class MapStyleRepository {
   // Labels. Every one of them was effectively unreadable: road names at
   // rgba(80,78,78,1) measured 1.38:1 against the road they sit on, a motorway
   // ref 1.14:1 against its own motorway, and water names were pure black with a
-  // *light* halo. A rider who cannot read a road name gets no confirmation that
+  // *light* halo. A sailor who cannot read a road name gets no confirmation that
   // the road they are on is the road they wanted.
   static const _labelRoad = '#BCC1C9';
   static const _labelMotorway = '#C9CCD1';
@@ -278,8 +278,8 @@ class MapStyleRepository {
   static const _labelHaloSoft = 'rgba(11,14,18,0.85)';
 
   /// `highway_minor` carries unclassified and residential roads - the lanes a
-  /// group actually rides - together with driveways and forest tracks. They are
-  /// not the same thing to a rider, so the fill is data-driven on `class`
+  /// group actually voyages - together with driveways and forest tracks. They are
+  /// not the same thing to a sailor, so the fill is data-driven on `class`
   /// instead of painting all three alike.
   static const _minorClassColor = <Object>[
     'match',
@@ -350,8 +350,8 @@ class MapStyleRepository {
   /// ground band below the dimmest road.
   ///
   /// `path`, `railway` and `boundary` are deliberately in neither list: they are
-  /// linear context that sits between the two bands, above the ground a rider
-  /// cannot use and below the roads a rider can. So is `road casing`, which is
+  /// linear context that sits between the two bands, above the ground a sailor
+  /// cannot use and below the roads a sailor can. So is `road casing`, which is
   /// darker than the background on purpose.
   static const darkBasemapGroundBand = <String>[
     'background',

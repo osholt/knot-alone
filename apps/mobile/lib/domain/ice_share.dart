@@ -1,10 +1,10 @@
-/// A rider's in-case-of-emergency details, shared into a ride either with
+/// A sailor's in-case-of-emergency details, shared into a voyage either with
 /// the whole group (an explicit share) or with whoever currently holds the
 /// lead role (the opt-in default-share setting).
 class IceShare {
   const IceShare({
     required this.eventId,
-    required this.sharedByRiderId,
+    required this.sharedBySailorId,
     required this.sharedByDisplayName,
     required this.contactName,
     required this.contactPhone,
@@ -12,11 +12,11 @@ class IceShare {
     required this.sharedAt,
     required this.toWholeGroup,
     this.viewedAt,
-    this.viewedByRiderId,
+    this.viewedBySailorId,
   });
 
   final String eventId;
-  final String sharedByRiderId;
+  final String sharedBySailorId;
   final String sharedByDisplayName;
   final String contactName;
   final String contactPhone;
@@ -25,7 +25,7 @@ class IceShare {
   final bool toWholeGroup;
 
   /// Set once the recipient has opened this share, so the sharer can see it
-  /// was seen. Only ever populated on a share the local rider sent.
+  /// was seen. Only ever populated on a share the local sailor sent.
   final DateTime? viewedAt;
-  final String? viewedByRiderId;
+  final String? viewedBySailorId;
 }

@@ -8,12 +8,12 @@ import '../../services/map_camera_command.dart';
 /// `map_camera_command.dart`. This is only the adapter, kept in one place
 /// because the throw it prevents is reached from several screens and guarding
 /// some of them is the same as guarding none: #377 covered the follow camera,
-/// #385 covered the ride map's bounds, and the ride history, the route preview
+/// #385 covered the voyage map's bounds, and the voyage history, the route preview
 /// and the group mini-map were still handing values straight to it.
 extension MapLibreCameraGuard on ml.LatLngBounds {
   /// True when this box is one the renderer can frame.
   ///
-  /// A ride whose points are a single repeated coordinate - a phone that never
+  /// A voyage whose points are a single repeated coordinate - a phone that never
   /// got a second fix - collapses to a box with no width, which is refused here
   /// rather than aborting the process inside `constrainCameraAndZoomToBounds`.
   bool get isUsableCamera => MapCameraCommand.boundsAreUsable(

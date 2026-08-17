@@ -3,7 +3,7 @@ import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:tide_and_seek/domain/imported_route.dart';
 import 'package:tide_and_seek/features/map/map_camera_guard.dart';
 import 'package:tide_and_seek/features/map/resolved_route_map_preview.dart';
-import 'package:tide_and_seek/features/ride/previous_rides_screen.dart';
+import 'package:tide_and_seek/features/voyage/previous_voyages_screen.dart';
 
 void main() {
   group('MapLibreCameraGuard', () {
@@ -61,9 +61,9 @@ void main() {
   });
 
   group('the collapsed box is reachable, not hypothetical', () {
-    // A phone that never got a second fix stores a ride whose every point is
-    // the same coordinate. Both screens frame stored points, so a ride like
-    // that crashed every time it was opened - the value outlives the ride that
+    // A phone that never got a second fix stores a voyage whose every point is
+    // the same coordinate. Both screens frame stored points, so a voyage like
+    // that crashed every time it was opened - the value outlives the voyage that
     // produced it.
     const stuck = [
       GeoPoint(latitude: 51.4672, longitude: -2.4889),
@@ -71,21 +71,21 @@ void main() {
       GeoPoint(latitude: 51.4672, longitude: -2.4889),
     ];
 
-    test('an archived ride with one repeated fix collapses', () {
-      expect(archivedRideBounds(stuck).isUsableCamera, isFalse);
+    test('an archived voyage with one repeated fix collapses', () {
+      expect(archivedVoyageBounds(stuck).isUsableCamera, isFalse);
     });
 
     test('a route preview with one repeated fix collapses', () {
       expect(routePreviewBounds(stuck).isUsableCamera, isFalse);
     });
 
-    test('a real ride still frames', () {
+    test('a real voyage still frames', () {
       const ridden = [
         GeoPoint(latitude: 51.4672, longitude: -2.4889),
         GeoPoint(latitude: 51.4700, longitude: -2.4800),
       ];
 
-      expect(archivedRideBounds(ridden).isUsableCamera, isTrue);
+      expect(archivedVoyageBounds(ridden).isUsableCamera, isTrue);
       expect(routePreviewBounds(ridden).isUsableCamera, isTrue);
     });
   });

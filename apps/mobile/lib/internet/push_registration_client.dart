@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
-import '../domain/ride_session.dart';
+import '../domain/voyage_session.dart';
 import 'internet_relay_client.dart';
 
 enum PushProvider { apns, fcm }
@@ -41,12 +41,12 @@ class PushPreferences {
 
 abstract interface class PushRegistrationApi {
   Future<void> register({
-    required RideSession session,
+    required VoyageSession session,
     required DevicePushToken token,
     required PushPreferences preferences,
   });
 
-  Future<void> revoke(RideSession session);
+  Future<void> revoke(VoyageSession session);
 
   void close();
 }
@@ -64,7 +64,7 @@ class HttpPushRegistrationClient implements PushRegistrationApi {
 
   @override
   Future<void> register({
-    required RideSession session,
+    required VoyageSession session,
     required DevicePushToken token,
     required PushPreferences preferences,
   }) async {
@@ -86,7 +86,7 @@ class HttpPushRegistrationClient implements PushRegistrationApi {
   }
 
   @override
-  Future<void> revoke(RideSession session) async {
+  Future<void> revoke(VoyageSession session) async {
     _validate(session);
     final response = await _send(
       http.Request('DELETE', _registrationUri(session))
@@ -143,35 +143,35 @@ class HttpPushRegistrationClient implements PushRegistrationApi {
     );
   }
 
-  Map<String, String> _headers(RideSession session) => {
+  Map<String, String> _headers(VoyageSession session) => {
     'accept': 'application/json',
-    'authorization': 'Bearer ${_rideBearerToken(session)}',
+    'authorization': 'Bearer ${_voyageBearerToken(session)}',
     'content-type': 'application/json',
-    'x-tide-and-seek-device': session.localRiderId,
+    'x-tide-and-seek-device': session.localSailorId,
     ..._clientDescriptor.headers,
   };
 
-  Uri _registrationUri(RideSession session) {
+  Uri _registrationUri(VoyageSession session) {
     final base = configuration.baseUri!;
     final baseText = base.toString().endsWith('/')
         ? base.toString().substring(0, base.toString().length - 1)
         : base.toString();
     return Uri.parse(
-      '$baseText/v1/rides/${Uri.encodeComponent(session.rideId)}'
-      '/push-registrations/${Uri.encodeComponent(session.localRiderId)}',
+      '$baseText/v1/voyages/${Uri.encodeComponent(session.voyageId)}'
+      '/push-registrations/${Uri.encodeComponent(session.localSailorId)}',
     );
   }
 
-  void _validate(RideSession session) {
+  void _validate(VoyageSession session) {
     final error = configuration.configurationError;
     if (error != null) throw InternetRelayException(error);
     if (session.inviteSecret.length < 16 ||
-        session.rideId.isEmpty ||
-        session.rideId.length > 128 ||
-        session.localRiderId.isEmpty ||
-        session.localRiderId.length > 128) {
+        session.voyageId.isEmpty ||
+        session.voyageId.length > 128 ||
+        session.localSailorId.isEmpty ||
+        session.localSailorId.length > 128) {
       throw const InternetRelayException(
-        'Notification registration requires an authenticated ride.',
+        'Notification registration requires an authenticated voyage.',
       );
     }
   }
@@ -180,10 +180,10 @@ class HttpPushRegistrationClient implements PushRegistrationApi {
   void close() => client.close();
 }
 
-String _rideBearerToken(RideSession session) {
+String _voyageBearerToken(VoyageSession session) {
   final digest = Hmac(
     sha256,
     utf8.encode(session.inviteSecret),
-  ).convert(utf8.encode('ride-relay-internet-token-v1\n${session.rideId}'));
+  ).convert(utf8.encode('ride-relay-internet-token-v1\n${session.voyageId}'));
   return 'rr1_${base64Url.encode(digest.bytes).replaceAll('=', '')}';
 }

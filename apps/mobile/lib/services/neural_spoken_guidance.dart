@@ -47,7 +47,7 @@ abstract interface class NeuralSpeechBackend {
 
 /// Persistent, background-isolate Sherpa-ONNX backend. Loading a 134 MB model
 /// or running inference on Flutter's UI isolate would make map interaction
-/// stutter precisely when a rider needs it.
+/// stutter precisely when a sailor needs it.
 class SherpaOnnxNeuralSpeechBackend implements NeuralSpeechBackend {
   SherpaOnnxNeuralSpeechBackend({required this.modelDirectory});
 
@@ -316,9 +316,9 @@ class FailSafeNeuralSpokenGuidanceEngine
   }
 }
 
-/// Keeps the Settings switch live during a ride. The ride shell creates its
+/// Keeps the Settings switch live during a voyage. The voyage shell creates its
 /// speaker once, so choosing, disabling, or deleting a pack later must be read
-/// at the next utterance rather than requiring the whole ride UI to restart.
+/// at the next utterance rather than requiring the whole voyage UI to restart.
 class AdaptiveNeuralSpokenGuidanceEngine
     implements SpokenGuidanceEngine, WarmableSpokenGuidanceEngine {
   AdaptiveNeuralSpokenGuidanceEngine({

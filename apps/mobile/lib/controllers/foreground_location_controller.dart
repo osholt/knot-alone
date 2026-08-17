@@ -2,14 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../domain/rider_location.dart';
+import '../domain/sailor_location.dart';
 import '../services/device_location_source.dart';
 
 typedef LocationSampleHandler = Future<void> Function(LocationSample sample);
 typedef LocationSampleErrorHandler =
     void Function(Object error, StackTrace stackTrace);
 
-/// User-controlled foreground sampler that forwards fixes to the ride layer.
+/// User-controlled foreground sampler that forwards fixes to the voyage layer.
 class ForegroundLocationController extends ChangeNotifier {
   ForegroundLocationController(
     this._source,
@@ -104,7 +104,7 @@ class ForegroundLocationController extends ChangeNotifier {
       try {
         await previous;
       } on Object {
-        // Each fix is independent. A failed ride-state write must never poison
+        // Each fix is independent. A failed voyage-state write must never poison
         // the serial queue and suppress every later native GPS update.
       }
       try {

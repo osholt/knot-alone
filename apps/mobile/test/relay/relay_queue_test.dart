@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/voyage_event.dart';
 import 'package:tide_and_seek/relay/in_memory_relay_queue.dart';
 import 'package:tide_and_seek/relay/relay_queue.dart';
 
@@ -13,7 +13,7 @@ void main() {
     await queue.enqueue(_item('critical', EventPriority.critical, now));
 
     var pending = await queue.pendingForPeer(
-      'ride-1',
+      'voyage-1',
       'peer-b',
       now: now,
       limit: 10,
@@ -22,14 +22,14 @@ void main() {
 
     await queue.acknowledge('peer-b', ['critical']);
     pending = await queue.pendingForPeer(
-      'ride-1',
+      'voyage-1',
       'peer-b',
       now: now,
       limit: 10,
     );
     expect(pending.single.event.id, 'routine');
     expect(
-      await queue.pendingForPeer('ride-1', 'peer-c', now: now, limit: 10),
+      await queue.pendingForPeer('voyage-1', 'peer-c', now: now, limit: 10),
       hasLength(2),
     );
 
@@ -42,11 +42,11 @@ void main() {
 
 QueuedRelayEvent _item(String id, EventPriority priority, DateTime now) =>
     QueuedRelayEvent(
-      event: RideEvent(
+      event: VoyageEvent(
         id: id,
-        rideId: 'ride-1',
+        voyageId: 'voyage-1',
         deviceId: 'device-a',
-        type: RideEventType.statusMessage,
+        type: VoyageEventType.statusMessage,
         priority: priority,
         createdAt: now,
         payload: const {},

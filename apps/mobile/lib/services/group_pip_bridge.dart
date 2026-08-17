@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../domain/imported_route.dart';
 
-enum GroupPipMarkerKind { rider, hazard }
+enum GroupPipMarkerKind { sailor, hazard }
 
 @immutable
 class GroupPipMarker {
@@ -62,7 +62,7 @@ class GroupPipSnapshot {
 
 /// Drives Android's user-initiated navigation Picture-in-Picture companion.
 ///
-/// The native Activity renders only bounded route/rider primitives. It does
+/// The native Activity renders only bounded route/sailor primitives. It does
 /// not embed Flutter, request an overlay permission, fetch tiles, or imitate
 /// video playback. Calls are harmless on iOS and unsupported Android hosts.
 class GroupPipBridge {

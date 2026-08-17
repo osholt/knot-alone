@@ -12,7 +12,7 @@ class SituationalAwarenessScreen extends StatelessWidget {
     required this.controller,
     this.showAppBar = true,
     this.locationController,
-    this.rideStarted = true,
+    this.voyageStarted = true,
     this.onLocationStopped,
     this.rejoinGuidance,
   });
@@ -20,10 +20,10 @@ class SituationalAwarenessScreen extends StatelessWidget {
   final SituationalAwarenessController controller;
   final bool showAppBar;
   final ForegroundLocationController? locationController;
-  final bool rideStarted;
+  final bool voyageStarted;
   final Future<void> Function()? onLocationStopped;
 
-  /// Issue #102: advisory rejoin guidance for the local rider, or null when
+  /// Issue #102: advisory rejoin guidance for the local sailor, or null when
   /// they are on route. Shown verbatim - it already says when routing is
   /// unavailable and never names a manoeuvre.
   final String? rejoinGuidance;
@@ -54,7 +54,7 @@ class SituationalAwarenessScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
               ],
-              if (!rideStarted) ...[
+              if (!voyageStarted) ...[
                 const _PreStartLocationCard(),
                 if (locationController case final locationController?) ...[
                   const SizedBox(height: 12),
@@ -72,12 +72,12 @@ class SituationalAwarenessScreen extends StatelessWidget {
                 ...controller.routeAlerts.map((alert) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 9),
-                    child: RiderStatusCard(
+                    child: SailorStatusCard(
                       displayName: alert.displayName,
                       alert: alert,
                       onAcknowledge: alert.acknowledged
                           ? null
-                          : () => controller.acknowledgeAlert(alert.riderId),
+                          : () => controller.acknowledgeAlert(alert.sailorId),
                     ),
                   );
                 }),
@@ -100,8 +100,8 @@ class _PreStartLocationCard extends StatelessWidget {
       title: Text('Current position only before departure'),
       subtitle: Text(
         'If you enable location, the group can see only your latest fresh '
-        'position. Tracks, route progress and ride statistics begin when the '
-        'leader starts the ride.',
+        'position. Tracks, route progress and voyage statistics begin when the '
+        'skipper starts the voyage.',
       ),
     ),
   );
@@ -145,7 +145,7 @@ class ForegroundLocationCard extends StatelessWidget {
                     Text(
                       preStart
                           ? 'Your assembly position'
-                          : 'Your ride location',
+                          : 'Your voyage location',
                       style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 3),
@@ -188,8 +188,8 @@ class ForegroundLocationCard extends StatelessWidget {
       };
 }
 
-class RiderStatusCard extends StatelessWidget {
-  const RiderStatusCard({
+class SailorStatusCard extends StatelessWidget {
+  const SailorStatusCard({
     super.key,
     required this.displayName,
     required this.alert,
@@ -197,7 +197,7 @@ class RiderStatusCard extends StatelessWidget {
   });
 
   final String displayName;
-  final RiderRouteAlert? alert;
+  final SailorRouteAlert? alert;
   final VoidCallback? onAcknowledge;
 
   @override
@@ -269,8 +269,8 @@ class _RouteStatusCard extends StatelessWidget {
                 if (!returningToRoute)
                   Text(
                     urgent.isEmpty
-                        ? 'Check the rider shown below.'
-                        : 'The ride coordinator may need to respond.',
+                        ? 'Check the sailor shown below.'
+                        : 'The voyage coordinator may need to respond.',
                     style: const TextStyle(color: Color(0xFF9CA7B5)),
                   ),
                 if (rejoinGuidance case final guidance?) ...[

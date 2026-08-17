@@ -7,7 +7,7 @@ import 'package:tide_and_seek/services/navigation_guidance.dart';
 import 'package:tide_and_seek/services/road_routing.dart';
 
 void main() {
-  // The 10 August ride, twice: "2nd exit, straight on" and "3rd exit, right"
+  // The 10 August voyage, twice: "2nd exit, straight on" and "3rd exit, right"
   // both drawn as though traffic circulates anticlockwise. The exit number and
   // the direction word were right each time, which is what made it look like a
   // drawing fault rather than a data one.

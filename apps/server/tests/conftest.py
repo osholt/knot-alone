@@ -39,21 +39,21 @@ def client(settings: Settings):
         yield test_client
 
 
-def ride_token(ride_id: str, secret: str) -> str:
+def voyage_token(voyage_id: str, secret: str) -> str:
     digest = hmac.new(
         secret.encode(),
-        f"ride-relay-internet-token-v1\n{ride_id}".encode(),
+        f"ride-relay-internet-token-v1\n{voyage_id}".encode(),
         hashlib.sha256,
     ).digest()
     return "rr1_" + base64.urlsafe_b64encode(digest).decode().rstrip("=")
 
 
 def event(
-    ride_id: str,
+    voyage_id: str,
     event_id: str,
     *,
     device_id: str = "device-a",
-    event_type: str = "rideCreated",
+    event_type: str = "voyageCreated",
     payload: dict[str, Any] | None = None,
     expires_at: datetime | None = None,
     created_at: datetime | None = None,
@@ -61,7 +61,7 @@ def event(
     return {
         "schemaVersion": 1,
         "id": event_id,
-        "rideId": ride_id,
+        "voyageId": voyage_id,
         "deviceId": device_id,
         "type": event_type,
         "priority": "routine",
@@ -76,7 +76,7 @@ def event(
 def sync_request(
     client: TestClient,
     *,
-    ride_id: str,
+    voyage_id: str,
     secret: str,
     device_id: str = "device-a",
     cursor: str | None = None,
@@ -97,7 +97,7 @@ def sync_request(
     ).encode()
     digest = base64.urlsafe_b64encode(hashlib.sha256(body).digest()).decode().rstrip("=")
     headers = {
-        "authorization": f"Bearer {token or ride_token(ride_id, secret)}",
+        "authorization": f"Bearer {token or voyage_token(voyage_id, secret)}",
         "content-type": "application/json",
         "idempotency-key": f"rr1-{digest}",
         "x-tide-and-seek-device": device_id,
@@ -109,7 +109,7 @@ def sync_request(
     if platform is not None:
         headers["x-tailendcharlie-platform"] = platform
     return client.post(
-        f"/api/v1/rides/{ride_id}/events:sync",
+        f"/api/v1/voyages/{voyage_id}/events:sync",
         content=body,
         headers=headers,
     )

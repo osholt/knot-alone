@@ -5,13 +5,13 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:tide_and_seek/data/in_memory_event_store.dart';
 import 'package:tide_and_seek/domain/event_store.dart';
-import 'package:tide_and_seek/domain/ride_event.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/voyage_event.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/internet/internet_cursor_store.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 import 'package:tide_and_seek/internet/internet_relay_worker.dart';
-import 'package:tide_and_seek/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/services/voyage_event_authenticator.dart';
 
 /// Two simulated devices sharing one relay, over the **real** HTTP client and
 /// worker, against a fake relay that keeps the FastAPI service's rules —
@@ -28,7 +28,7 @@ void main() {
 
   setUp(() => relay = _Relay());
 
-  _Device device(String riderId, {RideRole role = RideRole.rider}) {
+  _Device device(String sailorId, {VoyageRole role = VoyageRole.sailor}) {
     final store = InMemoryEventStore();
     final cursors = InMemoryInternetCursorStore();
     final worker = InternetRelayWorker(
@@ -46,80 +46,80 @@ void main() {
       randomValue: () => 0.5,
     );
     addTearDown(worker.close);
-    return _Device(_session(riderId, role), worker, store, cursors);
+    return _Device(_session(sailorId, role), worker, store, cursors);
   }
 
   test(
     'an idle device with an empty outbound queue still receives a peer',
     () async {
-      final leader = device('leader', role: RideRole.lead);
+      final skipper = device('skipper', role: VoyageRole.lead);
       final follower = device('follower');
 
-      // The leader is parked on a desk: it uploads its own creation event once
+      // The skipper is parked on a desk: it uploads its own creation event once
       // and then has nothing further to send, exactly like a stationary phone
       // whose GPS emits no new fix.
-      await leader.enqueue('leader-created', RideEventType.rideCreated);
-      await leader.start();
+      await skipper.enqueue('skipper-created', VoyageEventType.voyageCreated);
+      await skipper.start();
       await follower.start();
 
       // Two byte-identical idle polls before the follower says anything.
-      await leader.poll();
-      await leader.poll();
+      await skipper.poll();
+      await skipper.poll();
 
       await follower.enqueue(
         'follower-position-1',
-        RideEventType.riderLocationUpdated,
+        VoyageEventType.sailorLocationUpdated,
       );
       await follower.poll();
 
-      // One more idle poll on the leader. Its queue is still empty and its
+      // One more idle poll on the skipper. Its queue is still empty and its
       // cursor has not moved, so the request body is unchanged.
-      await leader.poll();
+      await skipper.poll();
 
-      expect(await leader.receivedIds(), contains('follower-position-1'));
-      expect(leader.worker.status.pendingEventCount, 0);
+      expect(await skipper.receivedIds(), contains('follower-position-1'));
+      expect(skipper.worker.status.pendingEventCount, 0);
     },
   );
 
   test('the same holds with the roles the other way round', () async {
-    final leader = device('leader', role: RideRole.lead);
+    final skipper = device('skipper', role: VoyageRole.lead);
     final follower = device('follower');
-    await follower.enqueue('follower-joined', RideEventType.riderJoined);
+    await follower.enqueue('follower-joined', VoyageEventType.sailorJoined);
     await follower.start();
-    await leader.start();
+    await skipper.start();
 
     // This time the follower is the idle device.
     await follower.poll();
     await follower.poll();
-    await leader.enqueue(
-      'leader-position-1',
-      RideEventType.riderLocationUpdated,
+    await skipper.enqueue(
+      'skipper-position-1',
+      VoyageEventType.sailorLocationUpdated,
     );
-    await leader.poll();
+    await skipper.poll();
     await follower.poll();
 
-    expect(await follower.receivedIds(), contains('leader-position-1'));
+    expect(await follower.receivedIds(), contains('skipper-position-1'));
   });
 
   test(
     'positions keep arriving in both directions while one device is idle',
     () async {
-      final leader = device('leader', role: RideRole.lead);
+      final skipper = device('skipper', role: VoyageRole.lead);
       final follower = device('follower');
-      await leader.start();
+      await skipper.start();
       await follower.start();
 
-      final leaderSaw = <String>[];
+      final skipperSaw = <String>[];
       for (var step = 0; step < 3; step += 1) {
         await follower.enqueue(
           'follower-position-$step',
-          RideEventType.riderLocationUpdated,
+          VoyageEventType.sailorLocationUpdated,
         );
         await follower.poll();
-        // The leader never enqueues anything at any point.
-        await leader.poll();
-        leaderSaw.add('follower-position-$step');
-        expect(await leader.receivedIds(), containsAll(leaderSaw));
+        // The skipper never enqueues anything at any point.
+        await skipper.poll();
+        skipperSaw.add('follower-position-$step');
+        expect(await skipper.receivedIds(), containsAll(skipperSaw));
       }
     },
   );
@@ -127,57 +127,57 @@ void main() {
   test(
     'a repeated upload after a lost acknowledgement still delivers the peer',
     () async {
-      final leader = device('leader', role: RideRole.lead);
+      final skipper = device('skipper', role: VoyageRole.lead);
       final follower = device('follower');
-      await leader.enqueue(
-        'leader-position-1',
-        RideEventType.riderLocationUpdated,
+      await skipper.enqueue(
+        'skipper-position-1',
+        VoyageEventType.sailorLocationUpdated,
       );
-      await leader.start();
+      await skipper.start();
       await follower.start();
 
       // The relay stored the batch but the acknowledgement never landed, so the
       // same batch is offered again with the same cursor: a byte-identical body.
-      await leader.forgetAcknowledgements();
+      await skipper.forgetAcknowledgements();
       await follower.enqueue(
         'follower-position-1',
-        RideEventType.riderLocationUpdated,
+        VoyageEventType.sailorLocationUpdated,
       );
       await follower.poll();
-      await leader.poll();
+      await skipper.poll();
 
-      expect(await leader.receivedIds(), contains('follower-position-1'));
+      expect(await skipper.receivedIds(), contains('follower-position-1'));
       // The re-offered event is stored once, not twice.
       expect(
-        relay.storedIds.where((id) => id == 'leader-position-1').length,
+        relay.storedIds.where((id) => id == 'skipper-position-1').length,
         1,
       );
     },
   );
 
   test('device clocks that disagree do not stop journal delivery', () async {
-    final leader = device('leader', role: RideRole.lead);
+    final skipper = device('skipper', role: VoyageRole.lead);
     final follower = device('follower');
-    await leader.start();
+    await skipper.start();
     await follower.start();
 
     // The follower's phone clock is four minutes behind the relay.
     await follower.enqueue(
       'follower-position-1',
-      RideEventType.riderLocationUpdated,
+      VoyageEventType.sailorLocationUpdated,
       createdAt: relay.now.subtract(const Duration(minutes: 4)),
     );
     await follower.poll();
-    await leader.poll();
+    await skipper.poll();
 
-    expect(await leader.receivedIds(), contains('follower-position-1'));
+    expect(await skipper.receivedIds(), contains('follower-position-1'));
   });
 }
 
 class _Device {
   _Device(this.session, this.worker, this.store, this.cursors);
 
-  final RideSession session;
+  final VoyageSession session;
   final InternetRelayWorker worker;
   final EventStore store;
   final InternetCursorStore cursors;
@@ -198,13 +198,13 @@ class _Device {
 
   Future<void> enqueue(
     String id,
-    RideEventType type, {
+    VoyageEventType type, {
     DateTime? createdAt,
   }) async {
     await store.append(
       _event(
         id: id,
-        deviceId: session.localRiderId,
+        deviceId: session.localSailorId,
         type: type,
         createdAt: createdAt,
       ),
@@ -214,15 +214,15 @@ class _Device {
   /// Simulates an acknowledgement write that never reached durable storage, so
   /// the same batch is offered again unchanged.
   Future<void> forgetAcknowledgements() async {
-    final events = await store.eventsForRide(session.rideId);
+    final events = await store.eventsForVoyage(session.voyageId);
     for (final event in events) {
-      if (event.deviceId != session.localRiderId) continue;
+      if (event.deviceId != session.localSailorId) continue;
       await store.append(event.copyWith(acknowledged: false));
     }
   }
 
-  Future<Set<String>> receivedIds() async => (await store.eventsForRide(
-    session.rideId,
+  Future<Set<String>> receivedIds() async => (await store.eventsForVoyage(
+    session.voyageId,
   )).map((event) => event.id).toSet();
 }
 
@@ -302,44 +302,44 @@ class _Replay {
   final List<String> acceptedEventIds;
 }
 
-const _rideId = 'ride-two-device';
+const _voyageId = 'voyage-two-device';
 const _secret = '0123456789abcdef0123456789abcdef';
 
-RideSession _session(String riderId, RideRole role) => RideSession(
-  rideId: _rideId,
-  rideCode: '123456',
+VoyageSession _session(String sailorId, VoyageRole role) => VoyageSession(
+  voyageId: _voyageId,
+  voyageCode: '123456',
   inviteSecret: _secret,
   joinToken: 'test-join-token-0123456789',
-  localRiderId: riderId,
-  displayName: riderId,
+  localSailorId: sailorId,
+  displayName: sailorId,
   role: role,
   joinedAt: DateTime.utc(2026, 7, 26, 12),
 );
 
-RideEvent _event({
+VoyageEvent _event({
   required String id,
   required String deviceId,
-  required RideEventType type,
+  required VoyageEventType type,
   DateTime? createdAt,
 }) {
-  final unsigned = RideEvent(
+  final unsigned = VoyageEvent(
     id: id,
-    rideId: _rideId,
+    voyageId: _voyageId,
     deviceId: deviceId,
     type: type,
     priority: EventPriority.routine,
     createdAt: createdAt ?? DateTime.utc(2026, 7, 26, 12),
-    payload: const {'displayName': 'Rider', 'role': 'rider'},
+    payload: const {'displayName': 'Sailor', 'role': 'sailor'},
     signature: '',
   );
-  return RideEvent(
+  return VoyageEvent(
     id: unsigned.id,
-    rideId: unsigned.rideId,
+    voyageId: unsigned.voyageId,
     deviceId: unsigned.deviceId,
     type: unsigned.type,
     priority: unsigned.priority,
     createdAt: unsigned.createdAt,
     payload: unsigned.payload,
-    signature: RideEventAuthenticator.sign(unsigned, _secret),
+    signature: VoyageEventAuthenticator.sign(unsigned, _secret),
   );
 }

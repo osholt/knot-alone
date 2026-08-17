@@ -4,13 +4,13 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-import '../controllers/ride_controller.dart';
+import '../controllers/voyage_controller.dart';
 import '../controllers/situational_awareness_controller.dart';
 import '../controllers/test_control_controller.dart';
 import '../domain/geo_point.dart';
-import '../domain/rider_location.dart';
-import '../domain/ride_join_payload.dart';
-import '../domain/ride_role.dart';
+import '../domain/sailor_location.dart';
+import '../domain/voyage_join_payload.dart';
+import '../domain/voyage_role.dart';
 import 'test_control_configuration.dart';
 import 'test_control_registry.dart';
 import 'test_control_snapshot.dart';
@@ -43,26 +43,26 @@ import 'test_control_snapshot.dart';
 class TestControlServer {
   TestControlServer(
     this._control,
-    this._ride,
+    this._voyage,
     this._registry, {
     this.configuration = const TestControlConfiguration(),
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
   final TestControlController _control;
-  final RideController _ride;
+  final VoyageController _voyage;
   final TestControlRegistry _registry;
   final TestControlConfiguration configuration;
   final DateTime Function() _now;
 
-  /// The awareness controller for the ride that is active right now, or a
+  /// The awareness controller for the voyage that is active right now, or a
   /// conflict if there is none - which is the honest answer, since hazards and
-  /// positions only exist inside a ride.
+  /// positions only exist inside a voyage.
   SituationalAwarenessController get _awareness =>
       _registry.awareness ??
       (throw StateError(
-        'No ride is active, so there is no situational-awareness controller to '
-        'drive. Create or join a ride first.',
+        'No voyage is active, so there is no situational-awareness controller to '
+        'drive. Create or join a voyage first.',
       ));
 
   HttpServer? _server;
@@ -131,7 +131,7 @@ class TestControlServer {
       }
 
       // Liveness only, deliberately unauthenticated and stateless: it says a
-      // driven build is listening, and nothing about the ride.
+      // driven build is listening, and nothing about the voyage.
       if (path == '/v1/health') {
         await _send(response, HttpStatus.ok, {
           'status': 'ok',
@@ -182,7 +182,7 @@ class TestControlServer {
         response,
         HttpStatus.ok,
         TestControlSnapshot.capture(
-          ride: _ride,
+          voyage: _voyage,
           awareness: _registry.awareness,
           now: _now(),
         ).toJson(),
@@ -193,20 +193,20 @@ class TestControlServer {
     // Capability material, so it is an explicit read rather than part of
     // /v1/state - a snapshot should be safe to paste into a results log, and a
     // join token is not.
-    if (method == 'GET' && path == '/v1/ride/invite') {
-      final session = _ride.session;
+    if (method == 'GET' && path == '/v1/voyage/invite') {
+      final session = _voyage.session;
       if (session == null) {
-        throw StateError('No ride is active.');
+        throw StateError('No voyage is active.');
       }
       await _send(response, HttpStatus.ok, {
-        'rideCode': session.rideCode,
+        'voyageCode': session.voyageCode,
         'joinToken': session.joinToken,
         // The same string a QR code carries (#279). Exposed here rather than in
         // /v1/state because it is capability material - anyone holding it can join
         // - and this endpoint is already the explicit read for that.
-        'invitation': RideJoinPayload(
-          rideId: session.rideId,
-          rideCode: session.rideCode,
+        'invitation': VoyageJoinPayload(
+          voyageId: session.voyageId,
+          voyageCode: session.voyageCode,
           inviteSecret: session.inviteSecret,
           joinToken: session.joinToken,
         ).encode(),
@@ -224,57 +224,57 @@ class TestControlServer {
 
     final body = await _readJson(request);
 
-    // RideController does not throw. `_run` catches everything into
+    // VoyageController does not throw. `_run` catches everything into
     // `errorMessage` and, when another action is already in flight, returns
-    // without doing anything at all - see ride_controller.dart. So `await`
+    // without doing anything at all - see voyage_controller.dart. So `await`
     // completing proves nothing about whether the action happened.
     //
-    // This bit exists because of a real false success. Driving a live ride where
-    // the local rider was the Sweeper, `POST /v1/ride/end` and then
-    // `POST /v1/ride` both answered 200, and the second answered with the *old*
-    // ride: `endRide` had thrown "Only the ride leader can end the ride", `_run`
+    // This bit exists because of a real false success. Driving a live voyage where
+    // the local sailor was the Sweeper, `POST /v1/voyage/end` and then
+    // `POST /v1/voyage` both answered 200, and the second answered with the *old*
+    // voyage: `endVoyage` had thrown "Only the voyage skipper can end the voyage", `_run`
     // had swallowed it, and the create then no-opped. An automated field test
-    // would have recorded a clean create-join-start against a ride that never
+    // would have recorded a clean create-join-start against a voyage that never
     // changed. Clearing the error first and reporting it afterwards is what makes
     // that visible.
     // The other half of the same problem: `_run` drops the operation entirely
     // when one is already in flight, leaving no error behind. A driver firing
     // requests back to back would get 200s for actions that never ran, so refuse
     // rather than accept one we cannot promise to perform.
-    if (_ride.busy) {
+    if (_voyage.busy) {
       throw StateError(
-        'Another ride action is still in flight. Retry in a moment - this '
+        'Another voyage action is still in flight. Retry in a moment - this '
         'request was not performed.',
       );
     }
-    _ride.clearError();
+    _voyage.clearError();
 
     switch (path) {
-      case '/v1/ride':
-        await _ride.createRide(_requireString(body, 'displayName'));
+      case '/v1/voyage':
+        await _voyage.createVoyage(_requireString(body, 'displayName'));
       // Joins from a scanned invitation, which is the only path that touches no
       // network (#279). Driving it is how the offline claim gets proven against a
       // relay that is genuinely unreachable rather than merely slow.
-      case '/v1/ride/join-invitation':
-        await _ride.joinRideFromInvitation(
-          RideJoinPayload.decode(_requireString(body, 'invitation')),
+      case '/v1/voyage/join-invitation':
+        await _voyage.joinVoyageFromInvitation(
+          VoyageJoinPayload.decode(_requireString(body, 'invitation')),
           _requireString(body, 'displayName'),
         );
-      case '/v1/ride/join':
-        await _ride.joinRide(
-          _requireString(body, 'rideCode'),
+      case '/v1/voyage/join':
+        await _voyage.joinVoyage(
+          _requireString(body, 'voyageCode'),
           _requireString(body, 'displayName'),
           joinToken: body['joinToken'] as String?,
         );
-      case '/v1/ride/start':
-        await _ride.startRide();
-      case '/v1/ride/leave':
-        await _ride.leaveRide();
-      case '/v1/ride/end':
-        await _ride.endRide();
+      case '/v1/voyage/start':
+        await _voyage.startVoyage();
+      case '/v1/voyage/leave':
+        await _voyage.leaveVoyage();
+      case '/v1/voyage/end':
+        await _voyage.endVoyage();
       case '/v1/role':
-        await _ride.setRole(_requireEnum(body, 'role', RideRole.values));
-      // Injecting a fix lets step 20 - ride 1 km off route and back - be driven
+        await _voyage.setRole(_requireEnum(body, 'role', VoyageRole.values));
+      // Injecting a fix lets step 20 - voyage 1 km off route and back - be driven
       // on a bench. It is not a substitute for real GPS: a mock fix arrives with
       // whatever accuracy is asked for, so it cannot exercise the multipath and
       // accuracy-rejection behaviour that #270 is about.
@@ -298,22 +298,22 @@ class TestControlServer {
     }
 
     // A swallowed failure is reported as a failure. `errorIsRetryable` is false
-    // for the rider's own bad input (a FormatException, which is also how the
-    // controller expresses "you are not the leader"), so that maps to 400; a
+    // for the sailor's own bad input (a FormatException, which is also how the
+    // controller expresses "you are not the skipper"), so that maps to 400; a
     // retryable one is a conflict with current state.
-    if (_ride.errorMessage case final message?) {
+    if (_voyage.errorMessage case final message?) {
       await _send(
         response,
-        _ride.errorIsRetryable ? HttpStatus.conflict : HttpStatus.badRequest,
+        _voyage.errorIsRetryable ? HttpStatus.conflict : HttpStatus.badRequest,
         {
           'error': 'action_failed',
           'detail': message,
-          'retryable': _ride.errorIsRetryable,
+          'retryable': _voyage.errorIsRetryable,
           // The snapshot still goes back: knowing what the state actually is
           // matters more than the error string when a driver has to decide
           // whether to abandon the run.
           'state': TestControlSnapshot.capture(
-            ride: _ride,
+            voyage: _voyage,
             awareness: _registry.awareness,
             now: _now(),
           ).toJson(),
@@ -329,7 +329,7 @@ class TestControlServer {
       response,
       HttpStatus.ok,
       TestControlSnapshot.capture(
-        ride: _ride,
+        voyage: _voyage,
         awareness: _registry.awareness,
         now: _now(),
       ).toJson(),

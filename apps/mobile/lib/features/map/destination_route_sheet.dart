@@ -14,8 +14,8 @@ class DestinationPlanRequest {
 
   final String query;
 
-  /// A place/postcode/lat-lng to start from instead of the rider's current
-  /// location - e.g. planning a ride from a meeting point before setting off.
+  /// A place/postcode/lat-lng to start from instead of the sailor's current
+  /// location - e.g. planning a voyage from a meeting point before setting off.
   /// Null or blank means "use my current location", same as before this
   /// field existed.
   final String? startQuery;
@@ -254,7 +254,7 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Avoid unsurfaced byways'),
               subtitle: const Text(
-                'On by default. A byway open to all traffic is legal to ride '
+                'On by default. A byway open to all traffic is legal to voyage '
                 'but often unsurfaced. Turn this off to allow ways '
                 'OpenStreetMap tags as unsurfaced or as a track.',
               ),

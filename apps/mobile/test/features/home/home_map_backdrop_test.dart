@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/controllers/foreground_location_controller.dart';
 import 'package:tide_and_seek/controllers/map_style_mode_controller.dart';
 import 'package:tide_and_seek/domain/distance_unit.dart';
-import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/domain/sailor_location.dart';
 import 'package:tide_and_seek/features/home/home_map_backdrop.dart';
 import 'package:tide_and_seek/services/device_location_source.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -34,7 +34,7 @@ void main() {
 
   testWidgets('opening the app never asks for location (#405)', (tester) async {
     // The whole point of opening on the map is that it is useful before the
-    // rider has decided anything. Meeting them with a permission prompt before
+    // sailor has decided anything. Meeting them with a permission prompt before
     // the app has shown what it is for would trade one gate for another.
     final platform = _RecordingLocationPlatform();
     final location = ForegroundLocationController(
@@ -54,7 +54,7 @@ void main() {
     expect(find.byKey(const Key('home-show-my-location')), findsOneWidget);
   });
 
-  testWidgets('the rider can ask for their location themselves', (
+  testWidgets('the sailor can ask for their location themselves', (
     tester,
   ) async {
     final platform = _RecordingLocationPlatform();
@@ -72,7 +72,7 @@ void main() {
     expect(platform.permissionRequests, 1);
   });
 
-  testWidgets('a rider who already granted access is not asked again', (
+  testWidgets('a sailor who already granted access is not asked again', (
     tester,
   ) async {
     final platform = _RecordingLocationPlatform(

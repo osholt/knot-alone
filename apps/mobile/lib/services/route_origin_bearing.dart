@@ -1,16 +1,16 @@
-/// Which way the rider is pointing, told to the routing engine (#444).
+/// Which way the sailor is pointing, told to the routing engine (#444).
 ///
 /// ## The defect
 ///
 /// > the new route **does not account for the current direction of travel**, so
 /// > the first instruction it gives is often wrong and confusing — typically
-/// > asking for a manoeuvre that only makes sense if the rider were facing the
+/// > asking for a manoeuvre that only makes sense if the sailor were facing the
 /// > other way.
 ///
-/// The rejoin request sent the rider's position and nothing else. A position on a
+/// The rejoin request sent the sailor's position and nothing else. A position on a
 /// two-way road is ambiguous: the engine picks a direction, and half the time it
-/// picks the one the rider is not facing. The first instruction is then a U-turn
-/// dressed up as a left, at the moment a rider has least attention to spare and
+/// picks the one the sailor is not facing. The first instruction is then a U-turn
+/// dressed up as a left, at the moment a sailor has least attention to spare and
 /// least reason to doubt the app.
 ///
 /// Both engines take a bearing on the origin waypoint. That is the standard fix
@@ -38,7 +38,7 @@ const rejoinBearingMinimumSpeedMetersPerSecond = 3.0;
 ///
 /// Wide enough to survive GPS heading error and a bike that is leaning, narrow
 /// enough to exclude the opposite carriageway — which is the whole point. ±60°
-/// cannot admit a road running back the way the rider came.
+/// cannot admit a road running back the way the sailor came.
 const rejoinBearingToleranceDegrees = 60.0;
 
 /// The bearing to send for the origin, or null when none should be.

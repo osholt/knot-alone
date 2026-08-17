@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/controllers/distance_unit_controller.dart';
 import 'package:tide_and_seek/controllers/map_style_mode_controller.dart';
-import 'package:tide_and_seek/controllers/rider_profile_controller.dart';
+import 'package:tide_and_seek/controllers/sailor_profile_controller.dart';
 import 'package:tide_and_seek/controllers/spoken_guidance_controller.dart';
 import 'package:tide_and_seek/features/settings/unit_settings_sheet.dart';
 import 'package:tide_and_seek/services/natural_voice_pack.dart';
@@ -28,7 +28,7 @@ void main() {
       voiceLoader: () async => const [voice],
     );
     final mapStyle = await MapStyleModeController.load();
-    final riderProfile = await RiderProfileController.load();
+    final sailorProfile = await SailorProfileController.load();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -38,7 +38,7 @@ void main() {
               const Locale('en', 'GB'),
             ),
             mapStyleMode: mapStyle,
-            riderProfile: riderProfile,
+            sailorProfile: sailorProfile,
             spokenGuidance: spoken,
             embedded: true,
           ),
@@ -73,7 +73,7 @@ void main() {
       voiceLoader: () async => const [daniel, novelty],
     );
     final mapStyle = await MapStyleModeController.load();
-    final riderProfile = await RiderProfileController.load();
+    final sailorProfile = await SailorProfileController.load();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -83,7 +83,7 @@ void main() {
               const Locale('en', 'GB'),
             ),
             mapStyleMode: mapStyle,
-            riderProfile: riderProfile,
+            sailorProfile: sailorProfile,
             spokenGuidance: spoken,
             embedded: true,
           ),
@@ -125,7 +125,7 @@ void main() {
         voiceLoader: () async => installedVoices,
       );
       final mapStyle = await MapStyleModeController.load();
-      final riderProfile = await RiderProfileController.load();
+      final sailorProfile = await SailorProfileController.load();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -136,7 +136,7 @@ void main() {
                 const Locale('en', 'GB'),
               ),
               mapStyleMode: mapStyle,
-              riderProfile: riderProfile,
+              sailorProfile: sailorProfile,
               spokenGuidance: spoken,
               embedded: true,
             ),
@@ -195,7 +195,7 @@ void main() {
       voiceLoader: () async => const [],
     );
     final mapStyle = await MapStyleModeController.load();
-    final riderProfile = await RiderProfileController.load();
+    final sailorProfile = await SailorProfileController.load();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -206,7 +206,7 @@ void main() {
               const Locale('en', 'GB'),
             ),
             mapStyleMode: mapStyle,
-            riderProfile: riderProfile,
+            sailorProfile: sailorProfile,
             spokenGuidance: spoken,
             embedded: true,
           ),

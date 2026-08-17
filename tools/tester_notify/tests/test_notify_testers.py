@@ -54,7 +54,7 @@ def context(**overrides) -> ReleaseContext:
         "repository": "osholt/tailendcharlie",
         "run_url": "https://github.com/osholt/tailendcharlie/actions/runs/12345",
         "changes": (
-            "- reroute off-course riders back to the route (ce39e51)",
+            "- reroute off-course sailors back to the route (ce39e51)",
             "- correct roundabout and lane guidance (6b56c7b)",
         ),
         "changes_baseline": "build 28 (commit 67853ec)",
@@ -101,7 +101,7 @@ class RenderingTest(unittest.TestCase):
             "About & build",
             "Distribution track  Play closed testing (alpha)",
             "WHAT CHANGED since build 28 (commit 67853ec)",
-            "- reroute off-course riders back to the route (ce39e51)",
+            "- reroute off-course sailors back to the route (ce39e51)",
             "docs/tester-update-guide.md",
             "docs/tester-release-notes.md",
         ]:

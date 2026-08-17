@@ -3,14 +3,14 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 import 'package:tide_and_seek/internet/push_registration_client.dart';
 
 void main() {
   test(
-    'registers and revokes a token outside the ride event payload',
+    'registers and revokes a token outside the voyage event payload',
     () async {
       final requests = <http.Request>[];
       final client = HttpPushRegistrationClient(
@@ -26,7 +26,7 @@ void main() {
                     'installationId': 'local-device',
                     'platform': 'android',
                     'provider': 'fcm',
-                    'role': 'rider',
+                    'role': 'sailor',
                     'preferences': {
                       'safety': true,
                       'status': false,
@@ -77,7 +77,7 @@ void main() {
       ),
       client: MockClient(
         (_) async => http.Response(
-          jsonEncode({'error': 'Ride credential rejected'}),
+          jsonEncode({'error': 'Voyage credential rejected'}),
           403,
         ),
       ),
@@ -105,13 +105,13 @@ void main() {
   });
 }
 
-final _session = RideSession(
-  rideId: 'ride/alpha',
-  rideCode: '123456',
+final _session = VoyageSession(
+  voyageId: 'voyage/alpha',
+  voyageCode: '123456',
   inviteSecret: '0123456789abcdef0123456789abcdef',
   joinToken: 'aTokenWithPlentyOfEntropy',
-  localRiderId: 'local-device',
+  localSailorId: 'local-device',
   displayName: 'Oliver',
-  role: RideRole.rider,
+  role: VoyageRole.sailor,
   joinedAt: DateTime.utc(2026, 7, 23),
 );

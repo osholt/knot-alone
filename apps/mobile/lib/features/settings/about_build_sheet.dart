@@ -23,7 +23,7 @@ class AboutBuildSheet extends StatelessWidget {
   final BuildIdentity identity;
 
   /// Most recent successful relay sync in this app session, when the caller
-  /// knows it. Null before a ride has synchronised.
+  /// knows it. Null before a voyage has synchronised.
   final DateTime? lastRelaySync;
 
   /// Injected in tests so staleness copy is deterministic.

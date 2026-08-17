@@ -1,0 +1,56 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:tide_and_seek/domain/join_invite.dart';
+import 'package:tide_and_seek/services/voyage_invitation_link.dart';
+
+void main() {
+  const code = '123456';
+  const token = 'Abcdefghijklmnop12345678';
+
+  test('private invitation material is carried only in the fragment', () {
+    final value = voyageInvitationUrl(code, token);
+    final uri = Uri.parse(value);
+
+    expect(uri.scheme, 'https');
+    expect(uri.host, 'tideandseek.invalid');
+    expect(uri.path, '/join.html');
+    expect(uri.hasQuery, isFalse);
+    expect(Uri.decodeComponent(uri.fragment), '$code#$token');
+    expect(uri.path, isNot(contains(code)));
+    expect(uri.query, isNot(contains(token)));
+
+    final parsed = voyageInvitationFromLink(value)!;
+    expect(parsed.voyageCode, code);
+    expect(parsed.joinToken, token);
+  });
+
+  test('pasting the new URL retains the established code and token path', () {
+    final parsed = parseJoinInvite(voyageInvitationUrl(code, token));
+
+    expect(parsed.code, code);
+    expect(parsed.token, token);
+    expect(parseJoinInvite('$code#$token').token, token);
+  });
+
+  test('rejects capability material outside the exact private fragment', () {
+    expect(
+      voyageInvitationFromLink(
+        'https://tideandseek.invalid/join.html?token=$token#$code',
+      ),
+      isNull,
+    );
+    expect(
+      voyageInvitationFromLink('https://example.com/join.html#$code%23$token'),
+      isNull,
+    );
+    expect(
+      voyageInvitationFromLink(
+        'https://tideandseek.invalid/join.html#open-$code%23$token',
+      ),
+      isNull,
+    );
+    expect(
+      voyageInvitationFromLink('https://tideandseek.invalid/join.html#$code'),
+      isNull,
+    );
+  });
+}

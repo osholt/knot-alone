@@ -25,7 +25,7 @@ void main() {
     final edited = insertRouteWaypoint(
       route,
       const RouteWaypoint(
-        name: 'Rider Cafe',
+        name: 'Sailor Cafe',
         point: GeoPoint(latitude: 51.015, longitude: -2.015),
       ),
     );
@@ -33,7 +33,7 @@ void main() {
     expect(edited.waypoints.map((point) => point.name), [
       'Start',
       'Existing stop',
-      'Rider Cafe',
+      'Sailor Cafe',
       'Finish',
     ]);
     expect(edited.shapingPoints.map((point) => point.legIndex), [0, 1, 2]);
@@ -50,7 +50,7 @@ void main() {
         ),
       ]),
       const RouteWaypoint(
-        name: 'Rider Cafe',
+        name: 'Sailor Cafe',
         point: GeoPoint(latitude: 51.015, longitude: -2.015),
       ),
     );

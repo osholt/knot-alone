@@ -12,7 +12,7 @@ import 'maneuver_symbol.dart';
 /// Every manoeuvre for the current route, in order.
 ///
 /// The list is built from persisted route data by the same planner that drives
-/// the map banner, so it matches what the rider is told at each junction and
+/// the map banner, so it matches what the sailor is told at each junction and
 /// needs no live routing call.
 class ManeuverListScreen extends StatelessWidget {
   const ManeuverListScreen({
@@ -20,7 +20,7 @@ class ManeuverListScreen extends StatelessWidget {
     required this.route,
     required this.distanceUnit,
     this.progressMeters,
-    this.riderPosition,
+    this.sailorPosition,
     this.planner = const NavigationGuidancePlanner(),
   });
 
@@ -31,8 +31,8 @@ class ManeuverListScreen extends StatelessWidget {
   /// manoeuvre still is. Live guidance supplies its monotonic value.
   final double? progressMeters;
 
-  /// Fallback used to measure rider progress where no tracked value exists.
-  final GeoPoint? riderPosition;
+  /// Fallback used to measure sailor progress where no tracked value exists.
+  final GeoPoint? sailorPosition;
   final NavigationGuidancePlanner planner;
 
   static Future<void> show(
@@ -40,14 +40,14 @@ class ManeuverListScreen extends StatelessWidget {
     required ImportedRoute? route,
     required DistanceUnit distanceUnit,
     double? progressMeters,
-    GeoPoint? riderPosition,
+    GeoPoint? sailorPosition,
   }) => Navigator.of(context).push<void>(
     MaterialPageRoute(
       builder: (_) => ManeuverListScreen(
         route: route,
         distanceUnit: distanceUnit,
         progressMeters: progressMeters,
-        riderPosition: riderPosition,
+        sailorPosition: sailorPosition,
       ),
     ),
   );
@@ -56,7 +56,7 @@ class ManeuverListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final steps = planner.instructions(route);
     final ridden =
-        progressMeters ?? planner.progressMetersAt(route, riderPosition);
+        progressMeters ?? planner.progressMetersAt(route, sailorPosition);
     final formatter = MeasurementFormatter(distanceUnit);
     return Scaffold(
       appBar: AppBar(
@@ -143,7 +143,7 @@ class _ManeuverListTile extends StatelessWidget {
       // "All turns" is a kerbside screen, not a riding one, so a turn can
       // afford to be openable. Tapping shows what the router actually said
       // about it — the data #302 and #301 are both waiting on, in a form a
-      // rider can paste into the tester group.
+      // sailor can paste into the tester group.
       onTap: () => unawaited(
         ManeuverDiagnosticsSheet.show(context, instruction, position: position),
       ),

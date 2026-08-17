@@ -30,11 +30,11 @@ PORT="${TEST_CONTROL_PORT:-8477}"
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 
 # curl exits 0 on a 4xx, and the surface answers 4xx with {"error": ...} when an
-# action was swallowed by RideController._run rather than performed. Checking the
+# action was swallowed by VoyageController._run rather than performed. Checking the
 # body is therefore the only way to know an action happened. An earlier version
 # of this script checked curl's exit code alone and cheerfully reported
-# "previous ride ended" and then the *previous* ride's code, for an end refused
-# because the local rider was the Sweeper rather than the leader.
+# "previous voyage ended" and then the *previous* voyage's code, for an end refused
+# because the local sailor was the Sweeper rather than the skipper.
 must() { # description, then the call output
   local what="$1" out="$2"
   local err
@@ -62,7 +62,7 @@ now_ms() { python3 -c 'import time; print(int(time.time()*1000))'; }
 printf '== step 8b: idle-device delivery ==\n'
 
 # --- reachability -----------------------------------------------------------
-for pair in "leader:$LEADER_HOST" "follower:$FOLLOWER_HOST"; do
+for pair in "skipper:$LEADER_HOST" "follower:$FOLLOWER_HOST"; do
   role="${pair%%:*}"; host="${pair#*:}"
   status=$(curl -sS --max-time 10 "http://$host:$PORT/v1/health" |
     jq -r '.status // "unreachable"' 2>/dev/null || echo unreachable)
@@ -71,54 +71,54 @@ for pair in "leader:$LEADER_HOST" "follower:$FOLLOWER_HOST"; do
 done
 
 # --- 0. start from a known state --------------------------------------------
-# A driven run must not inherit a ride: createRide refuses while one is active,
-# and a run that silently continued against the previous ride would describe the
+# A driven run must not inherit a voyage: createVoyage refuses while one is active,
+# and a run that silently continued against the previous voyage would describe the
 # wrong thing entirely.
 #
-# `end` is leader-only - RideController throws "Only the ride leader can end the
-# ride" for anyone else - so a phone holding a ride as the Sweeper or marker
+# `end` is skipper-only - VoyageController throws "Only the voyage skipper can end the
+# voyage" for anyone else - so a phone holding a voyage as the Sweeper or marker
 # needs `leave` instead. Both are attempted, errors ignored, and the create below
 # is the real check.
-clear_ride() {
+clear_voyage() {
   local label="$1" host="$2" tok="$3" code
-  code=$(call "$host" "$tok" GET /v1/state | jq -r '.ride.rideCode // empty')
+  code=$(call "$host" "$tok" GET /v1/state | jq -r '.voyage.voyageCode // empty')
   if [ -z "$code" ]; then
-    printf '  %-9s no ride to clear\n' "$label"
+    printf '  %-9s no voyage to clear\n' "$label"
     return 0
   fi
-  printf '  %-9s clearing ride %s\n' "$label" "$code"
-  call "$host" "$tok" POST /v1/ride/end >/dev/null 2>&1
-  call "$host" "$tok" POST /v1/ride/leave >/dev/null 2>&1
+  printf '  %-9s clearing voyage %s\n' "$label" "$code"
+  call "$host" "$tok" POST /v1/voyage/end >/dev/null 2>&1
+  call "$host" "$tok" POST /v1/voyage/leave >/dev/null 2>&1
 }
 
-printf '\n-- 0. clearing any existing ride --\n'
-clear_ride leader "$LEADER_HOST" "$LEADER_TOKEN"
-clear_ride follower "$FOLLOWER_HOST" "$FOLLOWER_TOKEN"
+printf '\n-- 0. clearing any existing voyage --\n'
+clear_voyage skipper "$LEADER_HOST" "$LEADER_TOKEN"
+clear_voyage follower "$FOLLOWER_HOST" "$FOLLOWER_TOKEN"
 
 # --- 1. create, join, start -------------------------------------------------
 printf '\n-- 1. create, join, start --\n'
-created=$(call "$LEADER_HOST" "$LEADER_TOKEN" POST /v1/ride \
-  '{"displayName":"Leader"}')
-must 'create ride' "$created"
+created=$(call "$LEADER_HOST" "$LEADER_TOKEN" POST /v1/voyage \
+  '{"displayName":"Skipper"}')
+must 'create voyage' "$created"
 
-invite=$(call "$LEADER_HOST" "$LEADER_TOKEN" GET /v1/ride/invite)
-code=$(jq -r '.rideCode' <<<"$invite")
+invite=$(call "$LEADER_HOST" "$LEADER_TOKEN" GET /v1/voyage/invite)
+code=$(jq -r '.voyageCode' <<<"$invite")
 token=$(jq -r '.joinToken // empty' <<<"$invite")
-[ -n "$code" ] && [ "$code" != null ] || fail "no ride code: $invite"
-printf '  ride code %s\n' "$code"
+[ -n "$code" ] && [ "$code" != null ] || fail "no voyage code: $invite"
+printf '  voyage code %s\n' "$code"
 
-joined=$(call "$FOLLOWER_HOST" "$FOLLOWER_TOKEN" POST /v1/ride/join \
+joined=$(call "$FOLLOWER_HOST" "$FOLLOWER_TOKEN" POST /v1/voyage/join \
   "$(jq -nc --arg c "$code" --arg t "$token" \
-    '{rideCode:$c, displayName:"Follower"} + (if $t=="" then {} else {joinToken:$t} end)')")
-must 'join ride' "$joined"
+    '{voyageCode:$c, displayName:"Follower"} + (if $t=="" then {} else {joinToken:$t} end)')")
+must 'join voyage' "$joined"
 
-started_out=$(call "$LEADER_HOST" "$LEADER_TOKEN" POST /v1/ride/start)
-must 'start ride' "$started_out"
+started_out=$(call "$LEADER_HOST" "$LEADER_TOKEN" POST /v1/voyage/start)
+must 'start voyage' "$started_out"
 printf '  started\n'
 
-# The ride code must be a NEW one. A create that silently no-opped would leave the
-# previous ride in place and every number below would describe the wrong ride.
-printf '  leader ride now: %s\n' "$(jq -r '.ride.rideCode // "none"' <<<"$started_out")"
+# The voyage code must be a NEW one. A create that silently no-opped would leave the
+# previous voyage in place and every number below would describe the wrong voyage.
+printf '  skipper voyage now: %s\n' "$(jq -r '.voyage.voyageCode // "none"' <<<"$started_out")"
 
 # --- 2. both untouched for two minutes --------------------------------------
 # Untouched is the whole point. Nothing is sent to either device in this window,
@@ -126,7 +126,7 @@ printf '  leader ride now: %s\n' "$(jq -r '.ride.rideCode // "none"' <<<"$starte
 printf '\n-- 2. two minutes untouched --\n'
 sleep 120
 
-for pair in "leader:$LEADER_HOST:$LEADER_TOKEN" "follower:$FOLLOWER_HOST:$FOLLOWER_TOKEN"; do
+for pair in "skipper:$LEADER_HOST:$LEADER_TOKEN" "follower:$FOLLOWER_HOST:$FOLLOWER_TOKEN"; do
   role="${pair%%:*}"; rest="${pair#*:}"; host="${rest%%:*}"; tok="${rest#*:}"
   state=$(call "$host" "$tok" GET /v1/state)
   gate=$(jq -r '.reconciliation.gateSatisfied' <<<"$state")
@@ -198,14 +198,14 @@ measure() {
 printf '\n-- 3. hazard delivery delay --\n'
 # Positions ~2 km apart and different hazard types, so the deduplicator cannot
 # merge one direction's report into the other's.
-measure 'follower -> leader' "$FOLLOWER_HOST" "$FOLLOWER_TOKEN" \
+measure 'follower -> skipper' "$FOLLOWER_HOST" "$FOLLOWER_TOKEN" \
   "$LEADER_HOST" "$LEADER_TOKEN" 51.2000 -2.4000 roadworks
-measure 'leader -> follower' "$LEADER_HOST" "$LEADER_TOKEN" \
+measure 'skipper -> follower' "$LEADER_HOST" "$LEADER_TOKEN" \
   "$FOLLOWER_HOST" "$FOLLOWER_TOKEN" 51.2200 -2.4300 flooding
 
 # --- tidy up ----------------------------------------------------------------
-printf '\n-- ending ride --\n'
-call "$LEADER_HOST" "$LEADER_TOKEN" POST /v1/ride/end >/dev/null &&
+printf '\n-- ending voyage --\n'
+call "$LEADER_HOST" "$LEADER_TOKEN" POST /v1/voyage/end >/dev/null &&
   printf '  ended\n'
 
 cat <<'NOTE'
@@ -217,7 +217,7 @@ follow either the role or the device.
 Sub-step 5 (a clock five minutes wrong, each direction) is not automatable from
 here - the date and time setting is an OS setting, not an app one. Set it by
 hand, then read /v1/state and check publisherClockOffsetSeconds is reported and
-the rider is still live.
+the sailor is still live.
 
 Record the observed delays, both device models, and the build number in
 docs/field-test-results.md. These are iOS-to-iOS or relay-transport figures

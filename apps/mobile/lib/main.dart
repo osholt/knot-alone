@@ -5,19 +5,19 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 
 import 'app/tide_and_seek_app.dart';
 import 'controllers/distance_unit_controller.dart';
-import 'controllers/completed_rides_controller.dart';
+import 'controllers/completed_voyages_controller.dart';
 import 'controllers/map_style_mode_controller.dart';
-import 'controllers/ride_code_preference_controller.dart';
-import 'controllers/ride_diagnostics_controller.dart';
-import 'controllers/ride_controller.dart';
-import 'controllers/ride_invitation_link_controller.dart';
+import 'controllers/voyage_code_preference_controller.dart';
+import 'controllers/voyage_diagnostics_controller.dart';
+import 'controllers/voyage_controller.dart';
+import 'controllers/voyage_invitation_link_controller.dart';
 import 'controllers/route_progress_display_controller.dart';
-import 'controllers/rider_profile_controller.dart';
+import 'controllers/sailor_profile_controller.dart';
 import 'controllers/shared_route_controller.dart';
 import 'controllers/spoken_guidance_controller.dart';
 import 'controllers/test_control_controller.dart';
 import 'data/json_file_recorded_route_store.dart';
-import 'data/json_file_completed_ride_store.dart';
+import 'data/json_file_completed_voyage_store.dart';
 import 'data/shared_preferences_session_store.dart';
 import 'data/sqlite_event_store.dart';
 import 'services/nearby_bridge.dart';
@@ -42,13 +42,13 @@ Future<void> main() async {
   // that produces that. Only the genuine dependencies stay ordered.
   final (
     (
-      riderProfile,
+      sailorProfile,
       distanceUnits,
       mapStyleMode,
-      rideCodePreference,
+      voyageCodePreference,
       sharedRoutes,
       recordedRoutes,
-      completedRideStore,
+      completedVoyageStore,
     ),
     // Returns immediately without touching storage in a build that has no
     // test-control define, so it costs an ordinary build nothing. Nested
@@ -56,40 +56,40 @@ Future<void> main() async {
     // must not become a tenth serial await - see the #209 note above.
     testControl,
     spokenGuidance,
-    rideInvitationLinks,
+    voyageInvitationLinks,
     routeProgressDisplay,
   ) = await (
     (
-      RiderProfileController.load(),
+      SailorProfileController.load(),
       DistanceUnitController.load(
         locale: WidgetsBinding.instance.platformDispatcher.locale,
       ),
       MapStyleModeController.load(),
-      RideCodePreferenceController.load(),
+      VoyageCodePreferenceController.load(),
       SharedRouteController.load(),
       JsonFileRecordedRouteStore.openDefault(),
-      JsonFileCompletedRideStore.openDefault(),
+      JsonFileCompletedVoyageStore.openDefault(),
     ).wait,
     TestControlController.load(),
     SpokenGuidanceController.load(),
-    RideInvitationLinkController.load(),
+    VoyageInvitationLinkController.load(),
     RouteProgressDisplayController.load(),
   ).wait;
 
-  final completedRides = await CompletedRidesController.load(
-    completedRideStore,
+  final completedVoyages = await CompletedVoyagesController.load(
+    completedVoyageStore,
   );
   // Loaded after the parallel batch rather than inside it, for the same reason
   // the #209 note gives for test control: the batch is already at its limit, and
   // this returns without touching storage in a build with no diagnostics define,
   // so it costs an ordinary build nothing.
-  final rideDiagnostics = await RideDiagnosticsController.load();
-  final controller = RideController(
+  final voyageDiagnostics = await VoyageDiagnosticsController.load();
+  final controller = VoyageController(
     SqliteEventStore(),
     SharedPreferencesSessionStore(),
     const NearbyBridge(),
-    installationId: riderProfile.installationId,
-    completedRideStore: completedRides,
+    installationId: sailorProfile.installationId,
+    completedVoyageStore: completedVoyages,
   );
 
   // The registry is created unconditionally - it is one nullable field - but the
@@ -112,17 +112,17 @@ Future<void> main() async {
       controller: controller,
       distanceUnits: distanceUnits,
       mapStyleMode: mapStyleMode,
-      rideCodePreference: rideCodePreference,
-      riderProfile: riderProfile,
+      voyageCodePreference: voyageCodePreference,
+      sailorProfile: sailorProfile,
       sharedRoutes: sharedRoutes,
       routeProgressDisplay: routeProgressDisplay,
       recordedRoutes: recordedRoutes,
-      completedRides: completedRides,
-      rideInvitationLinks: rideInvitationLinks,
+      completedVoyages: completedVoyages,
+      voyageInvitationLinks: voyageInvitationLinks,
       testControl: testControl,
       testControlRegistry: testControlRegistry,
       spokenGuidance: spokenGuidance,
-      rideDiagnostics: rideDiagnostics,
+      voyageDiagnostics: voyageDiagnostics,
       initializeController: controller.initialize,
     ),
   );

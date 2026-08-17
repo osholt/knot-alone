@@ -1,13 +1,13 @@
 // The body of the emergency text (#173).
 //
 // The control opens the phone's messaging app with no recipient, on purpose: a
-// ride invite carries a code, never a phone number. What it *can* do is fill in
-// the message, and the position is the one thing a recipient outside the ride
+// voyage invite carries a code, never a phone number. What it *can* do is fill in
+// the message, and the position is the one thing a recipient outside the voyage
 // cannot work out for themselves. It was missing.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/domain/imported_route.dart' show GeoPoint;
-import 'package:tide_and_seek/features/map/ride_map_feature.dart';
+import 'package:tide_and_seek/features/map/voyage_map_feature.dart';
 
 void main() {
   test('carries the position as coordinates and as a link', () {

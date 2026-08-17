@@ -150,7 +150,7 @@ void main() {
             places: [
               BikerPlace(
                 id: 'cafe-1',
-                name: 'Rider Cafe',
+                name: 'Sailor Cafe',
                 address: 'High Street',
                 point: GeoPoint(latitude: 51.001, longitude: -1.99),
                 source: 'Bike + Brew 2026',
@@ -185,7 +185,7 @@ void main() {
     expect(recalculated, isNotNull);
     expect(recalculated!.waypoints.map((point) => point.name), [
       'Start',
-      'Rider Cafe',
+      'Sailor Cafe',
       'Destination',
     ]);
     await tester.scrollUntilVisible(
@@ -221,9 +221,9 @@ void main() {
         ),
       ],
       waypoints: const [],
-      // Both manoeuvres sit on the first, longer path: the one the group rides.
+      // Both manoeuvres sit on the first, longer path: the one the group voyages.
       // They were on one path each until #179 stopped scoring manoeuvres that
-      // lie off the ridden line - a road nobody on this ride will use cannot be
+      // lie off the ridden line - a road nobody on this voyage will use cannot be
       // missed, so it earns no marking position. That rule is asserted directly
       // in test/services/route_marker_plan_test.dart; this test is about the two
       // paths staying visually separate, which they still are.
@@ -309,7 +309,7 @@ void main() {
     expect(candidateLayer.polylines.single.color, const Color(0xFF3478F6));
   });
 
-  testWidgets('route review opens the full manoeuvre list before the ride', (
+  testWidgets('route review opens the full manoeuvre list before the voyage', (
     tester,
   ) async {
     final route = ImportedRoute(

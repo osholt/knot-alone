@@ -37,7 +37,7 @@ class RecapBasemapSnapshot {
 
   bool get hasImage => image != null;
 
-  /// What the rider is told when there is no basemap. Never silence: a recap
+  /// What the sailor is told when there is no basemap. Never silence: a recap
   /// without tiles is the reported defect, so if it happens again it says so.
   String? get degradedMessage => switch (outcome) {
     RecapBasemapOutcome.captured => null,
@@ -48,14 +48,14 @@ class RecapBasemapSnapshot {
       'The map did not finish loading in time, so the recap shows the route '
           'outline only. Try again in a moment.',
     // "Load" rather than "capture": the same outcome now describes both the
-    // snapshot path and the live recap map, and a rider does not care which
+    // snapshot path and the live recap map, and a sailor does not care which
     // half of it failed.
     RecapBasemapOutcome.failed =>
       'The map could not load, so the recap shows the route outline only.',
   };
 }
 
-/// Rasterises the ride's basemap for the recap image.
+/// Rasterises the voyage's basemap for the recap image.
 ///
 /// Takes the snapshot through the map's own snapshot API rather than through
 /// `RepaintBoundary.toImage`, because MapLibre draws in a platform view that
@@ -103,7 +103,7 @@ class RecapBasemapSnapshotter {
       if (kDebugMode) {
         debugPrint('Recap basemap snapshot failed: $error\n$stackTrace');
       }
-      // A timeout is worth distinguishing: it is the one a rider can fix by
+      // A timeout is worth distinguishing: it is the one a sailor can fix by
       // waiting a moment and pressing Share again.
       return RecapBasemapSnapshot.unavailable(
         error is TimeoutException

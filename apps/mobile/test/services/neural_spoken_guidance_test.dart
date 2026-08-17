@@ -66,7 +66,7 @@ void main() {
   );
 
   test(
-    'disabling natural speech during a ride immediately uses fallback',
+    'disabling natural speech during a voyage immediately uses fallback',
     () async {
       var enabled = true;
       final neural = _FakeNeuralStarter();

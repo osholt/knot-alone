@@ -73,7 +73,7 @@ class RoadRouteResult {
 
 /// A decision reported by the routing engine or restored from reviewed mapped
 /// junction data rather than inferred from a bend in recorded GPS geometry.
-/// These are the points where a second rider may need to mark a junction.
+/// These are the points where a second sailor may need to mark a junction.
 class RoadRouteManeuver extends RouteManeuver {
   const RoadRouteManeuver({
     required super.position,
@@ -162,7 +162,7 @@ class MappedMiniRoundabout {
 /// The bundled mini-roundabout layer, generated from OpenStreetMap.
 ///
 /// OSRM and Valhalla both route through `highway=mini_roundabout` nodes without
-/// necessarily emitting a manoeuvre, so a rider gets no instruction at a
+/// necessarily emitting a manoeuvre, so a sailor gets no instruction at a
 /// junction they have to give way at. This restores one.
 ///
 /// It states the direction through the junction and **does not claim an exit
@@ -233,7 +233,7 @@ class MappedMiniRoundaboutCatalogue {
   /// Nodes near enough to the route to be worth projecting onto it.
   ///
   /// A whole-country layer is tens of thousands of nodes and projecting every
-  /// one onto every route would be felt on the way into a ride. The bounding
+  /// one onto every route would be felt on the way into a voyage. The bounding
   /// box is a cheap comparison that discards almost all of them.
   List<MappedMiniRoundabout> _candidates(List<GeoPoint> route) {
     var minLatitude = route.first.latitude;
@@ -345,7 +345,7 @@ class MappedMiniRoundaboutCatalogue {
 /// Memoised because every route and every road match wants the same 16,000-odd
 /// nodes, and because a failed read must not retry on every route: an
 /// unreadable asset degrades guidance at mini-roundabouts, which is not a
-/// reason to fail the ride.
+/// reason to fail the voyage.
 Future<MappedMiniRoundaboutCatalogue>? _bundledMiniRoundabouts;
 
 Future<MappedMiniRoundaboutCatalogue> bundledMiniRoundabouts() =>
@@ -356,7 +356,7 @@ Future<MappedMiniRoundaboutCatalogue> bundledMiniRoundabouts() =>
 abstract interface class RoadRoutingService {
   /// Routes through [waypoints].
   ///
-  /// [preferences] is what the rider asked the route to be like. Null means
+  /// [preferences] is what the sailor asked the route to be like. Null means
   /// "whatever this service does by default", which is what an internal caller
   /// such as an off-route rejoin wants: a rejoin leg is not a planning decision
   /// and must not silently acquire the exclusions of the route it rejoins.
@@ -364,7 +364,7 @@ abstract interface class RoadRoutingService {
     List<GeoPoint> waypoints, {
     RoutePreferences? preferences,
 
-    /// Which way the rider is pointing at the first waypoint, in degrees (#444).
+    /// Which way the sailor is pointing at the first waypoint, in degrees (#444).
     ///
     /// A position on a two-way road is ambiguous, and an engine that guesses
     /// wrong returns a first instruction that only makes sense facing the other
@@ -771,7 +771,7 @@ class ValhallaMotorcycleRoutingService implements RoadRoutingService {
   /// This used to be `const []`. Every route planned with a motorcycle
   /// preference — avoid motorways, prefer twisty roads (#182) — therefore
   /// arrived with **no turn instructions at all**, which is why navigation
-  /// "sometimes worked and sometimes didn't" (#303): whether a rider got turn
+  /// "sometimes worked and sometimes didn't" (#303): whether a sailor got turn
   /// guidance depended on whether they had set a preference. Valhalla does
   /// return manoeuvres; they were simply never read.
   ///
@@ -952,7 +952,7 @@ class ValhallaMotorcycleRoutingService implements RoadRoutingService {
   }
 }
 
-/// Sends a request to whichever engine can honour the rider's preferences.
+/// Sends a request to whichever engine can honour the sailor's preferences.
 ///
 /// The dispatch rule is [RoutePreferences.requiresMotorcycleCosting], which is
 /// the web planner's `requestRoadRoute` rule. Same rule, same engine, same
@@ -969,7 +969,7 @@ class PreferenceAwareRoadRoutingService implements RoadRoutingService {
   /// and to be shown on every preference-routed plan. Both halves were wrong:
   /// Valhalla does return manoeuvres — they were being discarded — and nothing
   /// in the app ever worked ordinary junctions out from the route shape, so the
-  /// sentence described a fallback that did not exist. A rider setting "avoid
+  /// sentence described a fallback that did not exist. A sailor setting "avoid
   /// motorways" was silently choosing a route with no turn guidance (#303).
   ///
   /// It is kept, because a route with no manoeuvres is still possible and must
@@ -1226,7 +1226,7 @@ class DestinationRoutePlanner {
 
   /// [originQuery] is geocoded the same way [query] (the destination)
   /// already is, and takes priority when given - the route need not start
-  /// from the rider's current location. [origin] is the fallback used only
+  /// from the sailor's current location. [origin] is the fallback used only
   /// when there is no [originQuery]; at least one of the two is required.
   Future<ImportedRoute> plan({
     GeoPoint? origin,
@@ -1381,7 +1381,7 @@ bool _isRoundaboutManeuver(String type) => const {
 
 const _requestHeaders = {
   'Accept': 'application/json',
-  'User-Agent': 'TailEndCharlie/1.0 (https://github.com/osholt/tailendcharlie)',
+  'User-Agent': 'Sweeper/1.0 (https://github.com/osholt/tailendcharlie)',
 };
 
 String _basePath(Uri base) {

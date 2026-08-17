@@ -9,7 +9,7 @@ enum RouteTrackingState {
 
 enum RouteAlertLevel { none, watch, urgent, critical }
 
-enum RouteAlertAudience { rider, coordinators, allRiders }
+enum RouteAlertAudience { sailor, coordinators, allSailors }
 
 class RouteDeviationAssessment {
   const RouteDeviationAssessment({
@@ -31,7 +31,7 @@ class RouteDeviationAssessment {
   final DateTime? offRouteSince;
 
   bool get coordinatorActionRequired =>
-      audience != RouteAlertAudience.rider &&
+      audience != RouteAlertAudience.sailor &&
       alertLevel.index >= RouteAlertLevel.urgent.index;
 
   Map<String, Object?> toJson() => {
@@ -62,9 +62,9 @@ class RouteDeviationAssessment {
       );
 }
 
-class RiderRouteAlert {
-  const RiderRouteAlert({
-    required this.riderId,
+class SailorRouteAlert {
+  const SailorRouteAlert({
+    required this.sailorId,
     required this.displayName,
     required this.assessment,
     this.acknowledged = false,
@@ -72,18 +72,18 @@ class RiderRouteAlert {
     this.acknowledgedAt,
   });
 
-  final String riderId;
+  final String sailorId;
   final String displayName;
   final RouteDeviationAssessment assessment;
   final bool acknowledged;
   final String? acknowledgedBy;
   final DateTime? acknowledgedAt;
 
-  RiderRouteAlert copyWithAcknowledgement({
+  SailorRouteAlert copyWithAcknowledgement({
     required String acknowledgedBy,
     required DateTime acknowledgedAt,
-  }) => RiderRouteAlert(
-    riderId: riderId,
+  }) => SailorRouteAlert(
+    sailorId: sailorId,
     displayName: displayName,
     assessment: assessment,
     acknowledged: true,
@@ -92,7 +92,7 @@ class RiderRouteAlert {
   );
 
   Map<String, Object?> toJson() => {
-    'riderId': riderId,
+    'sailorId': sailorId,
     'displayName': displayName,
     'assessment': assessment.toJson(),
     'acknowledged': acknowledged,
@@ -100,9 +100,9 @@ class RiderRouteAlert {
     'acknowledgedAt': acknowledgedAt?.toUtc().toIso8601String(),
   };
 
-  factory RiderRouteAlert.fromJson(Map<String, Object?> json) =>
-      RiderRouteAlert(
-        riderId: json['riderId']! as String,
+  factory SailorRouteAlert.fromJson(Map<String, Object?> json) =>
+      SailorRouteAlert(
+        sailorId: json['sailorId']! as String,
         displayName: json['displayName']! as String,
         assessment: RouteDeviationAssessment.fromJson(
           Map<String, Object?>.from(json['assessment']! as Map),

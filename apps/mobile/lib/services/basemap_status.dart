@@ -4,17 +4,17 @@ import 'package:http/http.dart' as http;
 
 import 'map_style_repository.dart';
 
-/// What the ride map is actually drawing behind the rider's position and trail.
+/// What the voyage map is actually drawing behind the sailor's position and trail.
 ///
 /// The live map had no equivalent of the recap screen's `_mapFailed`, so a
 /// failed style, an unreachable tile endpoint and a genuinely empty stretch of
 /// countryside all rendered the same way: a dot and a tail on a dark
-/// background, with no words attached. A rider could not tell us which had
+/// background, with no words attached. A sailor could not tell us which had
 /// happened and neither could we from a screenshot, which is why #281 sat
 /// undiagnosed through three passes. Every value here except [drawing] is
 /// something the app already knew and did not say.
 enum BasemapStatus {
-  /// Roads and place names are being drawn. Whatever the rider cannot see is
+  /// Roads and place names are being drawn. Whatever the sailor cannot see is
   /// genuinely not there — this is the value that makes empty countryside
   /// distinguishable from a fault, by the absence of any badge.
   drawing,
@@ -47,7 +47,7 @@ enum BasemapStatus {
     BasemapStatus.viewNeverLoaded => 'MAP DID NOT LOAD',
   };
 
-  /// What actually happened, in the words a rider could repeat back to us. Each
+  /// What actually happened, in the words a sailor could repeat back to us. Each
   /// one names a different fault, because moving the badge from one of these to
   /// another is the whole point of reporting it.
   String get explanation => switch (this) {
@@ -67,7 +67,7 @@ enum BasemapStatus {
           'being recorded, but nothing is being drawn on the map.',
   };
 
-  /// Whether this warrants telling the rider anything at all.
+  /// Whether this warrants telling the sailor anything at all.
   bool get isFault => this != BasemapStatus.drawing;
 }
 
@@ -150,7 +150,7 @@ class BasemapTileProbe {
   }
 
   /// The `0/0/0` tile of a `{z}/{x}/{y}` template — the one tile that exists in
-  /// every pyramid, so the probe never depends on where the rider happens to
+  /// every pyramid, so the probe never depends on where the sailor happens to
   /// be. A template carrying any other placeholder is left alone rather than
   /// guessed at.
   static Uri? _lowestZoomTile(String template) {
@@ -172,7 +172,7 @@ class BasemapTileProbe {
 /// of a view that never loaded, because the view had nothing to load.
 ///
 /// A map that is merely still starting reports [BasemapStatus.drawing] and
-/// therefore says nothing. Warning a rider about a map that is about to appear
+/// therefore says nothing. Warning a sailor about a map that is about to appear
 /// would be the same fault as the one being fixed, in the other direction.
 BasemapStatus resolveBasemapStatus({
   required MapStyleOutcome styleOutcome,

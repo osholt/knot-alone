@@ -23,7 +23,9 @@ class TestControlConfiguration {
   /// Deliberately not `TIDE_AND_SEEK_`-prefixed-and-forgotten: the name appears in
   /// **About & build** when it is on, because a build that can be driven
   /// remotely should say so rather than look like an ordinary build.
-  static const bool enabled = bool.fromEnvironment('TIDE_AND_SEEK_TEST_CONTROL');
+  static const bool enabled = bool.fromEnvironment(
+    'TIDE_AND_SEEK_TEST_CONTROL',
+  );
 
   /// Fixed so tooling does not have to discover it. Above the privileged range
   /// and outside the ephemeral range on both platforms.
@@ -49,7 +51,7 @@ class TestControlConfiguration {
 /// - **SOS and emergency actions.** The point of an emergency control is that a
 ///   human meant it.
 /// - **Emergency-contact and ICE disclosure.** Someone else's data.
-/// - **Sharing a rider's own phone number.** Same.
+/// - **Sharing a sailor's own phone number.** Same.
 /// - **Placing calls or sending messages** through the platform handoffs.
 ///
 /// If any of these ever needs test coverage it belongs in a widget or

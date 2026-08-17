@@ -5,7 +5,7 @@
 // iPhone in landscape. The framework then clipped whatever was last - the
 // explanatory note - without saying so.
 //
-// This is the screen a rider sees immediately after asking for help, so the test
+// This is the screen a sailor sees immediately after asking for help, so the test
 // runs the shortest viewports a supported device presents.
 
 import 'dart:io';
@@ -15,10 +15,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:tide_and_seek/domain/imported_route.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
 import 'package:tide_and_seek/domain/route_store.dart';
-import 'package:tide_and_seek/features/map/ride_map.dart';
-import 'package:tide_and_seek/features/map/ride_map_feature.dart';
+import 'package:tide_and_seek/features/map/voyage_map.dart';
+import 'package:tide_and_seek/features/map/voyage_map_feature.dart';
 import 'package:tide_and_seek/services/basemap_configuration.dart';
 import 'package:tide_and_seek/services/gpx_import_source.dart';
 import 'package:tide_and_seek/services/offline_tile_cache.dart';
@@ -38,7 +38,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData.dark(useMaterial3: true),
-        home: RideMapScreen(
+        home: VoyageMapScreen(
           routeStore: InMemoryRouteStore(_route),
           routeImporter: RouteImporter(source: const _NoFileSource()),
           offlineTileCache: OfflineTileCache(
@@ -48,19 +48,19 @@ void main() {
           ),
           emergencyContacts: const [
             MapEmergencyContact(
-              riderId: 'lead',
+              sailorId: 'lead',
               displayName: 'Oliver',
-              role: RideRole.lead,
+              role: VoyageRole.lead,
             ),
             MapEmergencyContact(
-              riderId: 'tec',
+              sailorId: 'sweeper',
               displayName: 'Charlie',
-              role: RideRole.tailEndCharlie,
+              role: VoyageRole.sweeper,
             ),
           ],
           onEmergencyAlert: () async {},
           onEmergencyIssue: (_) async {},
-          onLeaveRide: () async {},
+          onLeaveVoyage: () async {},
         ),
       ),
     );
@@ -89,7 +89,9 @@ void main() {
     });
   }
 
-  testWidgets('every issue the rider might raise is reachable', (tester) async {
+  testWidgets('every issue the sailor might raise is reachable', (
+    tester,
+  ) async {
     await openSheet(tester, const Size(844, 390));
 
     // The four issue buttons are the point of the sheet. Scrolling to them is

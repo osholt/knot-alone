@@ -49,7 +49,7 @@ class MainActivity : FlutterActivity() {
 
     private var pendingGpxImport: Pair<ByteArray, String>? = null
     private var pendingPlannerLink: String? = null
-    private var pendingRideInvitationLink: String? = null
+    private var pendingVoyageInvitationLink: String? = null
 
     private val connectionsClient: ConnectionsClient by lazy {
         Nearby.getConnectionsClient(this)
@@ -144,9 +144,9 @@ class MainActivity : FlutterActivity() {
                     pendingPlannerLink = null
                     result.success(pending)
                 }
-                "consumePendingRideInvitationLink" -> {
-                    val pending = pendingRideInvitationLink
-                    pendingRideInvitationLink = null
+                "consumePendingVoyageInvitationLink" -> {
+                    val pending = pendingVoyageInvitationLink
+                    pendingVoyageInvitationLink = null
                     result.success(pending)
                 }
                 else -> result.notImplemented()
@@ -222,18 +222,18 @@ class MainActivity : FlutterActivity() {
         manager.createNotificationChannels(
             listOf(
                 NotificationChannel(
-                    "ride_safety_alerts",
-                    "Urgent ride alerts",
+                    "voyage_safety_alerts",
+                    "Urgent voyage alerts",
                     NotificationManager.IMPORTANCE_HIGH,
                 ).apply {
-                    description = "Safety and assistance alerts for the active ride"
+                    description = "Safety and assistance alerts for the active voyage"
                 },
                 NotificationChannel(
-                    "ride_updates",
-                    "Ride updates",
+                    "voyage_updates",
+                    "Voyage updates",
                     NotificationManager.IMPORTANCE_DEFAULT,
                 ).apply {
-                    description = "Marker, status and administrative ride updates"
+                    description = "Marker, status and administrative voyage updates"
                 },
             ),
         )
@@ -275,7 +275,7 @@ class MainActivity : FlutterActivity() {
         }
         when (uri.path) {
             "/planner.html" -> pendingPlannerLink = uri.toString()
-            "/join.html" -> pendingRideInvitationLink = uri.toString()
+            "/join.html" -> pendingVoyageInvitationLink = uri.toString()
         }
     }
 
@@ -418,17 +418,17 @@ class MainActivity : FlutterActivity() {
         }
 
     private fun capturePushIntent(intent: Intent?) {
-        val rideId = intent?.getStringExtra("rideId") ?: return
+        val voyageId = intent?.getStringExtra("voyageId") ?: return
         val eventId = intent.getStringExtra("eventId") ?: return
         val category = intent.getStringExtra("category") ?: return
         NativePushBridge.notificationOpened(
             mapOf(
-                "rideId" to rideId,
+                "voyageId" to voyageId,
                 "eventId" to eventId,
                 "category" to category,
             ),
         )
-        intent.removeExtra("rideId")
+        intent.removeExtra("voyageId")
         intent.removeExtra("eventId")
         intent.removeExtra("category")
     }
@@ -509,7 +509,7 @@ class MainActivity : FlutterActivity() {
     private val lifecycleCallback = object : ConnectionLifecycleCallback() {
         override fun onConnectionInitiated(endpointId: String, info: ConnectionInfo) {
             // Development alpha: transport pairing is automatic. Every accepted
-            // byte frame is still authenticated with the shared ride secret.
+            // byte frame is still authenticated with the shared voyage secret.
             connectionsClient.acceptConnection(endpointId, payloadCallback)
         }
 

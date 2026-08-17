@@ -4,7 +4,7 @@
          simply not found and spoken guidance fails silently, which is the worst
          outcome available: the switch is on, nothing is said, and nothing
          explains why (#286). -->
-    <!-- Scanning a ride invitation, which is the only join path that works with
+    <!-- Scanning a voyage invitation, which is the only join path that works with
          no signal (#279). Requested at the point of scanning, and every other way
          in keeps working if it is refused. -->
     <uses-permission android:name="android.permission.CAMERA" />
@@ -30,7 +30,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <!--
-      A ride keeps recording while the phone is in a pocket or showing another
+      A voyage keeps recording while the phone is in a pocket or showing another
       navigation app, which on Android means a foreground service typed for
       location (#205). geolocator_android already declares
       GeolocatorLocationService with android:foregroundServiceType="location";
@@ -59,7 +59,7 @@
         android:icon="@mipmap/ic_launcher">
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="ride_updates" />
+            android:value="voyage_updates" />
         <service
             android:name=".TideAndSeekMessagingService"
             android:exported="false">

@@ -15,7 +15,7 @@ class GpxExporter {
         'creator': 'Tide and Seek',
         'xmlns': 'http://www.topografix.com/GPX/1/1',
         if (route.preferences != null || route.markerReview.isNotEmpty)
-          'xmlns:tec': 'https://tideandseek.invalid/gpx/1',
+          'xmlns:sweeper': 'https://tideandseek.invalid/gpx/1',
       },
       nest: () {
         builder.element(
@@ -30,7 +30,7 @@ class GpxExporter {
               nest: route.importedAt.toUtc().toIso8601String(),
             );
             // Preferences belong to the route, so they travel with the file a
-            // rider shares rather than staying on the device that planned it.
+            // sailor shares rather than staying on the device that planned it.
             // Any other GPX reader ignores an unknown extension element.
             if (route.preferences != null || route.markerReview.isNotEmpty) {
               builder.element(
@@ -38,7 +38,7 @@ class GpxExporter {
                 nest: () {
                   if (route.preferences case final preferences?) {
                     builder.element(
-                      'tec:route-preferences',
+                      'sweeper:route-preferences',
                       attributes: {
                         'style': preferences.style.apiValue,
                         'avoid-motorways': '${preferences.avoidMotorways}',
@@ -51,16 +51,16 @@ class GpxExporter {
                   }
                   if (route.markerReview.isNotEmpty) {
                     builder.element(
-                      'tec:marker-review',
+                      'sweeper:marker-review',
                       nest: () {
                         _writeReviewPoints(
                           builder,
-                          'tec:rejected',
+                          'sweeper:rejected',
                           route.markerReview.rejected,
                         );
                         _writeReviewPoints(
                           builder,
-                          'tec:added',
+                          'sweeper:added',
                           route.markerReview.added,
                         );
                       },

@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import RideMember
+from .models import VoyageMember
 
 
 @dataclass(frozen=True)
@@ -21,7 +21,7 @@ class MembershipEvent:
 def project_membership_events(
     session: Session,
     *,
-    ride_id: str,
+    voyage_id: str,
     events: Iterable[MembershipEvent],
 ) -> None:
     """Apply an accepted event batch with one lookup, not one query per event."""
@@ -33,19 +33,19 @@ def project_membership_events(
     members = {
         member.device_id: member
         for member in session.scalars(
-            select(RideMember).where(
-                RideMember.ride_id == ride_id,
-                RideMember.device_id.in_(device_ids),
+            select(VoyageMember).where(
+                VoyageMember.voyage_id == voyage_id,
+                VoyageMember.device_id.in_(device_ids),
             )
         )
     }
     for event in batch:
         member = members.get(event.device_id)
         if member is None:
-            member = RideMember(
-                ride_id=ride_id,
+            member = VoyageMember(
+                voyage_id=voyage_id,
                 device_id=event.device_id,
-                role="rider",
+                role="sailor",
                 state="joined",
                 last_seen_at=event.created_at,
             )
@@ -54,7 +54,7 @@ def project_membership_events(
         elif _as_utc(event.created_at) > _as_utc(member.last_seen_at):
             member.last_seen_at = event.created_at
 
-        if event.event_type == "riderJoined":
+        if event.event_type == "sailorJoined":
             member.role = safe_role(event.payload.get("role"))
             member.state = "joined"
         elif event.event_type == "roleChanged":
@@ -63,14 +63,14 @@ def project_membership_events(
             member.role = "marker"
         elif event.event_type == "markerEnded":
             member.role = safe_role(event.payload.get("previousRole"))
-        elif event.event_type == "riderLeft":
+        elif event.event_type == "sailorLeft":
             member.state = "left"
 
 
 def safe_role(value: object) -> str:
-    if value in {"lead", "rider", "tailEndCharlie", "marker"}:
+    if value in {"lead", "sailor", "sweeper", "marker"}:
         return str(value)
-    return "rider"
+    return "sailor"
 
 
 def _as_utc(value: datetime) -> datetime:

@@ -277,7 +277,7 @@ MarkerPlanReview _markerReview(XmlElement metadata) {
 /// MyRoute-app exports one `<trk>` of calculated road geometry *and* one `<rte>`
 /// of the waypoints it was calculated from - for the route this was found on,
 /// 709 track points and 8 route points over the same 37.7 km. Keeping both meant
-/// the ride was measured twice, so the app showed 47.4 mi for a 23.4 mi route,
+/// the voyage was measured twice, so the app showed 47.4 mi for a 23.4 mi route,
 /// and the sparse 8-point line drawn across the dense one read as loops wherever
 /// the two diverged (#180).
 ///
@@ -285,7 +285,7 @@ MarkerPlanReview _markerReview(XmlElement metadata) {
 /// representations; this extends it across the track/route boundary. Only a
 /// genuine duplicate is dropped: every one of its points must lie within
 /// [_duplicateRepresentationCorridorMeters] of a denser track path, so a `<trk>`
-/// recording of a different ride alongside a planned `<rte>` keeps both. The
+/// recording of a different voyage alongside a planned `<rte>` keeps both. The
 /// dropped path's `rtept`s have already been harvested as waypoints, with their
 /// via and shaping semantics, so nothing is lost but the redundant line.
 List<RoutePath> _withoutDuplicateRepresentations(List<RoutePath> paths) {
@@ -321,7 +321,7 @@ List<RoutePath> _withoutDuplicateRepresentations(List<RoutePath> paths) {
 /// 250 m: a shaping point is snapped to the road the router chose, so in practice
 /// these land within metres. The margin is for a junction the router resolved
 /// differently from where the point was dropped, and it is far tighter than any
-/// separation between two genuinely different rides.
+/// separation between two genuinely different voyages.
 const _duplicateRepresentationCorridorMeters = 250.0;
 
 /// Shortest distance from [point] to the polyline [path], in metres.

@@ -6,7 +6,7 @@ import '../../services/test_control_configuration.dart';
 /// Shown **only** while the app is actually being driven, and carries no switch.
 ///
 /// The switch lives in the iOS Settings app (`ios/Runner/Settings.bundle`), not
-/// here. That is deliberate: a rider who stumbles across an in-app control
+/// here. That is deliberate: a sailor who stumbles across an in-app control
 /// offering to let another machine drive their safety app is a worse outcome than
 /// a field tester having to leave the app to turn it on. While the surface is off
 /// this renders nothing at all — no row, no heading, no hint that the capability
@@ -92,8 +92,8 @@ class TestControlSection extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                'A computer on this network can create rides, join, start them, '
-                'report hazards and read this ride’s roster on this phone. '
+                'A computer on this network can create voyages, join, start them, '
+                'report hazards and read this voyage’s roster on this phone. '
                 'The screen is being kept awake.\n\n'
                 'Emergency actions, phone numbers and emergency-contact details '
                 'can never be reached this way.\n\n'

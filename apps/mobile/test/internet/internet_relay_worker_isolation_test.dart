@@ -1,18 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/data/in_memory_event_store.dart';
-import 'package:tide_and_seek/domain/ride_event.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/voyage_event.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/internet/internet_cursor_store.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 import 'package:tide_and_seek/internet/internet_relay_worker.dart';
 import 'package:tide_and_seek/relay/live_presence.dart';
-import 'package:tide_and_seek/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/services/voyage_event_authenticator.dart';
 
 /// Upload and download share one relay request, so a refused upload used to
 /// discard the download that would have carried a join or a position. Because
 /// pending events are offered oldest-first, one permanently refused event at the
-/// head of the queue silently froze the whole ride in both directions — exactly
+/// head of the queue silently froze the whole voyage in both directions — exactly
 /// the field report in issue #99.
 void main() {
   test(
@@ -23,14 +23,14 @@ void main() {
       await eventStore.append(
         _event(
           id: 'join',
-          type: RideEventType.riderJoined,
+          type: VoyageEventType.sailorJoined,
           createdAt: _base.add(const Duration(seconds: 1)),
         ),
       );
       await eventStore.append(
         _event(
           id: 'position',
-          type: RideEventType.riderLocationUpdated,
+          type: VoyageEventType.sailorLocationUpdated,
           createdAt: _base.add(const Duration(seconds: 2)),
         ),
       );
@@ -65,7 +65,7 @@ void main() {
       // The refused event stays in the durable journal: offline-first is not
       // sacrificed to keep the relay moving.
       expect(
-        (await eventStore.eventsForRide(_session.rideId)).map((e) => e.id),
+        (await eventStore.eventsForVoyage(_session.voyageId)).map((e) => e.id),
         containsAll(['poison', 'join', 'position']),
       );
       expect(
@@ -85,7 +85,7 @@ void main() {
         _event(
           id: 'peer-join',
           deviceId: 'peer-device',
-          type: RideEventType.riderJoined,
+          type: VoyageEventType.sailorJoined,
           createdAt: _base,
         ),
       ],
@@ -101,7 +101,7 @@ void main() {
       ),
       randomValue: () => 0.5,
     );
-    final received = <RideEvent>[];
+    final received = <VoyageEvent>[];
     final subscription = worker.receivedEvents.listen(received.add);
     final delivered = worker.receivedEvents.first;
 
@@ -142,12 +142,12 @@ void main() {
     await worker.close();
   });
 
-  test('a rejected credential never quarantines a rider event', () async {
+  test('a rejected credential never quarantines a sailor event', () async {
     final eventStore = InMemoryEventStore();
     await eventStore.append(_event(id: 'local', createdAt: _base));
     final api = _RejectingApi(
       const InternetRelayException(
-        'Ride credential rejected.',
+        'Voyage credential rejected.',
         unauthorized: true,
         statusCode: 403,
       ),
@@ -176,7 +176,7 @@ void main() {
         acceptedEventIds: {},
         events: [],
         ignoredEventCount: 2,
-        ignoredEventTypes: {'rideTeleported'},
+        ignoredEventTypes: {'voyageTeleported'},
       ),
     );
     final worker = InternetRelayWorker(
@@ -207,7 +207,7 @@ void main() {
       await eventStore.append(
         _event(
           id: 'departure',
-          type: RideEventType.riderLeft,
+          type: VoyageEventType.sailorLeft,
           createdAt: _base.add(const Duration(seconds: 1)),
         ),
       );
@@ -268,7 +268,7 @@ class _PoisonEventApi implements InternetRelayApi {
   _PoisonEventApi({required this.refusedEventId, this.download = const []});
 
   final String refusedEventId;
-  final List<RideEvent> download;
+  final List<VoyageEvent> download;
   final List<int> uploadSizes = [];
   final Set<String> acceptedEventIds = {};
   var _cursor = 0;
@@ -280,9 +280,9 @@ class _PoisonEventApi implements InternetRelayApi {
 
   @override
   Future<InternetSyncResult> synchronize({
-    required RideSession session,
+    required VoyageSession session,
     required String? cursor,
-    required List<RideEvent> events,
+    required List<VoyageEvent> events,
   }) async {
     uploadSizes.add(events.length);
     if (events.any((event) => event.id == refusedEventId)) {
@@ -293,7 +293,7 @@ class _PoisonEventApi implements InternetRelayApi {
     }
     _cursor += 1;
     acceptedEventIds.addAll(events.map((event) => event.id));
-    final delivering = _delivered ? const <RideEvent>[] : download;
+    final delivering = _delivered ? const <VoyageEvent>[] : download;
     _delivered = true;
     return InternetSyncResult(
       cursor: 'cursor-$_cursor',
@@ -317,9 +317,9 @@ class _RejectingApi implements InternetRelayApi {
 
   @override
   Future<InternetSyncResult> synchronize({
-    required RideSession session,
+    required VoyageSession session,
     required String? cursor,
-    required List<RideEvent> events,
+    required List<VoyageEvent> events,
   }) async => throw _error;
 
   @override
@@ -337,9 +337,9 @@ class _FixedResultApi implements InternetRelayApi {
 
   @override
   Future<InternetSyncResult> synchronize({
-    required RideSession session,
+    required VoyageSession session,
     required String? cursor,
-    required List<RideEvent> events,
+    required List<VoyageEvent> events,
   }) async => _result;
 
   @override
@@ -366,9 +366,9 @@ class _LegacyRelayApi implements InternetRelayApi, RelayCompatibilityApi {
 
   @override
   Future<InternetSyncResult> synchronize({
-    required RideSession session,
+    required VoyageSession session,
     required String? cursor,
-    required List<RideEvent> events,
+    required List<VoyageEvent> events,
   }) async {
     _cursor += 1;
     return InternetSyncResult(
@@ -390,9 +390,9 @@ class _ThrowingApi implements InternetRelayApi {
 
   @override
   Future<InternetSyncResult> synchronize({
-    required RideSession session,
+    required VoyageSession session,
     required String? cursor,
-    required List<RideEvent> events,
+    required List<VoyageEvent> events,
   }) async => throw StateError(
     'Connection to relay.internal.example:8443 failed for super-secret-token',
   );
@@ -403,26 +403,26 @@ class _ThrowingApi implements InternetRelayApi {
 
 final _base = DateTime.utc(2026, 7, 25, 10);
 
-final _session = RideSession(
-  rideId: 'ride-isolation',
-  rideCode: '123456',
+final _session = VoyageSession(
+  voyageId: 'voyage-isolation',
+  voyageCode: '123456',
   inviteSecret: '0123456789abcdef0123456789abcdef',
   joinToken: 'test-join-token-0123456789',
-  localRiderId: 'local-device',
+  localSailorId: 'local-device',
   displayName: 'Oliver',
-  role: RideRole.rider,
+  role: VoyageRole.sailor,
   joinedAt: DateTime.utc(2026, 7, 25, 9),
 );
 
-RideEvent _event({
+VoyageEvent _event({
   required String id,
   required DateTime createdAt,
   String deviceId = 'local-device',
-  RideEventType type = RideEventType.statusMessage,
+  VoyageEventType type = VoyageEventType.statusMessage,
 }) {
-  final unsigned = RideEvent(
+  final unsigned = VoyageEvent(
     id: id,
-    rideId: _session.rideId,
+    voyageId: _session.voyageId,
     deviceId: deviceId,
     type: type,
     priority: EventPriority.routine,
@@ -430,14 +430,14 @@ RideEvent _event({
     payload: const {'message': 'OK'},
     signature: '',
   );
-  return RideEvent(
+  return VoyageEvent(
     id: unsigned.id,
-    rideId: unsigned.rideId,
+    voyageId: unsigned.voyageId,
     deviceId: unsigned.deviceId,
     type: unsigned.type,
     priority: unsigned.priority,
     createdAt: unsigned.createdAt,
     payload: unsigned.payload,
-    signature: RideEventAuthenticator.sign(unsigned, _session.inviteSecret),
+    signature: VoyageEventAuthenticator.sign(unsigned, _session.inviteSecret),
   );
 }

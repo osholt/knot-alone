@@ -43,7 +43,7 @@ void main() {
     expect(guidance?.distanceMeters, 0);
   });
 
-  test('hides guidance when the rider is clearly away from the route', () {
+  test('hides guidance when the sailor is clearly away from the route', () {
     final guidance = planner.plan(
       route: _route(),
       position: const GeoPoint(latitude: 0.01, longitude: 0.005),
@@ -149,7 +149,7 @@ void main() {
   });
 
   // A route without turn prompts and a route with no line at all shared one
-  // message, so a rider whose map showed a perfectly good route was told turn
+  // message, so a sailor whose map showed a perfectly good route was told turn
   // guidance was "unavailable for this route" and read it as a failure (#303).
   group('a route that cannot be narrated', () {
     ImportedRoute routeWith({
@@ -231,7 +231,7 @@ void main() {
 
     test('the two messages are not the same words', () {
       // The whole point of the change. A single shared message is what made a
-      // good route and a broken one indistinguishable on the ride.
+      // good route and a broken one indistinguishable on the voyage.
       expect(
         NavigationGuidancePlanner.noTurnInstructionsMessage,
         isNot(NavigationGuidancePlanner.noRouteLineMessage),
@@ -530,7 +530,7 @@ void main() {
         ]).single;
 
     // Beside the drawn ring the wording states the exit and the direction only.
-    // A rider who cannot see the ring is told which junction it is.
+    // A sailor who cannot see the ring is told which junction it is.
     final counted = roundabout(exitNumber: 3);
     expect(counted.text, '3rd exit, right');
     expect(counted.standaloneText, 'Roundabout, 3rd exit, right');
@@ -583,7 +583,7 @@ void main() {
     expect(instruction.exitNumber, isNull);
   });
 
-  test('ride 392725 slight-left geometry speaks the straight-on bucket', () {
+  test('voyage 392725 slight-left geometry speaks the straight-on bucket', () {
     final instruction = collapseManeuvers(const [
       RouteManeuver(
         position: GeoPoint(latitude: 51.46705, longitude: -2.50050),
@@ -675,7 +675,7 @@ void main() {
   group('the New Cheltenham Road double roundabout', () {
     const firstRing = GeoPoint(latitude: 51.46721, longitude: -2.50106);
     const secondRing = GeoPoint(latitude: 51.46705, longitude: -2.50050);
-    // Leaving the first ring puts the rider most of the way to the second, which
+    // Leaving the first ring puts the sailor most of the way to the second, which
     // is exactly why an exit-to-entry measurement reads as one junction.
     const firstExit = GeoPoint(latitude: 51.46712, longitude: -2.50075);
     const secondExit = GeoPoint(latitude: 51.46695, longitude: -2.50020);
@@ -706,7 +706,7 @@ void main() {
         expect(
           restored,
           hasLength(2),
-          reason: 'a rider meets two junctions and needs telling about both',
+          reason: 'a sailor meets two junctions and needs telling about both',
         );
         expect(
           restored.last.distanceFromStartMeters -
@@ -770,7 +770,7 @@ void main() {
       expect(
         instructions.where((item) => item.kind == ManeuverKind.roundabout),
         hasLength(2),
-        reason: 'a rider meets two junctions and needs telling about both',
+        reason: 'a sailor meets two junctions and needs telling about both',
       );
       expect(instructions.first.exitNumber, 2);
       expect(instructions.last.exitNumber, 2);
@@ -906,7 +906,7 @@ void _turnDirectionTests() {
 
     test('an ordinary turn is not announced as a sharp one (#302)', () {
       // Woodhouse Lane, Leeds: the engine called a 21 degree deviation a sharp
-      // right. A rider braking for a sharp right that is barely a deviation
+      // right. A sailor braking for a sharp right that is barely a deviation
       // stops trusting the guidance, which is what was reported.
       expect(
         _directionFor(
@@ -926,8 +926,8 @@ void _turnDirectionTests() {
     });
 
     test('a real turn is not announced as straight on', () {
-      // The dangerous direction of the same fault: a rider told to carry on
-      // through an 82 degree left rides past the turn.
+      // The dangerous direction of the same fault: a sailor told to carry on
+      // through an 82 degree left voyages past the turn.
       expect(
         _directionFor(modifier: 'straight', bearingBefore: 90, bearingAfter: 8),
         ManeuverDirection.left,
@@ -936,7 +936,7 @@ void _turnDirectionTests() {
 
     test('one bucket apart is a judgement call the engine keeps', () {
       // 45 degrees sits inside this code's slight band and outside the
-      // engine's. Neither reading misleads a rider, so the engine's stands and
+      // engine's. Neither reading misleads a sailor, so the engine's stands and
       // the app does not churn its wording against the router's.
       expect(
         _directionFor(modifier: 'left', bearingBefore: 90, bearingAfter: 45),
@@ -994,8 +994,8 @@ const _line = [
 void _guidanceStateTests() {
   group('why a route has no turn prompts', () {
     // #303: "Turn guidance is unavailable for this route" persisted through an
-    // active ride with a good line drawn on the map. One message covered three
-    // different situations, so a rider could not tell a route working as
+    // active voyage with a good line drawn on the map. One message covered three
+    // different situations, so a sailor could not tell a route working as
     // intended from one that had lost its directions.
     const planner = NavigationGuidancePlanner();
     const onRoute = GeoPoint(latitude: 51.45, longitude: -2.59);
@@ -1025,7 +1025,7 @@ void _guidanceStateTests() {
 
     test('an imported track says the line is followable', () {
       // A GPX track is a line without instructions. Nothing failed, and the
-      // rider can ride it.
+      // sailor can voyage it.
       final assessment = assess(
         _routeWith(
           paths: const [RoutePath(kind: RoutePathKind.track, points: _line)],
@@ -1048,7 +1048,7 @@ void _guidanceStateTests() {
 
       expect(assessment.state, NavigationGuidanceState.routingUnfinished);
       expect(assessment.message, contains('could not be built'));
-      // Never the imported-track wording, which would tell a rider nothing is
+      // Never the imported-track wording, which would tell a sailor nothing is
       // wrong when something is.
       expect(assessment.message, isNot(contains('follow the line')));
     });

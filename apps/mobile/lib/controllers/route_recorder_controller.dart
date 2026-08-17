@@ -3,14 +3,14 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../domain/imported_route.dart';
-import '../domain/rider_location.dart';
+import '../domain/sailor_location.dart';
 import '../services/device_location_source.dart';
 import '../services/geo_calculations.dart';
 
 enum RouteRecorderState { idle, recording, paused }
 
-/// Records a GPS track independent of any active ride, so a leader can
-/// scout and save a route ahead of time and attach it to a ride later
+/// Records a GPS track independent of any active voyage, so a skipper can
+/// scout and save a route ahead of time and attach it to a voyage later
 /// (see [RecordedRouteStore]).
 class RouteRecorderController extends ChangeNotifier {
   RouteRecorderController([DeviceLocationSource? source])

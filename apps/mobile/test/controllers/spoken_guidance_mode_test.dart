@@ -7,9 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  group('the rider keeps the voice setting they chose (#415)', () {
+  group('the sailor keeps the voice setting they chose (#415)', () {
     test('a fresh install is silent', () async {
-      // Off by default is deliberate and long-standing: most riders already have
+      // Off by default is deliberate and long-standing: most sailors already have
       // an intercom carrying music or another app's prompts, and a second
       // uninvited voice is worse than silence (#286).
       final controller = await SpokenGuidanceController.load();
@@ -29,7 +29,7 @@ void main() {
     });
 
     test(
-      'a rider upgrading from the on/off build keeps their choice',
+      'a sailor upgrading from the on/off build keeps their choice',
       () async {
         // The case that would otherwise silence somebody: storage written by a
         // build that had only a boolean, read by this one.
@@ -47,7 +47,7 @@ void main() {
       'a mode this build does not know falls back rather than failing',
       () async {
         // A build that once wrote a mode this one has dropped must not leave a
-        // rider unable to turn audio on.
+        // sailor unable to turn audio on.
         SharedPreferences.setMockInitialValues({
           SpokenGuidanceController.modePreferenceKey: 'somethingElse',
           SpokenGuidanceController.preferenceKey: true,

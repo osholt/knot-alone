@@ -29,10 +29,10 @@ void main() {
       }
     });
 
-    test('silent speaks neither, because a rider chose that', () {
-      // Deliberately including safety. A rider who asks for silence has asked
+    test('silent speaks neither, because a sailor chose that', () {
+      // Deliberately including safety. A sailor who asks for silence has asked
       // for it; overriding them would make the control untrustworthy, and a
-      // control a rider does not trust is one they stop using.
+      // control a sailor does not trust is one they stop using.
       for (final audioClass in SpokenAudioClass.values) {
         expect(
           spokenAudioAllows(SpokenAudioMode.silent, audioClass),
@@ -54,8 +54,8 @@ void main() {
   });
 
   group('going off route quietens navigation, not warnings', () {
-    test('a rider off route drops to alerts only', () {
-      // Turn-by-turn for a route the rider is not on names junctions that are
+    test('a sailor off route drops to alerts only', () {
+      // Turn-by-turn for a route the sailor is not on names junctions that are
       // not coming.
       expect(
         spokenAudioModeOffRoute(SpokenAudioMode.everything),
@@ -63,9 +63,9 @@ void main() {
       );
     });
 
-    test('a rider who chose silence stays silent', () {
+    test('a sailor who chose silence stays silent', () {
       // An explicit choice outranks an automatic one — the same rule the mapped
-      // speed limit follows for a rider who turned it off.
+      // speed limit follows for a sailor who turned it off.
       expect(
         spokenAudioModeOffRoute(SpokenAudioMode.silent),
         SpokenAudioMode.silent,
@@ -82,7 +82,7 @@ void main() {
 
   group('the control on the map says what it is', () {
     test('every mode is named in words', () {
-      // #306: no feature reachable only through an unlabelled icon, and a rider
+      // #306: no feature reachable only through an unlabelled icon, and a sailor
       // pressing by feel needs to know what state they are in.
       for (final mode in SpokenAudioMode.values) {
         expect(spokenAudioModeLabel(mode).trim(), isNotEmpty, reason: '$mode');
@@ -103,7 +103,7 @@ void main() {
     });
 
     test('cycling goes from most talkative to least', () {
-      // One direction of travel, so a rider who wants quiet keeps pressing.
+      // One direction of travel, so a sailor who wants quiet keeps pressing.
       expect(
         nextSpokenAudioMode(SpokenAudioMode.everything),
         SpokenAudioMode.alertsOnly,

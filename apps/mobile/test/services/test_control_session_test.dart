@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tide_and_seek/controllers/ride_controller.dart';
+import 'package:tide_and_seek/controllers/voyage_controller.dart';
 import 'package:tide_and_seek/controllers/test_control_controller.dart';
 import 'package:tide_and_seek/data/in_memory_event_store.dart';
 import 'package:tide_and_seek/data/in_memory_session_store.dart';
-import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/domain/completed_voyage_store.dart';
 import 'package:tide_and_seek/services/nearby_bridge.dart';
 import 'package:tide_and_seek/services/test_control_registry.dart';
 import 'package:tide_and_seek/services/test_control_server.dart';
-import 'package:tide_and_seek/services/ride_screen_awake.dart';
+import 'package:tide_and_seek/services/voyage_screen_awake.dart';
 import 'package:tide_and_seek/services/test_control_configuration.dart';
 import 'package:tide_and_seek/services/test_control_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -137,23 +137,23 @@ void main() {
         SharedPreferences.setMockInitialValues({});
         final wakeLock = _RecordingWakeLock();
         final control = await TestControlController.load();
-        final ride = RideController(
+        final voyage = VoyageController(
           InMemoryEventStore(),
           InMemorySessionStore(),
           const _FakeNearbyBridge(),
-          completedRideStore: InMemoryCompletedRideStore(),
+          completedVoyageStore: InMemoryCompletedVoyageStore(),
         );
-        addTearDown(ride.dispose);
+        addTearDown(voyage.dispose);
         final session = TestControlSession(
           control,
           TestControlServer(
             control,
-            ride,
+            voyage,
             TestControlRegistry(),
             // Its own port so this cannot collide with a driven build.
             configuration: const TestControlConfiguration(port: 8481),
           ),
-          screenAwake: RideScreenAwakeCoordinator(wakeLock: wakeLock),
+          screenAwake: VoyageScreenAwakeCoordinator(wakeLock: wakeLock),
         )..start();
         addTearDown(session.stop);
 

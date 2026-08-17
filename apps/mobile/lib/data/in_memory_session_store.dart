@@ -1,8 +1,8 @@
-import '../domain/ride_session.dart';
+import '../domain/voyage_session.dart';
 import '../domain/session_store.dart';
 
 class InMemorySessionStore implements SessionStore {
-  RideSession? _session;
+  VoyageSession? _session;
 
   @override
   Future<void> clear() async {
@@ -10,10 +10,10 @@ class InMemorySessionStore implements SessionStore {
   }
 
   @override
-  Future<RideSession?> load() async => _session;
+  Future<VoyageSession?> load() async => _session;
 
   @override
-  Future<void> save(RideSession session) async {
+  Future<void> save(VoyageSession session) async {
     _session = session;
   }
 }

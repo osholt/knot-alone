@@ -24,7 +24,7 @@ def upgrade() -> None:
             "scope",
             sa.String(length=16),
             nullable=False,
-            server_default="rider",
+            server_default="sailor",
         ),
     )
 

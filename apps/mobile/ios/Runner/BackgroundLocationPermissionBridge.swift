@@ -1,7 +1,7 @@
 import CoreLocation
 import Flutter
 
-/// Promotes an explicit active-ride location choice from While Using to Always.
+/// Promotes an explicit active-voyage location choice from While Using to Always.
 ///
 /// geolocator cannot perform this second iOS permission step when both usage
 /// descriptions are present: a repeated request simply reports While Using.

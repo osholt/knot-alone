@@ -12,7 +12,7 @@ void main() {
     });
 
     test('no speed means no estimate, not a zero', () {
-      // Zero was the bug: `CPTravelEstimates.h` says a zero means the rider is
+      // Zero was the bug: `CPTravelEstimates.h` says a zero means the sailor is
       // imminently arriving, so the car rendered an arrival time of the current
       // clock on every update.
       expect(
@@ -26,7 +26,7 @@ void main() {
 
     test('stopped at lights gets no estimate', () {
       // 400 m at 0.4 m/s is a quarter of an hour, and it would climb while the
-      // rider waited. "--" is the honest answer.
+      // sailor waited. "--" is the honest answer.
       for (final speed in [0.0, 0.4, 2.9]) {
         expect(
           guidanceSecondsRemaining(

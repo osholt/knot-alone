@@ -1,9 +1,9 @@
-import 'ride_session.dart';
+import 'voyage_session.dart';
 
 abstract interface class SessionStore {
-  Future<RideSession?> load();
+  Future<VoyageSession?> load();
 
-  Future<void> save(RideSession session);
+  Future<void> save(VoyageSession session);
 
   Future<void> clear();
 }

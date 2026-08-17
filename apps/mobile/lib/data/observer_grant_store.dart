@@ -1,18 +1,21 @@
 import '../internet/observer_access_client.dart';
 
 abstract interface class ObserverGrantStore {
-  Future<List<ObserverGrantCredentials>> load(String rideId);
+  Future<List<ObserverGrantCredentials>> load(String voyageId);
 
-  Future<void> save(String rideId, List<ObserverGrantCredentials> credentials);
+  Future<void> save(
+    String voyageId,
+    List<ObserverGrantCredentials> credentials,
+  );
 
-  Future<void> delete(String rideId);
+  Future<void> delete(String voyageId);
 
-  Future<ObserverLocalAssistanceState?> loadLocalAssistance(String rideId);
+  Future<ObserverLocalAssistanceState?> loadLocalAssistance(String voyageId);
 
   Future<void> saveLocalAssistance(
-    String rideId,
+    String voyageId,
     ObserverLocalAssistanceState state,
   );
 
-  Future<void> deleteLocalAssistance(String rideId);
+  Future<void> deleteLocalAssistance(String voyageId);
 }

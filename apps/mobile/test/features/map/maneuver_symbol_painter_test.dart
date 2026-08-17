@@ -39,7 +39,7 @@ void main() {
       final geometry = RoundaboutSymbolGeometry.of(symbol, const Size(38, 38));
       final why = _describe(symbol);
 
-      // One arc: the part of the ring the rider rides, from where they join to
+      // One arc: the part of the ring the sailor voyages, from where they join to
       // where they leave. What is not drawn is simply the rest of the circle.
       expect(geometry.ringArcs, hasLength(1), reason: why);
       final arc = geometry.ringArcs.single;
@@ -55,7 +55,7 @@ void main() {
       expect(arc.sweepDegrees.abs(), lessThan(360), reason: why);
       expect(arc.sweepDegrees.abs(), greaterThan(0), reason: why);
 
-      // Clockwise where riders keep left, anticlockwise where they keep right.
+      // Clockwise where sailors keep left, anticlockwise where they keep right.
       if (symbol.leftHandTraffic == false) {
         expect(arc.sweepDegrees, lessThan(0), reason: why);
       } else {
@@ -83,7 +83,7 @@ void main() {
       //
       // Held at 1.2 stroke widths, not 3. At 3 the arc beside a square left or
       // right turn was dropped, the two gaps merged into one wide opening, and
-      // the ring lost its ridden/beyond emphasis — which a rider reported on the
+      // the ring lost its ridden/beyond emphasis — which a sailor reported on the
       // road as the ring having no gap and the flow running anticlockwise. A
       // short arc that keeps the ring reading as a ring beats a tidy gap.
       for (final arc in geometry.ringArcs) {
@@ -210,7 +210,7 @@ void main() {
         reason: why,
       );
       // The filled paths are the arrowheads, and there are at most two: the one
-      // on the exit saying where the rider leaves, and - on an arc long enough
+      // on the exit saying where the sailor leaves, and - on an arc long enough
       // to be read backwards - one on the ring saying which way round they go.
       // The road in and the exit are the only lines, so nothing else can be
       // hiding among them.
@@ -235,7 +235,7 @@ void main() {
     }
   });
 
-  test('driving side decides how far round the ring the rider goes', () {
+  test('driving side decides how far round the ring the sailor goes', () {
     double ridden(
       ManeuverDirection direction, {
       required bool leftHandTraffic,
@@ -247,9 +247,9 @@ void main() {
         ),
         const Size(38, 38),
       );
-      // There is only one arc: the part the rider rides.
+      // There is only one arc: the part the sailor voyages.
       final arc = geometry.ringArcs.single;
-      // Clockwise where riders keep left, anticlockwise where they keep right.
+      // Clockwise where sailors keep left, anticlockwise where they keep right.
       expect(arc.sweepDegrees.isNegative, !leftHandTraffic);
       return arc.sweepDegrees.abs();
     }

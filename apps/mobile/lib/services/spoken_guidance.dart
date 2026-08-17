@@ -189,7 +189,7 @@ int _voiceQualityRank(String? quality) => switch (quality?.toLowerCase()) {
   _ => 7,
 };
 
-/// Speaks turn instructions so a rider does not have to look down.
+/// Speaks turn instructions so a sailor does not have to look down.
 ///
 /// A tester asked for it directly: "does the directions also have audio prompts
 /// or just visual?" (#286). On a bike this is not a convenience over the visual
@@ -200,7 +200,7 @@ int _voiceQualityRank(String? quality) => switch (quality?.toLowerCase()) {
 /// The engine sits behind [SpokenGuidanceEngine] so the decisions in
 /// [SpokenGuidanceSpeaker] - what to say, when, and how often - are testable
 /// without a platform channel. Those decisions are the part that can be wrong in
-/// a way a rider would notice.
+/// a way a sailor would notice.
 abstract interface class SpokenGuidanceEngine {
   Future<void> configure();
   Future<void> speak(String phrase);
@@ -208,7 +208,7 @@ abstract interface class SpokenGuidanceEngine {
 }
 
 /// Which renderer actually delivered a prompt. This is deliberately about the
-/// output path, not the rider's preference: a natural voice can miss its safety
+/// output path, not the sailor's preference: a natural voice can miss its safety
 /// deadline and legitimately use the system fail-safe for that one prompt.
 enum SpokenGuidanceOutput { natural, systemFallback }
 
@@ -224,7 +224,7 @@ abstract interface class WarmableSpokenGuidanceEngine {
 ///
 /// Two platform settings matter more than the voice does:
 ///
-/// - **iOS must duck rather than take over.** Most riders have an intercom
+/// - **iOS must duck rather than take over.** Most sailors have an intercom
 ///   carrying music or another navigation app. `.mixWithOthers` plus
 ///   `duckOthers` lowers the other source for the phrase instead of stopping it.
 ///   Getting this wrong makes the feature actively unwelcome, because a prompt
@@ -236,7 +236,7 @@ abstract interface class WarmableSpokenGuidanceEngine {
 /// added here for two reasons. It is a release and review decision rather than a
 /// code one. And #205 means the app does not yet record position in the
 /// background at all - so background prompts would be guidance computed from a
-/// position that had stopped updating, which is worse than silence. A rider
+/// position that had stopped updating, which is worse than silence. A sailor
 /// running another navigation app in front will not hear these; that is a known
 /// limit, not an oversight.
 class FlutterTtsSpokenGuidanceEngine implements SpokenGuidanceEngine {
@@ -263,8 +263,8 @@ class FlutterTtsSpokenGuidanceEngine implements SpokenGuidanceEngine {
 
   @override
   Future<void> speak(String phrase) async {
-    // Settings can change during a ride. Read the selection at the next phrase
-    // rather than requiring the ride shell to rebuild its speaker.
+    // Settings can change during a voyage. Read the selection at the next phrase
+    // rather than requiring the voyage shell to rebuild its speaker.
     await _applyVoice();
     // The map needs compact labels such as "55 yd", but those same labels are
     // not safe speech input: at least one installed voice read `yd` as "id"
@@ -328,7 +328,7 @@ String _expandSpokenAbbreviations(String phrase) {
 ///
 /// Deliberately holds no opinion about how instructions are computed - #15, #103,
 /// #127 and #163 own that. This speaks what the screen is already showing, and
-/// nothing the screen is not: a rider who hears one thing and sees another will
+/// nothing the screen is not: a sailor who hears one thing and sees another will
 /// trust neither.
 class SpokenGuidanceSpeaker {
   SpokenGuidanceSpeaker(this._engine);
@@ -356,15 +356,15 @@ class SpokenGuidanceSpeaker {
     required String key,
     required String phrase,
     required bool enabled,
-    required bool rideActive,
+    required bool voyageActive,
   }) async {
-    // Off means silent, with no engine work at all: a rider who has not asked for
+    // Off means silent, with no engine work at all: a sailor who has not asked for
     // audio must not have a speech engine initialised behind their back.
     if (!enabled) return false;
-    // Nothing is spoken outside a running ride. An instruction read aloud after
-    // the ride has ended, or while still parked at the start, is noise at best
+    // Nothing is spoken outside a running voyage. An instruction read aloud after
+    // the voyage has ended, or while still parked at the start, is noise at best
     // and misleading at worst.
-    if (!rideActive) return false;
+    if (!voyageActive) return false;
     if (phrase.trim().isEmpty) return false;
     if (key == _lastSpokenKey) return false;
 
@@ -378,7 +378,7 @@ class SpokenGuidanceSpeaker {
   /// turn (#430).
   ///
   /// Kept apart from [speakManoeuvre] on purpose. A turn is guidance and a camera
-  /// is safety, and #415's alerts-only mode exists precisely so a rider can
+  /// is safety, and #415's alerts-only mode exists precisely so a sailor can
   /// silence one without silencing the other. Sharing one method would have made
   /// that distinction a boolean somebody forgets to pass.
   ///
@@ -388,10 +388,10 @@ class SpokenGuidanceSpeaker {
     required String key,
     required String phrase,
     required bool enabled,
-    required bool rideActive,
+    required bool voyageActive,
   }) async {
     if (!enabled) return false;
-    if (!rideActive) return false;
+    if (!voyageActive) return false;
     if (phrase.trim().isEmpty) return false;
     if (_spokenAlertKeys.contains(key)) return false;
 
@@ -404,10 +404,10 @@ class SpokenGuidanceSpeaker {
     return true;
   }
 
-  /// Forgets what was last spoken, so the next ride starts clean.
+  /// Forgets what was last spoken, so the next voyage starts clean.
   ///
-  /// Without this a new ride whose first manoeuvre happened to carry the same
-  /// identity as the last ride's final one would be silent for it.
+  /// Without this a new voyage whose first manoeuvre happened to carry the same
+  /// identity as the last voyage's final one would be silent for it.
   void reset() {
     _lastSpokenKey = null;
     _spokenAlertKeys.clear();

@@ -133,7 +133,7 @@ void main() {
     });
 
     test('falls back to the 0/0/0 tile, which every pyramid has', () {
-      // Not a tile near the rider: the probe must not depend on where the ride
+      // Not a tile near the sailor: the probe must not depend on where the voyage
       // happens to be, or it would report a fault for a legitimately empty
       // corner of the world.
       expect(

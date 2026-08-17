@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../data/observer_grant_store.dart';
-import '../domain/ride_session.dart';
+import '../domain/voyage_session.dart';
 import '../internet/internet_relay_client.dart';
 import '../internet/observer_access_client.dart';
 
@@ -19,10 +19,10 @@ class ObserverAccessController extends ChangeNotifier {
   final ObserverGrantStore _store;
   final DateTime Function() _clock;
   final Duration publishInterval;
-  RideSession? _session;
+  VoyageSession? _session;
   List<ObserverGrantCredentials> _credentials = const [];
   ObserverInvite? _latestInvite;
-  ({ObserverPublishedSnapshot rider, ObserverPublishedSnapshot? group})?
+  ({ObserverPublishedSnapshot sailor, ObserverPublishedSnapshot? group})?
   _pendingSnapshots;
   Future<void>? _publishLoop;
   Timer? _publishTimer;
@@ -60,8 +60,8 @@ class ObserverAccessController extends ChangeNotifier {
     return generatedAt;
   }
 
-  Future<void> attach(RideSession session) async {
-    if (_session?.rideId == session.rideId) {
+  Future<void> attach(VoyageSession session) async {
+    if (_session?.voyageId == session.voyageId) {
       _session = session;
       return;
     }
@@ -70,22 +70,24 @@ class ObserverAccessController extends ChangeNotifier {
     _lastDispatchedAt = null;
     _lastDispatchedStatusAt = null;
     _lastDispatchedAssistanceAt = null;
-    final loaded = await _store.load(session.rideId);
+    final loaded = await _store.load(session.voyageId);
     _credentials = List.unmodifiable(
       loaded.where((value) => value.grant.isActiveAt(_clock())),
     );
     if (_credentials.isEmpty) {
       _localAssistanceState = null;
-      await _store.deleteLocalAssistance(session.rideId);
+      await _store.deleteLocalAssistance(session.voyageId);
     } else {
-      _localAssistanceState = await _store.loadLocalAssistance(session.rideId);
+      _localAssistanceState = await _store.loadLocalAssistance(
+        session.voyageId,
+      );
     }
     if (_credentials.length != loaded.length) await _persist();
     notifyListeners();
   }
 
-  void updateSession(RideSession session) {
-    if (_session?.rideId != session.rideId) return;
+  void updateSession(VoyageSession session) {
+    if (_session?.voyageId != session.voyageId) return;
     _session = session;
   }
 
@@ -124,7 +126,7 @@ class ObserverAccessController extends ChangeNotifier {
   Future<void> create({
     required String label,
     required Duration duration,
-    ObserverAccessScope scope = ObserverAccessScope.rider,
+    ObserverAccessScope scope = ObserverAccessScope.sailor,
   }) async {
     final session = _session;
     if (session == null || _busy) return;
@@ -208,27 +210,30 @@ class ObserverAccessController extends ChangeNotifier {
         updatedAt: now,
         assistance: assistance,
       );
-      await _store.saveLocalAssistance(session.rideId, _localAssistanceState!);
+      await _store.saveLocalAssistance(
+        session.voyageId,
+        _localAssistanceState!,
+      );
     });
     notifyListeners();
   }
 
   void publishSnapshot(ObserverPublishedSnapshot snapshot) {
-    publishSnapshots(rider: snapshot);
+    publishSnapshots(sailor: snapshot);
   }
 
   void publishSnapshots({
-    required ObserverPublishedSnapshot rider,
+    required ObserverPublishedSnapshot sailor,
     ObserverPublishedSnapshot? group,
   }) {
-    _pendingSnapshots = (rider: rider, group: group);
+    _pendingSnapshots = (sailor: sailor, group: group);
     _ensurePublishing();
   }
 
   void _ensurePublishing({bool force = false}) {
     final snapshots = _pendingSnapshots;
     if (snapshots == null || _publishLoop != null) return;
-    final snapshot = snapshots.rider;
+    final snapshot = snapshots.sailor;
     final immediate =
         _lastDispatchedAt == null ||
         snapshot.statusUpdatedAt != _lastDispatchedStatusAt ||
@@ -278,7 +283,7 @@ class ObserverAccessController extends ChangeNotifier {
 
   Future<void> _publishOne() async {
     final snapshots = _pendingSnapshots!;
-    final snapshot = snapshots.rider;
+    final snapshot = snapshots.sailor;
     _pendingSnapshots = null;
     _lastDispatchedAt = _clock();
     _lastDispatchedStatusAt = snapshot.statusUpdatedAt;
@@ -295,7 +300,7 @@ class ObserverAccessController extends ChangeNotifier {
           final scopedSnapshot =
               credentials.grant.scope == ObserverAccessScope.group
               ? snapshots.group
-              : snapshots.rider;
+              : snapshots.sailor;
           if (scopedSnapshot == null) {
             return (
               credentials: credentials,
@@ -409,11 +414,11 @@ class ObserverAccessController extends ChangeNotifier {
     final session = _session;
     if (session == null) return;
     if (_credentials.isEmpty) {
-      await _store.delete(session.rideId);
+      await _store.delete(session.voyageId);
       _localAssistanceState = null;
-      await _store.deleteLocalAssistance(session.rideId);
+      await _store.deleteLocalAssistance(session.voyageId);
     } else {
-      await _store.save(session.rideId, _credentials);
+      await _store.save(session.voyageId, _credentials);
     }
   }
 

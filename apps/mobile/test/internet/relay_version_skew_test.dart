@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:tide_and_seek/domain/ride_event.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/voyage_event.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 import 'package:tide_and_seek/relay/relay_event_compatibility.dart';
-import 'package:tide_and_seek/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/services/voyage_event_authenticator.dart';
 
 /// Mixed tester builds are the normal case, so both skew directions must keep
 /// the core group functions working or say precisely what is unavailable.
@@ -17,7 +17,7 @@ void main() {
 
   group('describeUnsupportedRelayEvent', () {
     test('accepts every event type this build knows', () {
-      for (final type in RideEventType.values) {
+      for (final type in VoyageEventType.values) {
         expect(
           describeUnsupportedRelayEvent(_rawEvent(type: type.name)),
           isNull,
@@ -28,8 +28,8 @@ void main() {
 
     test('flags a future event type, schema version and envelope field', () {
       expect(
-        describeUnsupportedRelayEvent(_rawEvent(type: 'rideTeleported')),
-        'rideTeleported',
+        describeUnsupportedRelayEvent(_rawEvent(type: 'voyageTeleported')),
+        'voyageTeleported',
       );
       expect(
         describeUnsupportedRelayEvent(_rawEvent(schemaVersion: 2)),
@@ -66,7 +66,7 @@ void main() {
             'cursor': 'cursor-1',
             'acceptedEventIds': <String>[],
             'events': [
-              _rawEvent(id: 'future', type: 'rideTeleported'),
+              _rawEvent(id: 'future', type: 'voyageTeleported'),
               known.toJson(),
               _rawEvent(id: 'future-schema', schemaVersion: 2),
             ],
@@ -90,11 +90,11 @@ void main() {
       );
 
       // The known event survives and the cursor advances: one unknown type must
-      // not stall the batch forever and hide every rider.
+      // not stall the batch forever and hide every sailor.
       expect(result.events.map((event) => event.id), ['known']);
       expect(result.cursor, 'cursor-1');
       expect(result.ignoredEventCount, 2);
-      expect(result.ignoredEventTypes, {'rideTeleported', 'schema-v2'});
+      expect(result.ignoredEventTypes, {'voyageTeleported', 'schema-v2'});
     },
   );
 
@@ -297,26 +297,26 @@ void main() {
           'phase': 'started',
           'members': [
             {
-              'riderId': 'bill',
+              'sailorId': 'bill',
               'displayName': 'Bill',
-              'role': 'rider',
+              'role': 'sailor',
               'joinedAt': now.toIso8601String(),
               'left': false,
             },
             {
-              'riderId': 'gone',
+              'sailorId': 'gone',
               'displayName': 'Gone',
-              'role': 'rider',
+              'role': 'sailor',
               'joinedAt': now.toIso8601String(),
               'left': true,
               'leftAt': now.add(const Duration(minutes: 3)).toIso8601String(),
             },
-            // An older relay reports the departure without a time. The rider is
+            // An older relay reports the departure without a time. The sailor is
             // still gone; the roster simply cannot say when (#144).
             {
-              'riderId': 'undated',
+              'sailorId': 'undated',
               'displayName': 'Undated',
-              'role': 'rider',
+              'role': 'sailor',
               'joinedAt': now.toIso8601String(),
               'left': true,
             },
@@ -324,10 +324,10 @@ void main() {
         },
       );
 
-      expect(result.phase, RidePresencePhase.started);
+      expect(result.phase, VoyagePresencePhase.started);
       expect(result.livePresenceServed, isTrue);
-      expect(result.legacyPeerRiderIds, {'bill'});
-      expect(result.roster.map((entry) => entry.riderId), [
+      expect(result.legacyPeerSailorIds, {'bill'});
+      expect(result.roster.map((entry) => entry.sailorId), [
         'bill',
         'gone',
         'undated',
@@ -357,22 +357,22 @@ void main() {
           'phase': 'convoy',
           'members': [
             {
-              'riderId': 'sam',
+              'sailorId': 'sam',
               'displayName': 'Sam',
-              'role': 'tailEndCharlie',
+              'role': 'sweeper',
               'joinedAt': now.toIso8601String(),
               'squadron': 'blue',
             },
-            {'riderId': 'malformed'},
+            {'sailorId': 'malformed'},
           ],
           'unexpectedTopLevel': true,
         },
       );
 
-      expect(result.locations.single.riderId, 'sam');
+      expect(result.locations.single.sailorId, 'sam');
       // An unrecognised phase degrades to unknown rather than failing.
-      expect(result.phase, RidePresencePhase.unknown);
-      expect(result.roster.map((entry) => entry.riderId), ['sam']);
+      expect(result.phase, VoyagePresencePhase.unknown);
+      expect(result.roster.map((entry) => entry.sailorId), ['sam']);
     });
 
     test(
@@ -383,23 +383,23 @@ void main() {
           positions: [_rawPosition('sam', 'Sam', now)],
         );
 
-        expect(result.locations.single.riderId, 'sam');
+        expect(result.locations.single.sailorId, 'sam');
         expect(result.livePresenceServed, isFalse);
-        expect(result.phase, RidePresencePhase.unknown);
+        expect(result.phase, VoyagePresencePhase.unknown);
         expect(result.roster, isEmpty);
       },
     );
 
     test('a relay with neither capability is named, not silent', () async {
       await expectLater(
-        presence(serverCapabilities: const ['ride-start-v1']),
+        presence(serverCapabilities: const ['voyage-start-v1']),
         throwsA(
           isA<InternetRelayException>()
               .having((error) => error.code, 'code', 'feature_unsupported')
               .having(
                 (error) => error.message,
                 'message',
-                contains('does not support live rider positions'),
+                contains('does not support live sailor positions'),
               ),
         ),
       );
@@ -439,7 +439,7 @@ void main() {
         platform: 'android',
         appVersion: '1.4.0',
         appBuild: '91',
-        capabilities: {'ride-start-v1'},
+        capabilities: {'voyage-start-v1'},
         distributionTrack: 'alpha',
       );
 
@@ -450,7 +450,7 @@ void main() {
         'x-tailendcharlie-app-version': '1.4.0',
         'x-tailendcharlie-app-build': '91',
         'x-tailendcharlie-distribution-track': 'alpha',
-        'x-tailendcharlie-capabilities': 'ride-start-v1',
+        'x-tailendcharlie-capabilities': 'voyage-start-v1',
       });
     });
 
@@ -460,7 +460,7 @@ void main() {
         platform: 'android',
         appVersion: '1.4.0',
         appBuild: '91',
-        capabilities: {'ride-start-v1'},
+        capabilities: {'voyage-start-v1'},
       );
 
       expect(
@@ -491,7 +491,7 @@ Map<String, Object?> _rawEvent({
 }) => {
   'schemaVersion': schemaVersion,
   'id': id,
-  'rideId': _session.rideId,
+  'voyageId': _session.voyageId,
   'deviceId': 'peer',
   'type': type,
   'priority': 'routine',
@@ -504,16 +504,16 @@ Map<String, Object?> _rawEvent({
 };
 
 Map<String, Object?> _rawPosition(
-  String riderId,
+  String sailorId,
   String displayName,
   DateTime recordedAt, {
   bool livePresence = true,
 }) => {
-  'riderId': riderId,
+  'sailorId': sailorId,
   'displayName': displayName,
-  'role': 'rider',
+  'role': 'sailor',
   'motorcycleStyle': 'adventure',
-  'riderColor': 'blue',
+  'sailorColor': 'blue',
   'sample': {
     'position': {'latitude': 51.2, 'longitude': -2.4},
     'recordedAt': recordedAt.toIso8601String(),
@@ -527,36 +527,36 @@ Map<String, Object?> _rawPosition(
   'clientProtocol': 1,
 };
 
-final _session = RideSession(
-  rideId: 'ride-skew',
-  rideCode: '123456',
+final _session = VoyageSession(
+  voyageId: 'voyage-skew',
+  voyageCode: '123456',
   inviteSecret: '0123456789abcdef0123456789abcdef',
   joinToken: 'test-join-token-0123456789',
-  localRiderId: 'local',
+  localSailorId: 'local',
   displayName: 'Oliver',
-  role: RideRole.rider,
+  role: VoyageRole.sailor,
   joinedAt: DateTime.utc(2026, 7, 25, 9),
 );
 
-RideEvent _signedEvent({required String id, required String deviceId}) {
-  final unsigned = RideEvent(
+VoyageEvent _signedEvent({required String id, required String deviceId}) {
+  final unsigned = VoyageEvent(
     id: id,
-    rideId: _session.rideId,
+    voyageId: _session.voyageId,
     deviceId: deviceId,
-    type: RideEventType.riderJoined,
+    type: VoyageEventType.sailorJoined,
     priority: EventPriority.routine,
     createdAt: DateTime.utc(2026, 7, 25, 10),
-    payload: const {'displayName': 'Bill', 'role': 'rider'},
+    payload: const {'displayName': 'Bill', 'role': 'sailor'},
     signature: '',
   );
-  return RideEvent(
+  return VoyageEvent(
     id: unsigned.id,
-    rideId: unsigned.rideId,
+    voyageId: unsigned.voyageId,
     deviceId: unsigned.deviceId,
     type: unsigned.type,
     priority: unsigned.priority,
     createdAt: unsigned.createdAt,
     payload: unsigned.payload,
-    signature: RideEventAuthenticator.sign(unsigned, _session.inviteSecret),
+    signature: VoyageEventAuthenticator.sign(unsigned, _session.inviteSecret),
   );
 }

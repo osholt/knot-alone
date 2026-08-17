@@ -23,8 +23,8 @@ class Base(DeclarativeBase):
     pass
 
 
-class Ride(Base):
-    __tablename__ = "rides"
+class Voyage(Base):
+    __tablename__ = "voyages"
 
     id: Mapped[str] = mapped_column(String(128), primary_key=True)
     token_hash: Mapped[bytes] = mapped_column(LargeBinary(32), nullable=False)
@@ -41,55 +41,55 @@ class Ride(Base):
     )
 
     events: Mapped[list[StoredEvent]] = relationship(
-        back_populates="ride",
+        back_populates="voyage",
         cascade="all, delete-orphan",
     )
     replays: Mapped[list[IdempotencyReplay]] = relationship(
-        back_populates="ride",
+        back_populates="voyage",
         cascade="all, delete-orphan",
     )
     push_registrations: Mapped[list[PushRegistration]] = relationship(
-        back_populates="ride",
+        back_populates="voyage",
         cascade="all, delete-orphan",
     )
     observer_grants: Mapped[list[ObserverGrant]] = relationship(
-        back_populates="ride",
+        back_populates="voyage",
         cascade="all, delete-orphan",
     )
     pre_start_positions: Mapped[list[PreStartPosition]] = relationship(
-        back_populates="ride",
+        back_populates="voyage",
         cascade="all, delete-orphan",
     )
-    members: Mapped[list[RideMember]] = relationship(
-        back_populates="ride",
+    members: Mapped[list[VoyageMember]] = relationship(
+        back_populates="voyage",
         cascade="all, delete-orphan",
     )
 
 
-class RideJoinCode(Base):
-    """A short-lived, encrypted lookup record for a six-digit ride code."""
+class VoyageJoinCode(Base):
+    """A short-lived, encrypted lookup record for a six-digit voyage code."""
 
-    __tablename__ = "ride_join_codes"
-    __table_args__ = (Index("ix_ride_join_codes_expiry", "expires_at"),)
+    __tablename__ = "voyage_join_codes"
+    __table_args__ = (Index("ix_voyage_join_codes_expiry", "expires_at"),)
 
     code: Mapped[str] = mapped_column(String(6), primary_key=True)
-    ride_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    voyage_id: Mapped[str] = mapped_column(String(128), nullable=False)
     token_hash: Mapped[bytes] = mapped_column(LargeBinary(32), nullable=False)
     secret_ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
-class RidePlan(Base):
-    """An encrypted, pre-ride GPX route behind a short lookup code.
+class VoyagePlan(Base):
+    """An encrypted, pre-voyage GPX route behind a short lookup code.
 
-    Unrelated to the live ride/join-code tables: a plan never carries a ride
-    secret and a fetched plan never claims a ride. The phone that loads one
-    still runs its own unchanged create-ride flow.
+    Unrelated to the live voyage/join-code tables: a plan never carries a voyage
+    secret and a fetched plan never claims a voyage. The phone that loads one
+    still runs its own unchanged create-voyage flow.
     """
 
-    __tablename__ = "ride_plans"
-    __table_args__ = (Index("ix_ride_plans_expiry", "expires_at"),)
+    __tablename__ = "voyage_plans"
+    __table_args__ = (Index("ix_voyage_plans_expiry", "expires_at"),)
 
     code: Mapped[str] = mapped_column(String(16), primary_key=True)
     name: Mapped[str | None] = mapped_column(String(200))
@@ -99,17 +99,17 @@ class RidePlan(Base):
 
 
 class StoredEvent(Base):
-    __tablename__ = "ride_events"
+    __tablename__ = "voyage_events"
     __table_args__ = (
-        UniqueConstraint("ride_id", "event_id", name="uq_ride_event_identity"),
-        Index("ix_ride_events_cursor", "ride_id", "sequence"),
-        Index("ix_ride_events_expiry", "expires_at"),
+        UniqueConstraint("voyage_id", "event_id", name="uq_voyage_event_identity"),
+        Index("ix_voyage_events_cursor", "voyage_id", "sequence"),
+        Index("ix_voyage_events_expiry", "expires_at"),
     )
 
     sequence: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    ride_id: Mapped[str] = mapped_column(
+    voyage_id: Mapped[str] = mapped_column(
         String(128),
-        ForeignKey("rides.id", ondelete="CASCADE"),
+        ForeignKey("voyages.id", ondelete="CASCADE"),
         nullable=False,
     )
     event_id: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -120,17 +120,17 @@ class StoredEvent(Base):
     body_hash: Mapped[bytes] = mapped_column(LargeBinary(32), nullable=False)
     body_ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
 
-    ride: Mapped[Ride] = relationship(back_populates="events")
+    voyage: Mapped[Voyage] = relationship(back_populates="events")
 
 
-class RideMember(Base):
+class VoyageMember(Base):
     """Current push-recipient state projected from the encrypted event journal."""
 
-    __tablename__ = "ride_members"
+    __tablename__ = "voyage_members"
 
-    ride_id: Mapped[str] = mapped_column(
+    voyage_id: Mapped[str] = mapped_column(
         String(128),
-        ForeignKey("rides.id", ondelete="CASCADE"),
+        ForeignKey("voyages.id", ondelete="CASCADE"),
         primary_key=True,
     )
     device_id: Mapped[str] = mapped_column(String(128), primary_key=True)
@@ -138,11 +138,11 @@ class RideMember(Base):
     state: Mapped[str] = mapped_column(String(16), nullable=False)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    ride: Mapped[Ride] = relationship(back_populates="members")
+    voyage: Mapped[Voyage] = relationship(back_populates="members")
 
 
 class PreStartPosition(Base):
-    """One encrypted, short-lived pre-start snapshot per rider.
+    """One encrypted, short-lived pre-start snapshot per sailor.
 
     This is deliberately not an event or history table. Publishing again
     replaces the same row, and every read purges expired rows first.
@@ -151,30 +151,30 @@ class PreStartPosition(Base):
     __tablename__ = "pre_start_positions"
     __table_args__ = (Index("ix_pre_start_positions_expiry", "expires_at"),)
 
-    ride_id: Mapped[str] = mapped_column(
+    voyage_id: Mapped[str] = mapped_column(
         String(128),
-        ForeignKey("rides.id", ondelete="CASCADE"),
+        ForeignKey("voyages.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    rider_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    sailor_id: Mapped[str] = mapped_column(String(128), primary_key=True)
     snapshot_ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    ride: Mapped[Ride] = relationship(back_populates="pre_start_positions")
+    voyage: Mapped[Voyage] = relationship(back_populates="pre_start_positions")
 
 
 class IdempotencyReplay(Base):
     __tablename__ = "idempotency_replays"
     __table_args__ = (
-        UniqueConstraint("ride_id", "idempotency_key", name="uq_ride_idempotency_key"),
+        UniqueConstraint("voyage_id", "idempotency_key", name="uq_voyage_idempotency_key"),
         Index("ix_idempotency_replays_expiry", "expires_at"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    ride_id: Mapped[str] = mapped_column(
+    voyage_id: Mapped[str] = mapped_column(
         String(128),
-        ForeignKey("rides.id", ondelete="CASCADE"),
+        ForeignKey("voyages.id", ondelete="CASCADE"),
         nullable=False,
     )
     idempotency_key: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -183,28 +183,28 @@ class IdempotencyReplay(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    ride: Mapped[Ride] = relationship(back_populates="replays")
+    voyage: Mapped[Voyage] = relationship(back_populates="replays")
 
 
 class PushRegistration(Base):
-    """Encrypted provider token bound to one installation and live ride."""
+    """Encrypted provider token bound to one installation and live voyage."""
 
     __tablename__ = "push_registrations"
     __table_args__ = (
         UniqueConstraint(
-            "ride_id",
+            "voyage_id",
             "installation_id",
             "provider",
             name="uq_push_registration_installation",
         ),
-        Index("ix_push_registrations_active", "ride_id", "revoked_at"),
+        Index("ix_push_registrations_active", "voyage_id", "revoked_at"),
         Index("ix_push_registrations_token", "provider", "token_hash"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    ride_id: Mapped[str] = mapped_column(
+    voyage_id: Mapped[str] = mapped_column(
         String(128),
-        ForeignKey("rides.id", ondelete="CASCADE"),
+        ForeignKey("voyages.id", ondelete="CASCADE"),
         nullable=False,
     )
     installation_id: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -225,7 +225,7 @@ class PushRegistration(Base):
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    ride: Mapped[Ride] = relationship(back_populates="push_registrations")
+    voyage: Mapped[Voyage] = relationship(back_populates="push_registrations")
     deliveries: Mapped[list[PushDelivery]] = relationship(
         back_populates="registration",
         cascade="all, delete-orphan",
@@ -238,7 +238,7 @@ class PushDelivery(Base):
     __tablename__ = "push_deliveries"
     __table_args__ = (
         UniqueConstraint(
-            "ride_id",
+            "voyage_id",
             "event_id",
             "registration_id",
             name="uq_push_delivery_event_recipient",
@@ -247,7 +247,7 @@ class PushDelivery(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    ride_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    voyage_id: Mapped[str] = mapped_column(String(128), nullable=False)
     event_id: Mapped[str] = mapped_column(String(128), nullable=False)
     registration_id: Mapped[int] = mapped_column(
         Integer,
@@ -268,22 +268,22 @@ class ObserverGrant(Base):
 
     __tablename__ = "observer_grants"
     __table_args__ = (
-        Index("ix_observer_grants_ride", "ride_id"),
+        Index("ix_observer_grants_voyage", "voyage_id"),
         Index("ix_observer_grants_expiry", "expires_at"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    ride_id: Mapped[str] = mapped_column(
+    voyage_id: Mapped[str] = mapped_column(
         String(128),
-        ForeignKey("rides.id", ondelete="CASCADE"),
+        ForeignKey("voyages.id", ondelete="CASCADE"),
         nullable=False,
     )
     label: Mapped[str] = mapped_column(String(80), nullable=False)
     scope: Mapped[str] = mapped_column(
         String(16),
         nullable=False,
-        default="rider",
-        server_default="rider",
+        default="sailor",
+        server_default="sailor",
     )
     management_token_hash: Mapped[bytes] = mapped_column(LargeBinary(32), nullable=False)
     publisher_token_hash: Mapped[bytes] = mapped_column(LargeBinary(32), nullable=False)
@@ -296,11 +296,11 @@ class ObserverGrant(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    ride: Mapped[Ride] = relationship(back_populates="observer_grants")
+    voyage: Mapped[Voyage] = relationship(back_populates="observer_grants")
 
 
 class DiscoverySuggestion(Base):
-    """Private rider input; never queried by the public layer endpoint."""
+    """Private sailor input; never queried by the public layer endpoint."""
 
     __tablename__ = "discovery_suggestions"
     __table_args__ = (
@@ -383,18 +383,18 @@ class DiscoveryFeature(Base):
 
 
 class DiscoveryRoadRating(Base):
-    """Aggregated rider verdicts on catalogued roads (#159).
+    """Aggregated sailor verdicts on catalogued roads (#159).
 
     A tally, not a log. The primary key is the road, the catalogue release and
     the verdict; a submission increments ``rating_count``. There is no row that
-    stands for one rating, so there is nothing here to tie back to a rider even
-    with the whole database in hand - not a rider ID, not a device ID, not a
-    ride, not a submission identifier, and not a receipt timestamp finer than a
+    stands for one rating, so there is nothing here to tie back to a sailor even
+    with the whole database in hand - not a sailor ID, not a device ID, not a
+    voyage, not a submission identifier, and not a receipt timestamp finer than a
     day.
 
-    Deliberately outside the ride retention scheme. A rating outlives the ride it
-    came from: the cleanup worker never touches this table, and a rider archiving
-    or removing their ride does not remove their answer.
+    Deliberately outside the voyage retention scheme. A rating outlives the voyage it
+    came from: the cleanup worker never touches this table, and a sailor archiving
+    or removing their voyage does not remove their answer.
     """
 
     __tablename__ = "discovery_road_ratings"

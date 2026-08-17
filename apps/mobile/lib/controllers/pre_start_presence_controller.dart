@@ -2,24 +2,24 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../domain/ride_role.dart';
-import '../domain/rider_location.dart';
-import '../domain/ride_session.dart';
+import '../domain/voyage_role.dart';
+import '../domain/sailor_location.dart';
+import '../domain/voyage_session.dart';
 import '../internet/internet_relay_client.dart';
 import '../relay/live_presence.dart';
 import '../relay/relay_presence.dart';
 
-/// Maintains one short-lived, non-journalled position per rider for the whole
-/// ride.
+/// Maintains one short-lived, non-journalled position per sailor for the whole
+/// voyage.
 ///
 /// This controller deliberately has no [EventStore] dependency. Its snapshots
 /// disappear when stale, when the controller stops, or when the process exits.
 /// The durable journal remains the only record of where the group has been;
 /// this is only the answer to "where is everyone right now".
 ///
-/// It runs across the `rideStarted` transition on purpose. Stopping at start
-/// left two disconnected channels with no continuity, so a rider visible before
-/// the start vanished at start, and a rider joining an already-started ride was
+/// It runs across the `voyageStarted` transition on purpose. Stopping at start
+/// left two disconnected channels with no continuity, so a sailor visible before
+/// the start vanished at start, and a sailor joining an already-started voyage was
 /// never visible at all until a journal round-trip completed.
 class PreStartPresenceController extends ChangeNotifier {
   PreStartPresenceController(
@@ -33,12 +33,12 @@ class PreStartPresenceController extends ChangeNotifier {
   final Duration pollInterval;
   final PresenceFreshnessPolicy freshnessPolicy;
   final DateTime Function() _clock;
-  RideSession? _session;
-  RiderLocation? _localPosition;
-  final Map<String, RiderLocation> _internetLocations = {};
+  VoyageSession? _session;
+  SailorLocation? _localPosition;
+  final Map<String, SailorLocation> _internetLocations = {};
   final Map<String, RelayPresenceUpdate> _nearbyLocations = {};
   final Map<String, PresenceRosterMember> _roster = {};
-  Set<String> _legacyPeerRiderIds = const {};
+  Set<String> _legacyPeerSailorIds = const {};
   Duration _relayClockOffset = Duration.zero;
   int _unreadablePositionCount = 0;
   RelayPresenceGateway? _nearby;
@@ -50,7 +50,7 @@ class PreStartPresenceController extends ChangeNotifier {
   bool _closed = false;
   bool _clearOnNextSync = false;
   PresenceAvailability _availability = PresenceAvailability.stopped;
-  RidePresencePhase _phase = RidePresencePhase.unknown;
+  VoyagePresencePhase _phase = VoyagePresencePhase.unknown;
 
   bool get active => _active;
 
@@ -83,12 +83,12 @@ class PreStartPresenceController extends ChangeNotifier {
   /// Retained so existing callers keep compiling; prefer [unavailableReason].
   String? get statusMessage => unavailableReason;
 
-  /// The phase the relay reports for this ride, which is what makes presence
+  /// The phase the relay reports for this voyage, which is what makes presence
   /// continuous rather than something the client has to infer from its own
   /// cursor.
-  RidePresencePhase get phase => _phase;
+  VoyagePresencePhase get phase => _phase;
 
-  /// Riders the relay has seen, independent of the bulk event batch.
+  /// Sailors the relay has seen, independent of the bulk event batch.
   List<PresenceRosterMember> get roster =>
       List.unmodifiable(_roster.values.toList()..sort(_byJoinedAt));
 
@@ -120,24 +120,24 @@ class PreStartPresenceController extends ChangeNotifier {
         PresenceLimitation.positionsUnreadable(_unreadablePositionCount),
       );
     }
-    for (final riderId in _legacyPeerRiderIds) {
-      if (riderId == _session?.localRiderId) continue;
+    for (final sailorId in _legacyPeerSailorIds) {
+      if (sailorId == _session?.localSailorId) continue;
       final name =
-          _roster[riderId]?.displayName ??
-          _internetLocations[riderId]?.displayName;
+          _roster[sailorId]?.displayName ??
+          _internetLocations[sailorId]?.displayName;
       if (name == null) continue;
       result.add(
-        PresenceLimitation.peerAppOlder(riderId: riderId, displayName: name),
+        PresenceLimitation.peerAppOlder(sailorId: sailorId, displayName: name),
       );
     }
-    // A rider whose own clock disagrees with the relay is named rather than
+    // A sailor whose own clock disagrees with the relay is named rather than
     // quietly aged out. Their position is still live: it is timed by the relay.
     for (final presence in presenceAt(_clock())) {
       final offset = presence.publisherClockOffset;
       if (offset == null || presence.isLocal) continue;
       result.add(
-        PresenceLimitation.riderClockUntrusted(
-          riderId: presence.riderId,
+        PresenceLimitation.sailorClockUntrusted(
+          sailorId: presence.sailorId,
           displayName: presence.displayName,
           offset: offset,
         ),
@@ -146,40 +146,40 @@ class PreStartPresenceController extends ChangeNotifier {
     return List.unmodifiable(result);
   }
 
-  /// The freshest retained position per rider across both presence channels.
+  /// The freshest retained position per sailor across both presence channels.
   ///
   /// Positions past [PresenceFreshnessPolicy.retainFor] are dropped so nothing
   /// is drawn as if current; between the TTL and that threshold they survive so
   /// they can be visibly demoted to ageing and then stale.
-  List<RiderLocation> get locations => [
+  List<SailorLocation> get locations => [
     for (final presence in presenceAt(_clock())) ?presence.location,
   ];
 
   /// Retained positions from the internet presence channel only, so a caller
   /// merging in the journal can still attribute each source correctly.
-  List<RiderLocation> get internetLocations =>
+  List<SailorLocation> get internetLocations =>
       List.unmodifiable(_retainedInternet(_clock()));
 
   /// Retained positions from the nearby presence channel only.
-  List<RiderLocation> get nearbyLocations {
+  List<SailorLocation> get nearbyLocations {
     final now = _clock();
     return List.unmodifiable(_retained(_nearbyPositions(now), now));
   }
 
-  /// The reconciled per-rider state, including riders the roster names but who
+  /// The reconciled per-sailor state, including sailors the roster names but who
   /// have no position yet.
-  List<LiveRiderPresence> presenceAt(DateTime now) =>
+  List<LiveSailorPresence> presenceAt(DateTime now) =>
       LivePresenceReconciler(policy: freshnessPolicy).reconcile(
         now: now,
-        localRiderId: _session?.localRiderId ?? '',
+        localSailorId: _session?.localSailorId ?? '',
         internetPresence: _retainedInternet(now),
         nearbyPresence: _retained(_nearbyPositions(now), now),
         roster: _roster.values,
         relayClockOffset: _relayClockOffset,
       );
 
-  Iterable<RiderLocation> _retained(
-    Iterable<RiderLocation> locations,
+  Iterable<SailorLocation> _retained(
+    Iterable<SailorLocation> locations,
     DateTime now,
   ) => locations.where(
     (location) => location.sample.ageAt(now) <= freshnessPolicy.retainFor,
@@ -187,13 +187,13 @@ class PreStartPresenceController extends ChangeNotifier {
 
   /// Retention for the internet channel is measured on the relay's clock for a
   /// peer, because their position carries the relay's arrival stamp. Measuring it
-  /// against their own timestamp discarded riders whose phone clock was wrong
+  /// against their own timestamp discarded sailors whose phone clock was wrong
   /// while they were still reporting every few seconds.
-  Iterable<RiderLocation> _retainedInternet(DateTime now) {
-    final localRiderId = _session?.localRiderId;
+  Iterable<SailorLocation> _retainedInternet(DateTime now) {
+    final localSailorId = _session?.localSailorId;
     final relayNow = now.add(_relayClockOffset);
     return _internetLocations.values.where((location) {
-      if (location.riderId == localRiderId) {
+      if (location.sailorId == localSailorId) {
         return location.sample.ageAt(now) <= freshnessPolicy.retainFor;
       }
       final relayAge = relayNow.difference(location.receivedAt);
@@ -202,7 +202,7 @@ class PreStartPresenceController extends ChangeNotifier {
     });
   }
 
-  Iterable<RiderLocation> _nearbyPositions(DateTime now) => [
+  Iterable<SailorLocation> _nearbyPositions(DateTime now) => [
     for (final update in _nearbyLocations.values)
       if (update.position case final position?)
         if (update.expiresAt.isAfter(now) ||
@@ -222,7 +222,7 @@ class PreStartPresenceController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> start(RideSession session) async {
+  Future<void> start(VoyageSession session) async {
     if (_closed) throw StateError('Live presence controller is closed.');
     _session = session;
     _active = true;
@@ -231,7 +231,7 @@ class PreStartPresenceController extends ChangeNotifier {
   }
 
   /// Takes the newest local fix. Every fix belongs here, whether or not it was
-  /// worth a durable position report, because this channel is what keeps a rider
+  /// worth a durable position report, because this channel is what keeps a sailor
   /// visible while they are not moving.
   ///
   /// [publishImmediately] only decides whether the scheduled poll is brought
@@ -239,22 +239,22 @@ class PreStartPresenceController extends ChangeNotifier {
   /// keep-alive: the poll runs on a timer regardless of movement and carries
   /// whatever the newest fix is, so nothing is withheld — it is delivered at
   /// [pollInterval] instead of instantly. Callers pass false for a fix that did
-  /// not clear the reporting threshold, so a rider crawling in traffic stops
+  /// not clear the reporting threshold, so a sailor crawling in traffic stops
   /// generating a request per fix (#166).
   void updateLocalPosition(
-    RiderLocation location, {
+    SailorLocation location, {
     bool publishImmediately = true,
   }) {
     final session = _session;
     if (!_active ||
         session == null ||
-        location.riderId != session.localRiderId) {
+        location.sailorId != session.localSailorId) {
       return;
     }
     _localPosition = location;
     _offerInternet(location);
-    _nearbyLocations[location.riderId] = RelayPresenceUpdate(
-      riderId: location.riderId,
+    _nearbyLocations[location.sailorId] = RelayPresenceUpdate(
+      sailorId: location.sailorId,
       sentAt: location.receivedAt,
       expiresAt: location.receivedAt.add(_ttl),
       clear: false,
@@ -267,7 +267,7 @@ class PreStartPresenceController extends ChangeNotifier {
   }
 
   Future<void> clearLocalPosition() async {
-    final localId = _session?.localRiderId;
+    final localId = _session?.localSailorId;
     _localPosition = null;
     if (localId != null) {
       _internetLocations.remove(localId);
@@ -340,7 +340,7 @@ class PreStartPresenceController extends ChangeNotifier {
     _internetLocations.clear();
     _nearbyLocations.clear();
     _roster.clear();
-    _legacyPeerRiderIds = const {};
+    _legacyPeerSailorIds = const {};
     _relayClockOffset = Duration.zero;
     _unreadablePositionCount = 0;
     notifyListeners();
@@ -368,24 +368,24 @@ class PreStartPresenceController extends ChangeNotifier {
 
   void _applyInternetResult(
     PreStartPresenceResult result,
-    RideSession session,
+    VoyageSession session,
   ) {
-    // An out-of-order or duplicated reply must never rewind a rider to an older
+    // An out-of-order or duplicated reply must never rewind a sailor to an older
     // coordinate.
     for (final location in result.locations) {
       _offerInternet(location);
     }
     final localPosition = _localPosition;
     if (localPosition != null) _offerInternet(localPosition);
-    _legacyPeerRiderIds = result.legacyPeerRiderIds;
+    _legacyPeerSailorIds = result.legacyPeerSailorIds;
     _roster
       ..clear()
       ..addEntries(
         result.roster.map(
           (entry) => MapEntry(
-            entry.riderId,
+            entry.sailorId,
             PresenceRosterMember(
-              riderId: entry.riderId,
+              sailorId: entry.sailorId,
               displayName: entry.displayName,
               role: _roleFor(entry.role),
               joinedAt: entry.joinedAt,
@@ -395,39 +395,40 @@ class PreStartPresenceController extends ChangeNotifier {
           ),
         ),
       );
-    // A rider missing from the relay's list has stopped reporting; that is
+    // A sailor missing from the relay's list has stopped reporting; that is
     // shown by demoting their last position to ageing and then stale, not by
     // deleting it, because a marker that silently vanishes is indistinguishable
     // from one that was never there. Only an explicit departure removes a
-    // rider, and only [PresenceFreshnessPolicy.retainFor] drops the position.
+    // sailor, and only [PresenceFreshnessPolicy.retainFor] drops the position.
     final now = _clock();
     final departed = {
       for (final entry in result.roster)
-        if (entry.left) entry.riderId,
+        if (entry.left) entry.sailorId,
     };
     final retained = _retainedInternet(
       now,
-    ).map((location) => location.riderId).toSet();
+    ).map((location) => location.sailorId).toSet();
     _internetLocations.removeWhere(
-      (riderId, location) =>
-          (departed.contains(riderId) && riderId != session.localRiderId) ||
-          !retained.contains(riderId),
+      (sailorId, location) =>
+          (departed.contains(sailorId) && sailorId != session.localSailorId) ||
+          !retained.contains(sailorId),
     );
-    _nearbyLocations.removeWhere((riderId, update) {
+    _nearbyLocations.removeWhere((sailorId, update) {
       final position = update.position;
-      return (departed.contains(riderId) && riderId != session.localRiderId) ||
+      return (departed.contains(sailorId) &&
+              sailorId != session.localSailorId) ||
           position == null ||
           position.sample.ageAt(now) > freshnessPolicy.retainFor;
     });
   }
 
-  void _offerInternet(RiderLocation location) {
-    final previous = _internetLocations[location.riderId];
+  void _offerInternet(SailorLocation location) {
+    final previous = _internetLocations[location.sailorId];
     if (previous != null &&
         !location.sample.recordedAt.isAfter(previous.sample.recordedAt)) {
       return;
     }
-    _internetLocations[location.riderId] = location;
+    _internetLocations[location.sailorId] = location;
   }
 
   static PresenceAvailability _availabilityFor(InternetRelayException error) {
@@ -444,12 +445,12 @@ class PreStartPresenceController extends ChangeNotifier {
     return PresenceAvailability.serviceUnreachable;
   }
 
-  static RideRole _roleFor(String value) {
-    for (final role in RideRole.values) {
+  static VoyageRole _roleFor(String value) {
+    for (final role in VoyageRole.values) {
       if (role.name == value) return role;
     }
-    // An unknown future role must not drop the rider from the roster.
-    return RideRole.rider;
+    // An unknown future role must not drop the sailor from the roster.
+    return VoyageRole.sailor;
   }
 
   static int _byJoinedAt(
@@ -457,22 +458,22 @@ class PreStartPresenceController extends ChangeNotifier {
     PresenceRosterMember right,
   ) {
     final byJoin = left.joinedAt.compareTo(right.joinedAt);
-    return byJoin != 0 ? byJoin : left.riderId.compareTo(right.riderId);
+    return byJoin != 0 ? byJoin : left.sailorId.compareTo(right.sailorId);
   }
 
   void _onNearbyPresence(RelayPresenceUpdate update) {
     if (!_active || _closed) return;
-    final previous = _nearbyLocations[update.riderId];
+    final previous = _nearbyLocations[update.sailorId];
     if (previous != null && !update.sentAt.isAfter(previous.sentAt)) return;
     if (update.clear) {
-      _nearbyLocations.remove(update.riderId);
+      _nearbyLocations.remove(update.sailorId);
     } else {
-      _nearbyLocations[update.riderId] = update;
+      _nearbyLocations[update.sailorId] = update;
     }
     notifyListeners();
   }
 
-  Future<void> _publishNearby(RiderLocation location) async {
+  Future<void> _publishNearby(SailorLocation location) async {
     try {
       await _nearby?.publishPresence(location, ttl: _ttl);
     } on Object {
@@ -480,7 +481,7 @@ class PreStartPresenceController extends ChangeNotifier {
     }
   }
 
-  Future<void> _clearInternetPresence(RideSession session) async {
+  Future<void> _clearInternetPresence(VoyageSession session) async {
     try {
       await _api.synchronizePreStartPresence(
         session: session,
@@ -502,7 +503,7 @@ class PreStartPresenceController extends ChangeNotifier {
 }
 
 /// Why live positions are or are not flowing over the internet presence
-/// channel. Every value is a state a rider can be told about.
+/// channel. Every value is a state a sailor can be told about.
 enum PresenceAvailability {
   stopped,
   starting,

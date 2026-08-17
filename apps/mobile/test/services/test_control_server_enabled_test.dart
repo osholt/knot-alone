@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tide_and_seek/controllers/ride_controller.dart';
+import 'package:tide_and_seek/controllers/voyage_controller.dart';
 import 'package:tide_and_seek/controllers/test_control_controller.dart';
 import 'package:tide_and_seek/data/in_memory_event_store.dart';
 import 'package:tide_and_seek/data/in_memory_session_store.dart';
-import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/domain/completed_voyage_store.dart';
 import 'package:tide_and_seek/services/nearby_bridge.dart';
 import 'package:tide_and_seek/services/test_control_configuration.dart';
 import 'package:tide_and_seek/services/test_control_registry.dart';
@@ -35,7 +35,7 @@ void main() {
   group('test-control surface, define on', () {
     late TestControlController control;
     late TestControlServer server;
-    late RideController ride;
+    late VoyageController voyage;
     late TestControlRegistry registry;
     // A port of its own, so a run cannot collide with a real driven build or
     // with a parallel test shard.
@@ -44,16 +44,16 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       control = await TestControlController.load();
-      ride = RideController(
+      voyage = VoyageController(
         InMemoryEventStore(),
         InMemorySessionStore(),
         const _FakeNearbyBridge(),
-        completedRideStore: InMemoryCompletedRideStore(),
+        completedVoyageStore: InMemoryCompletedVoyageStore(),
       );
       registry = TestControlRegistry();
       server = TestControlServer(
         control,
-        ride,
+        voyage,
         registry,
         configuration: const TestControlConfiguration(port: port),
       );
@@ -61,7 +61,7 @@ void main() {
 
     tearDown(() async {
       await server.stop();
-      ride.dispose();
+      voyage.dispose();
     });
 
     Future<HttpClientResponse> send(
@@ -118,24 +118,27 @@ void main() {
       );
     });
 
-    test('health is unauthenticated and says nothing about the ride', () async {
-      await control.setForTesting(
-        on: true,
-        token: 'field-test-token-abcdefghij',
-      );
-      await server.start();
+    test(
+      'health is unauthenticated and says nothing about the voyage',
+      () async {
+        await control.setForTesting(
+          on: true,
+          token: 'field-test-token-abcdefghij',
+        );
+        await server.start();
 
-      final body = await readJson(await send('GET', '/v1/health'));
+        final body = await readJson(await send('GET', '/v1/health'));
 
-      expect(body['status'], 'ok');
-      expect(body['switchedOn'], isTrue);
-      expect(
-        body.keys,
-        isNot(contains('roster')),
-        reason:
-            'liveness must not leak ride state to an unauthenticated caller',
-      );
-    });
+        expect(body['status'], 'ok');
+        expect(body['switchedOn'], isTrue);
+        expect(
+          body.keys,
+          isNot(contains('roster')),
+          reason:
+              'liveness must not leak voyage state to an unauthenticated caller',
+        );
+      },
+    );
 
     test('a missing, empty or wrong token is rejected', () async {
       await control.setForTesting(
@@ -168,8 +171,8 @@ void main() {
       expect(body, contains('reconciliation'));
       expect(body, contains('roster'));
       expect(body, contains('presence'));
-      // No ride yet, so nothing to report and nothing to be wrong about.
-      expect(body['ride'], isNull);
+      // No voyage yet, so nothing to report and nothing to be wrong about.
+      expect(body['voyage'], isNull);
     });
 
     test('a snapshot never carries capability material', () async {
@@ -200,7 +203,7 @@ void main() {
       for (final path in <String>[
         '/v1/sos',
         '/v1/emergency',
-        '/v1/ride/ice',
+        '/v1/voyage/ice',
         '/v1/call',
       ]) {
         final response = await send('POST', path, token: control.token);
@@ -212,7 +215,7 @@ void main() {
       }
     });
 
-    test('a hazard with no active ride is a conflict, not a crash', () async {
+    test('a hazard with no active voyage is a conflict, not a crash', () async {
       await control.setForTesting(
         on: true,
         token: 'field-test-token-abcdefghij',
@@ -239,7 +242,7 @@ void main() {
 
       final response = await send(
         'POST',
-        '/v1/ride',
+        '/v1/voyage',
         token: control.token,
         body: {'displayName': ''},
       );
@@ -255,19 +258,19 @@ void main() {
       );
       await server.start();
 
-      // endRide on a ride the local rider does not lead throws a
-      // FormatException, which RideController._run captures into errorMessage
+      // endVoyage on a voyage the local sailor does not lead throws a
+      // FormatException, which VoyageController._run captures into errorMessage
       // instead of rethrowing. Before this was handled, the surface answered 200
-      // with a snapshot of the unchanged ride - a driven field test would have
-      // recorded a successful end against a ride that never ended.
-      await ride.createRide('Leader');
-      final before = ride.session?.rideId;
+      // with a snapshot of the unchanged voyage - a driven field test would have
+      // recorded a successful end against a voyage that never ended.
+      await voyage.createVoyage('Skipper');
+      final before = voyage.session?.voyageId;
 
       final response = await send(
         'POST',
-        '/v1/ride/join',
+        '/v1/voyage/join',
         token: control.token,
-        body: {'rideCode': 'not-six-digits', 'displayName': 'Follower'},
+        body: {'voyageCode': 'not-six-digits', 'displayName': 'Follower'},
       );
 
       expect(
@@ -279,12 +282,12 @@ void main() {
       expect(body['error'], 'action_failed');
       expect(body['detail'], isNotEmpty);
       // The state still comes back, because a driver deciding whether to abandon
-      // a run needs to know where the ride actually got to.
+      // a run needs to know where the voyage actually got to.
       expect(body['state'], isA<Map<String, Object?>>());
       expect(
-        ride.session?.rideId,
+        voyage.session?.voyageId,
         before,
-        reason: 'the ride must be unchanged by the failed action',
+        reason: 'the voyage must be unchanged by the failed action',
       );
     });
 

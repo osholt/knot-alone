@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/voyage_event.dart';
 import 'package:tide_and_seek/relay/relay_protocol.dart';
 
 /// The nearby transport had the same defect as the internet one: a single event
@@ -12,7 +12,7 @@ import 'package:tide_and_seek/relay/relay_protocol.dart';
 void main() {
   const protocol = RelayProtocol();
   const secret = '0123456789abcdef0123456789abcdef';
-  const rideId = 'ride-frame';
+  const voyageId = 'voyage-frame';
   final sentAt = DateTime.utc(2026, 7, 25, 12);
   final now = sentAt.add(const Duration(seconds: 1));
 
@@ -20,7 +20,7 @@ void main() {
     final unsigned = <String, Object?>{
       'version': 1,
       'kind': 'events',
-      'rideId': rideId,
+      'voyageId': voyageId,
       'senderId': 'peer',
       'frameId': 'frame-1',
       'sentAt': sentAt.toIso8601String(),
@@ -46,13 +46,13 @@ void main() {
   test('keeps the known events in a frame beside a future event type', () {
     final decoded = protocol.decode(
       frame([
-        _rawEvent(id: 'future', type: 'rideTeleported'),
-        _rawEvent(id: 'known', type: 'riderJoined'),
+        _rawEvent(id: 'future', type: 'voyageTeleported'),
+        _rawEvent(id: 'known', type: 'sailorJoined'),
         _rawEvent(id: 'future-schema', schemaVersion: 2),
-        _rawEvent(id: 'known-position', type: 'riderLocationUpdated'),
+        _rawEvent(id: 'known-position', type: 'sailorLocationUpdated'),
       ]),
       secret: secret,
-      expectedRideId: rideId,
+      expectedVoyageId: voyageId,
       now: now,
     );
 
@@ -61,15 +61,15 @@ void main() {
       'known-position',
     ]);
     expect(decoded.ignoredEventCount, 2);
-    expect(decoded.events.first.event.type, RideEventType.riderJoined);
+    expect(decoded.events.first.event.type, VoyageEventType.sailorJoined);
   });
 
   test('a frame of only future events is rejected without side effects', () {
     expect(
       () => protocol.decode(
-        frame([_rawEvent(id: 'future', type: 'rideTeleported')]),
+        frame([_rawEvent(id: 'future', type: 'voyageTeleported')]),
         secret: secret,
-        expectedRideId: rideId,
+        expectedVoyageId: voyageId,
         now: now,
       ),
       throwsA(isA<RelayProtocolException>()),
@@ -80,10 +80,10 @@ void main() {
     final decoded = protocol.decode(
       frame([
         _rawEvent(id: 'extra', extra: {'convoyId': 'c-1'}),
-        _rawEvent(id: 'known', type: 'riderJoined'),
+        _rawEvent(id: 'known', type: 'sailorJoined'),
       ]),
       secret: secret,
-      expectedRideId: rideId,
+      expectedVoyageId: voyageId,
       now: now,
     );
 
@@ -94,7 +94,7 @@ void main() {
   });
 
   test('a tampered frame still fails authentication', () {
-    final bytes = frame([_rawEvent(id: 'known', type: 'riderJoined')]);
+    final bytes = frame([_rawEvent(id: 'known', type: 'sailorJoined')]);
     final decodedJson = jsonDecode(utf8.decode(bytes)) as Map<String, Object?>;
     decodedJson['senderId'] = 'impostor';
 
@@ -102,7 +102,7 @@ void main() {
       () => protocol.decode(
         Uint8List.fromList(utf8.encode(jsonEncode(decodedJson))),
         secret: secret,
-        expectedRideId: rideId,
+        expectedVoyageId: voyageId,
         now: now,
       ),
       throwsA(isA<RelayProtocolException>()),
@@ -114,7 +114,7 @@ void main() {
       () => protocol.decode(
         frame([_rawEvent(id: 'broken', signature: 'nope')]),
         secret: secret,
-        expectedRideId: rideId,
+        expectedVoyageId: voyageId,
         now: now,
       ),
       throwsA(isA<RelayProtocolException>()),
@@ -134,13 +134,13 @@ Map<String, Object?> _rawEvent({
 }) => {
   'schemaVersion': schemaVersion,
   'id': id,
-  'rideId': 'ride-frame',
+  'voyageId': 'voyage-frame',
   'deviceId': 'peer',
   'type': type,
   'priority': 'routine',
   'createdAt': '2026-07-25T12:00:00.000Z',
   'expiresAt': null,
-  'payload': const {'displayName': 'Bill', 'role': 'rider'},
+  'payload': const {'displayName': 'Bill', 'role': 'sailor'},
   'signature': signature,
   'acknowledged': false,
   ...extra,

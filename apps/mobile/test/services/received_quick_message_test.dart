@@ -1,18 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/domain/geo_point.dart';
 import 'package:tide_and_seek/domain/quick_message.dart';
-import 'package:tide_and_seek/domain/ride_event.dart';
+import 'package:tide_and_seek/domain/voyage_event.dart';
 import 'package:tide_and_seek/services/geo_calculations.dart';
 import 'package:tide_and_seek/services/received_quick_message.dart';
-import 'package:tide_and_seek/services/ride_event_authenticator.dart';
+import 'package:tide_and_seek/services/voyage_event_authenticator.dart';
 
-const _rideId = 'ride-1';
+const _voyageId = 'voyage-1';
 const _secret = 'invite-secret';
 final _now = DateTime.utc(2026, 7, 26, 12);
 
-/// A signed `statusMessage`, exactly as `RideController.sendQuickMessage`
+/// A signed `statusMessage`, exactly as `VoyageController.sendQuickMessage`
 /// records one.
-RideEvent _quickMessage({
+VoyageEvent _quickMessage({
   required String id,
   required String deviceId,
   required QuickMessage message,
@@ -25,11 +25,11 @@ RideEvent _quickMessage({
   String? rawMessageName,
   String secret = _secret,
 }) {
-  final unsigned = RideEvent(
+  final unsigned = VoyageEvent(
     id: id,
-    rideId: _rideId,
+    voyageId: _voyageId,
     deviceId: deviceId,
-    type: RideEventType.statusMessage,
+    type: VoyageEventType.statusMessage,
     priority: message.priority,
     createdAt: createdAt ?? _now,
     expiresAt: expiresAt ?? _now.add(const Duration(hours: 2)),
@@ -38,35 +38,35 @@ RideEvent _quickMessage({
       'label': label ?? message.label,
       'senderDisplayName': ?senderDisplayName,
       'position': ?position?.toJson(),
-      'recipientRiderIds': ?recipients,
+      'recipientSailorIds': ?recipients,
     },
     signature: '',
   );
-  return RideEvent(
+  return VoyageEvent(
     id: unsigned.id,
-    rideId: unsigned.rideId,
+    voyageId: unsigned.voyageId,
     deviceId: unsigned.deviceId,
     type: unsigned.type,
     priority: unsigned.priority,
     createdAt: unsigned.createdAt,
     expiresAt: unsigned.expiresAt,
     payload: unsigned.payload,
-    signature: RideEventAuthenticator.sign(unsigned, secret),
+    signature: VoyageEventAuthenticator.sign(unsigned, secret),
   );
 }
 
-RideEvent _acknowledgement({
+VoyageEvent _acknowledgement({
   required String id,
   required String deviceId,
   required ReceivedQuickMessage message,
   String? displayName,
   DateTime? createdAt,
 }) {
-  final unsigned = RideEvent(
+  final unsigned = VoyageEvent(
     id: id,
-    rideId: _rideId,
+    voyageId: _voyageId,
     deviceId: deviceId,
-    type: RideEventType.statusMessage,
+    type: VoyageEventType.statusMessage,
     priority: EventPriority.important,
     createdAt: createdAt ?? _now.add(const Duration(seconds: 30)),
     expiresAt: _now.add(const Duration(hours: 2)),
@@ -76,35 +76,35 @@ RideEvent _acknowledgement({
     },
     signature: '',
   );
-  return RideEvent(
+  return VoyageEvent(
     id: unsigned.id,
-    rideId: unsigned.rideId,
+    voyageId: unsigned.voyageId,
     deviceId: unsigned.deviceId,
     type: unsigned.type,
     priority: unsigned.priority,
     createdAt: unsigned.createdAt,
     expiresAt: unsigned.expiresAt,
     payload: unsigned.payload,
-    signature: RideEventAuthenticator.sign(unsigned, _secret),
+    signature: VoyageEventAuthenticator.sign(unsigned, _secret),
   );
 }
 
 List<ReceivedQuickMessage> _reduce(
-  List<RideEvent> events, {
-  String localRiderId = 'leader',
+  List<VoyageEvent> events, {
+  String localSailorId = 'skipper',
   DateTime? now,
   Map<String, String> displayNames = const {},
-  Iterable<String> departedRiderIds = const [],
-  bool rideEnded = false,
+  Iterable<String> departedSailorIds = const [],
+  bool voyageEnded = false,
 }) => const ReceivedQuickMessageReducer().fromEvents(
-  rideId: _rideId,
+  voyageId: _voyageId,
   inviteSecret: _secret,
   events: events,
-  localRiderId: localRiderId,
+  localSailorId: localSailorId,
   now: now ?? _now.add(const Duration(minutes: 1)),
   displayNames: displayNames,
-  departedRiderIds: departedRiderIds,
-  rideEnded: rideEnded,
+  departedSailorIds: departedSailorIds,
+  voyageEnded: voyageEnded,
 );
 
 void main() {
@@ -116,20 +116,20 @@ void main() {
         message: QuickMessage.fuel,
         senderDisplayName: 'Bill',
         position: const GeoPoint(latitude: 53, longitude: -1.02),
-        recipients: const ['leader'],
+        recipients: const ['skipper'],
       ),
     ]);
 
     expect(messages, hasLength(1));
     final message = messages.single;
-    expect(message.senderRiderId, 'bill');
+    expect(message.senderSailorId, 'bill');
     expect(message.senderDisplayName, 'Bill');
     expect(message.message, QuickMessage.fuel);
     expect(message.label, 'Need fuel');
     expect(message.headline, 'Bill needs fuel');
     expect(message.raisedAtPosition?.latitude, 53);
-    expect(message.addressedToLocalRider, isTrue);
-    expect(message.raisedFromLocalRider, isFalse);
+    expect(message.addressedToLocalSailor, isTrue);
+    expect(message.raisedFromLocalSailor, isFalse);
     expect(message.isAcknowledged, isFalse);
     expect(message.interrupts, isFalse);
   });
@@ -150,14 +150,14 @@ void main() {
   });
 
   test('a message with no name anywhere is still presented', () {
-    // An older build did not relay `senderDisplayName`, and a rider can raise
+    // An older build did not relay `senderDisplayName`, and a sailor can raise
     // one before their membership event has arrived. The alert still has to say
     // something rather than being dropped.
     final messages = _reduce([
       _quickMessage(id: 'msg-1', deviceId: 'bill', message: QuickMessage.fuel),
     ]);
 
-    expect(messages.single.headline, 'A rider needs fuel');
+    expect(messages.single.headline, 'A sailor needs fuel');
   });
 
   test('a kind only a newer build knows keeps the sender own words', () {
@@ -220,27 +220,27 @@ void main() {
       message: QuickMessage.fuel,
       senderDisplayName: 'Bill',
     );
-    final asBill = _reduce([raised], localRiderId: 'bill').single;
+    final asBill = _reduce([raised], localSailorId: 'bill').single;
     final events = [
       raised,
       _acknowledgement(
         id: 'ack-1',
-        deviceId: 'leader',
+        deviceId: 'skipper',
         message: asBill,
         displayName: 'Ana',
       ),
     ];
 
     // The sender sees who saw it, which is the whole point of raising one.
-    final forSender = _reduce(events, localRiderId: 'bill').single;
-    expect(forSender.raisedFromLocalRider, isTrue);
+    final forSender = _reduce(events, localSailorId: 'bill').single;
+    expect(forSender.raisedFromLocalSailor, isTrue);
     expect(forSender.isAcknowledged, isTrue);
     expect(forSender.firstAcknowledgement?.displayName, 'Ana');
-    expect(forSender.acknowledgedBy('leader'), isTrue);
+    expect(forSender.acknowledgedBy('skipper'), isTrue);
 
-    // And the rider who acknowledged it knows they already have.
+    // And the sailor who acknowledged it knows they already have.
     final forReader = _reduce(events).single;
-    expect(forReader.acknowledgedBy('leader'), isTrue);
+    expect(forReader.acknowledgedBy('skipper'), isTrue);
 
     // The acknowledgement is never itself a message on anybody's screen.
     expect(
@@ -255,20 +255,20 @@ void main() {
       deviceId: 'bill',
       message: QuickMessage.fuel,
     );
-    final message = _reduce([raised], localRiderId: 'bill').single;
+    final message = _reduce([raised], localSailorId: 'bill').single;
     final ack = _acknowledgement(
       id: 'ack-1',
-      deviceId: 'leader',
+      deviceId: 'skipper',
       message: message,
     );
 
     expect(ReceivedQuickMessageReducer.isAcknowledgement(ack), isTrue);
     expect(ReceivedQuickMessageReducer.isAcknowledgement(raised), isFalse);
     expect(ack.payload['label'], 'Seen: Need fuel');
-    expect(ack.payload['recipientRiderIds'], const ['bill']);
+    expect(ack.payload['recipientSailorIds'], const ['bill']);
   });
 
-  test('Resolved from the same rider retires what they raised', () {
+  test('Resolved from the same sailor retires what they raised', () {
     final messages = _reduce([
       _quickMessage(
         id: 'msg-1',
@@ -291,17 +291,17 @@ void main() {
       ),
     ]);
 
-    expect(messages.map((message) => message.senderRiderId), const ['ana']);
+    expect(messages.map((message) => message.senderSailorId), const ['ana']);
   });
 
-  test('a message addressed to other riders is not this one to see', () {
+  test('a message addressed to other sailors is not this one to see', () {
     expect(
       _reduce([
         _quickMessage(
           id: 'msg-1',
           deviceId: 'bill',
           message: QuickMessage.fuel,
-          recipients: const ['tec'],
+          recipients: const ['sweeper'],
         ),
       ]),
       isEmpty,
@@ -309,7 +309,7 @@ void main() {
   });
 
   test('a message with no recipient list is group-visible', () {
-    // The dashboard grid sends one with no list, which is a rider telling the
+    // The dashboard grid sends one with no list, which is a sailor telling the
     // whole group. Deliberately the opposite default from a rejoin share.
     expect(
       _reduce([
@@ -328,7 +328,7 @@ void main() {
       id: 'forged',
       deviceId: 'bill',
       message: QuickMessage.assistance,
-      secret: 'another-ride',
+      secret: 'another-voyage',
     );
     final expired = _quickMessage(
       id: 'expired',
@@ -345,8 +345,8 @@ void main() {
 
     expect(_reduce([forged]), isEmpty);
     expect(_reduce([expired]), isEmpty);
-    expect(_reduce([live], departedRiderIds: const ['cal']), isEmpty);
-    expect(_reduce([live], rideEnded: true), isEmpty);
+    expect(_reduce([live], departedSailorIds: const ['cal']), isEmpty);
+    expect(_reduce([live], voyageEnded: true), isEmpty);
     expect(_reduce([forged, expired, live]), hasLength(1));
   });
 
@@ -482,7 +482,7 @@ void main() {
     );
   });
 
-  test('every quick message has a sentence naming the rider', () {
+  test('every quick message has a sentence naming the sailor', () {
     for (final message in QuickMessage.values) {
       final sentence = message.sentenceFor('Bill');
       expect(sentence, startsWith('Bill'));

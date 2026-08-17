@@ -1,4 +1,4 @@
-import '../domain/ride_event.dart';
+import '../domain/voyage_event.dart';
 
 const maxRelayHops = 8;
 
@@ -11,7 +11,7 @@ class QueuedRelayEvent {
     this.acknowledgedPeers = const {},
   });
 
-  final RideEvent event;
+  final VoyageEvent event;
   final DateTime firstSeenAt;
   final DateTime expiresAt;
   final int hopCount;
@@ -33,7 +33,7 @@ abstract interface class RelayQueueStore {
   Future<void> enqueue(QueuedRelayEvent item);
 
   Future<List<QueuedRelayEvent>> pendingForPeer(
-    String rideId,
+    String voyageId,
     String peerId, {
     required DateTime now,
     required int limit,
@@ -43,7 +43,7 @@ abstract interface class RelayQueueStore {
 
   Future<int> prune({required DateTime now, required int maxItems});
 
-  Future<int> count(String rideId, {required DateTime now});
+  Future<int> count(String voyageId, {required DateTime now});
 
   Future<void> close();
 }

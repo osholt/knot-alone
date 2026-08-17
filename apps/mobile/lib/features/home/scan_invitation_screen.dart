@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-import '../../domain/ride_join_payload.dart';
+import '../../domain/voyage_join_payload.dart';
 
-/// Scans a ride invitation and hands back the payload.
+/// Scans a voyage invitation and hands back the payload.
 ///
-/// Returns a [RideJoinPayload] on success and null if the rider backs out, so the
+/// Returns a [VoyageJoinPayload] on success and null if the sailor backs out, so the
 /// caller owns the joining. This screen decides one thing only: whether what the
 /// camera saw is a valid invitation.
 ///
 /// ## Refusal has to be survivable
 ///
 /// Camera permission is asked for here and nowhere else, and a refusal must leave
-/// the rider exactly where they were with every other way in still working - the
+/// the sailor exactly where they were with every other way in still working - the
 /// six-digit code and the pasted invite both still exist. A scanner is the only
 /// path that works with no signal, but it must never become the only path at all.
 class ScanInvitationScreen extends StatefulWidget {
@@ -21,8 +21,8 @@ class ScanInvitationScreen extends StatefulWidget {
   /// Injected in tests. Production builds the real camera controller.
   final MobileScannerController? controller;
 
-  static Future<RideJoinPayload?> show(BuildContext context) =>
-      Navigator.of(context).push<RideJoinPayload>(
+  static Future<VoyageJoinPayload?> show(BuildContext context) =>
+      Navigator.of(context).push<VoyageJoinPayload>(
         MaterialPageRoute(builder: (_) => const ScanInvitationScreen()),
       );
 
@@ -58,12 +58,12 @@ class _ScanInvitationScreenState extends State<ScanInvitationScreen> {
       final raw = barcode.rawValue;
       if (raw == null || raw.isEmpty) continue;
       try {
-        final payload = RideJoinPayload.decode(raw);
+        final payload = VoyageJoinPayload.decode(raw);
         _handled = true;
         Navigator.of(context).pop(payload);
         return;
       } on FormatException catch (error) {
-        // Say what was wrong rather than going quiet. A rider pointing a phone at
+        // Say what was wrong rather than going quiet. A sailor pointing a phone at
         // the wrong thing needs to know it was the wrong thing, not wonder whether
         // the camera is working.
         if (mounted) setState(() => _problem = error.message);
@@ -111,7 +111,7 @@ class _ScanInvitationScreenState extends State<ScanInvitationScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
-                  'Point the camera at the code on the ride leader’s phone. '
+                  'Point the camera at the code on the voyage skipper’s phone. '
                   'This works with no signal.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white, height: 1.4),
@@ -127,8 +127,8 @@ class _ScanInvitationScreenState extends State<ScanInvitationScreen> {
 
 /// Shown when the camera cannot be used, including a refused permission.
 ///
-/// Names the other ways in rather than leaving the rider at a dead end: refusing a
-/// camera must not cost them the ride.
+/// Names the other ways in rather than leaving the sailor at a dead end: refusing a
+/// camera must not cost them the voyage.
 class _CameraUnavailable extends StatelessWidget {
   const _CameraUnavailable({required this.error});
 
@@ -155,8 +155,8 @@ class _CameraUnavailable extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'You can still join with the six-digit ride code, or by pasting '
-              'the invitation the leader shared. Scanning is the only way that '
+              'You can still join with the six-digit voyage code, or by pasting '
+              'the invitation the skipper shared. Scanning is the only way that '
               'works with no signal at all.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Color(0xFFABB5C1), height: 1.45),
@@ -165,7 +165,7 @@ class _CameraUnavailable extends StatelessWidget {
             OutlinedButton(
               key: const Key('invitation-scanner-back'),
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Use a ride code instead'),
+              child: const Text('Use a voyage code instead'),
             ),
           ],
         ),

@@ -12,7 +12,7 @@ void main() {
     final matcher = OsrmImportedTrackMatcher(
       client: MockClient((request) async {
         requestedUri = request.url;
-        expect(request.headers['User-Agent'], contains('TailEndCharlie'));
+        expect(request.headers['User-Agent'], contains('Sweeper'));
         return http.Response(jsonEncode(_matchResponse()), 200);
       }),
       baseUrl: Uri.parse('https://routing.example.test/prefix'),

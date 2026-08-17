@@ -12,10 +12,10 @@ import 'package:tide_and_seek/domain/imported_route.dart';
 import 'package:tide_and_seek/domain/quick_message.dart';
 import 'package:tide_and_seek/domain/route_store.dart';
 import 'package:tide_and_seek/domain/route_alert.dart';
-import 'package:tide_and_seek/features/map/ride_map.dart';
+import 'package:tide_and_seek/features/map/voyage_map.dart';
 import 'package:tide_and_seek/services/basemap_configuration.dart';
 import 'package:tide_and_seek/services/gpx_import_source.dart';
-import 'package:tide_and_seek/services/leader_ride_status.dart';
+import 'package:tide_and_seek/services/skipper_voyage_status.dart';
 import 'package:tide_and_seek/services/offline_tile_cache.dart';
 import 'package:tide_and_seek/services/received_quick_message.dart';
 import 'package:tide_and_seek/services/route_importer.dart';
@@ -101,16 +101,16 @@ void main() {
           ),
         );
         addTearDown(navigation.dispose);
-        final leaderStatus = ValueNotifier<LeaderRideStatus?>(
+        final skipperStatus = ValueNotifier<SkipperVoyageStatus?>(
           scenario.maximumOverlays
-              ? const LeaderRideStatus(
-                  tecName: 'Charlie',
-                  distanceToTecMeters: 3200,
-                  estimatedTimeToTec: Duration(minutes: 4),
-                  tecLocationAge: Duration(seconds: 10),
+              ? const SkipperVoyageStatus(
+                  sweeperName: 'Charlie',
+                  distanceToSweeperMeters: 3200,
+                  estimatedTimeToSweeper: Duration(minutes: 4),
+                  sweeperLocationAge: Duration(seconds: 10),
                   offCourseAlerts: [
-                    LeaderOffCourseAlert(
-                      riderId: 'rider-alex',
+                    SkipperOffCourseAlert(
+                      sailorId: 'sailor-alex',
                       displayName: 'Alex',
                       level: RouteAlertLevel.urgent,
                       distanceFromRouteMeters: 420,
@@ -119,8 +119,8 @@ void main() {
                 )
               : null,
         );
-        addTearDown(leaderStatus.dispose);
-        final alerts = ValueNotifier<List<RideQuickMessageAlert>>(
+        addTearDown(skipperStatus.dispose);
+        final alerts = ValueNotifier<List<VoyageQuickMessageAlert>>(
           scenario.alerts,
         );
         addTearDown(alerts.dispose);
@@ -132,20 +132,20 @@ void main() {
               theme: ThemeData.dark(
                 useMaterial3: true,
               ).copyWith(textTheme: _renderTextTheme),
-              home: RideMapScreen(
+              home: VoyageMapScreen(
                 routeStore: InMemoryRouteStore(_route),
                 routeImporter: RouteImporter(source: const _NoFileSource()),
                 offlineTileCache: cache,
                 navigationPosition: navigation,
-                leaderStatus: leaderStatus,
-                groupRiderCount: scenario.maximumOverlays ? 3 : null,
-                ridePaused: scenario.maximumOverlays,
+                skipperStatus: skipperStatus,
+                groupSailorCount: scenario.maximumOverlays ? 3 : null,
+                voyagePaused: scenario.maximumOverlays,
                 distanceUnit: DistanceUnit.miles,
                 quickMessageAlerts: alerts,
                 onAcknowledgeQuickMessage: (_) async {},
-                onOpenRideMenu: () async {},
+                onOpenVoyageMenu: () async {},
                 onEmergencyAlert: () async {},
-                onLeaveRide: () async {},
+                onLeaveVoyage: () async {},
               ),
             ),
           ),
@@ -221,17 +221,17 @@ class _Scenario {
   final String name;
   final String fileName;
   final String expectedKey;
-  final List<RideQuickMessageAlert> alerts;
+  final List<VoyageQuickMessageAlert> alerts;
 
   /// Draws the alert on top of every other surface the map can show at once.
   final bool maximumOverlays;
 
-  /// Raises this rider's own alert first, so the SOS control's acknowledged
+  /// Raises this sailor's own alert first, so the SOS control's acknowledged
   /// state (#142's "alert acknowledged") is in the frame too.
   final bool pressSos;
 
   /// Closes the critical interrupt before the frame is taken, so the row it
-  /// leaves behind - the persistence a rider who glances away depends on - is
+  /// leaves behind - the persistence a sailor who glances away depends on - is
   /// rendered at its real critical priority rather than a downgraded one.
   final bool dismissInterrupt;
 }
@@ -326,7 +326,7 @@ final _scenarios = <_Scenario>[
         eventId: 'own-1',
         message: QuickMessage.emergencyStop,
         senderDisplayName: 'Me',
-        raisedFromLocalRider: true,
+        raisedFromLocalSailor: true,
         acknowledgedBy: 'Ana',
       ),
     ],
@@ -351,27 +351,27 @@ final _scenarios = <_Scenario>[
   ),
 ];
 
-RideQuickMessageAlert _alert({
+VoyageQuickMessageAlert _alert({
   required String eventId,
   required QuickMessage message,
   required String senderDisplayName,
   QuickMessageOrigin? origin,
-  bool raisedFromLocalRider = false,
+  bool raisedFromLocalSailor = false,
   String? acknowledgedBy,
-}) => RideQuickMessageAlert(
+}) => VoyageQuickMessageAlert(
   message: ReceivedQuickMessage(
     eventId: eventId,
-    senderRiderId: 'rider-$eventId',
+    senderSailorId: 'sailor-$eventId',
     senderDisplayName: senderDisplayName,
     label: message.label,
     priority: message.priority,
     raisedAt: DateTime.now().subtract(const Duration(minutes: 2)),
-    raisedFromLocalRider: raisedFromLocalRider,
+    raisedFromLocalSailor: raisedFromLocalSailor,
     message: message,
     acknowledgements: [
       if (acknowledgedBy != null)
         QuickMessageAcknowledgement(
-          riderId: 'rider-ack',
+          sailorId: 'sailor-ack',
           displayName: acknowledgedBy,
           acknowledgedAt: DateTime.now(),
         ),

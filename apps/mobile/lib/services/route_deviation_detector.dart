@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import '../domain/geo_point.dart';
-import '../domain/rider_location.dart';
+import '../domain/sailor_location.dart';
 import '../domain/route_alert.dart';
 import 'geo_calculations.dart';
 
@@ -15,11 +15,11 @@ class RouteDeviationConfig {
     this.staleAfter = const Duration(seconds: 30),
     this.coordinatorStaleAfter = const Duration(seconds: 90),
     this.criticalOffRouteAfter = const Duration(minutes: 3),
-    this.leaderTrackCorridorMeters = 120,
+    this.skipperTrackCorridorMeters = 120,
   }) : assert(enterOffRouteMeters > exitOffRouteMeters),
        assert(samplesToConfirmOffRoute > 0),
        assert(samplesToConfirmRecovery > 0),
-       assert(leaderTrackCorridorMeters > 0);
+       assert(skipperTrackCorridorMeters > 0);
 
   final double enterOffRouteMeters;
   final double exitOffRouteMeters;
@@ -30,11 +30,11 @@ class RouteDeviationConfig {
   final Duration coordinatorStaleAfter;
   final Duration criticalOffRouteAfter;
 
-  /// How close to the ride leader's *actual* recorded track a rider has to be
-  /// to count as following the leader rather than as off course. Matched to
-  /// [enterOffRouteMeters] so the leader's track is treated exactly as
+  /// How close to the voyage skipper's *actual* recorded track a sailor has to be
+  /// to count as following the skipper rather than as off course. Matched to
+  /// [enterOffRouteMeters] so the skipper's track is treated exactly as
   /// generously as the planned route is.
-  final double leaderTrackCorridorMeters;
+  final double skipperTrackCorridorMeters;
 }
 
 class RouteDeviationDetector {
@@ -52,9 +52,9 @@ class RouteDeviationDetector {
   int _insideSamples = 0;
   DateTime? _offRouteSince;
 
-  /// Replaces the segments riders are compared against - e.g. once the ride
-  /// leader's live trail has grown - without resetting the off-route/
-  /// recovery hysteresis already in progress for this rider.
+  /// Replaces the segments sailors are compared against - e.g. once the voyage
+  /// skipper's live trail has grown - without resetting the off-route/
+  /// recovery hysteresis already in progress for this sailor.
   void updateRouteSegments(List<List<GeoPoint>> routeSegments) {
     _routeSegments = _normalised(routeSegments);
   }
@@ -66,18 +66,18 @@ class RouteDeviationDetector {
 
   /// The stable state the hysteresis has settled on, before any caller-applied
   /// exemption. Exposed so a caller that overrides the verdict - the
-  /// leader-follow exemption does - can still see what the geometry said.
+  /// skipper-follow exemption does - can still see what the geometry said.
   RouteTrackingState get stableState => _stableState;
 
   DateTime? get offRouteSince => _offRouteSince;
 
   /// Drops the off-route/recovery hysteresis and the off-route clock.
   ///
-  /// Called when a rider is exempt from the planned-route comparison because
-  /// they are following the ride leader's own track. Without this the detector
-  /// would keep counting: a rider who spent twenty minutes behind the leader on
-  /// a diversion would be an instant all-rider critical the moment they left
-  /// the leader's track, instead of getting a fresh three-sample confirmation.
+  /// Called when a sailor is exempt from the planned-route comparison because
+  /// they are following the voyage skipper's own track. Without this the detector
+  /// would keep counting: a sailor who spent twenty minutes behind the skipper on
+  /// a diversion would be an instant all-sailor critical the moment they left
+  /// the skipper's track, instead of getting a fresh three-sample confirmation.
   void resetOffRouteHysteresis() {
     _stableState = RouteTrackingState.onRoute;
     _outsideSamples = 0;
@@ -85,21 +85,21 @@ class RouteDeviationDetector {
     _offRouteSince = null;
   }
 
-  /// The verdict for a rider inside the ride leader's live-track corridor.
+  /// The verdict for a sailor inside the voyage skipper's live-track corridor.
   ///
-  /// Such a rider is on route by definition, whatever the planned GPX says: the
-  /// leader has physically ridden this road. Using one constructor for it keeps
-  /// alert state, the leader's off-course count, the roster and the map in
+  /// Such a sailor is on route by definition, whatever the planned GPX says: the
+  /// skipper has physically ridden this road. Using one constructor for it keeps
+  /// alert state, the skipper's off-course count, the roster and the map in
   /// agreement.
-  static RouteDeviationAssessment followingLeaderTrackAssessment({
+  static RouteDeviationAssessment followingSkipperTrackAssessment({
     required DateTime evaluatedAt,
     double? distanceFromRouteMeters,
   }) => RouteDeviationAssessment(
     state: RouteTrackingState.onRoute,
     alertLevel: RouteAlertLevel.none,
-    audience: RouteAlertAudience.rider,
+    audience: RouteAlertAudience.sailor,
     evaluatedAt: evaluatedAt,
-    message: 'Following the ride leader\'s track.',
+    message: 'Following the voyage skipper\'s track.',
     distanceFromRouteMeters: distanceFromRouteMeters,
   );
 
@@ -111,7 +111,7 @@ class RouteDeviationDetector {
       return RouteDeviationAssessment(
         state: RouteTrackingState.unavailable,
         alertLevel: RouteAlertLevel.none,
-        audience: RouteAlertAudience.rider,
+        audience: RouteAlertAudience.sailor,
         evaluatedAt: now,
         message: 'No route is loaded.',
       );
@@ -128,7 +128,7 @@ class RouteDeviationDetector {
             : RouteAlertLevel.watch,
         audience: coordinatorAlert
             ? RouteAlertAudience.coordinators
-            : RouteAlertAudience.rider,
+            : RouteAlertAudience.sailor,
         evaluatedAt: now,
         message: sample.accuracyMeters > config.maxAcceptedAccuracyMeters
             ? 'GPS accuracy is too low for route alerts.'
@@ -209,12 +209,12 @@ class RouteDeviationDetector {
       state: RouteTrackingState.offRoute,
       alertLevel: critical ? RouteAlertLevel.critical : RouteAlertLevel.urgent,
       audience: critical
-          ? RouteAlertAudience.allRiders
+          ? RouteAlertAudience.allSailors
           : RouteAlertAudience.coordinators,
       evaluatedAt: now,
       message: critical
-          ? 'Rider remains off route; immediate follow-up required.'
-          : 'Rider is confirmed off route. Lead and TEC should check in.',
+          ? 'Sailor remains off route; immediate follow-up required.'
+          : 'Sailor is confirmed off route. Lead and TEC should check in.',
       distanceFromRouteMeters: distance,
       offRouteSince: since,
     );
@@ -232,7 +232,7 @@ class RouteDeviationDetector {
             state == RouteTrackingState.recovering
         ? RouteAlertLevel.watch
         : RouteAlertLevel.none,
-    audience: RouteAlertAudience.rider,
+    audience: RouteAlertAudience.sailor,
     evaluatedAt: now,
     message: message,
     distanceFromRouteMeters: distance,

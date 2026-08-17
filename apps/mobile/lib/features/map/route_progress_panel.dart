@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../domain/distance_unit.dart';
 import '../../services/measurement_formatter.dart';
 import '../../services/route_journey_progress.dart';
-import 'ride_clock.dart';
+import 'voyage_clock.dart';
 
 /// A compact, glanceable trip and next-stop summary for the moving map (#413).
 class RouteProgressPanel extends StatelessWidget {
@@ -85,7 +85,7 @@ class RouteProgressPanel extends StatelessWidget {
                 ),
                 if (showClock) ...[
                   const SizedBox(width: 7),
-                  const RideClock(
+                  const VoyageClock(
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 12,

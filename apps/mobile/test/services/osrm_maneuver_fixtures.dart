@@ -131,7 +131,7 @@ Map<String, Object?> ukRoundaboutStraightOnResponse() => _response(
   ],
 );
 
-/// A rotary left by its third exit, turning the rider from east to south.
+/// A rotary left by its third exit, turning the sailor from east to south.
 Map<String, Object?> roundaboutThirdExitRightResponse() => _response(
   coordinates: [
     [-2.6000, 51.4700],
@@ -185,7 +185,7 @@ Map<String, Object?> roundaboutThirdExitRightResponse() => _response(
 
 /// A gyratory whose ring the engine splits into two adjacent `roundabout` steps.
 ///
-/// Only the first ring carries an exit count, and the rider rides straight
+/// Only the first ring carries an exit count, and the sailor voyages straight
 /// through, so this must read as one instruction rather than three turns.
 Map<String, Object?> gyratoryResponse() => _response(
   coordinates: [

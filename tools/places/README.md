@@ -3,7 +3,7 @@
 `generate_route_places.py` extracts only `populatedPlace` features from the
 official OS Open Names CSV download and converts their British National Grid
 coordinates to WGS84. The compact result labels saved routes without sending a
-rider's start or finish to a geocoder.
+sailor's start or finish to a geocoder.
 
 Source: [OS Open Names](https://osdatahub.os.uk/downloads/open/OpenNames), used
 under the Open Government Licence. The generated asset carries the required

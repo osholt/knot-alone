@@ -20,7 +20,7 @@ void main() {
     );
   });
 
-  // The follow target is a ground point projected ahead of the rider from the
+  // The follow target is a ground point projected ahead of the sailor from the
   // tilt, zoom and measured viewport height. A viewport that has not been laid
   // out reports zero height, and dividing through that geometry is how a NaN
   // reaches the renderer.

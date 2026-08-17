@@ -4,7 +4,7 @@ import 'package:tide_and_seek/services/spoken_guidance.dart';
 
 /// The engine is behind an interface so these decisions - what to say, when, and
 /// how often - can be tested without a platform channel. They are the part that
-/// can be wrong in a way a rider on a bike would notice.
+/// can be wrong in a way a sailor on a bike would notice.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late _RecordingEngine engine;
@@ -19,12 +19,12 @@ void main() {
     String key = 'turn-1',
     String phrase = 'Second exit',
     bool enabled = true,
-    bool rideActive = true,
+    bool voyageActive = true,
   }) => speaker.speakManoeuvre(
     key: key,
     phrase: phrase,
     enabled: enabled,
-    rideActive: rideActive,
+    voyageActive: voyageActive,
   );
 
   test('speaks a manoeuvre once', () async {
@@ -35,7 +35,7 @@ void main() {
   test('does not repeat the same manoeuvre', () async {
     // Guidance is re-derived on every position fix, so without this a single turn
     // would be announced every few seconds all the way to the junction. Repetition
-    // like that is worse than silence: a rider stops listening.
+    // like that is worse than silence: a sailor stops listening.
     await speak();
     expect(await speak(), isFalse);
     await speak();
@@ -51,7 +51,7 @@ void main() {
   });
 
   test('says nothing at all while the option is off', () async {
-    // And touches no engine: a rider who has not asked for audio must not have a
+    // And touches no engine: a sailor who has not asked for audio must not have a
     // speech engine initialised behind their back.
     expect(await speak(enabled: false), isFalse);
 
@@ -59,14 +59,14 @@ void main() {
     expect(
       engine.configured,
       isFalse,
-      reason: 'the engine must not be configured for a rider who said no',
+      reason: 'the engine must not be configured for a sailor who said no',
     );
   });
 
-  test('says nothing outside a running ride', () async {
-    // An instruction read aloud after the ride has ended, or while still parked
+  test('says nothing outside a running voyage', () async {
+    // An instruction read aloud after the voyage has ended, or while still parked
     // at the start point, is noise at best and misleading at worst.
-    expect(await speak(rideActive: false), isFalse);
+    expect(await speak(voyageActive: false), isFalse);
     expect(engine.spoken, isEmpty);
   });
 
@@ -105,7 +105,7 @@ void main() {
         key: 'camera-1',
         phrase: 'Speed camera, in 151 yd',
         enabled: true,
-        rideActive: true,
+        voyageActive: true,
       );
       expect(warmable.configureCalls, 1);
       expect(warmable.spoken, ['Speed camera, in 151 yards']);
@@ -113,8 +113,8 @@ void main() {
   );
 
   test('a reset lets an identical manoeuvre be spoken again', () async {
-    // Without this a new ride whose first manoeuvre happened to carry the same
-    // identity as the last ride's final one would be silent for it.
+    // Without this a new voyage whose first manoeuvre happened to carry the same
+    // identity as the last voyage's final one would be silent for it.
     await speak(key: 'turn-1');
     speaker.reset();
 

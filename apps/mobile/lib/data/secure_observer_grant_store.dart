@@ -14,14 +14,14 @@ class SecureObserverGrantStore implements ObserverGrantStore {
   static const _assistancePrefix = 'ride_relay_observer_assistance_v1_';
   final FlutterSecureStorage _storage;
 
-  String _key(String rideId) =>
-      '$_prefix${sha256.convert(utf8.encode(rideId)).toString()}';
-  String _assistanceKey(String rideId) =>
-      '$_assistancePrefix${sha256.convert(utf8.encode(rideId)).toString()}';
+  String _key(String voyageId) =>
+      '$_prefix${sha256.convert(utf8.encode(voyageId)).toString()}';
+  String _assistanceKey(String voyageId) =>
+      '$_assistancePrefix${sha256.convert(utf8.encode(voyageId)).toString()}';
 
   @override
-  Future<List<ObserverGrantCredentials>> load(String rideId) async {
-    final encoded = await _storage.read(key: _key(rideId));
+  Future<List<ObserverGrantCredentials>> load(String voyageId) async {
+    final encoded = await _storage.read(key: _key(voyageId));
     if (encoded == null) return const [];
     try {
       final value = jsonDecode(encoded);
@@ -42,18 +42,21 @@ class SecureObserverGrantStore implements ObserverGrantStore {
       }
       return List.unmodifiable(credentials);
     } on Object {
-      await delete(rideId);
+      await delete(voyageId);
       return const [];
     }
   }
 
   @override
-  Future<void> save(String rideId, List<ObserverGrantCredentials> credentials) {
+  Future<void> save(
+    String voyageId,
+    List<ObserverGrantCredentials> credentials,
+  ) {
     if (credentials.length > 50) {
       throw const FormatException('Observer store is too large.');
     }
     return _storage.write(
-      key: _key(rideId),
+      key: _key(voyageId),
       value: jsonEncode({
         'schemaVersion': 1,
         'credentials': credentials
@@ -64,13 +67,13 @@ class SecureObserverGrantStore implements ObserverGrantStore {
   }
 
   @override
-  Future<void> delete(String rideId) => _storage.delete(key: _key(rideId));
+  Future<void> delete(String voyageId) => _storage.delete(key: _key(voyageId));
 
   @override
   Future<ObserverLocalAssistanceState?> loadLocalAssistance(
-    String rideId,
+    String voyageId,
   ) async {
-    final encoded = await _storage.read(key: _assistanceKey(rideId));
+    final encoded = await _storage.read(key: _assistanceKey(voyageId));
     if (encoded == null) return null;
     try {
       final value = Map<String, Object?>.from(jsonDecode(encoded) as Map);
@@ -81,21 +84,21 @@ class SecureObserverGrantStore implements ObserverGrantStore {
         Map<String, Object?>.from(value['state']! as Map),
       );
     } on Object {
-      await deleteLocalAssistance(rideId);
+      await deleteLocalAssistance(voyageId);
       return null;
     }
   }
 
   @override
   Future<void> saveLocalAssistance(
-    String rideId,
+    String voyageId,
     ObserverLocalAssistanceState state,
   ) => _storage.write(
-    key: _assistanceKey(rideId),
+    key: _assistanceKey(voyageId),
     value: jsonEncode({'schemaVersion': 1, 'state': state.toJson()}),
   );
 
   @override
-  Future<void> deleteLocalAssistance(String rideId) =>
-      _storage.delete(key: _assistanceKey(rideId));
+  Future<void> deleteLocalAssistance(String voyageId) =>
+      _storage.delete(key: _assistanceKey(voyageId));
 }

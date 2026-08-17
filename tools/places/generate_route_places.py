@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the compact offline settlement index used for ride endpoint labels."""
+"""Build the compact offline settlement index used for voyage endpoint labels."""
 
 from __future__ import annotations
 

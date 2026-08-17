@@ -3,22 +3,22 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/controllers/pre_start_presence_controller.dart';
 import 'package:tide_and_seek/domain/geo_point.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
-import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
+import 'package:tide_and_seek/domain/sailor_location.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 import 'package:tide_and_seek/relay/live_presence.dart';
 import 'package:tide_and_seek/relay/relay_presence.dart';
 
 void main() {
-  final session = RideSession(
-    rideId: 'ride-presence',
-    rideCode: '123456',
+  final session = VoyageSession(
+    voyageId: 'voyage-presence',
+    voyageCode: '123456',
     inviteSecret: '0123456789abcdef0123456789abcdef',
     joinToken: 'test-join-token-0123456789',
-    localRiderId: 'local',
+    localSailorId: 'local',
     displayName: 'Oliver',
-    role: RideRole.lead,
+    role: VoyageRole.lead,
     joinedAt: DateTime.utc(2026, 7, 23, 10),
   );
 
@@ -27,7 +27,7 @@ void main() {
     () async {
       var now = DateTime.utc(2026, 7, 23, 10);
       final remote = _location(
-        riderId: 'remote',
+        sailorId: 'remote',
         displayName: 'Alex',
         latitude: 51.1,
         receivedAt: now,
@@ -51,10 +51,10 @@ void main() {
       addTearDown(controller.close);
 
       await controller.start(session);
-      expect(controller.locations.single.riderId, 'remote');
+      expect(controller.locations.single.sailorId, 'remote');
 
       final local = _location(
-        riderId: 'local',
+        sailorId: 'local',
         displayName: 'Oliver',
         latitude: 51.2,
         receivedAt: now,
@@ -100,7 +100,7 @@ void main() {
       await controller.start(session);
       await controller.attachNearby(nearby);
       final remote = _location(
-        riderId: 'remote',
+        sailorId: 'remote',
         displayName: 'Alex',
         latitude: 51.3,
         receivedAt: now,
@@ -108,7 +108,7 @@ void main() {
 
       nearby.emit(
         RelayPresenceUpdate(
-          riderId: 'remote',
+          sailorId: 'remote',
           sentAt: now,
           expiresAt: now.add(const Duration(seconds: 45)),
           clear: false,
@@ -120,41 +120,41 @@ void main() {
       expect(controller.locations.single.sample.position.latitude, 51.3);
       controller.updateLocalPosition(
         _location(
-          riderId: 'local',
+          sailorId: 'local',
           displayName: 'Oliver',
           latitude: 51.4,
           receivedAt: now,
         ),
       );
       await Future<void>.delayed(Duration.zero);
-      expect(nearby.published.last.position?.riderId, 'local');
+      expect(nearby.published.last.position?.sailorId, 'local');
 
       now = now.add(const Duration(seconds: 46));
       expect(
         controller
             .presenceAt(now)
-            .firstWhere((entry) => entry.riderId == 'remote')
+            .firstWhere((entry) => entry.sailorId == 'remote')
             .freshness,
         PresenceFreshness.ageing,
       );
       now = now.add(const Duration(minutes: 6));
       expect(
-        controller.locations.where((value) => value.riderId == 'remote'),
+        controller.locations.where((value) => value.sailorId == 'remote'),
         isEmpty,
       );
     },
   );
 }
 
-RiderLocation _location({
-  required String riderId,
+SailorLocation _location({
+  required String sailorId,
   required String displayName,
   required double latitude,
   required DateTime receivedAt,
-}) => RiderLocation(
-  riderId: riderId,
+}) => SailorLocation(
+  sailorId: sailorId,
   displayName: displayName,
-  role: riderId == 'local' ? RideRole.lead : RideRole.rider,
+  role: sailorId == 'local' ? VoyageRole.lead : VoyageRole.sailor,
   sample: LocationSample(
     position: GeoPoint(latitude: latitude, longitude: -2.4),
     recordedAt: receivedAt,
@@ -167,7 +167,7 @@ class _FakePresenceApi implements PreStartPresenceApi {
   _FakePresenceApi(this._results);
 
   final List<PreStartPresenceResult> _results;
-  final List<({RideSession session, RiderLocation? position, bool clear})>
+  final List<({VoyageSession session, SailorLocation? position, bool clear})>
   calls = [];
 
   @override
@@ -176,8 +176,8 @@ class _FakePresenceApi implements PreStartPresenceApi {
 
   @override
   Future<PreStartPresenceResult> synchronizePreStartPresence({
-    required RideSession session,
-    required RiderLocation? position,
+    required VoyageSession session,
+    required SailorLocation? position,
     required bool clear,
   }) async {
     calls.add((session: session, position: position, clear: clear));
@@ -190,7 +190,7 @@ class _FakePresenceApi implements PreStartPresenceApi {
 
 class _FakePresenceGateway implements RelayPresenceGateway {
   final _updates = StreamController<RelayPresenceUpdate>.broadcast();
-  final List<({RiderLocation? position, bool clear, Duration ttl})> published =
+  final List<({SailorLocation? position, bool clear, Duration ttl})> published =
       [];
 
   @override
@@ -200,7 +200,7 @@ class _FakePresenceGateway implements RelayPresenceGateway {
 
   @override
   Future<void> publishPresence(
-    RiderLocation? position, {
+    SailorLocation? position, {
     bool clear = false,
     Duration ttl = const Duration(seconds: 45),
   }) async {

@@ -25,7 +25,7 @@ double shortestBearingDeltaDegrees(double to, double from) {
 /// never mixed in: a phone clamped to a steel motorcycle sits inside the
 /// bike's own magnetic field and next to its charging loom, so its magnetometer
 /// heading is unreliable exactly where it would be needed. The single
-/// exception is the very first bearing of a ride, when no course has ever been
+/// exception is the very first bearing of a voyage, when no course has ever been
 /// observed and holding an arbitrary north-up map would be worse than adopting
 /// whatever heading the platform supplies. Below the freeze speed the last
 /// stable bearing is held, so a stationary bike does not make the map wander.
@@ -44,7 +44,7 @@ double shortestBearingDeltaDegrees(double to, double from) {
 ///    tracks continuously until the two agree to within [settleDegrees], so a
 ///    long sweeping bend rotates smoothly instead of ratcheting in steps.
 ///    [maneuverDeadbandDegrees] replaces the deadband when a manoeuvre is
-///    imminent, so the bearing cannot lag at the junction the rider is being
+///    imminent, so the bearing cannot lag at the junction the sailor is being
 ///    told about.
 /// 4. **Rate limit.** Each step is capped at
 ///    [maximumRotationDegreesPerSecond], so a genuine change eases to the new
@@ -110,7 +110,7 @@ class NavigationHeadingSmoother {
         : 0.0;
 
     if (_bearing == null || _filtered == null) {
-      // First usable heading of the ride: adopt it rather than starting the
+      // First usable heading of the voyage: adopt it rather than starting the
       // map north-up and rotating away from it.
       _bearing = heading;
       _filtered = heading;

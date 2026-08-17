@@ -1,9 +1,9 @@
-import '../domain/ride_event.dart';
+import '../domain/voyage_event.dart';
 
 const _relayEventEnvelopeFields = {
   'schemaVersion',
   'id',
-  'rideId',
+  'voyageId',
   'deviceId',
   'type',
   'priority',
@@ -36,7 +36,7 @@ String? describeUnsupportedRelayEvent(Map<String, Object?> raw) {
   }
   final type = raw['type'];
   if (type is String &&
-      !RideEventType.values.any((candidate) => candidate.name == type)) {
+      !VoyageEventType.values.any((candidate) => candidate.name == type)) {
     return sanitiseRelayToken(type);
   }
   final hasUnknownField = raw.keys.any(

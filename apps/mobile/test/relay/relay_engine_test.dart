@@ -4,9 +4,9 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/data/in_memory_event_store.dart';
 import 'package:tide_and_seek/domain/geo_point.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_event.dart';
-import 'package:tide_and_seek/domain/rider_location.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_event.dart';
+import 'package:tide_and_seek/domain/sailor_location.dart';
 import 'package:tide_and_seek/relay/in_memory_relay_queue.dart';
 import 'package:tide_and_seek/relay/peer_transport.dart';
 import 'package:tide_and_seek/relay/relay_engine.dart';
@@ -43,24 +43,24 @@ void main() {
     final engineC = engine(transportC, storeC, queueC);
     await engineA.start(
       const RelayEngineConfig(
-        rideId: 'ride-1',
-        rideSecret: secret,
+        voyageId: 'voyage-1',
+        voyageSecret: secret,
         localDeviceId: 'device-a',
         endpointName: 'A',
       ),
     );
     await engineB.start(
       const RelayEngineConfig(
-        rideId: 'ride-1',
-        rideSecret: secret,
+        voyageId: 'voyage-1',
+        voyageSecret: secret,
         localDeviceId: 'device-b',
         endpointName: 'B',
       ),
     );
     await engineC.start(
       const RelayEngineConfig(
-        rideId: 'ride-1',
-        rideSecret: secret,
+        voyageId: 'voyage-1',
+        voyageSecret: secret,
         localDeviceId: 'device-c',
         endpointName: 'C',
       ),
@@ -68,11 +68,11 @@ void main() {
 
     await _drain();
     transportA.connect(transportB);
-    final event = RideEvent(
+    final event = VoyageEvent(
       id: 'event-1',
-      rideId: 'ride-1',
+      voyageId: 'voyage-1',
       deviceId: 'device-a',
-      type: RideEventType.statusMessage,
+      type: VoyageEventType.statusMessage,
       priority: EventPriority.critical,
       createdAt: now,
       payload: const {'message': 'emergencyStop'},
@@ -85,9 +85,9 @@ void main() {
     expect(engineA.status.peerIds, contains('peer-b'));
     expect(engineB.status.peerIds, contains('peer-a'));
     expect(engineB.status.rejectedFrameCount, 0);
-    expect(await storeB.eventsForRide('ride-1'), hasLength(1));
+    expect(await storeB.eventsForVoyage('voyage-1'), hasLength(1));
     expect(
-      await queueA.pendingForPeer('ride-1', 'peer-b', now: now, limit: 12),
+      await queueA.pendingForPeer('voyage-1', 'peer-b', now: now, limit: 12),
       isEmpty,
     );
 
@@ -96,17 +96,17 @@ void main() {
     await engineB.flush();
     await _drain();
 
-    expect(await storeC.eventsForRide('ride-1'), hasLength(1));
+    expect(await storeC.eventsForVoyage('voyage-1'), hasLength(1));
     await engineB.flush();
     await _drain();
-    expect(await storeC.eventsForRide('ride-1'), hasLength(1));
+    expect(await storeC.eventsForVoyage('voyage-1'), hasLength(1));
 
     await engineA.dispose();
     await engineB.dispose();
     await engineC.dispose();
   });
 
-  test('rejects frames from a different ride secret', () async {
+  test('rejects frames from a different voyage secret', () async {
     final transportA = FakePeerTransport('peer-a');
     final transportB = FakePeerTransport('peer-b');
     final engineA = RelayEngine(
@@ -126,16 +126,16 @@ void main() {
     );
     await engineA.start(
       const RelayEngineConfig(
-        rideId: 'ride-1',
-        rideSecret: secret,
+        voyageId: 'voyage-1',
+        voyageSecret: secret,
         localDeviceId: 'device-a',
         endpointName: 'A',
       ),
     );
     await engineB.start(
       const RelayEngineConfig(
-        rideId: 'ride-1',
-        rideSecret: 'fedcba9876543210fedcba9876543210',
+        voyageId: 'voyage-1',
+        voyageSecret: 'fedcba9876543210fedcba9876543210',
         localDeviceId: 'device-b',
         endpointName: 'B',
       ),
@@ -143,11 +143,11 @@ void main() {
     await _drain();
     transportA.connect(transportB);
     await engineA.enqueueLocal(
-      RideEvent(
+      VoyageEvent(
         id: 'event-1',
-        rideId: 'ride-1',
+        voyageId: 'voyage-1',
         deviceId: 'device-a',
-        type: RideEventType.statusMessage,
+        type: VoyageEventType.statusMessage,
         priority: EventPriority.important,
         createdAt: now,
         payload: const {},
@@ -156,7 +156,7 @@ void main() {
     );
     await _drain();
 
-    expect(await storeB.eventsForRide('ride-1'), isEmpty);
+    expect(await storeB.eventsForVoyage('voyage-1'), isEmpty);
     expect(engineB.status.rejectedFrameCount, greaterThanOrEqualTo(1));
     await engineA.dispose();
     await engineB.dispose();
@@ -185,16 +185,16 @@ void main() {
     final engineB = engine(transportB, storeB, queueB);
     await engineA.start(
       const RelayEngineConfig(
-        rideId: 'ride-1',
-        rideSecret: secret,
+        voyageId: 'voyage-1',
+        voyageSecret: secret,
         localDeviceId: 'device-a',
         endpointName: 'A',
       ),
     );
     await engineB.start(
       const RelayEngineConfig(
-        rideId: 'ride-1',
-        rideSecret: secret,
+        voyageId: 'voyage-1',
+        voyageSecret: secret,
         localDeviceId: 'device-b',
         endpointName: 'B',
       ),
@@ -205,10 +205,10 @@ void main() {
     final received = engineB.receivedPresence.first;
 
     await engineA.publishPresence(
-      RiderLocation(
-        riderId: 'device-a',
+      SailorLocation(
+        sailorId: 'device-a',
         displayName: 'Alex',
-        role: RideRole.rider,
+        role: VoyageRole.sailor,
         sample: LocationSample(
           position: const GeoPoint(latitude: 51.1, longitude: -2.4),
           recordedAt: now,
@@ -219,10 +219,10 @@ void main() {
     );
 
     expect((await received).position?.sample.position.latitude, 51.1);
-    expect(await storeA.eventsForRide('ride-1'), isEmpty);
-    expect(await storeB.eventsForRide('ride-1'), isEmpty);
-    expect(await queueA.count('ride-1', now: now), 0);
-    expect(await queueB.count('ride-1', now: now), 0);
+    expect(await storeA.eventsForVoyage('voyage-1'), isEmpty);
+    expect(await storeB.eventsForVoyage('voyage-1'), isEmpty);
+    expect(await queueA.count('voyage-1', now: now), 0);
+    expect(await queueB.count('voyage-1', now: now), 0);
     await engineA.dispose();
     await engineB.dispose();
   });

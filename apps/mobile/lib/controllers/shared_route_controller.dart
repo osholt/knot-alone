@@ -96,7 +96,7 @@ class SharedRouteController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// Stages a route obtained inside the app (for example from a web-planner
-  /// code) through the same leader-only handoff as an OS "Open in…" file.
+  /// code) through the same skipper-only handoff as an OS "Open in…" file.
   void stagePending(PickedGpxFile file) {
     _pending = file;
     _pendingInAppRoute = null;
@@ -105,9 +105,9 @@ class SharedRouteController extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Stages geometry already held by the app without serialising it to GPX.
   ///
-  /// Previous-ride reuse enters the same map review/activation path as every
+  /// Previous-voyage reuse enters the same map review/activation path as every
   /// other source, while keeping [ImportedRoute] as the only representation
-  /// between the archive and the new ride (#251).
+  /// between the archive and the new voyage (#251).
   void stagePendingInAppRoute(
     ImportedRoute route, {
     List<String> reviewNotes = const [],
@@ -121,7 +121,7 @@ class SharedRouteController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// Call once a screen has either started importing the file or shown the
-  /// rider a "start a ride first" message, so it is not offered again.
+  /// sailor a "start a voyage first" message, so it is not offered again.
   void clearPending() {
     if (_pending == null && _pendingInAppRoute == null) return;
     _pending = null;

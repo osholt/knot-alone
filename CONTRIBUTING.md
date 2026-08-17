@@ -13,7 +13,7 @@ preferred over broad feature additions.
 5. Include field-test evidence for nearby radio or background-execution changes.
 
 Never commit signing keys, provisioning profiles, credentials, precise field
-ride traces, or real emergency-contact details.
+voyage traces, or real emergency-contact details.
 
 ## Licence for contributions
 

@@ -24,7 +24,7 @@ abstract final class GeoCalculations {
   /// from true north and normalised to `[0, 360)`.
   ///
   /// Used where a distance on its own is not actionable: "400 m NE" tells a
-  /// rider which way to look, "400 m" does not (#151).
+  /// sailor which way to look, "400 m" does not (#151).
   static double bearingDegrees(GeoPoint from, GeoPoint to) {
     final latitude1 = _radians(from.latitude);
     final latitude2 = _radians(to.latitude);
@@ -102,8 +102,8 @@ abstract final class GeoCalculations {
   /// geometrically nearest place, which is the wrong question for a route that
   /// visits somewhere twice. An out-and-back passes the same camera at, say, 20
   /// km outbound and 40 km inbound, and the nearest projection picks one of them
-  /// essentially at random - so a rider on the way home gets told the camera they
-  /// are about to ride past is 15 km behind them (#135).
+  /// essentially at random - so a sailor on the way home gets told the camera they
+  /// are about to voyage past is 15 km behind them (#135).
   ///
   /// Each returned pass is one run of segments inside the corridor, reduced to
   /// the closest segment in that run, and carries that segment's bearing so a

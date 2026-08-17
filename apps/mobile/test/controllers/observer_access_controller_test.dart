@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/controllers/observer_access_controller.dart';
 import 'package:tide_and_seek/data/observer_grant_store.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
-import 'package:tide_and_seek/domain/ride_session.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
+import 'package:tide_and_seek/domain/voyage_session.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 import 'package:tide_and_seek/internet/observer_access_client.dart';
 
@@ -20,7 +20,7 @@ void main() {
     );
 
     expect(first.latestInvite?.shareUri.fragment, contains('ro1_'));
-    expect(store.saved[_session.rideId], hasLength(1));
+    expect(store.saved[_session.voyageId], hasLength(1));
 
     final restarted = ObserverAccessController(
       _FakeObserverApi(),
@@ -86,7 +86,7 @@ void main() {
       await controller.waitForPendingPublishes();
 
       expect(controller.grants.map((grant) => grant.label), ['Second']);
-      expect(store.saved[_session.rideId]?.single.grant.label, 'Second');
+      expect(store.saved[_session.voyageId]?.single.grant.label, 'Second');
     },
   );
 
@@ -118,7 +118,7 @@ void main() {
     await controller.waitForPendingPublishes();
 
     expect(controller.grants, isEmpty);
-    expect(store.saved[_session.rideId], isNull);
+    expect(store.saved[_session.voyageId], isNull);
   });
 
   test('routine fast samples are rate bounded and latest wins', () async {
@@ -222,14 +222,14 @@ void main() {
         duration: const Duration(hours: 1),
         scope: ObserverAccessScope.group,
       );
-      final rider = _snapshot(1);
+      final sailor = _snapshot(1);
       final group = ObserverPublishedSnapshot(
         scope: ObserverAccessScope.group,
-        subjectName: 'Group ride',
-        snapshotGeneratedAt: rider.snapshotGeneratedAt,
-        rideStatus: 'active',
-        statusUpdatedAt: rider.statusUpdatedAt,
-        assistanceUpdatedAt: rider.assistanceUpdatedAt,
+        subjectName: 'Group voyage',
+        snapshotGeneratedAt: sailor.snapshotGeneratedAt,
+        voyageStatus: 'active',
+        statusUpdatedAt: sailor.statusUpdatedAt,
+        assistanceUpdatedAt: sailor.assistanceUpdatedAt,
         participants: const [
           ObserverPublishedGroupParticipant(
             displayName: 'Oliver',
@@ -239,11 +239,14 @@ void main() {
         ],
       );
 
-      controller.publishSnapshots(rider: rider, group: group);
+      controller.publishSnapshots(sailor: sailor, group: group);
       await controller.waitForPendingPublishes();
 
       expect(api.published, hasLength(2));
-      expect(api.publishedByGrant['grant-1']?.scope, ObserverAccessScope.rider);
+      expect(
+        api.publishedByGrant['grant-1']?.scope,
+        ObserverAccessScope.sailor,
+      );
       expect(api.publishedByGrant['grant-2']?.scope, ObserverAccessScope.group);
     },
   );
@@ -251,14 +254,14 @@ void main() {
 
 DateTime _clock() => DateTime.utc(2026, 7, 24, 13);
 
-final _session = RideSession(
-  rideId: 'ride-observer',
-  rideCode: '123456',
+final _session = VoyageSession(
+  voyageId: 'voyage-observer',
+  voyageCode: '123456',
   inviteSecret: 'observer-secret-0123456789012345',
   joinToken: 'join-token-0123456789',
-  localRiderId: 'rider-a',
+  localSailorId: 'sailor-a',
   displayName: 'Oliver',
-  role: RideRole.rider,
+  role: VoyageRole.sailor,
   joinedAt: DateTime.utc(2026, 7, 24),
 );
 
@@ -270,7 +273,7 @@ ObserverPublishedSnapshot _snapshot(int sequence, {bool routine = false}) {
   return ObserverPublishedSnapshot(
     subjectName: 'Oliver',
     snapshotGeneratedAt: timestamp,
-    rideStatus: 'active',
+    voyageStatus: 'active',
     statusUpdatedAt: componentTimestamp,
     assistanceUpdatedAt: componentTimestamp,
     position: ObserverPublishedPosition(
@@ -287,34 +290,34 @@ class _MemoryObserverGrantStore implements ObserverGrantStore {
   final assistance = <String, ObserverLocalAssistanceState>{};
 
   @override
-  Future<void> delete(String rideId) async => saved.remove(rideId);
+  Future<void> delete(String voyageId) async => saved.remove(voyageId);
 
   @override
-  Future<void> deleteLocalAssistance(String rideId) async =>
-      assistance.remove(rideId);
+  Future<void> deleteLocalAssistance(String voyageId) async =>
+      assistance.remove(voyageId);
 
   @override
-  Future<List<ObserverGrantCredentials>> load(String rideId) async =>
-      List.of(saved[rideId] ?? const []);
+  Future<List<ObserverGrantCredentials>> load(String voyageId) async =>
+      List.of(saved[voyageId] ?? const []);
 
   @override
   Future<ObserverLocalAssistanceState?> loadLocalAssistance(
-    String rideId,
-  ) async => assistance[rideId];
+    String voyageId,
+  ) async => assistance[voyageId];
 
   @override
   Future<void> save(
-    String rideId,
+    String voyageId,
     List<ObserverGrantCredentials> credentials,
   ) async {
-    saved[rideId] = List.of(credentials);
+    saved[voyageId] = List.of(credentials);
   }
 
   @override
   Future<void> saveLocalAssistance(
-    String rideId,
+    String voyageId,
     ObserverLocalAssistanceState state,
-  ) async => assistance[rideId] = state;
+  ) async => assistance[voyageId] = state;
 }
 
 class _FakeObserverApi implements ObserverAccessApi {
@@ -343,10 +346,10 @@ class _FakeObserverApi implements ObserverAccessApi {
 
   @override
   Future<ObserverGrantCredentials> create(
-    RideSession session, {
+    VoyageSession session, {
     required String label,
     required Duration duration,
-    ObserverAccessScope scope = ObserverAccessScope.rider,
+    ObserverAccessScope scope = ObserverAccessScope.sailor,
   }) async {
     _nextGrant += 1;
     return ObserverGrantCredentials(

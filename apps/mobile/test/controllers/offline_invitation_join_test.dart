@@ -2,12 +2,12 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:tide_and_seek/controllers/ride_controller.dart';
+import 'package:tide_and_seek/controllers/voyage_controller.dart';
 import 'package:tide_and_seek/data/in_memory_event_store.dart';
 import 'package:tide_and_seek/data/in_memory_session_store.dart';
-import 'package:tide_and_seek/domain/completed_ride_store.dart';
-import 'package:tide_and_seek/domain/ride_join_payload.dart';
-import 'package:tide_and_seek/domain/ride_role.dart';
+import 'package:tide_and_seek/domain/completed_voyage_store.dart';
+import 'package:tide_and_seek/domain/voyage_join_payload.dart';
+import 'package:tide_and_seek/domain/voyage_role.dart';
 import 'package:tide_and_seek/internet/internet_relay_client.dart';
 import 'package:tide_and_seek/services/nearby_bridge.dart';
 
@@ -16,8 +16,8 @@ import 'package:tide_and_seek/services/nearby_bridge.dart';
 ///
 /// The unit test elsewhere uses a fake directory that throws, which shows the code
 /// path does not *call* the relay. This one goes further and uses the **real**
-/// `HttpRideCodeDirectory` pointed at a refusing endpoint, so what is being
-/// asserted is the behaviour a rider in a car park with no signal actually gets:
+/// `HttpVoyageCodeDirectory` pointed at a refusing endpoint, so what is being
+/// asserted is the behaviour a sailor in a car park with no signal actually gets:
 /// the ordinary join fails, and scanning still works.
 ///
 /// Port 1 on loopback refuses immediately. That matters for a test - an
@@ -27,28 +27,28 @@ void main() {
   const secret = '0123456789abcdef0123456789abcdef';
   const joinToken = 'resolve-token-0123456789';
 
-  late RideController controller;
+  late VoyageController controller;
   late http.Client client;
-  late RideCodeDirectory unreachableRelay;
+  late VoyageCodeDirectory unreachableRelay;
 
   setUp(() {
     client = http.Client();
-    unreachableRelay = HttpRideCodeDirectory(
+    unreachableRelay = HttpVoyageCodeDirectory(
       configuration: InternetRelayConfiguration(
         baseUri: Uri.parse('http://127.0.0.1:1/api'),
       ),
       client: client,
     );
     var id = 0;
-    controller = RideController(
+    controller = VoyageController(
       InMemoryEventStore(),
       InMemorySessionStore(),
       const _FakeNearbyBridge(),
       clock: () => DateTime.utc(2026, 8, 1, 9),
       idFactory: () => 'offline-${id++}',
       random: Random(11),
-      rideCodeDirectory: unreachableRelay,
-      completedRideStore: InMemoryCompletedRideStore(),
+      voyageCodeDirectory: unreachableRelay,
+      completedVoyageStore: InMemoryCompletedVoyageStore(),
     );
   });
 
@@ -60,9 +60,9 @@ void main() {
   test('the ordinary join cannot work with the relay unreachable', () async {
     // Establishes that the endpoint really is dead, so the next test is proving
     // something rather than passing by accident.
-    await controller.joinRide('934893', 'Rider');
+    await controller.joinVoyage('934893', 'Sailor');
 
-    expect(controller.hasActiveRide, isFalse);
+    expect(controller.hasActiveVoyage, isFalse);
     expect(
       controller.errorMessage,
       isNotNull,
@@ -71,49 +71,49 @@ void main() {
   });
 
   test('a scanned invitation joins anyway', () async {
-    const invitation = RideJoinPayload(
-      rideId: 'ride-from-a-car-park',
-      rideCode: '135627',
+    const invitation = VoyageJoinPayload(
+      voyageId: 'voyage-from-a-car-park',
+      voyageCode: '135627',
       inviteSecret: secret,
       joinToken: joinToken,
     );
 
-    await controller.joinRideFromInvitation(invitation, 'Scanned rider');
+    await controller.joinVoyageFromInvitation(invitation, 'Scanned sailor');
 
     expect(controller.errorMessage, isNull);
-    expect(controller.hasActiveRide, isTrue);
+    expect(controller.hasActiveVoyage, isTrue);
 
     final session = controller.session!;
-    expect(session.rideId, 'ride-from-a-car-park');
-    expect(session.rideCode, '135627');
-    expect(session.role, RideRole.rider);
+    expect(session.voyageId, 'voyage-from-a-car-park');
+    expect(session.voyageCode, '135627');
+    expect(session.role, VoyageRole.sailor);
     // The credentials that make authenticated transport possible have to survive
-    // intact. Without them the rider holds a session that looks joined and can
+    // intact. Without them the sailor holds a session that looks joined and can
     // reach nobody once signal returns.
     expect(session.inviteSecret, secret);
     expect(session.joinToken, joinToken);
 
-    // A real join, not just a stored session: the roster shows this rider, which
-    // means the riderJoined event was recorded.
+    // A real join, not just a stored session: the roster shows this sailor, which
+    // means the sailorJoined event was recorded.
     expect(
       controller.participants.map((participant) => participant.displayName),
-      contains('Scanned rider'),
+      contains('Scanned sailor'),
     );
   });
 
   test('it is fast, because nothing waits on a network', () async {
-    const invitation = RideJoinPayload(
-      rideId: 'ride-from-a-car-park',
-      rideCode: '135627',
+    const invitation = VoyageJoinPayload(
+      voyageId: 'voyage-from-a-car-park',
+      voyageCode: '135627',
       inviteSecret: secret,
       joinToken: joinToken,
     );
 
     final started = DateTime.now();
-    await controller.joinRideFromInvitation(invitation, 'Scanned rider');
+    await controller.joinVoyageFromInvitation(invitation, 'Scanned sailor');
     final elapsed = DateTime.now().difference(started);
 
-    expect(controller.hasActiveRide, isTrue);
+    expect(controller.hasActiveVoyage, isTrue);
     // Generous, because a loaded CI machine is not a benchmark. The point is that
     // it cannot have waited on a connect attempt, which is what any accidental
     // reintroduction of a relay call would cost.

@@ -13,32 +13,32 @@ from tide_and_seek_server.models import ObserverGrant
 from tide_and_seek_server.observer import get_managed_observer_grant
 from tide_and_seek_server.service import RelayServiceError
 
-from .conftest import event, ride_token, sync_request
+from .conftest import event, voyage_token, sync_request
 
 SECRET = "observer-test-secret-0123456789"
 
 
-def _create_ride(client, ride_id: str, events: list[dict] | None = None) -> None:
+def _create_voyage(client, voyage_id: str, events: list[dict] | None = None) -> None:
     response = sync_request(
         client,
-        ride_id=ride_id,
+        voyage_id=voyage_id,
         secret=SECRET,
-        events=events or [event(ride_id, "ride-created")],
+        events=events or [event(voyage_id, "voyage-created")],
     )
     assert response.status_code == 200
 
 
 def _create_grant(
     client,
-    ride_id: str,
-    device_header: str = "rider-a",
+    voyage_id: str,
+    device_header: str = "sailor-a",
     *,
-    scope: str = "rider",
+    scope: str = "sailor",
 ):
     return client.post(
-        f"/api/v1/rides/{ride_id}/observer-grants",
+        f"/api/v1/voyages/{voyage_id}/observer-grants",
         headers={
-            "authorization": f"Bearer {ride_token(ride_id, SECRET)}",
+            "authorization": f"Bearer {voyage_token(voyage_id, SECRET)}",
             # Deliberately irrelevant: the relay must not use this spoofable
             # group header to select observer data or grant ownership.
             "x-tide-and-seek-device": device_header,
@@ -73,7 +73,7 @@ def _snapshot(
     return {
         "subjectName": "Oliver",
         "snapshotGeneratedAt": (snapshot_at or now).isoformat(),
-        "rideStatus": "active",
+        "voyageStatus": "active",
         "statusUpdatedAt": status_at.isoformat(),
         "position": {
             "latitude": latitude,
@@ -93,9 +93,9 @@ def _snapshot(
 def _group_snapshot(now: datetime) -> dict:
     return {
         "scope": "group",
-        "subjectName": "Sunday ride",
+        "subjectName": "Sunday voyage",
         "snapshotGeneratedAt": now.isoformat(),
-        "rideStatus": "active",
+        "voyageStatus": "active",
         "statusUpdatedAt": now.isoformat(),
         "position": None,
         "participants": [
@@ -111,8 +111,8 @@ def _group_snapshot(now: datetime) -> dict:
                 },
             },
             {
-                "displayName": "Tail rider",
-                "role": "tailEndCharlie",
+                "displayName": "Tail sailor",
+                "role": "sweeper",
                 "color": "#5AC8FA",
                 "position": None,
             },
@@ -129,24 +129,24 @@ def _group_snapshot(now: datetime) -> dict:
     }
 
 
-def test_header_spoof_cannot_expose_another_riders_stored_events(client) -> None:
-    ride_id = "ride-observer-header-spoof"
+def test_header_spoof_cannot_expose_another_sailors_stored_events(client) -> None:
+    voyage_id = "voyage-observer-header-spoof"
     now = datetime.now(UTC)
-    _create_ride(
+    _create_voyage(
         client,
-        ride_id,
+        voyage_id,
         [
-            event(ride_id, "created", device_id="rider-a"),
+            event(voyage_id, "created", device_id="sailor-a"),
             event(
-                ride_id,
+                voyage_id,
                 "victim-location",
-                device_id="victim-rider",
-                event_type="riderLocationUpdated",
+                device_id="victim-sailor",
+                event_type="sailorLocationUpdated",
                 payload={
                     "location": {
-                        "riderId": "victim-rider",
+                        "sailorId": "victim-sailor",
                         "displayName": "Must not leak",
-                        "role": "rider",
+                        "role": "sailor",
                         "sample": {
                             "position": {"latitude": 52.0, "longitude": -2.0},
                             "recordedAt": now.isoformat(),
@@ -156,7 +156,7 @@ def test_header_spoof_cannot_expose_another_riders_stored_events(client) -> None
                         },
                         "receivedAt": now.isoformat(),
                         "motorcycleStyle": "sport",
-                        "riderColor": "red",
+                        "sailorColor": "red",
                     }
                 },
                 expires_at=now + timedelta(minutes=30),
@@ -164,7 +164,7 @@ def test_header_spoof_cannot_expose_another_riders_stored_events(client) -> None
         ],
     )
 
-    created = _create_grant(client, ride_id, device_header="victim-rider")
+    created = _create_grant(client, voyage_id, device_header="victim-sailor")
     assert created.status_code == 201
     grant = created.json()
     unread = client.get(
@@ -175,15 +175,15 @@ def test_header_spoof_cannot_expose_another_riders_stored_events(client) -> None
     assert unread.json()["position"] is None
     assert unread.json()["subjectName"] is None
     assert "Must not leak" not in unread.text
-    assert "victim-rider" not in unread.text
-    assert ride_id not in unread.text
+    assert "victim-sailor" not in unread.text
+    assert voyage_id not in unread.text
 
 
 def test_independent_publisher_supplies_only_the_minimized_snapshot(client) -> None:
-    ride_id = "ride-observer-publish"
+    voyage_id = "voyage-observer-publish"
     now = datetime.now(UTC)
-    _create_ride(client, ride_id)
-    created = _create_grant(client, ride_id)
+    _create_voyage(client, voyage_id)
+    created = _create_grant(client, voyage_id)
     assert created.status_code == 201
     grant = created.json()
 
@@ -201,18 +201,18 @@ def test_independent_publisher_supplies_only_the_minimized_snapshot(client) -> N
     assert observed.status_code == 200
     body = observed.json()
     assert body["subjectName"] == "Oliver"
-    assert body["rideStatus"] == "active"
+    assert body["voyageStatus"] == "active"
     assert body["freshness"] == "fresh"
     assert body["position"]["latitude"] == 51.5074
     assert body["assistance"]["kind"] == "assistance"
-    assert ride_id not in observed.text
+    assert voyage_id not in observed.text
 
 
 def test_group_grant_publishes_a_bounded_read_only_group_snapshot(client) -> None:
-    ride_id = "ride-observer-group"
+    voyage_id = "voyage-observer-group"
     now = datetime.now(UTC)
-    _create_ride(client, ride_id)
-    created = _create_grant(client, ride_id, scope="group")
+    _create_voyage(client, voyage_id)
+    created = _create_grant(client, voyage_id, scope="group")
     assert created.status_code == 201
     grant = created.json()
     assert grant["scope"] == "group"
@@ -232,26 +232,26 @@ def test_group_grant_publishes_a_bounded_read_only_group_snapshot(client) -> Non
     body = observed.json()
     assert body["protocolVersion"] == 2
     assert body["scope"] == "group"
-    assert body["subjectName"] == "Sunday ride"
-    assert [rider["displayName"] for rider in body["participants"]] == [
+    assert body["subjectName"] == "Sunday voyage"
+    assert [sailor["displayName"] for sailor in body["participants"]] == [
         "Oliver",
-        "Tail rider",
+        "Tail sailor",
     ]
     assert body["participants"][0]["freshness"] == "fresh"
     assert body["participants"][1]["freshness"] == "unavailable"
     assert body["route"]["name"] == "Sunday route"
     assert body["position"] is None
     assert body["assistance"] is None
-    assert ride_id not in observed.text
+    assert voyage_id not in observed.text
     assert SECRET not in observed.text
 
 
 def test_observer_grant_scope_cannot_be_changed_by_its_publisher(client) -> None:
-    ride_id = "ride-observer-scope"
+    voyage_id = "voyage-observer-scope"
     now = datetime.now(UTC)
-    _create_ride(client, ride_id)
-    personal = _create_grant(client, ride_id).json()
-    group = _create_grant(client, ride_id, scope="group").json()
+    _create_voyage(client, voyage_id)
+    personal = _create_grant(client, voyage_id).json()
+    group = _create_grant(client, voyage_id, scope="group").json()
 
     group_to_personal = client.put(
         f"/api/v1/observer-grants/{personal['id']}/snapshot",
@@ -268,9 +268,9 @@ def test_observer_grant_scope_cannot_be_changed_by_its_publisher(client) -> None
 
 
 def test_tokens_are_hash_only_and_role_separated(client) -> None:
-    ride_id = "ride-observer-token-boundary"
-    _create_ride(client, ride_id)
-    created = _create_grant(client, ride_id)
+    voyage_id = "voyage-observer-token-boundary"
+    _create_voyage(client, voyage_id)
+    created = _create_grant(client, voyage_id)
     assert created.status_code == 201
     grant = created.json()
     tokens = {
@@ -310,7 +310,7 @@ def test_tokens_are_hash_only_and_role_separated(client) -> None:
     )
     sync_with_observer = sync_request(
         client,
-        ride_id=ride_id,
+        voyage_id=voyage_id,
         secret=SECRET,
         token=grant["observerToken"],
     )
@@ -321,9 +321,9 @@ def test_tokens_are_hash_only_and_role_separated(client) -> None:
 
 
 def test_management_secret_reviews_and_revokes_all_access(client) -> None:
-    ride_id = "ride-observer-revoke"
-    _create_ride(client, ride_id)
-    created = _create_grant(client, ride_id)
+    voyage_id = "voyage-observer-revoke"
+    _create_voyage(client, voyage_id)
+    created = _create_grant(client, voyage_id)
     assert created.status_code == 201
     grant = created.json()
 
@@ -343,13 +343,13 @@ def test_management_secret_reviews_and_revokes_all_access(client) -> None:
         == 204
     )
 
-    # A shared ride bearer plus a spoofed device header is not a management
+    # A shared voyage bearer plus a spoofed device header is not a management
     # credential and cannot revoke the grant.
     spoofed = client.delete(
         f"/api/v1/observer-grants/{grant['id']}/management",
         headers={
-            "authorization": f"Bearer {ride_token(ride_id, SECRET)}",
-            "x-tide-and-seek-device": "rider-a",
+            "authorization": f"Bearer {voyage_token(voyage_id, SECRET)}",
+            "x-tide-and-seek-device": "sailor-a",
         },
     )
     assert spoofed.status_code == 404
@@ -387,16 +387,16 @@ def test_management_secret_reviews_and_revokes_all_access(client) -> None:
 
 
 def test_consent_and_bounded_duration_are_required(client) -> None:
-    ride_id = "ride-observer-consent"
-    _create_ride(client, ride_id)
-    headers = {"authorization": f"Bearer {ride_token(ride_id, SECRET)}"}
+    voyage_id = "voyage-observer-consent"
+    _create_voyage(client, voyage_id)
+    headers = {"authorization": f"Bearer {voyage_token(voyage_id, SECRET)}"}
     missing_consent = client.post(
-        f"/api/v1/rides/{ride_id}/observer-grants",
+        f"/api/v1/voyages/{voyage_id}/observer-grants",
         headers=headers,
         json={"label": "Home", "durationMinutes": 60},
     )
     too_long = client.post(
-        f"/api/v1/rides/{ride_id}/observer-grants",
+        f"/api/v1/voyages/{voyage_id}/observer-grants",
         headers=headers,
         json={
             "label": "Home",
@@ -405,7 +405,7 @@ def test_consent_and_bounded_duration_are_required(client) -> None:
         },
     )
     group_without_disclosure = client.post(
-        f"/api/v1/rides/{ride_id}/observer-grants",
+        f"/api/v1/voyages/{voyage_id}/observer-grants",
         headers=headers,
         json={
             "label": "Home",
@@ -440,9 +440,9 @@ def test_bad_or_missing_observer_credentials_are_indistinguishable(client) -> No
 
 
 def test_naive_snapshot_timestamps_are_rejected_without_a_server_error(client) -> None:
-    ride_id = "ride-observer-naive-time"
-    _create_ride(client, ride_id)
-    grant = _create_grant(client, ride_id).json()
+    voyage_id = "voyage-observer-naive-time"
+    _create_voyage(client, voyage_id)
+    grant = _create_grant(client, voyage_id).json()
     snapshot = _snapshot(datetime.now(UTC))
     snapshot["snapshotGeneratedAt"] = "2026-07-24T12:00:00"
 
@@ -457,10 +457,10 @@ def test_naive_snapshot_timestamps_are_rejected_without_a_server_error(client) -
 
 
 def test_tokens_cannot_cross_grants(client) -> None:
-    ride_id = "ride-observer-cross-grant"
-    _create_ride(client, ride_id)
-    first = _create_grant(client, ride_id).json()
-    second = _create_grant(client, ride_id).json()
+    voyage_id = "voyage-observer-cross-grant"
+    _create_voyage(client, voyage_id)
+    first = _create_grant(client, voyage_id).json()
+    second = _create_grant(client, voyage_id).json()
 
     assert (
         client.get(
@@ -487,9 +487,9 @@ def test_tokens_cannot_cross_grants(client) -> None:
 
 
 def test_expired_grant_denies_all_roles(client) -> None:
-    ride_id = "ride-observer-expired"
-    _create_ride(client, ride_id)
-    grant = _create_grant(client, ride_id).json()
+    voyage_id = "voyage-observer-expired"
+    _create_voyage(client, voyage_id)
+    grant = _create_grant(client, voyage_id).json()
     with Session(client.app.state.engine) as session, session.begin():
         stored = session.get(ObserverGrant, grant["id"])
         assert stored is not None
@@ -520,10 +520,10 @@ def test_expired_grant_denies_all_roles(client) -> None:
 
 
 def test_new_status_cannot_roll_back_an_existing_position(client) -> None:
-    ride_id = "ride-observer-monotonic-components"
+    voyage_id = "voyage-observer-monotonic-components"
     base = datetime.now(UTC) - timedelta(minutes=1)
-    _create_ride(client, ride_id)
-    grant = _create_grant(client, ride_id).json()
+    _create_voyage(client, voyage_id)
+    grant = _create_grant(client, voyage_id).json()
     path = f"/api/v1/observer-grants/{grant['id']}/snapshot"
     first = _snapshot(
         base,
@@ -570,32 +570,32 @@ def test_new_status_cannot_roll_back_an_existing_position(client) -> None:
     assert body["assistance"] is None
 
 
-def test_concurrent_creation_cannot_exceed_the_ride_cap(client) -> None:
-    ride_id = "ride-observer-create-cap"
-    _create_ride(client, ride_id)
-    client.app.state.settings.maximum_observer_grants_per_ride = 1
+def test_concurrent_creation_cannot_exceed_the_voyage_cap(client) -> None:
+    voyage_id = "voyage-observer-create-cap"
+    _create_voyage(client, voyage_id)
+    client.app.state.settings.maximum_observer_grants_per_voyage = 1
 
     with ThreadPoolExecutor(max_workers=2) as executor:
-        responses = list(executor.map(lambda _: _create_grant(client, ride_id), range(2)))
+        responses = list(executor.map(lambda _: _create_grant(client, voyage_id), range(2)))
 
     assert sorted(response.status_code for response in responses) == [201, 409]
     with Session(client.app.state.engine) as session:
         assert (
-            session.scalar(select(ObserverGrant).where(ObserverGrant.ride_id == ride_id))
+            session.scalar(select(ObserverGrant).where(ObserverGrant.voyage_id == voyage_id))
             is not None
         )
         assert (
             len(
-                session.scalars(select(ObserverGrant).where(ObserverGrant.ride_id == ride_id)).all()
+                session.scalars(select(ObserverGrant).where(ObserverGrant.voyage_id == voyage_id)).all()
             )
             == 1
         )
 
 
 def test_revoke_wins_final_state_against_an_in_flight_publish(client) -> None:
-    ride_id = "ride-observer-revoke-race"
-    _create_ride(client, ride_id)
-    grant = _create_grant(client, ride_id).json()
+    voyage_id = "voyage-observer-revoke-race"
+    _create_voyage(client, voyage_id)
+    grant = _create_grant(client, voyage_id).json()
     snapshot = _snapshot(datetime.now(UTC))
 
     def publish():
@@ -630,10 +630,10 @@ def test_shared_ip_does_not_consume_other_grants_token_budget(settings) -> None:
     settings.observer_read_rate_limit_requests = 10
     settings.observer_ip_abuse_rate_limit_requests = 100
     with TestClient(create_app(settings)) as client:
-        ride_id = "ride-observer-cgnat"
-        _create_ride(client, ride_id)
-        first = _create_grant(client, ride_id).json()
-        second = _create_grant(client, ride_id).json()
+        voyage_id = "voyage-observer-cgnat"
+        _create_voyage(client, voyage_id)
+        first = _create_grant(client, voyage_id).json()
+        second = _create_grant(client, voyage_id).json()
 
         for grant in (first, second):
             for _ in range(10):
@@ -650,31 +650,31 @@ def test_shared_ip_does_not_consume_other_grants_token_budget(settings) -> None:
         assert limited.status_code == 429
 
 
-def test_shared_ip_does_not_consume_other_rides_creation_budget(settings) -> None:
+def test_shared_ip_does_not_consume_other_voyages_creation_budget(settings) -> None:
     settings.observer_create_rate_limit_requests = 2
     settings.observer_create_ip_abuse_rate_limit_requests = 100
     with TestClient(create_app(settings)) as client:
-        first_ride = "ride-observer-create-cgnat-a"
-        second_ride = "ride-observer-create-cgnat-b"
-        _create_ride(client, first_ride)
-        _create_ride(client, second_ride)
+        first_voyage = "voyage-observer-create-cgnat-a"
+        second_voyage = "voyage-observer-create-cgnat-b"
+        _create_voyage(client, first_voyage)
+        _create_voyage(client, second_voyage)
 
-        for ride_id in (first_ride, second_ride):
+        for voyage_id in (first_voyage, second_voyage):
             for _ in range(2):
-                assert _create_grant(client, ride_id).status_code == 201
+                assert _create_grant(client, voyage_id).status_code == 201
 
-        limited = _create_grant(client, first_ride)
+        limited = _create_grant(client, first_voyage)
         assert limited.status_code == 429
         assert limited.json() == {"error": "Observer creation rate limit exceeded"}
 
 
-def test_malformed_ride_secret_does_not_consume_creation_budgets(settings) -> None:
+def test_malformed_voyage_secret_does_not_consume_creation_budgets(settings) -> None:
     settings.observer_create_rate_limit_requests = 1
     settings.observer_create_ip_abuse_rate_limit_requests = 100
     with TestClient(create_app(settings)) as client:
-        ride_id = "ride-observer-create-malformed"
-        _create_ride(client, ride_id)
-        path = f"/api/v1/rides/{ride_id}/observer-grants"
+        voyage_id = "voyage-observer-create-malformed"
+        _create_voyage(client, voyage_id)
+        path = f"/api/v1/voyages/{voyage_id}/observer-grants"
         payload = {
             "label": "Home contact",
             "durationMinutes": 60,
@@ -688,5 +688,5 @@ def test_malformed_ride_secret_does_not_consume_creation_budgets(settings) -> No
             )
             assert response.status_code == 401
 
-        assert _create_grant(client, ride_id).status_code == 201
-        assert _create_grant(client, ride_id).status_code == 429
+        assert _create_grant(client, voyage_id).status_code == 201
+        assert _create_grant(client, voyage_id).status_code == 429

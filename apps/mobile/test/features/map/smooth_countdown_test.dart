@@ -43,7 +43,7 @@ void main() {
     });
 
     testWidgets('it settles exactly on the real distance', (tester) async {
-      // It may never leave the rider looking at an interpolated number once the
+      // It may never leave the sailor looking at an interpolated number once the
       // fixes stop — that would be a wrong distance held on screen.
       double? shown;
 
@@ -107,7 +107,7 @@ void main() {
 
     test('a new manoeuvre steps, whatever the distance', () {
       // "It must not smooth *through* the junction. The count has to reach zero
-      // when the rider reaches the junction, not glide past it."
+      // when the sailor reaches the junction, not glide past it."
       expect(
         smoothCountdownAnimates(
           shownMeters: 20,
@@ -139,7 +139,7 @@ void main() {
       // behind is a smoothly wrong number". The interpolated value must reach no
       // decision — it is handed to a formatter and nothing else.
       final source = File(
-        'lib/features/map/ride_map_feature.dart',
+        'lib/features/map/voyage_map_feature.dart',
       ).readAsStringSync();
 
       expect(source, contains('meters: guidance.distanceMeters'));
@@ -152,7 +152,7 @@ void main() {
       // The prompts are staged on distance (#410). If the smoothed number ever
       // reached them, a prompt would fire on an animation frame.
       final shell = File(
-        'lib/features/ride/active_ride_shell.dart',
+        'lib/features/voyage/active_voyage_shell.dart',
       ).readAsStringSync();
 
       expect(shell, isNot(contains('SmoothCountdown')));

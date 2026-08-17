@@ -9,7 +9,7 @@ from tide_and_seek_server.models import PreStartPosition, StoredEvent
 from tide_and_seek_server.schemas import PresenceSyncRequest
 from tide_and_seek_server.service import RelayService
 
-from .conftest import event, ride_token
+from .conftest import event, voyage_token
 
 SECRET = "0123456789abcdef0123456789abcdef"
 
@@ -17,9 +17,9 @@ SECRET = "0123456789abcdef0123456789abcdef"
 def _position(latitude: float) -> dict:
     return {
         "displayName": "Alex",
-        "role": "rider",
+        "role": "sailor",
         "motorcycleStyle": "adventure",
-        "riderColor": "blue",
+        "sailorColor": "blue",
         "sample": {
             "position": {"latitude": latitude, "longitude": -2.4},
             "recordedAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
@@ -30,12 +30,12 @@ def _position(latitude: float) -> dict:
     }
 
 
-def _presence(client, ride_id: str, device_id: str, **body):
+def _presence(client, voyage_id: str, device_id: str, **body):
     return client.post(
-        f"/api/v1/rides/{ride_id}/presence:sync",
+        f"/api/v1/voyages/{voyage_id}/presence:sync",
         json={"protocolVersion": 1, "deviceId": device_id, **body},
         headers={
-            "authorization": f"Bearer {ride_token(ride_id, SECRET)}",
+            "authorization": f"Bearer {voyage_token(voyage_id, SECRET)}",
             "x-tide-and-seek-device": device_id,
             "x-tailendcharlie-protocol": "1",
             "x-tailendcharlie-capabilities": "pre-start-presence-v1",
@@ -44,18 +44,18 @@ def _presence(client, ride_id: str, device_id: str, **body):
 
 
 def test_presence_replaces_latest_position_without_storing_events(client, synchronize) -> None:
-    ride_id = "ride-presence"
-    assert synchronize(client, ride_id=ride_id, secret=SECRET).status_code == 200
+    voyage_id = "voyage-presence"
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET).status_code == 200
 
-    first = _presence(client, ride_id, "rider-a", position=_position(51.0))
-    second = _presence(client, ride_id, "rider-a", position=_position(51.1))
-    observed = _presence(client, ride_id, "leader")
+    first = _presence(client, voyage_id, "sailor-a", position=_position(51.0))
+    second = _presence(client, voyage_id, "sailor-a", position=_position(51.1))
+    observed = _presence(client, voyage_id, "skipper")
 
     assert first.status_code == 200
     assert second.status_code == 200
     positions = observed.json()["positions"]
     assert len(positions) == 1
-    assert positions[0]["riderId"] == "rider-a"
+    assert positions[0]["sailorId"] == "sailor-a"
     assert positions[0]["sample"]["position"]["latitude"] == 51.1
     with client.app.state.session_factory() as session:
         assert session.scalar(select(func.count(StoredEvent.sequence))) == 0
@@ -63,9 +63,9 @@ def test_presence_replaces_latest_position_without_storing_events(client, synchr
 
 
 def test_presence_is_shared_between_relay_processes(client, settings, synchronize) -> None:
-    ride_id = "ride-presence-shared"
-    assert synchronize(client, ride_id=ride_id, secret=SECRET).status_code == 200
-    assert _presence(client, ride_id, "rider-a", position=_position(51.2)).status_code == 200
+    voyage_id = "voyage-presence-shared"
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET).status_code == 200
+    assert _presence(client, voyage_id, "sailor-a", position=_position(51.2)).status_code == 200
 
     second_process = RelayService(
         settings,
@@ -75,17 +75,17 @@ def test_presence_is_shared_between_relay_processes(client, settings, synchroniz
     with client.app.state.session_factory() as session:
         observed = second_process.synchronize_pre_start_presence(
             session,
-            ride_id=ride_id,
-            bearer_token=ride_token(ride_id, SECRET),
-            device_header="leader",
+            voyage_id=voyage_id,
+            bearer_token=voyage_token(voyage_id, SECRET),
+            device_header="skipper",
             request=PresenceSyncRequest(
                 protocolVersion=1,
-                deviceId="leader",
+                deviceId="skipper",
             ),
         )
 
     assert len(observed["positions"]) == 1
-    assert observed["positions"][0]["riderId"] == "rider-a"
+    assert observed["positions"][0]["sailorId"] == "sailor-a"
     assert observed["positions"][0]["sample"]["position"]["latitude"] == 51.2
 
 
@@ -95,63 +95,63 @@ def test_presence_expires_on_ttl_and_a_legacy_client_reads_nothing_after_start(
     """The legacy read contract is preserved without destroying stored rows.
 
     A build that only advertises ``pre-start-presence-v1`` still sees nothing
-    once the ride has started, but the rows survive for live-presence peers. An
+    once the voyage has started, but the rows survive for live-presence peers. An
     older phone in a mixed group must not be able to blank a newer one.
     """
-    ride_id = "ride-presence-lifecycle"
-    assert synchronize(client, ride_id=ride_id, secret=SECRET).status_code == 200
-    assert _presence(client, ride_id, "rider-a", position=_position(51.0)).json()["positions"]
+    voyage_id = "voyage-presence-lifecycle"
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET).status_code == 200
+    assert _presence(client, voyage_id, "sailor-a", position=_position(51.0)).json()["positions"]
 
     service = client.app.state.service
     with client.app.state.session_factory() as session:
         expired = service.synchronize_pre_start_presence(
             session,
-            ride_id=ride_id,
-            bearer_token=ride_token(ride_id, SECRET),
-            device_header="leader",
+            voyage_id=voyage_id,
+            bearer_token=voyage_token(voyage_id, SECRET),
+            device_header="skipper",
             request=PresenceSyncRequest(
                 protocolVersion=1,
-                deviceId="leader",
+                deviceId="skipper",
             ),
             now=datetime.now(UTC)
             + timedelta(seconds=client.app.state.settings.pre_start_presence_ttl_seconds + 1),
         )
     assert expired["positions"] == []
 
-    assert _presence(client, ride_id, "rider-a", position=_position(51.0)).status_code == 200
+    assert _presence(client, voyage_id, "sailor-a", position=_position(51.0)).status_code == 200
     started = event(
-        ride_id,
-        "ride-started",
-        event_type="rideStarted",
-        payload={"leaderRiderId": "leader"},
+        voyage_id,
+        "voyage-started",
+        event_type="voyageStarted",
+        payload={"skipperSailorId": "skipper"},
     )
     assert (
         synchronize(
             client,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             secret=SECRET,
-            device_id="leader",
+            device_id="skipper",
             events=[started],
         ).status_code
         == 200
     )
     with client.app.state.session_factory() as session:
         assert session.scalar(select(func.count()).select_from(PreStartPosition)) == 1
-    legacy = _presence(client, ride_id, "leader").json()
+    legacy = _presence(client, voyage_id, "skipper").json()
     assert legacy["positions"] == []
     assert legacy["phase"] == "started"
 
 
 def test_presence_requires_matching_authenticated_device(client, synchronize) -> None:
-    ride_id = "ride-presence-auth"
-    assert synchronize(client, ride_id=ride_id, secret=SECRET).status_code == 200
+    voyage_id = "voyage-presence-auth"
+    assert synchronize(client, voyage_id=voyage_id, secret=SECRET).status_code == 200
 
     response = client.post(
-        f"/api/v1/rides/{ride_id}/presence:sync",
-        json={"protocolVersion": 1, "deviceId": "rider-a"},
+        f"/api/v1/voyages/{voyage_id}/presence:sync",
+        json={"protocolVersion": 1, "deviceId": "sailor-a"},
         headers={
-            "authorization": f"Bearer {ride_token(ride_id, SECRET)}",
-            "x-tide-and-seek-device": "rider-b",
+            "authorization": f"Bearer {voyage_token(voyage_id, SECRET)}",
+            "x-tide-and-seek-device": "sailor-b",
         },
     )
 

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tide_and_seek/controllers/ride_push_notification_controller.dart';
+import 'package:tide_and_seek/controllers/voyage_push_notification_controller.dart';
 import 'package:tide_and_seek/internet/push_registration_client.dart';
 import 'package:tide_and_seek/services/native_push_token_source.dart';
 
@@ -39,7 +39,7 @@ void main() {
       calls.add(call);
       if (call.method == 'consumeInitialNotification') {
         return <String, Object?>{
-          'rideId': 'ride-1',
+          'voyageId': 'voyage-1',
           'eventId': 'cold-event',
           'category': 'safety',
         };
@@ -91,7 +91,7 @@ void main() {
       messenger,
       channel,
       const MethodCall('notificationOpened', <String, Object?>{
-        'rideId': 'ride-1',
+        'voyageId': 'voyage-1',
         'eventId': 'warm-event',
         'category': 'administrative',
       }),

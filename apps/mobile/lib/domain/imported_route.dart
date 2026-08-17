@@ -197,9 +197,9 @@ class RouteManeuver {
   /// Route-engine traffic side (`left` or `right`) at this manoeuvre.
   ///
   /// This is deliberately stored with the route instead of inferred from the
-  /// phone locale: a rider can load a route for a different country. It only
+  /// phone locale: a sailor can load a route for a different country. It only
   /// decides which way round a roundabout ring is drawn; it must never be used
-  /// to decide which way the rider turns.
+  /// to decide which way the sailor turns.
   final String? drivingSide;
 
   /// Heading in degrees clockwise from true north immediately before and after
@@ -327,12 +327,12 @@ class MarkerReviewPoint {
 
 /// A person's decisions about the suggested marking positions for one route.
 ///
-/// Marker assistance only ever suggests; the rider confirms. Rejection is the
+/// Marker assistance only ever suggests; the sailor confirms. Rejection is the
 /// missing half of that (#179), and adding is the other half again: the
 /// detector misses junctions as well as over-suggesting, so a review surface
 /// that could only remove suggestions would be half a tool.
 ///
-/// This rides with the route rather than in a side store, so a rejection sticks
+/// This voyages with the route rather than in a side store, so a rejection sticks
 /// for that route through save, restart and hand-off, and so the web planner
 /// can read and write the same JSON without a second source of truth.
 class MarkerPlanReview {
@@ -463,7 +463,7 @@ class ImportedRoute {
   /// than recorded or imported from a tool that records none.
   ///
   /// It lives on the route and not on the device so that sharing a route into a
-  /// ride carries what it was planned for. Null means "not stated", which is
+  /// voyage carries what it was planned for. Null means "not stated", which is
   /// honest for a recorded track and for every route saved before this field
   /// existed; it is not the same as a route deliberately planned with the
   /// defaults.
@@ -603,7 +603,7 @@ class ImportedRoute {
           : null,
       plannedDuration:
           _optionalDuration(json['plannedDurationSeconds']) ??
-          _legacyTailEndCharlieDuration(
+          _legacySweeperDuration(
             sourceFileName: sourceFileName,
             description: description,
           ),
@@ -633,7 +633,7 @@ Duration? _optionalDuration(Object? value) {
 /// duration, but did retain the router's duration in this fixed description.
 /// Restrict the migration to TEC destination-route filenames and copy so an
 /// arbitrary imported GPX description can never be mistaken for route timing.
-Duration? _legacyTailEndCharlieDuration({
+Duration? _legacySweeperDuration({
   required String sourceFileName,
   required String? description,
 }) {

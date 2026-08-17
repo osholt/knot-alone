@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Deploy the ride relay from a pinned commit. Runs on the relay host, either by
+# Deploy the voyage relay from a pinned commit. Runs on the relay host, either by
 # hand or from CI through the restricted deploy key (see relay-deploy-command).
 #
 #   relay-deploy.sh <staging|production> [commit]
@@ -105,7 +105,7 @@ staging)
   api_service="preproduction-server"
   # Staging's own containers carry no Caddy: its public route lives in the
   # production proxy. Recreating that proxy is the one action that can take
-  # riders offline, so a staging deploy never touches it.
+  # sailors offline, so a staging deploy never touches it.
   caddyfile=""
   ;;
 production)

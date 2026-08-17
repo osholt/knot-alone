@@ -107,7 +107,7 @@ void main() {
     expect(request?.stopQueries, const ['Second', 'First']);
   });
 
-  testWidgets('unsurfaced byways are avoided until a rider says otherwise', (
+  testWidgets('unsurfaced byways are avoided until a sailor says otherwise', (
     tester,
   ) async {
     DestinationPlanRequest? request;
@@ -164,7 +164,7 @@ void main() {
     expect(request?.preferences.style, RouteStyle.quickest);
   });
 
-  testWidgets('a rider can ask for twisty roads and for byways', (
+  testWidgets('a sailor can ask for twisty roads and for byways', (
     tester,
   ) async {
     DestinationPlanRequest? request;

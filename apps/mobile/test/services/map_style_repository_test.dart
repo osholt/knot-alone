@@ -36,7 +36,9 @@ void main() {
   late Directory directory;
 
   setUp(() async {
-    directory = await Directory.systemTemp.createTemp('tide-and-seek-style-test');
+    directory = await Directory.systemTemp.createTemp(
+      'tide-and-seek-style-test',
+    );
   });
 
   tearDown(() async {
@@ -360,7 +362,7 @@ void main() {
   });
 
   group('the resolution says where the style came from (#281)', () {
-    // Every one of these used to be a bare `String`, so the ride map could not
+    // Every one of these used to be a bare `String`, so the voyage map could not
     // tell a provider that answered from one that did not, and drew the empty
     // fallback as though it were the map.
     test('a fetched style is reported as live', () async {
@@ -411,7 +413,7 @@ void main() {
       expect(
         resolution.error,
         isA<SocketException>(),
-        reason: 'the rider should be able to report the actual fault',
+        reason: 'the sailor should be able to report the actual fault',
       );
     });
 
@@ -459,7 +461,7 @@ void main() {
     final dimmestRoad = surface(MapStyleRepository.darkBasemapRoadRamp.first);
 
     test('the road ramp rises monotonically with a visible step', () {
-      // The whole point of the ramp: a rider can tell a motorway from an A road
+      // The whole point of the ramp: a sailor can tell a motorway from an A road
       // from a B road from a lane. Before this the middle four were one colour.
       var previous = -1.0;
       for (final name in MapStyleRepository.darkBasemapRoadRamp) {
@@ -509,7 +511,7 @@ void main() {
           reason: '${entry.key} must not be less separated than it was on main',
         );
       }
-      // The classes a rider actually uses gained the most: a lane was the worst
+      // The classes a sailor actually uses gained the most: a lane was the worst
       // measured road on the map and a motorway was already the best.
       expect(
         contrastRatio(surface('minor'), ground) / before['minor']!,
@@ -572,7 +574,7 @@ void main() {
         expect(
           lightness(surface(name)),
           lessThan(lightness(surface('minor'))),
-          reason: '$name outranks a road a group can ride on',
+          reason: '$name outranks a road a group can voyage on',
         );
       }
     });
@@ -599,7 +601,7 @@ void main() {
       const overGround = <String, double>{
         'route ahead': 10.44,
         'travelled': 7.14,
-        'leader trail': 10.71,
+        'skipper trail': 10.71,
         'off route': 6.93,
         'rejoin breadcrumb': 12.11,
       };
@@ -651,7 +653,7 @@ void main() {
         final after = contrastRatio(RouteTrailStyle.casing, surface(name));
         if (name == 'service/track') {
           // The one class that got dimmer, deliberately: a driveway or a forest
-          // track is not a road a group rides, and main painted it the same
+          // track is not a road a group voyages, and main painted it the same
           // colour as a lane.
           expect(after, closeTo(before, 0.02), reason: name);
           continue;

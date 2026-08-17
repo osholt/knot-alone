@@ -11,7 +11,7 @@ void main() {
 
   /// Plays an approach through the scheduler the way a phone would: a fix every
   /// [step] metres, collecting what is said and where.
-  List<({double at, GuidanceStage stage, String phrase})> ride({
+  List<({double at, GuidanceStage stage, String phrase})> voyage({
     required double fromMeters,
     required double speedMetersPerSecond,
     double step = 10,
@@ -50,7 +50,7 @@ void main() {
         // 70 mph. The ask was "2 mile warning on motorways and then a follow up at
         // 0.5 miles and a final one just prior" — from time budgets rather than a
         // road-class lookup.
-        final said = ride(fromMeters: 6000, speedMetersPerSecond: 31.3);
+        final said = voyage(fromMeters: 6000, speedMetersPerSecond: 31.3);
 
         expect(said.map((s) => s.stage), [
           GuidanceStage.early,
@@ -66,7 +66,7 @@ void main() {
     test('the same route at 30 mph pulls the prompts in', () {
       // The point of staging on time: a two-mile warning on a B road is four
       // minutes of nothing.
-      final said = ride(fromMeters: 6000, speedMetersPerSecond: 13.4);
+      final said = voyage(fromMeters: 6000, speedMetersPerSecond: 13.4);
 
       expect(said.map((s) => s.stage), [
         GuidanceStage.early,
@@ -78,20 +78,20 @@ void main() {
     });
 
     test('the prompt carries the distance, and the last one does not', () {
-      final said = ride(fromMeters: 6000, speedMetersPerSecond: 31.3);
+      final said = voyage(fromMeters: 6000, speedMetersPerSecond: 31.3);
 
       // #410: it never said any distance at all before this.
       expect(said[0].phrase, startsWith('In '));
       expect(said[0].phrase, contains('take the 3rd exit, right'));
       expect(said[1].phrase, startsWith('In '));
-      // At eight seconds out a distance is a syllable the rider has no time for.
+      // At eight seconds out a distance is a syllable the sailor has no time for.
       expect(said[2].phrase, 'take the 3rd exit, right');
     });
 
     test('a junction is never announced after it has been passed', () {
       // #409, stated as the property that was broken: every prompt lands with
       // road still to go.
-      final said = ride(fromMeters: 6000, speedMetersPerSecond: 31.3);
+      final said = voyage(fromMeters: 6000, speedMetersPerSecond: 31.3);
 
       for (final prompt in said) {
         expect(prompt.at, greaterThan(0), reason: '${prompt.stage} was late');
@@ -99,7 +99,11 @@ void main() {
     });
 
     test('nothing is said twice', () {
-      final said = ride(fromMeters: 6000, speedMetersPerSecond: 31.3, step: 2);
+      final said = voyage(
+        fromMeters: 6000,
+        speedMetersPerSecond: 31.3,
+        step: 2,
+      );
 
       expect(said.map((s) => s.stage).toSet().length, said.length);
     });
@@ -107,17 +111,17 @@ void main() {
 
   group('a close junction gets one prompt, not three', () {
     test('a turn 300 m ahead skips the early heads-up', () {
-      final said = ride(fromMeters: 300, speedMetersPerSecond: 13.4);
+      final said = voyage(fromMeters: 300, speedMetersPerSecond: 13.4);
 
       expect(said.map((s) => s.stage), isNot(contains(GuidanceStage.early)));
       expect(said, isNotEmpty);
     });
   });
 
-  group('nothing is said until the rider is clear of the junction (#429)', () {
+  group('nothing is said until the sailor is clear of the junction (#429)', () {
     test('still on the roundabout, the next turn waits', () {
       // The reported case: on a large roundabout the next instruction arrived
-      // while the rider was still going round the one they were told about.
+      // while the sailor was still going round the one they were told about.
       final announcement = nextGuidanceAnnouncement(
         maneuverIdentity: 'junction-2',
         instructionText: 'turn left',
@@ -147,7 +151,7 @@ void main() {
 
     test('two junctions 42 m apart are both announced', () {
       // #163's double mini-roundabout. Silence here is worse than a prompt that
-      // arrives while the rider is still finishing the first, which is why the
+      // arrives while the sailor is still finishing the first, which is why the
       // exemption exists and is wider than the clearance.
       final announcement = nextGuidanceAnnouncement(
         maneuverIdentity: 'junction-2',
@@ -169,7 +173,7 @@ void main() {
 
   group('a speed the phone cannot vouch for still gets a prompt', () {
     test('no speed falls back to the stage ceiling', () {
-      final said = ride(fromMeters: 6000, speedMetersPerSecond: 0);
+      final said = voyage(fromMeters: 6000, speedMetersPerSecond: 0);
 
       expect(said.map((s) => s.stage), contains(GuidanceStage.early));
       expect(said.first.at, closeTo(4000, 30));
@@ -182,7 +186,7 @@ void main() {
     // junction close behind another had no earlier opportunity than the junction
     // itself.
     test('the early prompt names both junctions', () {
-      final said = ride(
+      final said = voyage(
         fromMeters: 6000,
         speedMetersPerSecond: 31.3,
         following: 'turn right',
@@ -196,7 +200,7 @@ void main() {
     });
 
     test('the final prompt names both, without a distance', () {
-      final said = ride(
+      final said = voyage(
         fromMeters: 6000,
         speedMetersPerSecond: 31.3,
         following: 'turn right',
@@ -207,8 +211,8 @@ void main() {
 
     test('a lone junction is unchanged', () {
       // The staging that produces the 1.5-mile prompt must not move.
-      final alone = ride(fromMeters: 6000, speedMetersPerSecond: 31.3);
-      final paired = ride(
+      final alone = voyage(fromMeters: 6000, speedMetersPerSecond: 31.3);
+      final paired = voyage(
         fromMeters: 6000,
         speedMetersPerSecond: 31.3,
         following: 'turn right',
@@ -233,7 +237,7 @@ void main() {
       }
     });
 
-    test('the pair is joined by a word a rider would use', () {
+    test('the pair is joined by a word a sailor would use', () {
       expect(
         guidanceSubject(
           instructionText: 'turn left',
@@ -249,9 +253,9 @@ void main() {
       // The schedule can be given a pair and get it right while the shell never
       // passes one — which is the whole defect, and no unit test of the schedule
       // can see it. Structural for the same reason as the #439 reachability check:
-      // no test here can construct `ActiveRideShell`.
+      // no test here can construct `ActiveVoyageShell`.
       final source = File(
-        'lib/features/ride/active_ride_shell.dart',
+        'lib/features/voyage/active_voyage_shell.dart',
       ).readAsStringSync();
 
       expect(

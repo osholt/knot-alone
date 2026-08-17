@@ -44,7 +44,7 @@ class RouteGeometryEnricher {
           _sample(path.points, maximumViaPoints),
           // A route that recorded what it was planned for is re-snapped for the
           // same thing, so a shared route does not quietly gain a motorway when
-          // it reaches a second rider's phone (#182).
+          // it reaches a second sailor's phone (#182).
           preferences: route.preferences,
         );
         paths.add(

@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from tide_and_seek_server.app import create_app
 from tide_and_seek_server.gpx import GpxValidationError, validate_gpx
-from tide_and_seek_server.models import RidePlan
+from tide_and_seek_server.models import VoyagePlan
 from tide_and_seek_server.service import PLAN_CODE_ALPHABET, PLAN_CODE_LENGTH, purge_expired
 
 GPX_TWO_POINTS = """<?xml version="1.0" encoding="UTF-8"?>
@@ -116,7 +116,7 @@ def test_plan_gpx_is_encrypted_at_rest(client) -> None:
     created = _create(client)
     factory = client.app.state.session_factory
     with factory() as session:
-        stored = session.get(RidePlan, created.json()["code"])
+        stored = session.get(VoyagePlan, created.json()["code"])
         assert stored is not None
         assert b"51.5" not in stored.gpx_ciphertext
         assert b"Loop" not in stored.gpx_ciphertext
@@ -127,7 +127,7 @@ def test_expired_plan_is_not_found_and_purge_removes_it(client) -> None:
     code = created.json()["code"]
     factory = client.app.state.session_factory
     with factory() as session:
-        plan = session.get(RidePlan, code)
+        plan = session.get(VoyagePlan, code)
         plan.expires_at = datetime.now(UTC) - timedelta(seconds=1)
         session.commit()
 
@@ -136,7 +136,7 @@ def test_expired_plan_is_not_found_and_purge_removes_it(client) -> None:
     with factory() as session:
         purge_expired(session)
     with factory() as session:
-        assert session.get(RidePlan, code) is None
+        assert session.get(VoyagePlan, code) is None
 
 
 def test_plan_create_is_rate_limited(settings) -> None:

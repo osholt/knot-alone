@@ -21,23 +21,29 @@ void main() {
     expect(await store.loadActiveRoute(), isNull);
   });
 
-  test('keeps active routes isolated by ride', () async {
+  test('keeps active routes isolated by voyage', () async {
     final directory = await Directory.systemTemp.createTemp(
       'scoped-route-store-test',
     );
     addTearDown(() => directory.delete(recursive: true));
-    final firstRideStore = JsonFileRouteStore.forRide(directory, 'ride-a');
-    final secondRideStore = JsonFileRouteStore.forRide(directory, 'ride-b');
+    final firstVoyageStore = JsonFileRouteStore.forVoyage(
+      directory,
+      'voyage-a',
+    );
+    final secondVoyageStore = JsonFileRouteStore.forVoyage(
+      directory,
+      'voyage-b',
+    );
 
-    await firstRideStore.saveActiveRoute(_route('first', 'First route'));
+    await firstVoyageStore.saveActiveRoute(_route('first', 'First route'));
 
-    expect((await firstRideStore.loadActiveRoute())?.id, 'first');
-    expect(await secondRideStore.loadActiveRoute(), isNull);
+    expect((await firstVoyageStore.loadActiveRoute())?.id, 'first');
+    expect(await secondVoyageStore.loadActiveRoute(), isNull);
 
-    await secondRideStore.saveActiveRoute(_route('second', 'Second route'));
+    await secondVoyageStore.saveActiveRoute(_route('second', 'Second route'));
 
-    expect((await firstRideStore.loadActiveRoute())?.id, 'first');
-    expect((await secondRideStore.loadActiveRoute())?.id, 'second');
+    expect((await firstVoyageStore.loadActiveRoute())?.id, 'first');
+    expect((await secondVoyageStore.loadActiveRoute())?.id, 'second');
   });
 }
 

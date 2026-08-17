@@ -4,16 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/services/route_origin_bearing.dart';
 
 void main() {
-  group('the reroute is told which way the rider is pointing (#444)', () {
-    test('a moving rider contributes their heading', () {
+  group('the reroute is told which way the sailor is pointing (#444)', () {
+    test('a moving sailor contributes their heading', () {
       expect(
         rejoinOriginBearing(headingDegrees: 270, speedMetersPerSecond: 20),
         270,
       );
     });
 
-    test('a stationary rider contributes nothing', () {
-      // "A heading from a stationary or nearly-stationary rider is noise. Using
+    test('a stationary sailor contributes nothing', () {
+      // "A heading from a stationary or nearly-stationary sailor is noise. Using
       // it would produce a confidently wrong first instruction, which is the
       // defect this is about."
       for (final speed in [0.0, 0.5, 2.9]) {
@@ -74,7 +74,7 @@ void main() {
 
     test('the tolerance excludes the opposite carriageway', () {
       // Wide enough for GPS heading error and a leaning bike; narrow enough that
-      // a road running back the way the rider came cannot be chosen, which is
+      // a road running back the way the sailor came cannot be chosen, which is
       // the whole point.
       expect(rejoinBearingToleranceDegrees, lessThan(90));
       expect(rejoinBearingToleranceDegrees, greaterThanOrEqualTo(45));

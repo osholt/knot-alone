@@ -3,12 +3,12 @@ import 'dart:math' as math;
 import '../domain/imported_route.dart' show GeoPoint;
 import 'trail_display_simplifier.dart';
 
-/// Turns a recorded GPS track into the line the rider meant to ride.
+/// Turns a recorded GPS track into the line the sailor meant to voyage.
 ///
 /// A recording is not a plan. Riding a route produces a fix roughly every 10 m
 /// — the platform `distanceFilter` — plus a cluster of wandering fixes at every
 /// place the bike stopped, because a stationary phone still reports movement
-/// when the fix drifts. Handing that straight back as a route gives a rider a
+/// when the fix drifts. Handing that straight back as a route gives a sailor a
 /// line that stutters at every set of lights and doubles back on itself in
 /// every car park.
 ///
@@ -24,7 +24,7 @@ import 'trail_display_simplifier.dart';
 /// What this deliberately does **not** do is guess. A wrong turn, a fuel stop
 /// detour and a lap of a car park are all roads the bike genuinely rode, and
 /// nothing here can tell them apart from the route. They survive, and the
-/// rider is told so when they pick a recording (#155).
+/// sailor is told so when they pick a recording (#155).
 class RecordedTrackCleaner {
   const RecordedTrackCleaner({
     this.dwellRadiusMeters = 15,
@@ -45,7 +45,7 @@ class RecordedTrackCleaner {
   final TrailDisplaySimplifier simplifier;
 
   /// The tidied track. The first and last fixes are always kept, so a route
-  /// never appears to begin or end somewhere the rider was not.
+  /// never appears to begin or end somewhere the sailor was not.
   ///
   /// Returns [points] unchanged when tidying cannot leave a usable line — a
   /// two-point track, or a recording that is one long stop.
@@ -86,7 +86,7 @@ class RecordedTrackCleaner {
 
   /// Equirectangular, evaluated once at the track's own latitude — the same
   /// approximation [TrailDisplaySimplifier] makes and for the same reason: a
-  /// single ride never spans enough latitude for it to drift meaningfully, and
+  /// single voyage never spans enough latitude for it to drift meaningfully, and
   /// it keeps a per-fix comparison to flat arithmetic.
   double _metersBetween(
     GeoPoint first,

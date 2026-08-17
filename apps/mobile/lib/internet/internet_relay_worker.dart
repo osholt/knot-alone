@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:math';
 
 import '../domain/event_store.dart';
-import '../domain/ride_event.dart';
-import '../domain/ride_session.dart';
+import '../domain/voyage_event.dart';
+import '../domain/voyage_session.dart';
 import '../relay/live_presence.dart';
-import '../services/ride_event_authenticator.dart';
+import '../services/voyage_event_authenticator.dart';
 import 'internet_cursor_store.dart';
 import 'internet_relay_client.dart';
 
@@ -51,7 +51,7 @@ class InternetRelayStatus {
   final int pendingEventCount;
   final Uri? actionUrl;
 
-  /// Events the relay refused outright, set aside so the rest of the ride keeps
+  /// Events the relay refused outright, set aside so the rest of the voyage keeps
   /// synchronizing. They stay in the durable journal.
   final int quarantinedEventCount;
 
@@ -123,10 +123,10 @@ class InternetRelayWorker {
   final DateTime Function() _clock;
   final double Function() _randomValue;
   final _statusController = StreamController<InternetRelayStatus>.broadcast();
-  final _receivedEventController = StreamController<RideEvent>.broadcast();
+  final _receivedEventController = StreamController<VoyageEvent>.broadcast();
 
   InternetRelayStatus _status = const InternetRelayStatus.stopped();
-  RideSession? _session;
+  VoyageSession? _session;
   Timer? _timer;
   bool _running = false;
   bool _syncing = false;
@@ -145,14 +145,14 @@ class InternetRelayWorker {
 
   /// Forces the next attempt to download only. Receiving must never be held
   /// hostage to sending: upload and download share one request, so a rejected
-  /// upload otherwise discards the batch that would have revealed a new rider.
+  /// upload otherwise discards the batch that would have revealed a new sailor.
   bool _downloadOnlyNextAttempt = false;
   int _ignoredEventCount = 0;
   int _unsupportedUploadCount = 0;
 
   InternetRelayStatus get status => _status;
   Stream<InternetRelayStatus> get statuses => _statusController.stream;
-  Stream<RideEvent> get receivedEvents => _receivedEventController.stream;
+  Stream<VoyageEvent> get receivedEvents => _receivedEventController.stream;
 
   /// The negotiated relay contract, once checked.
   RelayCompatibilityResult? get compatibility => _compatibility;
@@ -160,7 +160,7 @@ class InternetRelayWorker {
   /// Event IDs the relay refused and this worker stopped offering.
   Set<String> get quarantinedEventIds => Set.unmodifiable(_quarantinedEventIds);
 
-  Future<void> start(RideSession session) async {
+  Future<void> start(VoyageSession session) async {
     if (_closed) throw StateError('Internet relay worker is closed.');
     _stop(emitStatus: false);
     _session = session;
@@ -186,7 +186,7 @@ class InternetRelayWorker {
       _emit(
         const InternetRelayStatus(
           phase: InternetRelayPhase.unauthorized,
-          message: 'Authenticated ride invitation required',
+          message: 'Authenticated voyage invitation required',
         ),
       );
       return;
@@ -205,7 +205,7 @@ class InternetRelayWorker {
     _syncing = true;
     var nextDelay = _pollInterval;
     var uploadLimit = 0;
-    var upload = const <RideEvent>[];
+    var upload = const <VoyageEvent>[];
     try {
       if (_compatibility == null && _api is RelayCompatibilityApi) {
         final result = await (_api as RelayCompatibilityApi)
@@ -213,7 +213,7 @@ class InternetRelayWorker {
         _compatibility = result;
         if (!result.canSynchronize) {
           throw InternetRelayException(
-            result.message ?? 'Ride service compatibility check failed.',
+            result.message ?? 'Voyage service compatibility check failed.',
             retryable:
                 result.disposition ==
                 RelayCompatibilityDisposition.temporarilyUnavailable,
@@ -227,7 +227,7 @@ class InternetRelayWorker {
           );
         }
       }
-      final pending = await _eventStore.pendingEvents(session.rideId);
+      final pending = await _eventStore.pendingEvents(session.voyageId);
       final offerable = pending
           .where((event) => !_quarantinedEventIds.contains(event.id))
           .toList(growable: false);
@@ -248,8 +248,8 @@ class InternetRelayWorker {
         InternetRelayStatus(
           phase: InternetRelayPhase.syncing,
           message: downloadOnly
-              ? 'Receiving ride updates while a refused update is isolated'
-              : 'Synchronizing queued ride events',
+              ? 'Receiving voyage updates while a refused update is isolated'
+              : 'Synchronizing queued voyage events',
           lastSuccessfulSync: _status.lastSuccessfulSync,
           pendingEventCount: offerable.length,
           quarantinedEventCount: _quarantinedEventIds.length,
@@ -258,19 +258,19 @@ class InternetRelayWorker {
           limitations: _limitations(),
         ),
       );
-      final knownEventIds = (await _eventStore.eventsForRide(
-        session.rideId,
+      final knownEventIds = (await _eventStore.eventsForVoyage(
+        session.voyageId,
       )).map((event) => event.id).toSet();
       final result = await _api.synchronize(
         session: session,
-        cursor: await _cursorStore.load(session.rideId),
+        cursor: await _cursorStore.load(session.voyageId),
         events: upload,
       );
       if (!_isCurrent(generation, session)) return;
       for (final event in result.events) {
-        if (event.rideId != session.rideId ||
+        if (event.voyageId != session.voyageId ||
             event.schemaVersion != 1 ||
-            !RideEventAuthenticator.verify(event, session.inviteSecret)) {
+            !VoyageEventAuthenticator.verify(event, session.inviteSecret)) {
           throw InternetRelayException(
             'Server returned an unauthenticated event ${event.id}.',
           );
@@ -291,7 +291,7 @@ class InternetRelayWorker {
         }
       }
       if (!_isCurrent(generation, session)) return;
-      await _cursorStore.save(session.rideId, result.cursor);
+      await _cursorStore.save(session.voyageId, result.cursor);
       if (!_isCurrent(generation, session)) return;
       _failureCount = 0;
       // A download-only attempt proves nothing about the batch, so the probe
@@ -299,7 +299,7 @@ class InternetRelayWorker {
       // and the isolation would never converge.
       if (upload.isNotEmpty) _uploadProbeSize = null;
       _ignoredEventCount += result.ignoredEventCount;
-      final remaining = (await _eventStore.pendingEvents(session.rideId))
+      final remaining = (await _eventStore.pendingEvents(session.voyageId))
           .where((event) => !_quarantinedEventIds.contains(event.id))
           .toList(growable: false);
       _emit(
@@ -323,7 +323,7 @@ class InternetRelayWorker {
       _failureCount += 1;
       final cursorExpired = error.code == 'invalid_cursor';
       if (cursorExpired) {
-        await _cursorStore.clear(session.rideId);
+        await _cursorStore.clear(session.voyageId);
         nextDelay = Duration.zero;
       } else {
         nextDelay = _boundedRetryDelay(error.retryAfter);
@@ -348,10 +348,10 @@ class InternetRelayWorker {
         InternetRelayStatus(
           phase: phase,
           message: cursorExpired
-              ? 'Refreshing the ride history after a relay update'
+              ? 'Refreshing the voyage history after a relay update'
               : isolating
-              ? 'The ride service refused an update; isolating it so the rest '
-                    'of the ride keeps synchronizing'
+              ? 'The voyage service refused an update; isolating it so the rest '
+                    'of the voyage keeps synchronizing'
               : error.message,
           lastSuccessfulSync: _status.lastSuccessfulSync,
           nextAttemptAt: _clock().add(nextDelay),
@@ -390,7 +390,7 @@ class InternetRelayWorker {
     }
   }
 
-  /// Keeps one refused event from wedging the whole ride.
+  /// Keeps one refused event from wedging the whole voyage.
   ///
   /// Upload and download share a single request, so a rejected batch discards
   /// the download that would have carried a join or a position. On a refusal
@@ -398,7 +398,7 @@ class InternetRelayWorker {
   /// finally quarantines the single offender. Returns true while isolating.
   bool _isolateRefusedUpload(
     InternetRelayException error,
-    List<RideEvent> upload,
+    List<VoyageEvent> upload,
   ) {
     if (upload.isEmpty || error.retryable || error.unauthorized) return false;
     // A negotiation verdict is about the whole client, not one event.
@@ -435,24 +435,25 @@ class InternetRelayWorker {
     return _retryPolicy.delayFor(_failureCount, randomValue: _randomValue());
   }
 
-  bool _serverSupportsEvent(RideEvent event) {
+  bool _serverSupportsEvent(VoyageEvent event) {
     final compatibility = _compatibility;
     if (compatibility == null) return true;
     final capability = switch (event.type) {
-      RideEventType.rideStarted ||
-      RideEventType.ridePaused ||
-      RideEventType.rideResumed => RelayProtocolCapabilities.rideStart,
-      RideEventType.riderLeft => RelayProtocolCapabilities.membership,
-      RideEventType.routeRevisionChunk ||
-      RideEventType.routeRevisionPublished ||
-      RideEventType.routeCleared => RelayProtocolCapabilities.routeRevisions,
-      RideEventType.tecRoleRequested || RideEventType.tecRoleResponded =>
-        RelayProtocolCapabilities.tecRoleAssignment,
-      RideEventType.rejoinRouteShared =>
+      VoyageEventType.voyageStarted ||
+      VoyageEventType.voyagePaused ||
+      VoyageEventType.voyageResumed => RelayProtocolCapabilities.voyageStart,
+      VoyageEventType.sailorLeft => RelayProtocolCapabilities.membership,
+      VoyageEventType.routeRevisionChunk ||
+      VoyageEventType.routeRevisionPublished ||
+      VoyageEventType.routeCleared => RelayProtocolCapabilities.routeRevisions,
+      VoyageEventType.sweeperRoleRequested ||
+      VoyageEventType.sweeperRoleResponded =>
+        RelayProtocolCapabilities.sweeperRoleAssignment,
+      VoyageEventType.rejoinRouteShared =>
         RelayProtocolCapabilities.rejoinRouteSharing,
-      RideEventType.riderContactShared =>
-        RelayProtocolCapabilities.riderContactSharing,
-      RideEventType.rideReopened => RelayProtocolCapabilities.rideReopen,
+      VoyageEventType.sailorContactShared =>
+        RelayProtocolCapabilities.sailorContactSharing,
+      VoyageEventType.voyageReopened => RelayProtocolCapabilities.voyageReopen,
       _ => null,
     };
     return capability == null || compatibility.supports(capability);
@@ -462,8 +463,8 @@ class InternetRelayWorker {
   ///
   /// Null before the first negotiation, so a caller can say "not checked yet"
   /// instead of guessing. Used by the features whose whole point is a relayed
-  /// event — a leader-assigned TEC role, a leader-visible rejoin route and a
-  /// rider's own phone number — so they can name the limitation rather than
+  /// event — a skipper-assigned TEC role, a skipper-visible rejoin route and a
+  /// sailor's own phone number — so they can name the limitation rather than
   /// appear to have worked.
   bool? supportsCapability(String capability) =>
       _compatibility?.supports(capability);
@@ -497,7 +498,7 @@ class InternetRelayWorker {
     }
   }
 
-  bool _isCurrent(int generation, RideSession session) =>
+  bool _isCurrent(int generation, VoyageSession session) =>
       _running &&
       !_closed &&
       generation == _generation &&

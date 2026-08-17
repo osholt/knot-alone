@@ -10,7 +10,7 @@ Environment:
   SMOKE_EXPECTED_COMMIT   commit the deployed image must report
   SMOKE_WRITE_PLAN        "1" to include the round trip that writes to the
                           database. Pre-production only: production's database
-                          is riders' data, not a test fixture.
+                          is sailors' data, not a test fixture.
 
 Exits non-zero on the first failure, with the check that failed named.
 """

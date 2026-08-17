@@ -52,9 +52,9 @@ class PresencePositionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     displayName: str = Field(min_length=1, max_length=80)
-    role: Literal["lead", "rider", "tailEndCharlie", "marker"]
+    role: Literal["lead", "sailor", "sweeper", "marker"]
     motorcycleStyle: str = Field(min_length=1, max_length=40)
-    riderColor: str = Field(min_length=1, max_length=40)
+    sailorColor: str = Field(min_length=1, max_length=40)
     sample: PresenceLocationSample
 
 
@@ -74,19 +74,19 @@ class PresenceSyncRequest(BaseModel):
 
 
 class PresencePositionResponse(PresencePositionRequest):
-    riderId: str
+    sailorId: str
     receivedAt: datetime
     expiresAt: datetime
 
     # False when the publishing build only advertised the legacy pre-start
     # capability, so a peer can name the limitation instead of showing an
-    # unexplained gap once the ride starts.
+    # unexplained gap once the voyage starts.
     livePresence: bool = False
     clientProtocol: int = Field(default=1, ge=1, le=1000)
 
 
 class PresenceMemberResponse(BaseModel):
-    """One rider derived from durable membership events, with no cursor.
+    """One sailor derived from durable membership events, with no cursor.
 
     This is what lets a join reach the other devices even when their bulk event
     batch is wedged or backed off.
@@ -94,13 +94,13 @@ class PresenceMemberResponse(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    riderId: str = Field(min_length=1, max_length=128)
+    sailorId: str = Field(min_length=1, max_length=128)
     displayName: str = Field(min_length=1, max_length=80)
     role: str = Field(min_length=1, max_length=40)
     joinedAt: datetime
     left: bool = False
 
-    # When the departure was recorded, so a caller can say *when* a rider left
+    # When the departure was recorded, so a caller can say *when* a sailor left
     # and can order that departure against a later rejoin without waiting for
     # the bulk event batch (issue #144). Absent unless ``left`` is true;
     # additive, so an older client simply ignores it.
@@ -137,7 +137,7 @@ class PushRegistrationRequest(BaseModel):
     platform: Literal["ios", "android"]
     provider: Literal["apns", "fcm"]
     token: str = Field(min_length=16, max_length=4096)
-    role: Literal["lead", "rider", "tailEndCharlie", "marker"]
+    role: Literal["lead", "sailor", "sweeper", "marker"]
     preferences: PushPreferences = Field(default_factory=PushPreferences)
 
     @model_validator(mode="after")
@@ -155,7 +155,7 @@ class PushRegistrationResponse(BaseModel):
     installationId: str
     platform: Literal["ios", "android"]
     provider: Literal["apns", "fcm"]
-    role: Literal["lead", "rider", "tailEndCharlie", "marker"]
+    role: Literal["lead", "sailor", "sweeper", "marker"]
     preferences: PushPreferences
     registeredAt: datetime
     updatedAt: datetime
@@ -164,7 +164,7 @@ class PushRegistrationResponse(BaseModel):
 class RegisterJoinCodeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    rideId: str = Field(min_length=1, max_length=128)
+    voyageId: str = Field(min_length=1, max_length=128)
     inviteSecret: str = Field(min_length=16, max_length=512)
     resolveToken: str = Field(min_length=16, max_length=128)
 
@@ -172,8 +172,8 @@ class RegisterJoinCodeRequest(BaseModel):
 class JoinCodeResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    rideId: str
-    rideCode: str
+    voyageId: str
+    voyageCode: str
     inviteSecret: str
     resolveToken: str
 
@@ -292,16 +292,16 @@ class DiscoveryModerationRequest(BaseModel):
 
 
 class RoadRatingRequest(BaseModel):
-    """One anonymous rider verdict on a catalogued road (#159).
+    """One anonymous sailor verdict on a catalogued road (#159).
 
     This is the whole of it. ``extra="forbid"`` is load-bearing, not tidiness: it
-    means the relay structurally cannot accept a rider ID, device ID, ride ID,
+    means the relay structurally cannot accept a sailor ID, device ID, voyage ID,
     installation ID, position or client timestamp, however a future client is
     written. A build that tried to attach one gets HTTP 400 instead of quietly
     handing the relay something it could attribute.
 
     There is no ``createdAt`` for the same reason. A client-supplied time of
-    rating is a correlation handle against the ride journal, so the relay records
+    rating is a correlation handle against the voyage journal, so the relay records
     only the day it received the answer.
     """
 
@@ -352,14 +352,14 @@ class CreateObserverGrantRequest(BaseModel):
     label: str = Field(min_length=1, max_length=80)
     durationMinutes: int = Field(ge=30, le=24 * 60)
     consentConfirmed: Literal[True]
-    scope: Literal["rider", "group"] = "rider"
+    scope: Literal["sailor", "group"] = "sailor"
     groupDisclosureConfirmed: Literal[True] | None = None
 
     @model_validator(mode="after")
     def group_scope_requires_disclosure(self) -> CreateObserverGrantRequest:
         if self.scope == "group" and self.groupDisclosureConfirmed is not True:
             raise ValueError("Group observer access requires group disclosure")
-        if self.scope == "rider" and self.groupDisclosureConfirmed is not None:
+        if self.scope == "sailor" and self.groupDisclosureConfirmed is not None:
             raise ValueError("Personal observer access has no group disclosure")
         return self
 
@@ -369,7 +369,7 @@ class ObserverGrantResponse(BaseModel):
 
     id: str
     label: str
-    scope: Literal["rider", "group"] = "rider"
+    scope: Literal["sailor", "group"] = "sailor"
     createdAt: datetime
     expiresAt: datetime
     revokedAt: datetime | None
@@ -411,7 +411,7 @@ class PublishObserverGroupParticipant(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     displayName: str = Field(min_length=1, max_length=80)
-    role: Literal["lead", "tailEndCharlie", "marker", "rider"]
+    role: Literal["lead", "sweeper", "marker", "sailor"]
     color: str = Field(pattern=r"^#[0-9A-Fa-f]{6}$")
     position: ObserverPosition | None
 
@@ -433,10 +433,10 @@ class ObserverRoute(BaseModel):
 class PublishObserverSnapshotRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    scope: Literal["rider", "group"] = "rider"
+    scope: Literal["sailor", "group"] = "sailor"
     subjectName: str = Field(min_length=1, max_length=80)
     snapshotGeneratedAt: datetime
-    rideStatus: Literal["waiting", "active", "paused", "ended"]
+    voyageStatus: Literal["waiting", "active", "paused", "ended"]
     statusUpdatedAt: datetime
     position: ObserverPosition | None
     participants: list[PublishObserverGroupParticipant] = Field(
@@ -458,7 +458,7 @@ class PublishObserverSnapshotRequest(BaseModel):
 
     @model_validator(mode="after")
     def scope_matches_payload(self) -> PublishObserverSnapshotRequest:
-        if self.scope == "rider":
+        if self.scope == "sailor":
             if self.participants or self.route is not None:
                 raise ValueError("Personal observer snapshots cannot contain group data")
         elif self.position is not None or self.assistance is not None:
@@ -478,10 +478,10 @@ class ObserverSnapshotResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     protocolVersion: Literal[1, 2] = 1
-    scope: Literal["rider", "group"] = "rider"
+    scope: Literal["sailor", "group"] = "sailor"
     label: str
     subjectName: str | None
-    rideStatus: Literal["waiting", "active", "paused", "ended"]
+    voyageStatus: Literal["waiting", "active", "paused", "ended"]
     statusUpdatedAt: datetime | None
     freshness: Literal["unavailable", "fresh", "delayed", "offline"]
     serverTime: datetime

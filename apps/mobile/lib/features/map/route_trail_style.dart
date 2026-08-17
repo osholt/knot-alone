@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-import '../../services/rider_trail_recorder.dart';
+import '../../services/sailor_trail_recorder.dart';
 
 /// One route or trail line, described once for every renderer.
 ///
@@ -41,7 +41,7 @@ class RouteLineStyle {
 }
 
 /// Colour, weight and pattern for every kind of route and trail geometry on the
-/// ride map, plus the measurements that justify them.
+/// voyage map, plus the measurements that justify them.
 ///
 /// The route ahead was `#3478F6` at width 5, dotted, drawn at 90% opacity. Its
 /// measured luminance contrast against the dark basemap this app renders is
@@ -66,7 +66,7 @@ class RouteLineStyle {
 /// |---------------|---------|-----------:|-------------:|----------:|
 /// | route ahead   | #3DDC84 |      4.11  |        9.54  |    10.27  |
 /// | travelled     | #FF7A1A |      2.81  |        6.52  |     7.02  |
-/// | leader trail  | #D3B8FF |      4.22  |        9.78  |    10.53  |
+/// | skipper trail  | #D3B8FF |      4.22  |        9.78  |    10.53  |
 /// | off route     | #FF5FD1 |      2.73  |        6.33  |     6.81  |
 /// | rejoin        | #00E5FF |      4.77  |       11.06  |    11.91  |
 ///
@@ -80,9 +80,9 @@ class RouteLineStyle {
 /// than something to re-tune.
 ///
 /// The closest pair by luminance alone is the route ahead against the rejoin
-/// breadcrumb (1.16) and against the leader trail (1.03). Hue separates the
+/// breadcrumb (1.16) and against the skipper trail (1.03). Hue separates the
 /// first, and both are separated by width and pattern: 6px long-dash for the
-/// route ahead, 4.5px dash for the rejoin, 8px solid for the leader trail.
+/// route ahead, 4.5px dash for the rejoin, 8px solid for the skipper trail.
 class RouteTrailStyle {
   const RouteTrailStyle._();
 
@@ -93,17 +93,17 @@ class RouteTrailStyle {
   static const casingHex = '#10151C';
 
   /// Ink for the symbol drawn *inside* a marker badge - the motorcycle glyph on
-  /// a rider, the warning glyph on a hazard.
+  /// a sailor, the warning glyph on a hazard.
   ///
   /// The same dark ink as [casing], and for the same reason: every badge fill is
   /// deliberately light, because it has to be found on a dark basemap. A white
   /// glyph on a light badge is the one ink on this map with nothing behind it,
   /// and #133 measured it at 1.53:1 on the caution yellow, 1.76:1 on the default
-  /// rider green, and never better than 3.87:1 on any badge in the palette - so
-  /// the marker that says *which rider* and *how bad* was the least legible
+  /// sailor green, and never better than 3.87:1 on any badge in the palette - so
+  /// the marker that says *which sailor* and *how bad* was the least legible
   /// thing on the surface, while the route lines #107 fixed were fine.
   ///
-  /// Dark ink reverses it: 4.74:1 at worst (the rider's own blue badge) and
+  /// Dark ink reverses it: 4.74:1 at worst (the sailor's own blue badge) and
   /// 12.00:1 on the caution yellow. Every badge colour in the app measures
   /// better this way than with white - there is no case where white wins - so
   /// this is a fixed colour rather than a per-badge choice.
@@ -130,25 +130,25 @@ class RouteTrailStyle {
     dashPixels: [22, 11],
   );
 
-  /// The planned route already covered, and the local rider's own trail. Both
+  /// The planned route already covered, and the local sailor's own trail. Both
   /// mean "where we have been", so they share one colour and overlap harmlessly
-  /// when the rider is on route.
+  /// when the sailor is on route.
   static const travelled = RouteLineStyle(
     color: Color(0xFFFF7A1A),
     widthPixels: 5,
     casingWidthPixels: 9,
   );
 
-  /// The leader's travelled path: the group's ground truth once the plan stops
+  /// The skipper's travelled path: the group's ground truth once the plan stops
   /// matching the road, so it is the widest line on the map and is drawn under
   /// the planned route rather than over it.
-  static const leaderTrail = RouteLineStyle(
+  static const skipperTrail = RouteLineStyle(
     color: Color(0xFFD3B8FF),
     widthPixels: 8,
     casingWidthPixels: 12,
   );
 
-  /// A rider flagged as suspected off route, off route, or recovering.
+  /// A sailor flagged as suspected off route, off route, or recovering.
   static const offRouteTrail = RouteLineStyle(
     color: Color(0xFFFF5FD1),
     widthPixels: 4,
@@ -160,7 +160,7 @@ class RouteTrailStyle {
   /// cyan and renders it dashed. Declared here so the palette stays one table
   /// and the widths and dash runs stay distinct from every other line.
   ///
-  /// Now slotted in fully: [RiderTrailKind.rejoin] maps to it in [forTrail],
+  /// Now slotted in fully: [SailorTrailKind.rejoin] maps to it in [forTrail],
   /// and - because MapLibre cannot data-drive `line-dasharray` - it gets its own
   /// dashed line layer from the same per-kind layer builder every other trail
   /// uses.
@@ -180,11 +180,11 @@ class RouteTrailStyle {
     casingWidthPixels: 5,
   );
 
-  static RouteLineStyle forTrail(RiderTrailKind kind) => switch (kind) {
-    RiderTrailKind.rider => travelled,
-    RiderTrailKind.leader => leaderTrail,
-    RiderTrailKind.offRoute => offRouteTrail,
-    RiderTrailKind.rejoin => rejoinBreadcrumb,
+  static RouteLineStyle forTrail(SailorTrailKind kind) => switch (kind) {
+    SailorTrailKind.sailor => travelled,
+    SailorTrailKind.skipper => skipperTrail,
+    SailorTrailKind.offRoute => offRouteTrail,
+    SailorTrailKind.rejoin => rejoinBreadcrumb,
   };
 
   /// Every badge fill a marker glyph is drawn on, so one test can hold the whole
@@ -199,12 +199,12 @@ class RouteTrailStyle {
   /// steps land in this table and have to satisfy the same rule as everything
   /// else. That is what stops the fade being taken too far - the fading step
   /// still measures 8.99:1 against its own ring, and it is why the blend target
-  /// is a lighter grey than the one a stale rider marker uses. The road-defect
+  /// is a lighter grey than the one a stale sailor marker uses. The road-defect
   /// fills are the four `hazard *` rows below, unchanged, and their faded steps
   /// are generated and checked in `hazard_map_symbol_test.dart` rather than
   /// listed here.
   static const markerBadgeFills = <String, Color>{
-    'own rider': Color(0xFF2F80ED),
+    'own sailor': Color(0xFF2F80ED),
     // #135. Near-white is the one value nothing else on this map uses, and at
     // 17.04:1 against its own ring it is also the most findable badge in the set,
     // which is what a camera or a police sighting warrants.
@@ -215,17 +215,17 @@ class RouteTrailStyle {
     // table and the painter were documenting different colours.
     'enforcement report ageing': Color(0xFFCCD3DB),
     'enforcement report fading': Color(0xFFACB7C2),
-    'rider green': Color(0xFF6ED89A),
-    'rider orange': Color(0xFFFF9F5A),
-    'rider yellow': Color(0xFFE8D24C),
-    'rider teal': Color(0xFF4FC7C7),
-    'rider pink': Color(0xFFE87FC0),
-    'rider cyan': Color(0xFF5AC8FA),
-    'rider amber': Color(0xFFD9A441),
-    'rider crimson': Color(0xFFD9607A),
+    'sailor green': Color(0xFF6ED89A),
+    'sailor orange': Color(0xFFFF9F5A),
+    'sailor yellow': Color(0xFFE8D24C),
+    'sailor teal': Color(0xFF4FC7C7),
+    'sailor pink': Color(0xFFE87FC0),
+    'sailor cyan': Color(0xFF5AC8FA),
+    'sailor amber': Color(0xFFD9A441),
+    'sailor crimson': Color(0xFFD9607A),
     'lead role': Color(0xFFB58CFF),
     'tail end charlie role': Color(0xFF68A9FF),
-    'alerting rider': Color(0xFFFF5D73),
+    'alerting sailor': Color(0xFFFF5D73),
     'hazard advisory': Color(0xFF8EA7C4),
     'hazard caution': Color(0xFFFFC857),
     'hazard serious': Color(0xFFFF8A4C),
@@ -237,7 +237,7 @@ class RouteTrailStyle {
   static const allLines = <String, RouteLineStyle>{
     'route ahead': routeAhead,
     'travelled': travelled,
-    'leader trail': leaderTrail,
+    'skipper trail': skipperTrail,
     'off route': offRouteTrail,
     'rejoin breadcrumb': rejoinBreadcrumb,
   };

@@ -48,7 +48,7 @@ void main() {
     final route = await routeFromOsrmResponse(multiRoundaboutUrbanResponse());
     final path = route.paths.first.points;
 
-    // Ride the route and collect what the banner announces, in order.
+    // Voyage the route and collect what the banner announces, in order.
     final announced = <String>[];
     final total = planner
         .instructions(route)
@@ -81,7 +81,7 @@ void main() {
     expect(_titles(tester), announced);
   });
 
-  testWidgets('reports how far each manoeuvre is from the rider', (
+  testWidgets('reports how far each manoeuvre is from the sailor', (
     tester,
   ) async {
     final route = await routeFromOsrmResponse(multiRoundaboutUrbanResponse());
@@ -93,7 +93,7 @@ void main() {
           route: route,
           distanceUnit: DistanceUnit.kilometres,
           // Between the first and second roundabout.
-          riderPosition: route.paths.first.points[2],
+          sailorPosition: route.paths.first.points[2],
         ),
       ),
     );

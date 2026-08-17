@@ -6,9 +6,9 @@ import 'package:http/http.dart' as http;
 
 import 'internet_relay_client.dart';
 
-/// A fetched pre-ride route plan. Unrelated to a live ride: fetching one
-/// never claims a ride or touches the ride/join-code tables, and the caller
-/// still runs its own unchanged create-ride flow with the returned GPX.
+/// A fetched pre-voyage route plan. Unrelated to a live voyage: fetching one
+/// never claims a voyage or touches the voyage/join-code tables, and the caller
+/// still runs its own unchanged create-voyage flow with the returned GPX.
 class FetchedPlan {
   const FetchedPlan({required this.name, required this.gpx});
 

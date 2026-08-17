@@ -9,9 +9,9 @@ import '../services/spoken_guidance.dart';
 
 /// Whether turn instructions are spoken aloud.
 ///
-/// **Off by default, and that is not timidity.** Most riders already have an
+/// **Off by default, and that is not timidity.** Most sailors already have an
 /// intercom carrying music or another navigation app's prompts, and a second
-/// uninvited voice is worse than silence. A rider who wants this will find it;
+/// uninvited voice is worse than silence. A sailor who wants this will find it;
 /// one who does not must never be surprised by it (#286).
 class SpokenGuidanceController extends ChangeNotifier
     implements ValueListenable<bool> {
@@ -27,7 +27,7 @@ class SpokenGuidanceController extends ChangeNotifier
     naturalVoicePack.addListener(_onNaturalVoiceChanged);
   }
 
-  /// The voice. Carried here rather than built by the ride surface so a test can
+  /// The voice. Carried here rather than built by the voyage surface so a test can
   /// substitute one, and so there is exactly one place that decides what speaks.
   final SpokenGuidanceEngine Function()? _engineOverride;
 
@@ -37,8 +37,8 @@ class SpokenGuidanceController extends ChangeNotifier
   /// installed OS voice remains the fail-safe for every natural utterance.
   final NaturalVoicePackController naturalVoicePack;
 
-  /// Creates the ride's engine. The production closure reads [voice] before
-  /// every phrase, so a Settings change applies without restarting the ride.
+  /// Creates the voyage's engine. The production closure reads [voice] before
+  /// every phrase, so a Settings change applies without restarting the voyage.
   SpokenGuidanceEngine Function() get engine =>
       () => createEngine();
 
@@ -59,9 +59,9 @@ class SpokenGuidanceController extends ChangeNotifier
 
   static const preferenceKey = 'spoken_guidance_enabled';
 
-  /// Which of the three states the rider chose (#415).
+  /// Which of the three states the sailor chose (#415).
   ///
-  /// Stored beside the old boolean rather than replacing it, so a rider upgrading
+  /// Stored beside the old boolean rather than replacing it, so a sailor upgrading
   /// from a build that only had on/off keeps their choice: an absent mode falls
   /// back to the boolean, and `enabled` stays meaningful for every caller that
   /// only needs "is anything spoken".
@@ -112,7 +112,7 @@ class SpokenGuidanceController extends ChangeNotifier
   /// A stored mode if it is one this build knows, else the old boolean.
   ///
   /// An unrecognised value is treated as absent rather than as an error: a build
-  /// that once wrote a mode this one has dropped must not leave a rider unable to
+  /// that once wrote a mode this one has dropped must not leave a sailor unable to
   /// turn audio on.
   static SpokenAudioMode _modeFromNames(
     String? stored, {
@@ -172,17 +172,17 @@ class SpokenGuidanceController extends ChangeNotifier
         jsonEncode(voice.toJson()),
       );
     }
-    // Null has two meanings without this marker: a rider deliberately chose
+    // Null has two meanings without this marker: a sailor deliberately chose
     // System default, or an older/fresh install has never chosen. Only the
     // latter should receive Daniel as the product default (#508).
     await _preferences?.setBool(voiceChoiceMadePreferenceKey, true);
     if (changed) notifyListeners();
   }
 
-  /// Saves a voice selection and gives the rider an immediate useful sample.
+  /// Saves a voice selection and gives the sailor an immediate useful sample.
   ///
   /// Preview does not depend on guidance being enabled: Settings is where a
-  /// rider decides whether they like a voice. Saving happens first and remains
+  /// sailor decides whether they like a voice. Saving happens first and remains
   /// successful if a platform has no working speech engine (#503).
   Future<void> setVoiceAndPreview(SpokenGuidanceVoice? voice) async {
     await setVoice(voice);
@@ -195,7 +195,7 @@ class SpokenGuidanceController extends ChangeNotifier
     } on Object {
       // A voice preview is helpful, not a prerequisite for saving the choice.
       // The ordinary speech path will still fall back to the system default if
-      // an installed voice disappears between Settings and the next ride.
+      // an installed voice disappears between Settings and the next voyage.
     }
   }
 
@@ -219,7 +219,7 @@ class SpokenGuidanceController extends ChangeNotifier
       await preview.speak(voicePreviewPhrase);
     } on Object {
       // Installation remains useful even if this one preview cannot start. The
-      // live ride engine will use the already configured OS fallback.
+      // live voyage engine will use the already configured OS fallback.
     } finally {
       await preview.stop();
     }
@@ -241,7 +241,7 @@ class SpokenGuidanceController extends ChangeNotifier
 
   void _onNaturalVoiceChanged() => notifyListeners();
 
-  /// What the rider gets by pressing the map control once more.
+  /// What the sailor gets by pressing the map control once more.
   SpokenAudioMode get nextMode => nextSpokenAudioMode(_mode);
 
   Future<void> setEnabled(bool enabled) =>
@@ -252,7 +252,7 @@ class SpokenGuidanceController extends ChangeNotifier
     _mode = mode;
     await _preferences?.setString(modePreferenceKey, mode.name);
     // The old boolean is kept in step so a downgrade to a build without modes
-    // still finds the rider's choice rather than defaulting them to silence.
+    // still finds the sailor's choice rather than defaulting them to silence.
     await _preferences?.setBool(preferenceKey, enabled);
     notifyListeners();
   }

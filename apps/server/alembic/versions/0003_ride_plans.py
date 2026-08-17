@@ -1,4 +1,4 @@
-"""Add encrypted pre-ride GPX plan lookups.
+"""Add encrypted pre-voyage GPX plan lookups.
 
 Revision ID: 0003
 Revises: 0002
@@ -18,7 +18,7 @@ depends_on: str | None = None
 
 def upgrade() -> None:
     op.create_table(
-        "ride_plans",
+        "voyage_plans",
         sa.Column("code", sa.String(length=16), nullable=False),
         sa.Column("name", sa.String(length=200), nullable=True),
         sa.Column("gpx_ciphertext", sa.LargeBinary(), nullable=False),
@@ -26,9 +26,9 @@ def upgrade() -> None:
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("code"),
     )
-    op.create_index("ix_ride_plans_expiry", "ride_plans", ["expires_at"])
+    op.create_index("ix_voyage_plans_expiry", "voyage_plans", ["expires_at"])
 
 
 def downgrade() -> None:
-    op.drop_index("ix_ride_plans_expiry", table_name="ride_plans")
-    op.drop_table("ride_plans")
+    op.drop_index("ix_voyage_plans_expiry", table_name="voyage_plans")
+    op.drop_table("voyage_plans")

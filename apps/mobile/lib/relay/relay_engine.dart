@@ -4,8 +4,8 @@ import 'dart:math';
 import 'package:uuid/uuid.dart';
 
 import '../domain/event_store.dart';
-import '../domain/rider_location.dart';
-import '../domain/ride_event.dart';
+import '../domain/sailor_location.dart';
+import '../domain/voyage_event.dart';
 import 'peer_transport.dart';
 import 'relay_protocol.dart';
 import 'relay_queue.dart';
@@ -106,15 +106,15 @@ class ReconnectBackoff {
 
 class RelayEngineConfig {
   const RelayEngineConfig({
-    required this.rideId,
-    required this.rideSecret,
+    required this.voyageId,
+    required this.voyageSecret,
     required this.localDeviceId,
     required this.endpointName,
     this.serviceId = 'me.osholt.ride_relay.relay.v1',
   });
 
-  final String rideId;
-  final String rideSecret;
+  final String voyageId;
+  final String voyageSecret;
   final String localDeviceId;
   final String endpointName;
   final String serviceId;
@@ -172,7 +172,7 @@ class RelayEngine {
   final RelayDelay _delay;
   final Random _random;
   final _statusController = StreamController<RelayStatus>.broadcast();
-  final _receivedEventController = StreamController<RideEvent>.broadcast();
+  final _receivedEventController = StreamController<VoyageEvent>.broadcast();
   final _receivedPresenceController =
       StreamController<RelayPresenceUpdate>.broadcast();
 
@@ -190,15 +190,17 @@ class RelayEngine {
 
   RelayStatus get status => _status;
   Stream<RelayStatus> get statuses => _statusController.stream;
-  Stream<RideEvent> get receivedEvents => _receivedEventController.stream;
+  Stream<VoyageEvent> get receivedEvents => _receivedEventController.stream;
   Stream<RelayPresenceUpdate> get receivedPresence =>
       _receivedPresenceController.stream;
 
   Future<void> start(RelayEngineConfig config) async {
-    if (config.rideId.isEmpty ||
+    if (config.voyageId.isEmpty ||
         config.localDeviceId.isEmpty ||
-        config.rideSecret.length < 16) {
-      throw ArgumentError('A complete, authenticated ride session is required');
+        config.voyageSecret.length < 16) {
+      throw ArgumentError(
+        'A complete, authenticated voyage session is required',
+      );
     }
     await stop();
     _config = config;
@@ -213,16 +215,16 @@ class RelayEngine {
     unawaited(_connect());
   }
 
-  Future<void> enqueueLocal(RideEvent event) async {
+  Future<void> enqueueLocal(VoyageEvent event) async {
     final config = _requireConfig();
-    if (event.rideId != config.rideId) {
-      throw ArgumentError('Cannot relay an event from another ride');
+    if (event.voyageId != config.voyageId) {
+      throw ArgumentError('Cannot relay an event from another voyage');
     }
     final now = _clock();
     final defaultLifetime = switch (event.type) {
-      RideEventType.routeRevisionChunk ||
-      RideEventType.routeRevisionPublished ||
-      RideEventType.routeCleared => const Duration(hours: 72),
+      VoyageEventType.routeRevisionChunk ||
+      VoyageEventType.routeRevisionPublished ||
+      VoyageEventType.routeCleared => const Duration(hours: 72),
       _ => switch (event.priority) {
         EventPriority.routine => const Duration(hours: 2),
         EventPriority.important => const Duration(hours: 8),
@@ -251,7 +253,7 @@ class RelayEngine {
   }
 
   Future<void> publishPresence(
-    RiderLocation? position, {
+    SailorLocation? position, {
     bool clear = false,
     Duration ttl = const Duration(seconds: 45),
   }) async {
@@ -259,12 +261,12 @@ class RelayEngine {
     if (clear == (position != null) ||
         ttl < const Duration(seconds: 15) ||
         ttl > const Duration(minutes: 5) ||
-        (position != null && position.riderId != config.localDeviceId)) {
+        (position != null && position.sailorId != config.localDeviceId)) {
       throw ArgumentError('Invalid pre-start presence update');
     }
     final now = _clock();
     final update = RelayPresenceUpdate(
-      riderId: config.localDeviceId,
+      sailorId: config.localDeviceId,
       sentAt: now,
       expiresAt: now.add(ttl),
       clear: clear,
@@ -289,7 +291,7 @@ class RelayEngine {
       await _queue.prune(now: now, maxItems: maxQueuedEvents);
       for (final peerId in _status.peerIds) {
         final items = await _queue.pendingForPeer(
-          config.rideId,
+          config.voyageId,
           peerId,
           now: now,
           limit: RelayProtocol.maxEventsPerFrame,
@@ -300,13 +302,13 @@ class RelayEngine {
         final bytes = _protocol.encode(
           RelayFrame(
             kind: RelayFrameKind.events,
-            rideId: config.rideId,
+            voyageId: config.voyageId,
             senderId: config.localDeviceId,
             frameId: _idFactory(),
             sentAt: now,
             events: items,
           ),
-          secret: config.rideSecret,
+          secret: config.voyageSecret,
         );
         await _transport.send(bytes, peerIds: {peerId});
       }
@@ -392,8 +394,8 @@ class RelayEngine {
     try {
       frame = _protocol.decode(
         packet.bytes,
-        secret: config.rideSecret,
-        expectedRideId: config.rideId,
+        secret: config.voyageSecret,
+        expectedVoyageId: config.voyageId,
         now: _clock(),
       );
     } on RelayProtocolException {
@@ -455,13 +457,13 @@ class RelayEngine {
     final bytes = _protocol.encode(
       RelayFrame(
         kind: RelayFrameKind.presence,
-        rideId: config.rideId,
+        voyageId: config.voyageId,
         senderId: config.localDeviceId,
         frameId: _idFactory(),
         sentAt: update.sentAt,
         presence: update,
       ),
-      secret: config.rideSecret,
+      secret: config.voyageSecret,
     );
     await _transport.send(bytes, peerIds: peerIds);
   }
@@ -477,13 +479,13 @@ class RelayEngine {
     final bytes = _protocol.encode(
       RelayFrame(
         kind: RelayFrameKind.acknowledgement,
-        rideId: config.rideId,
+        voyageId: config.voyageId,
         senderId: config.localDeviceId,
         frameId: _idFactory(),
         sentAt: _clock(),
         acknowledgedEventIds: eventIds,
       ),
-      secret: config.rideSecret,
+      secret: config.voyageSecret,
     );
     await _transport.send(bytes, peerIds: {peerId});
   }
@@ -519,7 +521,7 @@ class RelayEngine {
     if (config == null) {
       return;
     }
-    final count = await _queue.count(config.rideId, now: _clock());
+    final count = await _queue.count(config.voyageId, now: _clock());
     _emit(
       _status.copyWith(queuedEventCount: count, lastExchangeAt: lastExchangeAt),
     );

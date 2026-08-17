@@ -96,15 +96,15 @@ void _selectionTests() {
   const sampler = TrailDirectionArrowSampler(spacingMeters: 100);
 
   // The defect behind #363: every arrow source was something that only exists
-  // once the ride is moving, so a planned route that had not been ridden yet
-  // carried no direction arrows at all - on exactly the screen where a rider is
+  // once the voyage is moving, so a planned route that had not been ridden yet
+  // carried no direction arrows at all - on exactly the screen where a sailor is
   // working out which way round the route goes.
   test('a planned route that has not been ridden still gets arrows', () {
     final selected = selectTrailDirectionArrows<String>(
       sampler: sampler,
       sources: [
         TrailDirectionArrowSource(paths: [line(51.4)], style: 'route-ahead'),
-        // No ridden path and no trails: the ride has not started.
+        // No ridden path and no trails: the voyage has not started.
         const TrailDirectionArrowSource(paths: [], style: 'ridden'),
       ],
     );

@@ -48,7 +48,7 @@ class MiniRoundaboutFeatureTest(unittest.TestCase):
     def test_does_not_read_a_compass_bearing_as_a_rotation(self) -> None:
         """A GB extract carries `direction=195` and `direction=340`."""
         # Those are compass bearings on the node, not which way traffic goes
-        # round. Reading one as a rotation would send a rider the wrong way
+        # round. Reading one as a rotation would send a sailor the wrong way
         # round a junction, so anything unrecognised is left unstated and the
         # app falls back to its own default.
         features = build_features(

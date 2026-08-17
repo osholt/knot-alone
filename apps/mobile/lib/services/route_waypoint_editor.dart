@@ -5,7 +5,7 @@ import 'route_reshape_planner.dart';
 /// Inserts a deliberate stop on the leg nearest [waypoint].
 ///
 /// Shaping controls are re-indexed around the new stop so adding a café or
-/// meeting point does not discard route adjustments the rider already made.
+/// meeting point does not discard route adjustments the sailor already made.
 ImportedRoute insertRouteWaypoint(ImportedRoute route, RouteWaypoint waypoint) {
   final waypoints = _editableWaypoints(route);
   if (waypoints.length < 2) {

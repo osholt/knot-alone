@@ -35,9 +35,9 @@ void main() {
         for (var index = 0; index < 120; index += 1)
           GroupPipMarker(
             point: GeoPoint(latitude: 51, longitude: -3 + index / 100000),
-            label: 'Rider $index',
+            label: 'Sailor $index',
             colourArgb: 0xFF3478F6,
-            kind: GroupPipMarkerKind.rider,
+            kind: GroupPipMarkerKind.sailor,
             isLocal: index == 0,
           ),
       ],

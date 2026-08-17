@@ -228,7 +228,7 @@ def _publish_approved_revision(
     feature_id = (
         suggestion.target_feature_id
         if suggestion.action in {"correct", "remove"}
-        else f"tec-community-{suggestion.id}"
+        else f"sweeper-community-{suggestion.id}"
     )
     if feature_id is None:  # defended by schema, retained for service callers
         raise RelayServiceError(400, "Revision target required")
@@ -301,7 +301,7 @@ def _intersects_bounds(
 
 
 # ---------------------------------------------------------------------------
-# Anonymous rider road ratings (#159)
+# Anonymous sailor road ratings (#159)
 # ---------------------------------------------------------------------------
 
 WORTH_INCLUDING = "worth_including"
@@ -322,7 +322,7 @@ ROAD_RATING_PROMOTION_SHARE = 0.7
 
 # 60% saying no flags a candidate for a human to look at. It never removes one:
 # the recommendation is advisory input to the review process, and a road leaves
-# the catalogue only when a reviewer says so. One rider's dislike cannot remove
+# the catalogue only when a reviewer says so. One sailor's dislike cannot remove
 # anything, and neither can twenty.
 ROAD_RATING_REVIEW_SHARE = 0.6
 
@@ -335,11 +335,11 @@ def record_road_rating(
 ) -> None:
     """Count one anonymous verdict.
 
-    Takes no caller identity and stores none. There is no ride, no rider, no
+    Takes no caller identity and stores none. There is no voyage, no sailor, no
     device, no request hash and no client-supplied timestamp: the request schema
     forbids extra fields, so a client cannot add one, and this function has
     nowhere to write it if it did. Receipt is recorded to the day, because a
-    receipt second could be lined up against the ride journal's own sequence.
+    receipt second could be lined up against the voyage journal's own sequence.
 
     The cost is no per-submitter deduplication - one person can answer twice from
     two devices. That is a deliberate trade against anonymity, bounded by the

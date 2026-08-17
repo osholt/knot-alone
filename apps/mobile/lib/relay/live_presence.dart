@@ -1,9 +1,9 @@
-import '../domain/ride_role.dart';
-import '../domain/rider_color.dart';
-import '../domain/rider_location.dart';
+import '../domain/voyage_role.dart';
+import '../domain/sailor_color.dart';
+import '../domain/sailor_location.dart';
 import '../features/map/motorcycle_icon.dart';
 
-/// How old a rider's newest position is, in states a rider can act on.
+/// How old a sailor's newest position is, in states a sailor can act on.
 ///
 /// Thresholds are deliberately explicit and shared by every surface so a map
 /// marker, the roster and a vehicle head unit cannot disagree about whether a
@@ -20,12 +20,12 @@ enum PresenceFreshness {
 
   /// Older than [PresenceFreshnessPolicy.ageingWithin].
   ///
-  /// Still drawn: where a rider stopped is exactly what the group needs in
+  /// Still drawn: where a sailor stopped is exactly what the group needs in
   /// order to go back for them. It is demoted in wording and colour so it can
   /// never be mistaken for a current position.
   stale,
 
-  /// No position at all — the rider is in the ride but nothing has arrived.
+  /// No position at all — the sailor is in the voyage but nothing has arrived.
   none,
 }
 
@@ -41,7 +41,7 @@ extension PresenceFreshnessLabels on PresenceFreshness {
   bool get isTrustworthy => this == PresenceFreshness.live;
 
   /// True when the position is recent enough to count as current proof that the
-  /// rider is reachable. A stale position is evidence of a past fix only.
+  /// sailor is reachable. A stale position is evidence of a past fix only.
   bool get isTrackedAsContact =>
       this == PresenceFreshness.live || this == PresenceFreshness.ageing;
 }
@@ -63,8 +63,8 @@ enum PresenceClockBasis {
 
 extension PresenceClockBasisLabels on PresenceClockBasis {
   String get label => switch (this) {
-    PresenceClockBasis.sharedRelayClock => 'Timed by the ride service',
-    PresenceClockBasis.publisherClock => "Timed by the rider's own phone",
+    PresenceClockBasis.sharedRelayClock => 'Timed by the voyage service',
+    PresenceClockBasis.publisherClock => "Timed by the sailor's own phone",
   };
 }
 
@@ -96,7 +96,7 @@ class PresenceFreshnessPolicy {
   /// How far a publisher's own timestamp may sit from the relay's arrival stamp
   /// before that phone's clock is treated as untrustworthy rather than its
   /// position as old. Beyond this the disagreement is stated in words; it never
-  /// ages a reporting rider out silently.
+  /// ages a reporting sailor out silently.
   final Duration publisherClockTolerance;
 
   PresenceFreshness classify(Duration age) {
@@ -107,7 +107,7 @@ class PresenceFreshnessPolicy {
   }
 }
 
-/// Which channel produced a position. A rider can be corroborated by more than
+/// Which channel produced a position. A sailor can be corroborated by more than
 /// one at a time; that is evidence of reachability, not a conflict.
 enum LivePresenceSource {
   /// This phone's own GPS.
@@ -119,7 +119,7 @@ enum LivePresenceSource {
   /// The ephemeral, non-journalled presence channel over the nearby relay.
   nearbyPresence,
 
-  /// A durable `riderLocationUpdated` event from the offline-first journal.
+  /// A durable `sailorLocationUpdated` event from the offline-first journal.
   journal,
 }
 
@@ -128,11 +128,11 @@ extension LivePresenceSourceLabels on LivePresenceSource {
     LivePresenceSource.localDevice => 'This phone',
     LivePresenceSource.internetPresence => 'Internet presence',
     LivePresenceSource.nearbyPresence => 'Nearby presence',
-    LivePresenceSource.journal => 'Ride journal',
+    LivePresenceSource.journal => 'Voyage journal',
   };
 }
 
-/// A rider the transport says is in the ride, learned without waiting for the
+/// A sailor the transport says is in the voyage, learned without waiting for the
 /// bulk event batch.
 ///
 /// This is advisory: the durable journal stays authoritative for identity and
@@ -140,39 +140,39 @@ extension LivePresenceSourceLabels on LivePresenceSource {
 /// hide a participant who is demonstrably reachable.
 class PresenceRosterMember {
   const PresenceRosterMember({
-    required this.riderId,
+    required this.sailorId,
     required this.displayName,
     required this.role,
     required this.joinedAt,
     this.left = false,
     this.leftAt,
     this.motorcycleStyle = motorcycleIconStyleDefault,
-    this.riderSymbol = riderSymbolDefault,
-    this.riderColor = riderColorDefault,
+    this.sailorSymbol = sailorSymbolDefault,
+    this.sailorColor = sailorColorDefault,
   });
 
-  final String riderId;
+  final String sailorId;
   final String displayName;
-  final RideRole role;
+  final VoyageRole role;
   final DateTime joinedAt;
   final bool left;
 
-  /// When the relay recorded this rider's departure, when it reports it.
+  /// When the relay recorded this sailor's departure, when it reports it.
   ///
   /// Null from a relay that does not, in which case the departure is still
   /// authoritative but cannot be ordered against a later rejoin, so the roster
   /// may only add a departed row it alone knows about (#144).
   final DateTime? leftAt;
   final MotorcycleIconStyle motorcycleStyle;
-  final RiderSymbol riderSymbol;
-  final RiderColor riderColor;
+  final SailorSymbol sailorSymbol;
+  final SailorColor sailorColor;
 }
 
-/// One rider's reconciled live state, spanning both ride phases and every
+/// One sailor's reconciled live state, spanning both voyage phases and every
 /// transport.
-class LiveRiderPresence {
-  const LiveRiderPresence({
-    required this.riderId,
+class LiveSailorPresence {
+  const LiveSailorPresence({
+    required this.sailorId,
     required this.displayName,
     required this.role,
     required this.freshness,
@@ -180,8 +180,8 @@ class LiveRiderPresence {
     required this.isLocal,
     required this.knownSince,
     this.motorcycleStyle = motorcycleIconStyleDefault,
-    this.riderSymbol = riderSymbolDefault,
-    this.riderColor = riderColorDefault,
+    this.sailorSymbol = sailorSymbolDefault,
+    this.sailorColor = sailorColorDefault,
     this.location,
     this.age,
     this.contactAt,
@@ -189,38 +189,38 @@ class LiveRiderPresence {
     this.publisherClockOffset,
   });
 
-  final String riderId;
+  final String sailorId;
   final String displayName;
-  final RideRole role;
+  final VoyageRole role;
   final PresenceFreshness freshness;
   final Set<LivePresenceSource> sources;
   final bool isLocal;
 
-  /// The earliest moment this rider is known to have been in the ride, from the
+  /// The earliest moment this sailor is known to have been in the voyage, from the
   /// roster when the transport supplies it and otherwise from their oldest
   /// observed sample. Deterministic so a recomputed roster does not reorder.
   final DateTime knownSince;
   final MotorcycleIconStyle motorcycleStyle;
-  final RiderSymbol riderSymbol;
-  final RiderColor riderColor;
+  final SailorSymbol sailorSymbol;
+  final SailorColor sailorColor;
 
-  /// The newest position for this rider, or null when there is none worth
+  /// The newest position for this sailor, or null when there is none worth
   /// drawing. Never a position older than
   /// [PresenceFreshnessPolicy.retainFor].
-  final RiderLocation? location;
+  final SailorLocation? location;
 
   /// Age of [location] at the moment of reconciliation.
   final Duration? age;
 
-  /// When this rider was last demonstrably in contact, expressed on **this**
+  /// When this sailor was last demonstrably in contact, expressed on **this**
   /// device's clock. Null when nothing has been heard from them at all.
   ///
   /// Deliberately not interchangeable with the age of [location], even though
   /// today both are derived from the newest position that arrived. Position
   /// reports are driven by distance travelled with a keep-alive on a timer
-  /// (#166), so a rider stopped at a set of lights keeps proving they are there
+  /// (#166), so a sailor stopped at a set of lights keeps proving they are there
   /// while their position correctly stops changing. Anything judging *whether a
-  /// rider is present* must read this; anything judging *how current their
+  /// sailor is present* must read this; anything judging *how current their
   /// position is* must read [age].
   final DateTime? contactAt;
 
@@ -232,7 +232,7 @@ class LiveRiderPresence {
   /// phone clock is behind the relay's.
   ///
   /// This is the difference between two clocks, not an age. It exists so a
-  /// rider whose clock is wrong is *told* that, instead of being aged out as if
+  /// sailor whose clock is wrong is *told* that, instead of being aged out as if
   /// they had stopped reporting.
   final Duration? publisherClockOffset;
 
@@ -264,30 +264,30 @@ String formatPresenceAge(Duration age) {
   return '${age.inHours}h';
 }
 
-/// Every reason live rider state can be incomplete, as a named state rather
+/// Every reason live sailor state can be incomplete, as a named state rather
 /// than an empty map.
 enum PresenceLimitationKind {
-  /// The configured ride service does not advertise the presence capability.
+  /// The configured voyage service does not advertise the presence capability.
   serviceCapabilityMissing,
 
-  /// The ride service is reachable but presence requests are failing.
+  /// The voyage service is reachable but presence requests are failing.
   serviceUnreachable,
 
-  /// The ride credential was rejected for presence.
+  /// The voyage credential was rejected for presence.
   serviceUnauthorized,
 
-  /// This app is older than the ride service requires.
+  /// This app is older than the voyage service requires.
   clientUpdateRequired,
 
-  /// The ride service is older than this app.
+  /// The voyage service is older than this app.
   serviceUpgradeRequired,
 
   /// A peer's app is too old to publish continuous live positions.
   peerAppOlder,
 
-  /// A peer's phone clock disagrees with the ride service, so their own
+  /// A peer's phone clock disagrees with the voyage service, so their own
   /// timestamps cannot be used to judge how fresh their position is.
-  riderClockUntrusted,
+  sailorClockUntrusted,
 
   /// Live positions arrived but could not be read, so they were skipped rather
   /// than discarding the whole reply.
@@ -299,23 +299,23 @@ enum PresenceLimitationKind {
   /// Events could not be uploaded because the service lacks the capability.
   uploadCapabilityMissing,
 
-  /// An event the service refuses was set aside so the rest of the ride keeps
+  /// An event the service refuses was set aside so the rest of the voyage keeps
   /// flowing.
   uploadQuarantined,
 
-  /// The ride service cannot carry a leader-issued Sweeper request, so
-  /// the role has to be taken by the rider themselves.
-  tecAssignmentUnsupportedByService,
+  /// The voyage service cannot carry a skipper-issued Sweeper request, so
+  /// the role has to be taken by the sailor themselves.
+  sweeperAssignmentUnsupportedByService,
 
-  /// A named rider's app cannot read a leader-issued Sweeper request.
-  tecAssignmentUnsupportedByPeer,
+  /// A named sailor's app cannot read a skipper-issued Sweeper request.
+  sweeperAssignmentUnsupportedByPeer,
 
-  /// The ride service cannot carry a rider's rejoin route to the leader.
+  /// The voyage service cannot carry a sailor's rejoin route to the skipper.
   rejoinSharingUnsupportedByService,
 
-  /// The ride service cannot carry a rider's own phone number to the ride's
+  /// The voyage service cannot carry a sailor's own phone number to the voyage's
   /// coordination roles, so nothing was shared.
-  riderContactSharingUnsupportedByService,
+  sailorContactSharingUnsupportedByService,
 }
 
 /// A single named, user-readable limitation.
@@ -326,44 +326,44 @@ class PresenceLimitation {
   const PresenceLimitation({
     required this.kind,
     required this.message,
-    this.riderId,
-    this.riderDisplayName,
+    this.sailorId,
+    this.sailorDisplayName,
   });
 
   final PresenceLimitationKind kind;
   final String message;
-  final String? riderId;
-  final String? riderDisplayName;
+  final String? sailorId;
+  final String? sailorDisplayName;
 
   static PresenceLimitation peerAppOlder({
-    required String riderId,
+    required String sailorId,
     required String displayName,
   }) => PresenceLimitation(
     kind: PresenceLimitationKind.peerAppOlder,
-    riderId: riderId,
-    riderDisplayName: displayName,
+    sailorId: sailorId,
+    sailorDisplayName: displayName,
     message:
         "$displayName's app is older — their live position will not appear "
-        'once the ride starts until they update.',
+        'once the voyage starts until they update.',
   );
 
-  /// Names a peer whose phone clock disagrees with the ride service.
+  /// Names a peer whose phone clock disagrees with the voyage service.
   ///
   /// Their position is still shown and still counts as contact: it is timed by
-  /// the ride service instead of by their phone. Saying so is the alternative to
-  /// silently ageing out a rider who is reporting perfectly well.
-  static PresenceLimitation riderClockUntrusted({
-    required String riderId,
+  /// the voyage service instead of by their phone. Saying so is the alternative to
+  /// silently ageing out a sailor who is reporting perfectly well.
+  static PresenceLimitation sailorClockUntrusted({
+    required String sailorId,
     required String displayName,
     required Duration offset,
   }) => PresenceLimitation(
-    kind: PresenceLimitationKind.riderClockUntrusted,
-    riderId: riderId,
-    riderDisplayName: displayName,
+    kind: PresenceLimitationKind.sailorClockUntrusted,
+    sailorId: sailorId,
+    sailorDisplayName: displayName,
     message:
         "$displayName's phone clock is ${formatPresenceAge(offset.abs())} "
-        '${offset.isNegative ? 'ahead of' : 'behind'} the ride service, so '
-        'their position is timed by the ride service instead. Their location '
+        '${offset.isNegative ? 'ahead of' : 'behind'} the voyage service, so '
+        'their position is timed by the voyage service instead. Their location '
         'is still live.',
   );
 
@@ -373,41 +373,41 @@ class PresenceLimitation {
     kind: PresenceLimitationKind.positionsUnreadable,
     message:
         '$count live position${count == 1 ? '' : 's'} could not be read and '
-        'were skipped. Every other rider is unaffected.',
+        'were skipped. Every other sailor is unaffected.',
   );
 
   static const serviceCapabilityMissing = PresenceLimitation(
     kind: PresenceLimitationKind.serviceCapabilityMissing,
     message:
-        'The ride service does not support live rider positions yet, so only '
-        'saved ride history is shared.',
+        'The voyage service does not support live sailor positions yet, so only '
+        'saved voyage history is shared.',
   );
 
   static const serviceUnreachable = PresenceLimitation(
     kind: PresenceLimitationKind.serviceUnreachable,
     message:
-        'Live rider positions are paused because the ride service cannot be '
+        'Live sailor positions are paused because the voyage service cannot be '
         'reached. They resume automatically.',
   );
 
   static const serviceUnauthorized = PresenceLimitation(
     kind: PresenceLimitationKind.serviceUnauthorized,
     message:
-        'The ride service rejected this ride invitation, so live rider '
+        'The voyage service rejected this voyage invitation, so live sailor '
         'positions are unavailable. Re-join with a fresh invite.',
   );
 
   static const clientUpdateRequired = PresenceLimitation(
     kind: PresenceLimitationKind.clientUpdateRequired,
     message:
-        'Update Tide and Seek: this build is older than the ride service '
-        'supports, so live rider positions are unavailable.',
+        'Update Tide and Seek: this build is older than the voyage service '
+        'supports, so live sailor positions are unavailable.',
   );
 
   static const serviceUpgradeRequired = PresenceLimitation(
     kind: PresenceLimitationKind.serviceUpgradeRequired,
     message:
-        'This app is newer than the ride service, so live rider positions are '
+        'This app is newer than the voyage service, so live sailor positions are '
         'unavailable until the service is updated.',
   );
 
@@ -415,79 +415,79 @@ class PresenceLimitation {
       PresenceLimitation(
         kind: PresenceLimitationKind.unsupportedEventsIgnored,
         message:
-            '$count ride update${count == 1 ? '' : 's'} from a newer app '
+            '$count voyage update${count == 1 ? '' : 's'} from a newer app '
             'version could not be read and were skipped. Everything else in '
-            'the ride is unaffected.',
+            'the voyage is unaffected.',
       );
 
   static PresenceLimitation uploadCapabilityMissing(int count) =>
       PresenceLimitation(
         kind: PresenceLimitationKind.uploadCapabilityMissing,
         message:
-            '$count ride update${count == 1 ? '' : 's'} stayed on this phone '
-            'because the ride service does not support them yet.',
+            '$count voyage update${count == 1 ? '' : 's'} stayed on this phone '
+            'because the voyage service does not support them yet.',
       );
 
   static PresenceLimitation uploadQuarantined(int count) => PresenceLimitation(
     kind: PresenceLimitationKind.uploadQuarantined,
     message:
-        '$count ride update${count == 1 ? '' : 's'} were set aside because the '
-        'ride service refused them. Joining, positions and alerts keep working.',
+        '$count voyage update${count == 1 ? '' : 's'} were set aside because the '
+        'voyage service refused them. Joining, positions and alerts keep working.',
   );
 
   /// The outgoing direction for #128 part 1: this build can ask, the relay
   /// cannot carry the question. Names the fallback rather than letting the
-  /// leader believe a rider was asked.
-  static const tecAssignmentUnsupportedByService = PresenceLimitation(
-    kind: PresenceLimitationKind.tecAssignmentUnsupportedByService,
+  /// skipper believe a sailor was asked.
+  static const sweeperAssignmentUnsupportedByService = PresenceLimitation(
+    kind: PresenceLimitationKind.sweeperAssignmentUnsupportedByService,
     message:
-        'The ride service is too old to pass on a Sweeper request, so '
-        'nobody has been asked. The rider has to set the role themselves on '
-        'their own Ride tab.',
+        'The voyage service is too old to pass on a Sweeper request, so '
+        'nobody has been asked. The sailor has to set the role themselves on '
+        'their own Voyage tab.',
   );
 
   /// The incoming direction for #128 part 1: the request will reach that
-  /// rider's phone and their build will skip it, so the leader must be told
-  /// which rider, by name, rather than watching a request sit at "waiting".
-  static PresenceLimitation tecAssignmentUnsupportedByPeer({
-    required String riderId,
+  /// sailor's phone and their build will skip it, so the skipper must be told
+  /// which sailor, by name, rather than watching a request sit at "waiting".
+  static PresenceLimitation sweeperAssignmentUnsupportedByPeer({
+    required String sailorId,
     required String displayName,
   }) => PresenceLimitation(
-    kind: PresenceLimitationKind.tecAssignmentUnsupportedByPeer,
-    riderId: riderId,
-    riderDisplayName: displayName,
+    kind: PresenceLimitationKind.sweeperAssignmentUnsupportedByPeer,
+    sailorId: sailorId,
+    sailorDisplayName: displayName,
     message:
         "$displayName's app is older — they will not see a Sweeper "
         'request until they update. Ask them to set the role themselves.',
   );
 
-  /// #128 part 2. The rider keeps their own rejoin guidance either way; only the
-  /// leader's copy is lost, and the leader is told so.
+  /// #128 part 2. The sailor keeps their own rejoin guidance either way; only the
+  /// skipper's copy is lost, and the skipper is told so.
   static const rejoinSharingUnsupportedByService = PresenceLimitation(
     kind: PresenceLimitationKind.rejoinSharingUnsupportedByService,
     message:
-        'The ride service is too old to send your rejoin route to the ride '
-        'leader. You still have it on this phone; the leader will not see it.',
+        'The voyage service is too old to send your rejoin route to the voyage '
+        'skipper. You still have it on this phone; the skipper will not see it.',
   );
 
   /// #188. A new event type is rejected outright by an older *build*, and
-  /// withheld by an older *relay*, so the one thing a rider must never be left
+  /// withheld by an older *relay*, so the one thing a sailor must never be left
   /// with is the belief that their number went out. Names what is lost and what
   /// still works: the in-app alert never needed a phone number.
-  static const riderContactSharingUnsupportedByService = PresenceLimitation(
-    kind: PresenceLimitationKind.riderContactSharingUnsupportedByService,
+  static const sailorContactSharingUnsupportedByService = PresenceLimitation(
+    kind: PresenceLimitationKind.sailorContactSharingUnsupportedByService,
     message:
-        'The ride service is too old to pass on your phone number, so nobody '
-        'has been given it. Your emergency alert still reaches the leader and '
+        'The voyage service is too old to pass on your phone number, so nobody '
+        'has been given it. Your emergency alert still reaches the skipper and '
         'TEC in the app.',
   );
 }
 
-/// Merges every position channel into one per-rider live state.
+/// Merges every position channel into one per-sailor live state.
 ///
 /// The reconciler is pure and phase-neutral on purpose. Pre-start presence,
-/// post-start journal events and nearby presence all arrive here, so a rider
-/// visible before the start stays visible across `rideStarted` without
+/// post-start journal events and nearby presence all arrive here, so a sailor
+/// visible before the start stays visible across `voyageStarted` without
 /// re-opting-in and without a duplicate identity.
 class LivePresenceReconciler {
   const LivePresenceReconciler({this.policy = const PresenceFreshnessPolicy()});
@@ -495,28 +495,28 @@ class LivePresenceReconciler {
   final PresenceFreshnessPolicy policy;
 
   /// [journal] is the durable post-start location history, [internetPresence]
-  /// and [nearbyPresence] are the ephemeral channels, and [roster] names riders
+  /// and [nearbyPresence] are the ephemeral channels, and [roster] names sailors
   /// the transport has seen even when no position exists yet.
   ///
   /// [relayClockOffset] is the relay's clock minus this device's, measured on the
-  /// last successful presence sync. A remote rider's position that the relay
+  /// last successful presence sync. A remote sailor's position that the relay
   /// stamped is aged on the relay's clock — the only clock both phones share —
   /// so a peer whose own clock is wrong is never aged out as if they had stopped
   /// reporting. This device's own fixes are always aged on its own clock.
-  List<LiveRiderPresence> reconcile({
+  List<LiveSailorPresence> reconcile({
     required DateTime now,
-    required String localRiderId,
-    Iterable<RiderLocation> journal = const [],
-    Iterable<RiderLocation> internetPresence = const [],
-    Iterable<RiderLocation> nearbyPresence = const [],
+    required String localSailorId,
+    Iterable<SailorLocation> journal = const [],
+    Iterable<SailorLocation> internetPresence = const [],
+    Iterable<SailorLocation> nearbyPresence = const [],
     Iterable<PresenceRosterMember> roster = const [],
     Duration relayClockOffset = Duration.zero,
   }) {
     final best = <String, _Candidate>{};
-    void offer(RiderLocation location, LivePresenceSource source) {
-      final existing = best[location.riderId];
+    void offer(SailorLocation location, LivePresenceSource source) {
+      final existing = best[location.sailorId];
       if (existing == null) {
-        best[location.riderId] = _Candidate(location, {source});
+        best[location.sailorId] = _Candidate(location, {source});
         return;
       }
       existing.sources.add(source);
@@ -524,7 +524,7 @@ class LivePresenceReconciler {
         existing.oldestSampleAt = location.sample.recordedAt;
       }
       // Newest recorded sample wins, so a duplicate or out-of-order delivery
-      // can never rewind a rider to an older coordinate.
+      // can never rewind a sailor to an older coordinate.
       if (location.sample.recordedAt.isAfter(
         existing.location.sample.recordedAt,
       )) {
@@ -547,24 +547,24 @@ class LivePresenceReconciler {
     final departed = <String>{};
     for (final member in roster) {
       if (member.left) {
-        departed.add(member.riderId);
+        departed.add(member.sailorId);
         continue;
       }
-      rosterById[member.riderId] = member;
+      rosterById[member.sailorId] = member;
     }
 
-    final result = <LiveRiderPresence>[];
-    for (final riderId in {...best.keys, ...rosterById.keys}) {
+    final result = <LiveSailorPresence>[];
+    for (final sailorId in {...best.keys, ...rosterById.keys}) {
       // A departure is explicit and authoritative. A lingering ephemeral
-      // position must not resurrect a rider who has left the ride.
-      if (departed.contains(riderId)) continue;
-      final candidate = best[riderId];
-      final member = rosterById[riderId];
-      final isLocal = riderId == localRiderId;
+      // position must not resurrect a sailor who has left the voyage.
+      if (departed.contains(sailorId)) continue;
+      final candidate = best[sailorId];
+      final member = rosterById[sailorId];
+      final isLocal = sailorId == localSailorId;
       if (candidate == null) {
         result.add(
-          LiveRiderPresence(
-            riderId: riderId,
+          LiveSailorPresence(
+            sailorId: sailorId,
             displayName: member!.displayName,
             role: member.role,
             freshness: PresenceFreshness.none,
@@ -572,8 +572,8 @@ class LivePresenceReconciler {
             isLocal: isLocal,
             knownSince: member.joinedAt,
             motorcycleStyle: member.motorcycleStyle,
-            riderSymbol: member.riderSymbol,
-            riderColor: member.riderColor,
+            sailorSymbol: member.sailorSymbol,
+            sailorColor: member.sailorColor,
           ),
         );
         continue;
@@ -601,7 +601,7 @@ class LivePresenceReconciler {
         if (isLocal) LivePresenceSource.localDevice,
       };
       result.add(
-        LiveRiderPresence(
+        LiveSailorPresence(
           clockBasis: relayStamped
               ? PresenceClockBasis.sharedRelayClock
               : PresenceClockBasis.publisherClock,
@@ -610,7 +610,7 @@ class LivePresenceReconciler {
                   publisherOffset.abs() > policy.publisherClockTolerance
               ? publisherOffset
               : null,
-          riderId: riderId,
+          sailorId: sailorId,
           // The roster is the transport's authoritative identity when it has
           // one; a position payload is only self-described.
           displayName: member?.displayName ?? location.displayName,
@@ -620,13 +620,13 @@ class LivePresenceReconciler {
           isLocal: isLocal,
           knownSince: member?.joinedAt ?? candidate.oldestSampleAt,
           motorcycleStyle: location.motorcycleStyle,
-          riderSymbol: location.riderSymbol,
-          riderColor: location.riderColor,
+          sailorSymbol: location.sailorSymbol,
+          sailorColor: location.sailorColor,
           location: location,
           age: age,
-          // The newest evidence of this rider, moved onto this device's clock.
+          // The newest evidence of this sailor, moved onto this device's clock.
           // For a relay-stamped position that is the relay's arrival stamp, the
-          // only clock both phones share, so a stationary rider republishing an
+          // only clock both phones share, so a stationary sailor republishing an
           // unchanged position still advances their contact.
           contactAt: now.subtract(age),
         ),
@@ -634,23 +634,23 @@ class LivePresenceReconciler {
     }
     result.sort((left, right) {
       final byName = left.displayName.compareTo(right.displayName);
-      return byName != 0 ? byName : left.riderId.compareTo(right.riderId);
+      return byName != 0 ? byName : left.sailorId.compareTo(right.sailorId);
     });
     return List.unmodifiable(result);
   }
 
-  /// The reconciled positions worth drawing, newest per rider.
-  List<RiderLocation> reconcileLocations({
+  /// The reconciled positions worth drawing, newest per sailor.
+  List<SailorLocation> reconcileLocations({
     required DateTime now,
-    required String localRiderId,
-    Iterable<RiderLocation> journal = const [],
-    Iterable<RiderLocation> internetPresence = const [],
-    Iterable<RiderLocation> nearbyPresence = const [],
+    required String localSailorId,
+    Iterable<SailorLocation> journal = const [],
+    Iterable<SailorLocation> internetPresence = const [],
+    Iterable<SailorLocation> nearbyPresence = const [],
     Duration relayClockOffset = Duration.zero,
   }) => List.unmodifiable([
     for (final presence in reconcile(
       now: now,
-      localRiderId: localRiderId,
+      localSailorId: localSailorId,
       journal: journal,
       internetPresence: internetPresence,
       nearbyPresence: nearbyPresence,
@@ -668,7 +668,7 @@ class _Candidate {
     : oldestSampleAt = location.sample.recordedAt,
       newestSource = sources.first;
 
-  RiderLocation location;
+  SailorLocation location;
   final Set<LivePresenceSource> sources;
   DateTime oldestSampleAt;
 

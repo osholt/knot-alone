@@ -173,7 +173,7 @@ class RoundaboutRingArc {
 }
 
 /// An arrowhead. The symbol carries two: one at the end of the exit road,
-/// saying where the rider leaves, and one on the ring, saying which way round
+/// saying where the sailor leaves, and one on the ring, saying which way round
 /// they travel to get there.
 @immutable
 class RoundaboutArrowHead {
@@ -184,7 +184,7 @@ class RoundaboutArrowHead {
     required this.halfWidth,
   });
 
-  /// Where the arrow points, which is where the rider is going.
+  /// Where the arrow points, which is where the sailor is going.
   final Offset tip;
 
   /// Unit vector from the ring towards [tip].
@@ -209,7 +209,7 @@ class RoundaboutArrowHead {
   }
 }
 
-/// The exit the rider takes: a road leaving through the break in the ring, and
+/// The exit the sailor takes: a road leaving through the break in the ring, and
 /// the symbol's only arrowhead at the end of it.
 @immutable
 class RoundaboutExitRoad {
@@ -261,7 +261,7 @@ class RoundaboutSymbolGeometry {
     final exitDegrees = _exitDegrees(symbol);
     final entryDegrees = _entryDegrees(exitDegrees);
     final entryUnit = _unitAt(entryDegrees);
-    // Turning back leaves by the exit beside the one the rider came in by, so
+    // Turning back leaves by the exit beside the one the sailor came in by, so
     // both roads sit near the bottom of the ring. Run them along the box instead
     // of along their own radii: radial roads splay apart into a V, which reads as
     // two unrelated sticks rather than as going back the way you came.
@@ -333,7 +333,7 @@ class RoundaboutSymbolGeometry {
     );
   }
 
-  /// Which way round the ring the rider travels, drawn on the ring itself.
+  /// Which way round the ring the sailor travels, drawn on the ring itself.
   ///
   /// Reported from the field as "the symbol shows going anticlockwise round a
   /// roundabout to turn right". The arc was correct — keeping left, a right turn
@@ -341,7 +341,7 @@ class RoundaboutSymbolGeometry {
   /// 6 → 9 → 12 → 3, so the drawn path leaves the bottom towards the *left* of
   /// the box before coming back to the right-hand exit. It reads as
   /// anticlockwise because the only thing saying otherwise was the shape of the
-  /// arc, and a rider glancing at a long arc reads it in whichever direction
+  /// arc, and a sailor glancing at a long arc reads it in whichever direction
   /// their eye travels.
   ///
   /// Flipping the sweep was the obvious fix and would have drawn the illegal
@@ -349,7 +349,7 @@ class RoundaboutSymbolGeometry {
   ///
   /// Placed early on the arc, not at its middle: on a near-full circle the
   /// middle is diametrically opposite the roads and reads as belonging to
-  /// neither, while a mark just after the rider joins is unambiguously about the
+  /// neither, while a mark just after the sailor joins is unambiguously about the
   /// direction they set off in.
   static RoundaboutArrowHead? _ringDirection({
     required Offset centre,
@@ -381,7 +381,7 @@ class RoundaboutSymbolGeometry {
     );
   }
 
-  /// Straight down the box, the way the rider came from.
+  /// Straight down the box, the way the sailor came from.
   static const _down = Offset(0, 1);
 
   /// Whether the exit leaves close enough to the road in for the two to need
@@ -391,7 +391,7 @@ class RoundaboutSymbolGeometry {
       _halfTurn(exitDegrees - _straightBackDegrees).abs() <
           _minimumRoadSeparationDegrees;
 
-  /// Straight back the way the rider came, where the road in normally meets the
+  /// Straight back the way the sailor came, where the road in normally meets the
   /// ring: at the bottom of the box, opposite a straight-ahead exit.
   static const _straightBackDegrees = 180.0;
 
@@ -419,7 +419,7 @@ class RoundaboutSymbolGeometry {
   /// so the mark would be clutter crowding the entry road. Keeping left that
   /// leaves a left turn (a quarter of the ring) unmarked, and marks straight on
   /// (a half) and a right turn (three quarters) - which are exactly the two a
-  /// rider can read backwards.
+  /// sailor can read backwards.
   static const _minimumArcForDirectionDegrees = 135.0;
 
   /// How far along the ridden arc the direction arrowhead sits.
@@ -445,7 +445,7 @@ class RoundaboutSymbolGeometry {
   final Offset entryRoadEnd;
   final List<RoundaboutRingArc> ringArcs;
 
-  /// Which way round the ring the rider goes. Null where the arc is too short
+  /// Which way round the ring the sailor goes. Null where the arc is too short
   /// to carry the mark, which is also where the direction is not in doubt.
   final RoundaboutArrowHead? ringDirection;
 
@@ -457,7 +457,7 @@ class RoundaboutSymbolGeometry {
       ringArcs.fold(0, (total, arc) => total + arc.sweepDegrees.abs());
 
   /// How much of the ring is left open for the roads to pass through.
-  /// What is not drawn: the part of the ring the rider never reaches.
+  /// What is not drawn: the part of the ring the sailor never reaches.
   double get ringGapDegrees => 360 - ringSweepDegrees;
 
   /// The number of arrowheads drawn, which is one wherever a direction is
@@ -469,7 +469,7 @@ class RoundaboutSymbolGeometry {
   /// Where the exit road leaves the ring.
   ///
   /// Four fixed angles, from the same bucket the wording uses (#427), so the arrow
-  /// and the words cannot disagree. An arrow at 45 degrees invited a rider to read
+  /// and the words cannot disagree. An arrow at 45 degrees invited a sailor to read
   /// a precision the data does not have, and #412 reports that precision as wrong
   /// about as often as it is right.
   static double? _exitDegrees(RoundaboutSymbol symbol) {
@@ -477,7 +477,7 @@ class RoundaboutSymbolGeometry {
     if (bucket == null) return _legacyExitDegrees(symbol);
     // Turning back is the one bucket whose *side* depends on the driving side.
     // Keeping left, traffic circulates clockwise, so the exit beside the one the
-    // rider came in by is the one they reach last — just before the road in
+    // sailor came in by is the one they reach last — just before the road in
     // rather than just after it. Getting this backwards drew a U-turn as a short
     // arc: take the first exit, the opposite instruction. That is what
     // `_legacyExitDegrees` already handles, so it keeps handling it.
@@ -496,7 +496,7 @@ class RoundaboutSymbolGeometry {
     ManeuverDirection.slightRight => 45,
     ManeuverDirection.right => 90,
     ManeuverDirection.sharpRight => 135,
-    // Turning back leaves by the exit beside the one the rider joined by -
+    // Turning back leaves by the exit beside the one the sailor joined by -
     // but the one they reach *last*, having gone almost the whole way round.
     // Keeping left, traffic circulates clockwise, so that exit sits just
     // before the road in rather than just after it. The two were the wrong way
@@ -512,7 +512,7 @@ class RoundaboutSymbolGeometry {
   /// It comes straight up from the bottom, except where the exit turns so far
   /// back that the two would be drawn along each other: the road in then swings
   /// to the other side of straight back, so a turn back on itself reads as
-  /// leaving by the exit beside the one the rider came in by.
+  /// leaving by the exit beside the one the sailor came in by.
   static double _entryDegrees(double? exitDegrees) {
     if (exitDegrees == null) return _straightBackDegrees;
     final fromStraightBack = _halfTurn(exitDegrees - _straightBackDegrees);
@@ -530,7 +530,7 @@ class RoundaboutSymbolGeometry {
   }
 
   /// Half the ring gap, as the angle whose chord is one road width: the road
-  /// The one arc: the part of the ring the rider actually rides.
+  /// The one arc: the part of the ring the sailor actually voyages.
   ///
   /// From where they join to where they leave, the way traffic flows on their
   /// side of the road. The rest of the circle is not drawn at all - it is not a
@@ -539,7 +539,7 @@ class RoundaboutSymbolGeometry {
   ///
   /// This replaced a ring drawn as two arcs with a fixed gap either side of each
   /// road. Every complaint about the old symbol came from the part of the ring the
-  /// rider does not ride: drawn thinner it read as a second, smaller circle;
+  /// sailor does not voyage: drawn thinner it read as a second, smaller circle;
   /// drawn at full weight it closed the ring up; and the fixed gaps left the roads
   /// either floating in a hole or welded to an unbroken circle. Not drawing it at
   /// all answers all of that, and says something true - this is the way round you
@@ -554,7 +554,7 @@ class RoundaboutSymbolGeometry {
       // ridden. The whole circle is drawn, saying only "a roundabout".
       return [const RoundaboutRingArc(startDegrees: 0, sweepDegrees: 360)];
     }
-    // Traffic runs clockwise where riders keep left, so that is the way round the
+    // Traffic runs clockwise where sailors keep left, so that is the way round the
     // arc sweeps: the first exit is a short arc, the last one nearly the whole
     // circle. Where the driving side was never reported, assume the local one
     // rather than draw nothing - the exit road still carries the instruction.
@@ -578,10 +578,10 @@ class RoundaboutSymbolGeometry {
   }
 }
 
-/// Paints a roundabout with the exit pointing where the rider actually goes.
+/// Paints a roundabout with the exit pointing where the sailor actually goes.
 ///
 /// The ring is broken where the roads meet it and the exit carries the only
-/// arrowhead, so the one arrow a rider glances at is the one they follow.
+/// arrowhead, so the one arrow a sailor glances at is the one they follow.
 class RoundaboutSymbolPainter extends CustomPainter {
   const RoundaboutSymbolPainter({required this.symbol, required this.color});
 
@@ -603,7 +603,7 @@ class RoundaboutSymbolPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final geometry = RoundaboutSymbolGeometry.of(symbol, size);
 
-    // The road the rider is on, entering from the bottom of the box.
+    // The road the sailor is on, entering from the bottom of the box.
     canvas.drawLine(
       geometry.entryRoadStart,
       geometry.entryRoadEnd,
@@ -782,7 +782,7 @@ class ManeuverLaneStrip extends StatelessWidget {
                 ),
               ),
               // A usable lane is marked by an underline as well as colour so it
-              // stays distinct in bright sun and for colour-blind riders.
+              // stays distinct in bright sun and for colour-blind sailors.
               child: Column(
                 children: [
                   Expanded(
@@ -798,7 +798,7 @@ class ManeuverLaneStrip extends StatelessWidget {
                   ),
                   Container(
                     // Grows with the tile: the underline is what keeps a usable
-                    // lane distinct in bright sun and for a rider who cannot
+                    // lane distinct in bright sun and for a sailor who cannot
                     // separate the two fills by colour, so it must not stay a
                     // hairline while the tile doubles.
                     height: 4,

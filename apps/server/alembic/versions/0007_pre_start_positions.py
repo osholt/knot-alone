@@ -20,13 +20,13 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "pre_start_positions",
-        sa.Column("ride_id", sa.String(length=128), nullable=False),
-        sa.Column("rider_id", sa.String(length=128), nullable=False),
+        sa.Column("voyage_id", sa.String(length=128), nullable=False),
+        sa.Column("sailor_id", sa.String(length=128), nullable=False),
         sa.Column("snapshot_ciphertext", sa.LargeBinary(), nullable=False),
         sa.Column("received_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["ride_id"], ["rides.id"], ondelete="CASCADE"),
-        sa.PrimaryKeyConstraint("ride_id", "rider_id"),
+        sa.ForeignKeyConstraint(["voyage_id"], ["voyages.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("voyage_id", "sailor_id"),
     )
     op.create_index(
         "ix_pre_start_positions_expiry",

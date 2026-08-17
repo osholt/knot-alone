@@ -7,32 +7,32 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../controllers/distance_unit_controller.dart';
-import '../../controllers/completed_rides_controller.dart';
+import '../../controllers/completed_voyages_controller.dart';
 import '../../controllers/map_style_mode_controller.dart';
-import '../../controllers/ride_code_preference_controller.dart';
-import '../../controllers/ride_controller.dart';
+import '../../controllers/voyage_code_preference_controller.dart';
+import '../../controllers/voyage_controller.dart';
 import '../../controllers/route_progress_display_controller.dart';
-import '../../controllers/rider_profile_controller.dart';
+import '../../controllers/sailor_profile_controller.dart';
 import '../../controllers/shared_route_controller.dart';
-import '../../controllers/ride_diagnostics_controller.dart';
+import '../../controllers/voyage_diagnostics_controller.dart';
 import '../../controllers/spoken_guidance_controller.dart';
 import '../../domain/imported_route.dart' show GeoPoint;
 import '../../services/road_routing.dart';
 import 'home_destination_search.dart';
 import 'home_map_backdrop.dart';
-import 'home_ride_actions.dart';
+import 'home_voyage_actions.dart';
 import 'scan_invitation_screen.dart';
 import '../../controllers/test_control_controller.dart';
 import '../../domain/join_invite.dart';
 import '../../domain/recorded_route_store.dart';
-import '../../domain/ride_coordination_mode.dart';
+import '../../domain/voyage_coordination_mode.dart';
 import '../../internet/plan_directory.dart';
 import '../../services/build_identity.dart';
 import '../../services/gpx_import_source.dart';
 import '../../services/stored_route_library.dart';
 import '../map/stored_route_picker.dart';
-import '../ride/previous_rides_screen.dart';
-import '../ride/route_recorder_screen.dart';
+import '../voyage/previous_voyages_screen.dart';
+import '../voyage/route_recorder_screen.dart';
 import '../settings/about_build_sheet.dart';
 import '../settings/emergency_info_sheet.dart';
 import '../settings/unit_settings_sheet.dart';
@@ -43,17 +43,17 @@ class HomeScreen extends StatefulWidget {
     required this.controller,
     required this.distanceUnits,
     required this.mapStyleMode,
-    required this.rideCodePreference,
-    required this.riderProfile,
+    required this.voyageCodePreference,
+    required this.sailorProfile,
     required this.sharedRoutes,
     this.routeProgressDisplay,
     required this.recordedRoutes,
-    required this.completedRides,
+    required this.completedVoyages,
     this.planDirectory,
     this.testControl,
     this.spokenGuidance,
-    this.rideDiagnostics,
-    this.restoringRideCode,
+    this.voyageDiagnostics,
+    this.restoringVoyageCode,
     this.restorationError,
     this.onRetryRestoration,
     this.openJoinGroup = false,
@@ -61,15 +61,15 @@ class HomeScreen extends StatefulWidget {
     this.enableNativeServices = true,
   });
 
-  final RideController controller;
+  final VoyageController controller;
   final DistanceUnitController distanceUnits;
   final MapStyleModeController mapStyleMode;
-  final RideCodePreferenceController rideCodePreference;
-  final RiderProfileController riderProfile;
+  final VoyageCodePreferenceController voyageCodePreference;
+  final SailorProfileController sailorProfile;
   final SharedRouteController sharedRoutes;
   final RouteProgressDisplayController? routeProgressDisplay;
   final RecordedRouteStore recordedRoutes;
-  final CompletedRidesController completedRides;
+  final CompletedVoyagesController completedVoyages;
   final PlanDirectory? planDirectory;
 
   /// Null unless this build carries the test-control define; only forwarded to
@@ -77,15 +77,15 @@ class HomeScreen extends StatefulWidget {
   final TestControlController? testControl;
 
   /// Whether turn instructions are spoken (#286). Forwarded to the settings
-  /// sheet, which is where a rider opts in.
+  /// sheet, which is where a sailor opts in.
   final SpokenGuidanceController? spokenGuidance;
 
   /// Null in an ordinary build. Threaded so the Settings sheet opened from
-  /// *here* offers the recorder too — wiring only the ride shell's sheet is
-  /// what hid it from a tester who had never started a ride (#419).
-  final RideDiagnosticsController? rideDiagnostics;
+  /// *here* offers the recorder too — wiring only the voyage shell's sheet is
+  /// what hid it from a tester who had never started a voyage (#419).
+  final VoyageDiagnosticsController? voyageDiagnostics;
 
-  final String? restoringRideCode;
+  final String? restoringVoyageCode;
   final Object? restorationError;
   final VoidCallback? onRetryRestoration;
 
@@ -113,13 +113,13 @@ class _HomeScreenState extends State<HomeScreen> {
       _scheduleJoinGroupSheet();
       return;
     }
-    final choice = widget.riderProfile.takePendingRideChoice();
+    final choice = widget.sailorProfile.takePendingVoyageChoice();
     if (choice != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _showRideSheet(
+          _showVoyageSheet(
             context,
-            creating: choice == OnboardingRideChoice.create,
+            creating: choice == OnboardingVoyageChoice.create,
           );
         }
       });
@@ -140,12 +140,12 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       widget.onJoinGroupOpened?.call();
-      await _showRideSheet(context, creating: false);
+      await _showVoyageSheet(context, creating: false);
       _joinGroupOpenScheduled = false;
     });
   }
 
-  /// Where the rider is, shared with the map below so a searched destination can
+  /// Where the sailor is, shared with the map below so a searched destination can
   /// be routed from here (#431).
   final _position = ValueNotifier<GeoPoint?>(null);
 
@@ -158,12 +158,12 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  /// True while a route is being planned, which disables the actions so a rider
-  /// cannot start a second ride on top of the one being arranged.
+  /// True while a route is being planned, which disables the actions so a sailor
+  /// cannot start a second voyage on top of the one being arranged.
   bool _planningDestination = false;
 
   /// Built once, and deliberately one instance: `NominatimDestinationSearchService`
-  /// caches by query, so planning a route to a result the rider just searched for
+  /// caches by query, so planning a route to a result the sailor just searched for
   /// is a cache hit rather than a second call to a public geocoder that asks for
   /// no more than one a second.
   final _routingClient = http.Client();
@@ -189,8 +189,8 @@ class _HomeScreenState extends State<HomeScreen> {
       // (#426). #405 asked for this and #407 delivered a map behind a
       // full-screen panel — a brand mark, a heading, a paragraph, four buttons,
       // two links and a footer over a gradient covering the whole screen. From
-      // the ride: "I don't want the start screen at all. I want the selection of
-      // starting a ride to happen from the map view."
+      // the voyage: "I don't want the start screen at all. I want the selection of
+      // starting a voyage to happen from the map view."
       //
       // So there is no panel and no scrim. What is left standing on the map is
       // one bar of actions at the bottom, the two controls at the top right, and
@@ -201,11 +201,11 @@ class _HomeScreenState extends State<HomeScreen> {
           HomeMapBackdrop(
             mapStyleMode: widget.mapStyleMode,
             distanceUnit: widget.distanceUnits.value,
-            completedRideStore: widget.completedRides,
+            completedVoyageStore: widget.completedVoyages,
             enableNativeServices: widget.enableNativeServices,
             // So the map's own "Show my location" control sits above the action
             // bar rather than under it.
-            bottomInset: HomeRideActions.reservedHeight,
+            bottomInset: HomeVoyageActions.reservedHeight,
             position: _position,
           ),
           SafeArea(
@@ -216,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // is why the panel existed at all; they are now cards on the map
                 // that appear and go.
                 // The way in that #431 asked for: a magnifying glass and a
-                // field, on the map, before any decision about the ride.
+                // field, on the map, before any decision about the voyage.
                 Positioned(
                   top: 6,
                   left: 12,
@@ -240,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         tooltip: 'Emergency info',
                         onPressed: () => EmergencyInfoSheet.show(
                           context,
-                          widget.riderProfile,
+                          widget.sailorProfile,
                         ),
                         icon: const Icon(Icons.medical_information_outlined),
                       ),
@@ -250,11 +250,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           context,
                           widget.distanceUnits,
                           widget.mapStyleMode,
-                          widget.riderProfile,
+                          widget.sailorProfile,
                           routeProgressDisplay: widget.routeProgressDisplay,
                           testControl: widget.testControl,
                           spokenGuidance: widget.spokenGuidance,
-                          rideDiagnostics: widget.rideDiagnostics,
+                          voyageDiagnostics: widget.voyageDiagnostics,
                         ),
                         icon: const Icon(Icons.settings_outlined),
                       ),
@@ -268,13 +268,13 @@ class _HomeScreenState extends State<HomeScreen> {
             left: 0,
             right: 0,
             bottom: 0,
-            child: HomeRideActions(
+            child: HomeVoyageActions(
               enabled:
                   !widget.controller.busy &&
                   !_planningDestination &&
                   widget.onRetryRestoration == null,
-              onCreate: () => _showRideSheet(context, creating: true),
-              onJoin: () => _showRideSheet(context, creating: false),
+              onCreate: () => _showVoyageSheet(context, creating: true),
+              onJoin: () => _showVoyageSheet(context, creating: false),
               onMore: () => unawaited(_showMoreActions(context)),
             ),
           ),
@@ -291,15 +291,15 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Widget> _notices(BuildContext context) => [
     TesterUpdateBanner(identity: _buildIdentity),
     if (widget.onRetryRestoration != null)
-      _RideRestorationBanner(
-        rideCode: widget.restoringRideCode,
+      _VoyageRestorationBanner(
+        voyageCode: widget.restoringVoyageCode,
         error: widget.restorationError,
         onRetry: widget.onRetryRestoration!,
       ),
-    if (widget.controller.endedRideSetAside)
-      _SetAsideRideBanner(
-        rideCode: widget.controller.session!.rideCode,
-        onReopen: widget.controller.reopenEndedRide,
+    if (widget.controller.endedVoyageSetAside)
+      _SetAsideVoyageBanner(
+        voyageCode: widget.controller.session!.voyageCode,
+        onReopen: widget.controller.reopenEndedVoyage,
       ),
     if (widget.sharedRoutes.pending case final file?)
       _PendingSharedRouteBanner(
@@ -332,15 +332,15 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              key: const Key('start-ride-simulator'),
+              key: const Key('start-voyage-simulator'),
               leading: const Icon(Icons.science_outlined),
-              title: const Text('Try a simulated ride'),
+              title: const Text('Try a simulated voyage'),
               subtitle: const Text('Never shares your location'),
               enabled:
                   !widget.controller.busy && widget.onRetryRestoration == null,
               onTap: () {
                 Navigator.of(sheetContext).pop();
-                widget.controller.createSimulationRide();
+                widget.controller.createSimulationVoyage();
               },
             ),
             ListTile(
@@ -355,17 +355,17 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              key: const Key('ride-library-button'),
+              key: const Key('voyage-library-button'),
               leading: const Icon(Icons.route_outlined),
-              title: const Text('Ride library'),
+              title: const Text('Voyage library'),
               subtitle: Text(
-                widget.completedRides.rides.isEmpty
-                    ? 'Recorded routes and previous rides'
-                    : 'Recorded routes and ${widget.completedRides.rides.length} previous ride${widget.completedRides.rides.length == 1 ? '' : 's'}',
+                widget.completedVoyages.voyages.isEmpty
+                    ? 'Recorded routes and previous voyages'
+                    : 'Recorded routes and ${widget.completedVoyages.voyages.length} previous voyage${widget.completedVoyages.voyages.length == 1 ? '' : 's'}',
               ),
               onTap: () {
                 Navigator.of(sheetContext).pop();
-                unawaited(_openRideLibrary(context));
+                unawaited(_openVoyageLibrary(context));
               },
             ),
             const Divider(height: 8),
@@ -390,10 +390,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Search for somewhere to ride to, then arrange the ride around it (#431).
+  /// Search for somewhere to voyage to, then arrange the voyage around it (#431).
   ///
-  /// The order is the point. The app used to ask for ride scope, coordination
-  /// mode, display name and an optional route code *before* a rider got near a
+  /// The order is the point. The app used to ask for voyage scope, coordination
+  /// mode, display name and an optional route code *before* a sailor got near a
   /// map; this asks where they are going and infers the rest.
   /// Takes no context: it uses the State's own, so the `mounted` check after
   /// each await is guarding the thing actually being used.
@@ -406,31 +406,31 @@ class _HomeScreenState extends State<HomeScreen> {
     if (outcome == null || !mounted) return;
     switch (outcome) {
       case HomeSearchDestination(:final choice, :final start):
-        await _startRideTo(choice, start);
+        await _startVoyageTo(choice, start);
       case HomeSearchHandoff(:final kind):
         switch (kind) {
           // Both of these are the existing form, which already knows how to take
-          // a six-digit ride code and a planner route code. #431 is about the way
+          // a six-digit voyage code and a planner route code. #431 is about the way
           // in, not about replacing what works once you are there.
           case HomeSearchHandoffKind.joinWithCode:
-            await _showRideSheet(context, creating: false);
+            await _showVoyageSheet(context, creating: false);
           case HomeSearchHandoffKind.plannedRouteCode:
-            await _showRideSheet(context, creating: true);
+            await _showVoyageSheet(context, creating: true);
           case HomeSearchHandoffKind.storedRoute:
-            await _openRideLibrary(context);
+            await _openVoyageLibrary(context);
         }
     }
   }
 
-  /// Plans the route, then creates the ride with it staged.
+  /// Plans the route, then creates the voyage with it staged.
   ///
-  /// Planned **before** the ride is created, so a routing failure leaves the rider
-  /// on the map with a message rather than inside a ride with no route. That order
+  /// Planned **before** the voyage is created, so a routing failure leaves the sailor
+  /// on the map with a message rather than inside a voyage with no route. That order
   /// costs a spinner and saves the one state that is genuinely awkward to get out
   /// of.
-  Future<void> _startRideTo(
+  Future<void> _startVoyageTo(
     DestinationChoice choice,
-    RideStartChoice start,
+    VoyageStartChoice start,
   ) async {
     final origin = _position.value;
     if (origin == null) return;
@@ -438,7 +438,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final plan = await _destinationPlanner.planForReview(
         origin: origin,
-        // The label the rider picked, not its coordinates: the service caches by
+        // The label the sailor picked, not its coordinates: the service caches by
         // query so this is the same lookup again, and it keeps the route named
         // after the place rather than a pair of numbers.
         query: choice.label,
@@ -453,12 +453,12 @@ class _HomeScreenState extends State<HomeScreen> {
         plan.route,
         reviewNotes: plan.warnings,
       );
-      await widget.controller.createRide(
-        // Already known from onboarding. Asking for it again on every ride is
+      await widget.controller.createVoyage(
+        // Already known from onboarding. Asking for it again on every voyage is
         // exactly what #431 was raised about.
-        widget.riderProfile.displayName,
+        widget.sailorProfile.displayName,
         coordinationMode: start.coordinationMode,
-        rideName: choice.label,
+        voyageName: choice.label,
       );
     } on Object catch (error) {
       if (!mounted) return;
@@ -477,7 +477,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _showRideSheet(
+  Future<void> _showVoyageSheet(
     BuildContext context, {
     required bool creating,
     PendingInAppRoute? pendingInAppRoute,
@@ -488,10 +488,10 @@ class _HomeScreenState extends State<HomeScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: const Color(0xFF171D25),
-      builder: (sheetContext) => _RideForm(
+      builder: (sheetContext) => _VoyageForm(
         controller: widget.controller,
-        rideCodePreference: widget.rideCodePreference,
-        riderProfile: widget.riderProfile,
+        voyageCodePreference: widget.voyageCodePreference,
+        sailorProfile: widget.sailorProfile,
         sharedRoutes: widget.sharedRoutes,
         planDirectory: widget.planDirectory,
         creating: creating,
@@ -501,24 +501,24 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _openRideLibrary(BuildContext launchContext) async {
+  Future<void> _openVoyageLibrary(BuildContext launchContext) async {
     final library = StoredRouteLibrary(
       recordedRoutes: widget.recordedRoutes,
-      completedRides: widget.completedRides,
+      completedVoyages: widget.completedVoyages,
     );
     final selection = await StoredRoutePickerScreen.show(
       launchContext,
       library: library,
       distanceUnit: widget.distanceUnits.value,
-      openPreviousRideArchive: (libraryContext) => PreviousRidesScreen.show(
+      openPreviousVoyageArchive: (libraryContext) => PreviousVoyagesScreen.show(
         libraryContext,
-        widget.completedRides,
+        widget.completedVoyages,
         widget.distanceUnits,
       ),
     );
     if (selection == null || !mounted) return;
     final prepared = library.prepare(selection);
-    await _showRideSheet(
+    await _showVoyageSheet(
       context,
       creating: true,
       pendingInAppRoute: PendingInAppRoute(
@@ -529,23 +529,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _RideRestorationBanner extends StatelessWidget {
-  const _RideRestorationBanner({
-    required this.rideCode,
+class _VoyageRestorationBanner extends StatelessWidget {
+  const _VoyageRestorationBanner({
+    required this.voyageCode,
     required this.error,
     required this.onRetry,
   });
 
-  final String? rideCode;
+  final String? voyageCode;
   final Object? error;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final failed = error != null;
-    final ride = rideCode == null ? 'your saved ride' : 'ride $rideCode';
+    final voyage = voyageCode == null
+        ? 'your saved voyage'
+        : 'voyage $voyageCode';
     return Container(
-      key: const Key('ride-restoration-banner'),
+      key: const Key('voyage-restoration-banner'),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1D2530),
@@ -575,21 +577,23 @@ class _RideRestorationBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  failed ? 'Could not restore $ride' : 'Still restoring $ride',
+                  failed
+                      ? 'Could not restore $voyage'
+                      : 'Still restoring $voyage',
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   failed
                       ? 'The home screen remains available. Retry before '
-                            'creating or joining another ride.'
+                            'creating or joining another voyage.'
                       : 'The home screen remains available while its journal '
-                            'loads. Ride actions will unlock when it is ready.',
+                            'loads. Voyage actions will unlock when it is ready.',
                 ),
                 if (failed) ...[
                   const SizedBox(height: 8),
                   TextButton.icon(
-                    key: const Key('retry-ride-restoration'),
+                    key: const Key('retry-voyage-restoration'),
                     onPressed: onRetry,
                     icon: const Icon(Icons.refresh),
                     label: const Text('Retry restore'),
@@ -604,15 +608,18 @@ class _RideRestorationBanner extends StatelessWidget {
   }
 }
 
-class _SetAsideRideBanner extends StatelessWidget {
-  const _SetAsideRideBanner({required this.rideCode, required this.onReopen});
+class _SetAsideVoyageBanner extends StatelessWidget {
+  const _SetAsideVoyageBanner({
+    required this.voyageCode,
+    required this.onReopen,
+  });
 
-  final String rideCode;
+  final String voyageCode;
   final VoidCallback onReopen;
 
   @override
   Widget build(BuildContext context) => Container(
-    key: const Key('set-aside-ride-banner'),
+    key: const Key('set-aside-voyage-banner'),
     margin: const EdgeInsets.only(bottom: 20),
     padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
     decoration: BoxDecoration(
@@ -629,7 +636,7 @@ class _SetAsideRideBanner extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Ride $rideCode has ended',
+                'Voyage $voyageCode has ended',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w700),
@@ -642,7 +649,7 @@ class _SetAsideRideBanner extends StatelessWidget {
           ),
         ),
         TextButton(
-          key: const Key('reopen-set-aside-ride'),
+          key: const Key('reopen-set-aside-voyage'),
           onPressed: onReopen,
           child: const Text('Open'),
         ),
@@ -652,7 +659,7 @@ class _SetAsideRideBanner extends StatelessWidget {
 }
 
 /// A GPX file opened from another app (Files, Mail, a route planner's share
-/// sheet) has nowhere to go yet - there is no ride to attach a route to until
+/// sheet) has nowhere to go yet - there is no voyage to attach a route to until
 /// one exists. Surfaces that instead of silently discarding it.
 class _PendingSharedRouteBanner extends StatelessWidget {
   const _PendingSharedRouteBanner({
@@ -686,7 +693,7 @@ class _PendingSharedRouteBanner extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               const Text(
-                'Start or join a ride, then reopen it to use this route.',
+                'Start or join a voyage, then reopen it to use this route.',
                 style: TextStyle(color: Color(0xFFABB5C1), fontSize: 12),
               ),
             ],
@@ -759,11 +766,11 @@ class _PlannerLinkStatusBanner extends StatelessWidget {
   );
 }
 
-class _RideForm extends StatefulWidget {
-  const _RideForm({
+class _VoyageForm extends StatefulWidget {
+  const _VoyageForm({
     required this.controller,
-    required this.rideCodePreference,
-    required this.riderProfile,
+    required this.voyageCodePreference,
+    required this.sailorProfile,
     required this.sharedRoutes,
     required this.planDirectory,
     required this.creating,
@@ -771,9 +778,9 @@ class _RideForm extends StatefulWidget {
     this.pendingInAppRoute,
   });
 
-  final RideController controller;
-  final RideCodePreferenceController rideCodePreference;
-  final RiderProfileController riderProfile;
+  final VoyageController controller;
+  final VoyageCodePreferenceController voyageCodePreference;
+  final SailorProfileController sailorProfile;
   final SharedRouteController sharedRoutes;
   final PlanDirectory? planDirectory;
   final bool creating;
@@ -781,25 +788,25 @@ class _RideForm extends StatefulWidget {
   final PendingInAppRoute? pendingInAppRoute;
 
   @override
-  State<_RideForm> createState() => _RideFormState();
+  State<_VoyageForm> createState() => _VoyageFormState();
 }
 
-class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
+class _VoyageFormState extends State<_VoyageForm> with WidgetsBindingObserver {
   late final _nameController = TextEditingController(
-    text: widget.riderProfile.displayName,
+    text: widget.sailorProfile.displayName,
   );
   late final _codeController = TextEditingController(
-    text: widget.creating ? null : widget.rideCodePreference.savedCode,
+    text: widget.creating ? null : widget.voyageCodePreference.savedCode,
   );
-  final _rideNameController = TextEditingController();
+  final _voyageNameController = TextEditingController();
   final _planCodeController = TextEditingController();
   final _codeFocusNode = FocusNode();
   final _codeFieldKey = GlobalKey();
-  RideCoordinationMode _selectedCoordinationMode =
-      RideCoordinationMode.secondBikeDropOff;
+  VoyageCoordinationMode _selectedCoordinationMode =
+      VoyageCoordinationMode.secondBikeDropOff;
 
-  /// Set once a created ride's code needs sharing before handing off to the
-  /// map - the moment a leader most needs it, with people waiting nearby.
+  /// Set once a created voyage's code needs sharing before handing off to the
+  /// map - the moment a skipper most needs it, with people waiting nearby.
   bool _showShareStep = false;
   bool _checkingPlanCode = false;
   String? _planCodeError;
@@ -824,7 +831,7 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
     _codeFocusNode.dispose();
     _nameController.dispose();
     _codeController.dispose();
-    _rideNameController.dispose();
+    _voyageNameController.dispose();
     _planCodeController.dispose();
     super.dispose();
   }
@@ -840,7 +847,7 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
     return AnimatedBuilder(
       animation: Listenable.merge([
         widget.controller,
-        widget.rideCodePreference,
+        widget.voyageCodePreference,
       ]),
       builder: (context, _) => AnimatedPadding(
         duration: const Duration(milliseconds: 180),
@@ -849,7 +856,7 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
           bottom: MediaQuery.viewInsetsOf(context).bottom,
         ),
         child: SingleChildScrollView(
-          key: const Key('ride-form-scroll-view'),
+          key: const Key('voyage-form-scroll-view'),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
           child: Column(
@@ -857,14 +864,14 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                widget.creating ? 'Create a private ride' : 'Join your group',
+                widget.creating ? 'Create a private voyage' : 'Join your group',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 8),
               Text(
                 widget.creating
-                    ? 'You will become the ride lead and get a six-digit code to share.'
-                    : 'Enter the six-digit code shared by the ride lead. You need a connection once to join, then the app keeps using the secure relay.',
+                    ? 'You will become the voyage lead and get a six-digit code to share.'
+                    : 'Enter the six-digit code shared by the voyage lead. You need a connection once to join, then the app keeps using the secure relay.',
                 style: const TextStyle(color: Color(0xFFABB5C1)),
               ),
               const SizedBox(height: 24),
@@ -875,7 +882,7 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 8),
                 SegmentedButton<bool>(
-                  key: const Key('ride-scope-selector'),
+                  key: const Key('voyage-scope-selector'),
                   segments: const [
                     ButtonSegment(
                       value: false,
@@ -891,14 +898,14 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                   selected: {_selectedCoordinationMode.isGroup},
                   onSelectionChanged: (selection) => setState(() {
                     _selectedCoordinationMode = selection.first
-                        ? RideCoordinationMode.secondBikeDropOff
-                        : RideCoordinationMode.solo;
+                        ? VoyageCoordinationMode.secondBikeDropOff
+                        : VoyageCoordinationMode.solo;
                   }),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _selectedCoordinationMode == RideCoordinationMode.solo
-                      ? RideCoordinationMode.solo.description
+                  _selectedCoordinationMode == VoyageCoordinationMode.solo
+                      ? VoyageCoordinationMode.solo.description
                       : 'Choose how this group will handle junctions.',
                   style: const TextStyle(
                     color: Color(0xFFABB5C1),
@@ -907,7 +914,7 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                 ),
                 if (_selectedCoordinationMode.isGroup) ...[
                   const SizedBox(height: 12),
-                  RadioGroup<RideCoordinationMode>(
+                  RadioGroup<VoyageCoordinationMode>(
                     groupValue: _selectedCoordinationMode,
                     onChanged: (value) {
                       if (value != null) {
@@ -917,11 +924,11 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                     child: Column(
                       children: [
                         for (final mode in const [
-                          RideCoordinationMode.secondBikeDropOff,
-                          RideCoordinationMode.keepTogether,
+                          VoyageCoordinationMode.secondBikeDropOff,
+                          VoyageCoordinationMode.keepTogether,
                         ])
-                          RadioListTile<RideCoordinationMode>(
-                            key: Key('ride-mode-${mode.name}'),
+                          RadioListTile<VoyageCoordinationMode>(
+                            key: Key('voyage-mode-${mode.name}'),
                             contentPadding: EdgeInsets.zero,
                             value: mode,
                             title: Text(mode.label),
@@ -933,11 +940,11 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                 ],
                 const SizedBox(height: 12),
                 TextField(
-                  controller: _rideNameController,
+                  controller: _voyageNameController,
                   maxLength: 32,
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
-                    labelText: 'Ride name (optional)',
+                    labelText: 'Voyage name (optional)',
                     hintText: 'e.g. Sunday coast run',
                     counterText: '',
                   ),
@@ -958,7 +965,7 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                     labelText: 'Planned route code (optional)',
                     hintText: 'e.g. 7F3K9QRT',
                     helperText:
-                        'From the web planner. The route opens for review after the ride is created.',
+                        'From the web planner. The route opens for review after the voyage is created.',
                     errorText: _planCodeError,
                     counterText: '',
                     suffixIcon: const Icon(Icons.qr_code),
@@ -967,14 +974,14 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                 const SizedBox(height: 12),
               ],
               TextField(
-                key: const Key('rider-name-field'),
+                key: const Key('sailor-name-field'),
                 controller: _nameController,
                 autofocus: true,
                 maxLength: 24,
                 textCapitalization: TextCapitalization.words,
                 onChanged: (_) => setState(() {}),
                 decoration: const InputDecoration(
-                  labelText: 'Rider name',
+                  labelText: 'Sailor name',
                   hintText: 'How the group will recognise you',
                   counterText: '',
                 ),
@@ -984,7 +991,7 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                 KeyedSubtree(
                   key: _codeFieldKey,
                   child: TextField(
-                    key: const Key('ride-code-field'),
+                    key: const Key('voyage-code-field'),
                     controller: _codeController,
                     focusNode: _codeFocusNode,
                     scrollPadding: const EdgeInsets.only(bottom: 112),
@@ -1000,9 +1007,9 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                       LengthLimitingTextInputFormatter(6),
                     ],
                     decoration: InputDecoration(
-                      labelText: 'Six-digit ride code',
+                      labelText: 'Six-digit voyage code',
                       hintText: '123456',
-                      helperText: widget.rideCodePreference.savedCode == null
+                      helperText: widget.voyageCodePreference.savedCode == null
                           ? null
                           : 'Saved from your last successful join',
                       counterText: '',
@@ -1019,8 +1026,8 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                             icon: const Icon(Icons.qr_code_scanner),
                           ),
                           IconButton(
-                            tooltip: 'Paste ride code',
-                            onPressed: _pasteRideCode,
+                            tooltip: 'Paste voyage code',
+                            onPressed: _pasteVoyageCode,
                             icon: const Icon(Icons.content_paste),
                           ),
                         ],
@@ -1035,8 +1042,8 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                 // delivered: the owner concluded it was missing entirely,
                 // because the only affordance was an unlabelled icon and a
                 // tooltip, and a tooltip does not appear when you tap a phone.
-                // The icon stays for riders who have learned it; this is the
-                // one a rider who has never seen the app can read.
+                // The icon stays for sailors who have learned it; this is the
+                // one a sailor who has never seen the app can read.
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
@@ -1047,14 +1054,14 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                   ),
                 ),
                 CheckboxListTile(
-                  key: const Key('keep-ride-code'),
+                  key: const Key('keep-voyage-code'),
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                   controlAffinity: ListTileControlAffinity.leading,
-                  value: widget.rideCodePreference.keepCode,
+                  value: widget.voyageCodePreference.keepCode,
                   onChanged: (value) {
                     if (value != null) {
-                      widget.rideCodePreference.setKeepCode(value);
+                      widget.voyageCodePreference.setKeepCode(value);
                     }
                   },
                   title: const Text('Keep this code for next time'),
@@ -1062,11 +1069,11 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                     'Only the six-digit code is saved. Invitation secrets are not.',
                   ),
                 ),
-                if (widget.rideCodePreference.savedCode != null)
+                if (widget.voyageCodePreference.savedCode != null)
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
-                      key: const Key('forget-saved-ride-code'),
+                      key: const Key('forget-saved-voyage-code'),
                       onPressed: _forgetSavedCode,
                       icon: const Icon(Icons.delete_outline),
                       label: const Text('Forget saved code'),
@@ -1080,13 +1087,13 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 // A connection or service failure is worth another go, and there
-                // was nothing to press: the rider read a sentence about a relay
+                // was nothing to press: the sailor read a sentence about a relay
                 // handshake and had to guess (#208).
                 if (widget.controller.errorIsRetryable)
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
-                      key: const Key('retry-ride-submit'),
+                      key: const Key('retry-voyage-submit'),
                       onPressed: widget.controller.busy || _checkingPlanCode
                           ? null
                           : () {
@@ -1108,7 +1115,7 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
                         dimension: 22,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Text(widget.creating ? 'Create ride' : 'Join ride'),
+                    : Text(widget.creating ? 'Create voyage' : 'Join voyage'),
               ),
             ],
           ),
@@ -1154,39 +1161,39 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
           if (mounted) setState(() => _checkingPlanCode = false);
         }
       }
-      await widget.controller.createRide(
+      await widget.controller.createVoyage(
         name,
-        motorcycleStyle: widget.riderProfile.motorcycleStyle,
-        riderSymbol: widget.riderProfile.riderSymbol,
-        riderColor: widget.riderProfile.riderColor,
+        motorcycleStyle: widget.sailorProfile.motorcycleStyle,
+        sailorSymbol: widget.sailorProfile.sailorSymbol,
+        sailorColor: widget.sailorProfile.sailorColor,
         coordinationMode: _selectedCoordinationMode,
-        rideName: _rideNameController.text,
+        voyageName: _voyageNameController.text,
       );
     } else {
       final code = _codeController.text.trim();
-      await widget.controller.joinRide(
+      await widget.controller.joinVoyage(
         code,
         name,
-        motorcycleStyle: widget.riderProfile.motorcycleStyle,
-        riderSymbol: widget.riderProfile.riderSymbol,
-        riderColor: widget.riderProfile.riderColor,
+        motorcycleStyle: widget.sailorProfile.motorcycleStyle,
+        sailorSymbol: widget.sailorProfile.sailorSymbol,
+        sailorColor: widget.sailorProfile.sailorColor,
         joinToken: _pastedJoinToken,
       );
-      if (widget.controller.hasActiveRide) {
-        await widget.rideCodePreference.rememberSuccessfulJoin(code);
+      if (widget.controller.hasActiveVoyage) {
+        await widget.voyageCodePreference.rememberSuccessfulJoin(code);
       } else if (widget.controller.errorMessage?.startsWith(
-            'That ride code is not active.',
+            'That voyage code is not active.',
           ) ??
           false) {
-        await widget.rideCodePreference.clearIfInactive(code);
+        await widget.voyageCodePreference.clearIfInactive(code);
       }
     }
-    if (widget.controller.hasActiveRide && mounted) {
-      await widget.riderProfile.save(
+    if (widget.controller.hasActiveVoyage && mounted) {
+      await widget.sailorProfile.save(
         displayName: name.trim(),
-        motorcycleStyle: widget.riderProfile.motorcycleStyle,
-        riderSymbol: widget.riderProfile.riderSymbol,
-        riderColor: widget.riderProfile.riderColor,
+        motorcycleStyle: widget.sailorProfile.motorcycleStyle,
+        sailorSymbol: widget.sailorProfile.sailorSymbol,
+        sailorColor: widget.sailorProfile.sailorColor,
       );
       if (widget.creating) {
         if (_selectedCoordinationMode.isGroup) {
@@ -1236,8 +1243,8 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
   }
 
   Future<void> _forgetSavedCode() async {
-    final savedCode = widget.rideCodePreference.savedCode;
-    await widget.rideCodePreference.clear();
+    final savedCode = widget.voyageCodePreference.savedCode;
+    await widget.voyageCodePreference.clear();
     if (_codeController.text == savedCode) _codeController.clear();
   }
 
@@ -1253,28 +1260,28 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
     if (name.isEmpty) {
       // Ask for the name rather than joining as nobody: the roster is how a group
       // finds each other.
-      setState(() => _codeController.text = invitation.rideCode);
+      setState(() => _codeController.text = invitation.voyageCode);
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('Add your rider name, then join.')),
+        const SnackBar(content: Text('Add your sailor name, then join.')),
       );
       return;
     }
-    await widget.controller.joinRideFromInvitation(
+    await widget.controller.joinVoyageFromInvitation(
       invitation,
       name,
-      motorcycleStyle: widget.riderProfile.motorcycleStyle,
-      riderSymbol: widget.riderProfile.riderSymbol,
-      riderColor: widget.riderProfile.riderColor,
+      motorcycleStyle: widget.sailorProfile.motorcycleStyle,
+      sailorSymbol: widget.sailorProfile.sailorSymbol,
+      sailorColor: widget.sailorProfile.sailorColor,
     );
     if (!mounted) return;
-    if (widget.controller.hasActiveRide) {
-      await widget.rideCodePreference.rememberSuccessfulJoin(
-        invitation.rideCode,
+    if (widget.controller.hasActiveVoyage) {
+      await widget.voyageCodePreference.rememberSuccessfulJoin(
+        invitation.voyageCode,
       );
     }
   }
 
-  Future<void> _pasteRideCode() async {
+  Future<void> _pasteVoyageCode() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text?.trim();
     if (text == null || text.isEmpty || !mounted) return;
@@ -1286,19 +1293,19 @@ class _RideFormState extends State<_RideForm> with WidgetsBindingObserver {
   }
 }
 
-/// Shown immediately after creating a ride - the moment a leader most needs
-/// the code, with riders waiting nearby, rather than requiring a trip
-/// through the active Ride page to find it.
+/// Shown immediately after creating a voyage - the moment a skipper most needs
+/// the code, with sailors waiting nearby, rather than requiring a trip
+/// through the active Voyage page to find it.
 class _ShareCodeStep extends StatelessWidget {
   const _ShareCodeStep({required this.controller, required this.onContinue});
 
-  final RideController controller;
+  final VoyageController controller;
   final VoidCallback onContinue;
 
   @override
   Widget build(BuildContext context) {
     final session = controller.session;
-    final code = session?.rideCode ?? '';
+    final code = session?.voyageCode ?? '';
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
       child: Column(
@@ -1308,7 +1315,7 @@ class _ShareCodeStep extends StatelessWidget {
           const Icon(Icons.check_circle, color: Color(0xFF6ED89A), size: 40),
           const SizedBox(height: 16),
           Text(
-            session?.rideName ?? 'Ride created',
+            session?.voyageName ?? 'Voyage created',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 8),
@@ -1350,7 +1357,7 @@ class _ShareCodeStep extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: () => SharePlus.instance.share(
                     ShareParams(
-                      text: controller.rideCodeShareText,
+                      text: controller.voyageCodeShareText,
                       subject: 'Join my Tide and Seek group',
                     ),
                   ),
@@ -1363,7 +1370,7 @@ class _ShareCodeStep extends StatelessWidget {
           const SizedBox(height: 22),
           TextButton(
             onPressed: onContinue,
-            child: const Text('Continue to ride'),
+            child: const Text('Continue to voyage'),
           ),
         ],
       ),
@@ -1376,7 +1383,7 @@ class _ShareCodeStep extends StatelessWidget {
 ///
 /// The old home screen carried these in the scrolling column of a full-screen
 /// panel, which is most of why the panel was full-screen. They still need a home —
-/// a restoration failure, a set-aside ride, a pending shared route and a planner
+/// a restoration failure, a set-aside voyage, a pending shared route and a planner
 /// link all matter — but not one that reserves space when empty.
 ///
 /// Scrollable because several can be live at once and the map must not be pushed

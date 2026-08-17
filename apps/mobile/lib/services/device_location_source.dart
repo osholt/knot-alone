@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../domain/geo_point.dart';
-import '../domain/rider_location.dart';
+import '../domain/sailor_location.dart';
 
 enum DeviceLocationState {
   idle,
@@ -104,10 +104,10 @@ class GeolocatorDeviceLocationPlatform implements DeviceLocationPlatform {
   ///  - It gives the policy two or more candidate fixes per reported position,
   ///    which is what lets a fix be reported at a corner apex rather than 20 m
   ///    past it.
-  ///  - It is the only thing that distinguishes "this rider has not moved" from
-  ///    "this rider's GPS has stopped". Raising it to 20 m would collapse that
+  ///  - It is the only thing that distinguishes "this sailor has not moved" from
+  ///    "this sailor's GPS has stopped". Raising it to 20 m would collapse that
   ///    distinction, and the app would have no evidence left to tell a parked
-  ///    rider apart from a dead receiver.
+  ///    sailor apart from a dead receiver.
   ///
   /// Lowering it is not free either: sub-10 m wander on a stationary phone is
   /// mostly noise, and every delivered fix costs a wake-up. 10 m stays.
@@ -115,28 +115,28 @@ class GeolocatorDeviceLocationPlatform implements DeviceLocationPlatform {
 
   @override
   Stream<LocationSample> positionStream() => Geolocator.getPositionStream(
-    locationSettings: rideLocationSettings(defaultTargetPlatform),
+    locationSettings: voyageLocationSettings(defaultTargetPlatform),
   ).map(_mapPosition);
 
   /// Settings that keep fixes arriving while the app is not in the foreground.
   ///
   /// A plain [LocationSettings] is foreground-only, and that broke the premise of
-  /// the app: a rider with the phone in a pocket or another navigation app in
+  /// the app: a sailor with the phone in a pocket or another navigation app in
   /// front contributed no position to the group and recorded a trail that jumped
   /// in a straight line across a bay (#205).
   ///
   /// Exposed for test because the two platform branches are the whole fix, and
   /// they cannot be exercised on a device from a unit test.
   @visibleForTesting
-  static LocationSettings rideLocationSettings(
+  static LocationSettings voyageLocationSettings(
     TargetPlatform platform,
   ) => switch (platform) {
     TargetPlatform.iOS || TargetPlatform.macOS => AppleSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: platformDistanceFilterMeters,
       allowBackgroundLocationUpdates: true,
-      // Core Location would otherwise decide the rider has stopped moving
-      // and power the receiver down. On a ride, a stop is a coffee stop.
+      // Core Location would otherwise decide the sailor has stopped moving
+      // and power the receiver down. On a voyage, a stop is a coffee stop.
       pauseLocationUpdatesAutomatically: false,
       // The blue indicator is the honest signal that this app is using
       // location. The native bridge separately promotes access to Always:
@@ -150,14 +150,14 @@ class GeolocatorDeviceLocationPlatform implements DeviceLocationPlatform {
       distanceFilter: platformDistanceFilterMeters,
       // Android grants background location through a location-typed
       // foreground service. geolocator_android owns the service; this is the
-      // notification that has to accompany it, and the rider can stop the
-      // ride from the app it points at.
+      // notification that has to accompany it, and the sailor can stop the
+      // voyage from the app it points at.
       foregroundNotificationConfig: const ForegroundNotificationConfig(
-        notificationTitle: 'Sharing your position with your ride',
+        notificationTitle: 'Sharing your position with your voyage',
         notificationText:
-            'Tide and Seek is recording your ride and keeping the group '
-            'up to date. This stops when the ride ends.',
-        notificationChannelName: 'Active ride',
+            'Tide and Seek is recording your voyage and keeping the group '
+            'up to date. This stops when the voyage ends.',
+        notificationChannelName: 'Active voyage',
         setOngoing: true,
         enableWakeLock: true,
       ),
@@ -192,10 +192,10 @@ class GeolocatorDeviceLocationPlatform implements DeviceLocationPlatform {
   );
 }
 
-/// Ride-scoped location source.
+/// Voyage-scoped location source.
 ///
 /// Runs only between [start] and [stop], and within that window keeps running
-/// while the app is in the background — a rider using another navigation app is
+/// while the app is in the background — a sailor using another navigation app is
 /// the ordinary case, not an edge case (#205). Outside that window the app holds
 /// no location session at all.
 ///
@@ -258,7 +258,7 @@ class DeviceLocationSource {
       DeviceLocationStatus(
         state: DeviceLocationState.sampling,
         message: inspected.backgroundCapable
-            ? 'Sharing your position for this ride, including in the background.'
+            ? 'Sharing your position for this voyage, including in the background.'
             : 'Sharing while Tide and Seek is visible. Allow “Always” '
                   'location access to keep sharing with another app in front.',
         lastSample: _status.lastSample,
@@ -271,7 +271,7 @@ class DeviceLocationSource {
         DeviceLocationStatus(
           state: DeviceLocationState.sampling,
           message: _status.backgroundCapable
-              ? 'Location is active for this ride, including in the background.'
+              ? 'Location is active for this voyage, including in the background.'
               : 'Location is active only while Tide and Seek is visible.',
           lastSample: sample,
           backgroundCapable: _status.backgroundCapable,
@@ -286,7 +286,7 @@ class DeviceLocationSource {
 
   /// Recreates the native stream after an app lifecycle interruption while
   /// preserving the last fix. The caller is responsible for remembering that
-  /// the rider previously opted in.
+  /// the sailor previously opted in.
   Future<DeviceLocationStatus> restart() async {
     await stop();
     return start();
@@ -366,7 +366,7 @@ class DeviceLocationSource {
               DeviceLocationStatus(
                 state: DeviceLocationState.sampling,
                 message: permission == DeviceLocationPermission.always
-                    ? 'Location is active for this ride, including in the background.'
+                    ? 'Location is active for this voyage, including in the background.'
                     : 'Location is active only while Tide and Seek is visible.',
                 lastSample: _status.lastSample,
                 backgroundCapable:
@@ -377,7 +377,7 @@ class DeviceLocationSource {
               DeviceLocationStatus(
                 state: DeviceLocationState.ready,
                 message: permission == DeviceLocationPermission.always
-                    ? 'Location is ready. It runs for the length of a ride.'
+                    ? 'Location is ready. It runs for the length of a voyage.'
                     : 'Location is ready, but background sharing needs “Always” '
                           'access.',
                 lastSample: _status.lastSample,

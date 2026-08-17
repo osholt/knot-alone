@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/domain/imported_route.dart' show GeoPoint;
-import 'package:tide_and_seek/domain/ride_coordination_mode.dart';
+import 'package:tide_and_seek/domain/voyage_coordination_mode.dart';
 import 'package:tide_and_seek/features/home/home_destination_search.dart';
 import 'package:tide_and_seek/services/road_routing.dart';
 
 void main() {
-  group('search for a destination, then arrange the ride (#431)', () {
+  group('search for a destination, then arrange the voyage (#431)', () {
     testWidgets('a search finds places and picking one offers solo or group', (
       tester,
     ) async {
@@ -47,25 +47,28 @@ void main() {
       await tester.tap(find.text('Bath, Somerset'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Ride solo'), findsOneWidget);
-      expect(find.text('Ride as a group'), findsOneWidget);
+      expect(find.text('Voyage solo'), findsOneWidget);
+      expect(find.text('Voyage as a group'), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('ride-start-group')));
+      await tester.tap(find.byKey(const Key('voyage-start-group')));
       await tester.pumpAndSettle();
 
       final destination = outcome as HomeSearchDestination;
       expect(destination.choice.label, 'Bath, Somerset');
-      expect(destination.start, RideStartChoice.group);
+      expect(destination.start, VoyageStartChoice.group);
     });
 
     testWidgets('solo and group mean different coordination modes', (
       tester,
     ) async {
       // The whole point of the two buttons: they are not cosmetic.
-      expect(RideStartChoice.solo.coordinationMode, RideCoordinationMode.solo);
       expect(
-        RideStartChoice.group.coordinationMode,
-        RideCoordinationMode.secondBikeDropOff,
+        VoyageStartChoice.solo.coordinationMode,
+        VoyageCoordinationMode.solo,
+      );
+      expect(
+        VoyageStartChoice.group.coordinationMode,
+        VoyageCoordinationMode.secondBikeDropOff,
       );
     });
 
@@ -87,7 +90,7 @@ void main() {
       expect(find.textContaining('Nothing found'), findsOneWidget);
     });
 
-    testWidgets('a failed search says something a rider can act on', (
+    testWidgets('a failed search says something a sailor can act on', (
       tester,
     ) async {
       final search = _FailingSearch();
@@ -145,10 +148,10 @@ void main() {
   });
 
   group('the other ways in are on the same surface', () {
-    testWidgets('a planned-route code, a ride code and a stored route', (
+    testWidgets('a planned-route code, a voyage code and a stored route', (
       tester,
     ) async {
-      // #431 named these specifically: "entering a code to recall a planned ride
+      // #431 named these specifically: "entering a code to recall a planned voyage
       // etc." They sit beside the search rather than behind it.
       final outcomes = <HomeSearchOutcome?>[];
       for (final key in [

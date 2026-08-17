@@ -13,7 +13,7 @@ Safety, in order of importance:
   run renders the mail into the job summary and sends nothing.
 * It never fails a release. Every configuration and delivery outcome exits 0
   with a visible annotation; the caller also runs it `continue-on-error`.
-* It never carries relay URLs, ride codes or tester data. Every link in the
+* It never carries relay URLs, voyage codes or tester data. Every link in the
   rendered mail is checked against `ALLOWED_LINK_HOSTS` before it can be sent.
 * Credentials come from the environment (repository secrets), never arguments,
   and are never written to the summary or the log.
@@ -147,7 +147,7 @@ def render_body(context: ReleaseContext) -> str:
         f"                 {context.commit_url}",
         "",
         "HOW TO GET IT",
-        "  1. On the phone you ride with, signed in with the Google account you",
+        "  1. On the phone you voyage with, signed in with the Google account you",
         "     test on, open the closed-testing opt-in page:",
         f"     {context.opt_in_url}",
         "  2. If it says you are not a tester yet, accept the invitation there.",

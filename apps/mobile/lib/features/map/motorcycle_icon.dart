@@ -8,7 +8,7 @@ import 'package:flutter/services.dart' show rootBundle;
 
 import 'route_trail_style.dart';
 
-/// Rider-selectable bike silhouettes, generated as flat single-colour art
+/// Sailor-selectable bike silhouettes, generated as flat single-colour art
 /// (see assets/icons/motorcycles) so they can be tinted per role exactly like
 /// the Icon widgets they replace.
 enum MotorcycleIconStyle {
@@ -79,94 +79,94 @@ MotorcycleIconStyle motorcycleIconStyleFromName(String? name) =>
       orElse: () => motorcycleIconStyleDefault,
     );
 
-enum RiderSymbolKind { motorcycle, initials, emoji }
+enum SailorSymbolKind { motorcycle, initials, emoji }
 
-/// Ink choices for an initials marker. These stay separate from the rider's
+/// Ink choices for an initials marker. These stay separate from the sailor's
 /// badge colour because the same initials need to remain recognisable when two
-/// riders choose similar identity colours.
-enum RiderInitialsInk { dark, white, yellow, cyan, pink, purple }
+/// sailors choose similar identity colours.
+enum SailorInitialsInk { dark, white, yellow, cyan, pink, purple }
 
-extension RiderInitialsInkData on RiderInitialsInk {
+extension SailorInitialsInkData on SailorInitialsInk {
   Color get color => switch (this) {
-    RiderInitialsInk.dark => const Color(0xFF14202B),
-    RiderInitialsInk.white => const Color(0xFFFFFFFF),
-    RiderInitialsInk.yellow => const Color(0xFFFFD84D),
-    RiderInitialsInk.cyan => const Color(0xFF3DDCFF),
-    RiderInitialsInk.pink => const Color(0xFFFF76C8),
-    RiderInitialsInk.purple => const Color(0xFF9B7BFF),
+    SailorInitialsInk.dark => const Color(0xFF14202B),
+    SailorInitialsInk.white => const Color(0xFFFFFFFF),
+    SailorInitialsInk.yellow => const Color(0xFFFFD84D),
+    SailorInitialsInk.cyan => const Color(0xFF3DDCFF),
+    SailorInitialsInk.pink => const Color(0xFFFF76C8),
+    SailorInitialsInk.purple => const Color(0xFF9B7BFF),
   };
 
   String get label => switch (this) {
-    RiderInitialsInk.dark => 'Dark',
-    RiderInitialsInk.white => 'White',
-    RiderInitialsInk.yellow => 'Yellow',
-    RiderInitialsInk.cyan => 'Cyan',
-    RiderInitialsInk.pink => 'Pink',
-    RiderInitialsInk.purple => 'Purple',
+    SailorInitialsInk.dark => 'Dark',
+    SailorInitialsInk.white => 'White',
+    SailorInitialsInk.yellow => 'Yellow',
+    SailorInitialsInk.cyan => 'Cyan',
+    SailorInitialsInk.pink => 'Pink',
+    SailorInitialsInk.purple => 'Purple',
   };
 }
 
-const riderInitialsInkDefault = RiderInitialsInk.dark;
+const sailorInitialsInkDefault = SailorInitialsInk.dark;
 
-/// How a rider identifies themselves inside their coloured marker badge.
+/// How a sailor identifies themselves inside their coloured marker badge.
 ///
 /// The wire representation deliberately reuses the existing
 /// `motorcycleStyle` string. Old builds therefore see an unknown style and
 /// safely fall back to the default bike, while new builds can show initials or
 /// an emoji without requiring a relay protocol migration.
-class RiderSymbol {
-  const RiderSymbol.motorcycle()
-    : kind = RiderSymbolKind.motorcycle,
+class SailorSymbol {
+  const SailorSymbol.motorcycle()
+    : kind = SailorSymbolKind.motorcycle,
       emoji = null,
       customInitials = null,
-      initialsInk = riderInitialsInkDefault;
+      initialsInk = sailorInitialsInkDefault;
 
-  const RiderSymbol.initials({
+  const SailorSymbol.initials({
     this.customInitials,
-    this.initialsInk = riderInitialsInkDefault,
-  }) : kind = RiderSymbolKind.initials,
+    this.initialsInk = sailorInitialsInkDefault,
+  }) : kind = SailorSymbolKind.initials,
        emoji = null;
 
-  const RiderSymbol.emoji(this.emoji)
-    : kind = RiderSymbolKind.emoji,
+  const SailorSymbol.emoji(this.emoji)
+    : kind = SailorSymbolKind.emoji,
       customInitials = null,
-      initialsInk = riderInitialsInkDefault,
+      initialsInk = sailorInitialsInkDefault,
       assert(emoji != null && emoji != '');
 
-  final RiderSymbolKind kind;
+  final SailorSymbolKind kind;
   final String? emoji;
   final String? customInitials;
-  final RiderInitialsInk initialsInk;
+  final SailorInitialsInk initialsInk;
 
   String get storageValue => switch (kind) {
-    RiderSymbolKind.motorcycle => 'motorcycle',
-    RiderSymbolKind.initials =>
-      customInitials == null && initialsInk == riderInitialsInkDefault
+    SailorSymbolKind.motorcycle => 'motorcycle',
+    SailorSymbolKind.initials =>
+      customInitials == null && initialsInk == sailorInitialsInkDefault
           ? 'initials'
           : 'initials:v1:${_encodeInitials(customInitials)}:${initialsInk.name}',
-    RiderSymbolKind.emoji => 'emoji:$emoji',
+    SailorSymbolKind.emoji => 'emoji:$emoji',
   };
 
   String wireValue(MotorcycleIconStyle motorcycleStyle) => switch (kind) {
-    RiderSymbolKind.motorcycle => motorcycleStyle.name,
+    SailorSymbolKind.motorcycle => motorcycleStyle.name,
     _ => storageValue,
   };
 
   String label(String displayName, MotorcycleIconStyle motorcycleStyle) =>
       switch (kind) {
-        RiderSymbolKind.motorcycle => motorcycleStyle.label,
-        RiderSymbolKind.initials => 'Initials ${initialsFor(displayName)}',
-        RiderSymbolKind.emoji => 'Emoji $emoji',
+        SailorSymbolKind.motorcycle => motorcycleStyle.label,
+        SailorSymbolKind.initials => 'Initials ${initialsFor(displayName)}',
+        SailorSymbolKind.emoji => 'Emoji $emoji',
       };
 
   String initialsFor(String displayName) =>
-      customInitials ?? riderInitials(displayName);
+      customInitials ?? sailorInitials(displayName);
 
-  RiderSymbol withInitials({
+  SailorSymbol withInitials({
     String? customInitials,
     bool useAutomaticInitials = false,
-    RiderInitialsInk? ink,
-  }) => RiderSymbol.initials(
+    SailorInitialsInk? ink,
+  }) => SailorSymbol.initials(
     customInitials: useAutomaticInitials
         ? null
         : customInitials ?? this.customInitials,
@@ -174,46 +174,46 @@ class RiderSymbol {
   );
 
   String imageName(String displayName, MotorcycleIconStyle motorcycleStyle) {
-    if (kind == RiderSymbolKind.motorcycle) return motorcycleStyle.name;
-    final glyph = kind == RiderSymbolKind.initials
+    if (kind == SailorSymbolKind.motorcycle) return motorcycleStyle.name;
+    final glyph = kind == SailorSymbolKind.initials
         ? initialsFor(displayName)
         : emoji!;
     final codePoints = glyph.runes
         .map((value) => value.toRadixString(16))
         .join('-');
-    return 'rider-symbol-${kind.name}-$codePoints'
-        '${kind == RiderSymbolKind.initials ? '-${initialsInk.name}' : ''}';
+    return 'sailor-symbol-${kind.name}-$codePoints'
+        '${kind == SailorSymbolKind.initials ? '-${initialsInk.name}' : ''}';
   }
 
-  static RiderSymbol fromStorageValue(String? value) {
-    if (value == 'initials') return const RiderSymbol.initials();
+  static SailorSymbol fromStorageValue(String? value) {
+    if (value == 'initials') return const SailorSymbol.initials();
     if (value?.startsWith('initials:v1:') ?? false) {
       final parts = value!.split(':');
-      if (parts.length != 4) return riderSymbolDefault;
+      if (parts.length != 4) return sailorSymbolDefault;
       final initials = _decodeInitials(parts[2]);
-      final ink = _riderInitialsInkFromName(parts[3]);
+      final ink = _sailorInitialsInkFromName(parts[3]);
       if ((parts[2].isNotEmpty && initials == null) || ink == null) {
-        return riderSymbolDefault;
+        return sailorSymbolDefault;
       }
-      return RiderSymbol.initials(customInitials: initials, initialsInk: ink);
+      return SailorSymbol.initials(customInitials: initials, initialsInk: ink);
     }
     if (value?.startsWith('emoji:') ?? false) {
       final emoji = value!.substring('emoji:'.length);
-      if (riderEmojiChoices.contains(emoji)) return RiderSymbol.emoji(emoji);
+      if (sailorEmojiChoices.contains(emoji)) return SailorSymbol.emoji(emoji);
     }
-    return const RiderSymbol.motorcycle();
+    return const SailorSymbol.motorcycle();
   }
 
-  static RiderSymbol fromWireValue(String? value) {
+  static SailorSymbol fromWireValue(String? value) {
     if (MotorcycleIconStyle.values.any((style) => style.name == value)) {
-      return const RiderSymbol.motorcycle();
+      return const SailorSymbol.motorcycle();
     }
     return fromStorageValue(value);
   }
 
   @override
   bool operator ==(Object other) =>
-      other is RiderSymbol &&
+      other is SailorSymbol &&
       other.kind == kind &&
       other.emoji == emoji &&
       other.customInitials == customInitials &&
@@ -223,12 +223,12 @@ class RiderSymbol {
   int get hashCode => Object.hash(kind, emoji, customInitials, initialsInk);
 }
 
-const riderSymbolDefault = RiderSymbol.motorcycle();
+const sailorSymbolDefault = SailorSymbol.motorcycle();
 
 /// A deliberately small, high-contrast catalogue that renders consistently on
 /// both supported platforms and keeps the wire value comfortably below the
 /// relay's existing 40-character motorcycle-style limit.
-const riderEmojiChoices = <String>[
+const sailorEmojiChoices = <String>[
   '🏍️',
   '🛵',
   '🏁',
@@ -266,7 +266,7 @@ const riderEmojiChoices = <String>[
 /// Returns an uppercase 1–3 letter/number identity, or null for automatic
 /// initials. Punctuation and control characters are deliberately excluded so
 /// the compact wire value is safe to parse on Flutter.
-String? normalizeCustomRiderInitials(String value) {
+String? normalizeCustomSailorInitials(String value) {
   final normalized = value.trim().toUpperCase();
   if (normalized.isEmpty) return null;
   final characters = normalized.characters.toList(growable: false);
@@ -290,20 +290,20 @@ String? _decodeInitials(String encoded) {
   if (encoded.isEmpty) return null;
   try {
     final padded = encoded.padRight((encoded.length + 3) ~/ 4 * 4, '=');
-    return normalizeCustomRiderInitials(utf8.decode(base64Url.decode(padded)));
+    return normalizeCustomSailorInitials(utf8.decode(base64Url.decode(padded)));
   } on FormatException {
     return null;
   }
 }
 
-RiderInitialsInk? _riderInitialsInkFromName(String name) {
-  for (final ink in RiderInitialsInk.values) {
+SailorInitialsInk? _sailorInitialsInkFromName(String name) {
+  for (final ink in SailorInitialsInk.values) {
     if (ink.name == name) return ink;
   }
   return null;
 }
 
-String riderInitials(String displayName) {
+String sailorInitials(String displayName) {
   final words = displayName
       .trim()
       .split(RegExp(r'\s+'))
@@ -317,39 +317,39 @@ String riderInitials(String displayName) {
       .toUpperCase();
 }
 
-/// Side of the square PNG every rider glyph is rasterised into for the native
+/// Side of the square PNG every sailor glyph is rasterised into for the native
 /// map.
-const double riderSymbolRasterSize = 128;
+const double sailorSymbolRasterSize = 128;
 
-/// The share of a rider badge's diameter that the rider's initials span.
+/// The share of a sailor badge's diameter that the sailor's initials span.
 ///
 /// This is the one number the whole app sizes initials by, and it exists
 /// because there were three different answers to the same question (#259).
 ///
 /// A bike or an emoji is a pictogram: it sits *inside* the badge, and every
 /// symbol layer draws one at roughly 0.8 of the badge diameter. Initials are
-/// not a pictogram — they are the rider's identity, and the point of #259 is
+/// not a pictogram — they are the sailor's identity, and the point of #259 is
 /// that they should fill the circle. They silently inherited the pictogram's
 /// size on the native map, so they were drawn at about **0.76** of the badge
 /// there, while the symbol picker's preview drew them at **0.94**. That is
 /// both halves of the report at once: a quarter smaller than they should be,
-/// and visibly not matching the preview a rider chose them from.
-const double riderInitialsBadgeFill = 0.94;
+/// and visibly not matching the preview a sailor chose them from.
+const double sailorInitialsBadgeFill = 0.94;
 
 /// `icon-size` for an initials raster drawn on a badge of [badgeDiameter].
 ///
-/// [rasterizeRiderSymbolPng] already insets the glyph by
-/// [riderInitialsBadgeFill] inside its own square, so the raster maps one to
+/// [rasterizeSailorSymbolPng] already insets the glyph by
+/// [sailorInitialsBadgeFill] inside its own square, so the raster maps one to
 /// one onto the badge and this is simply the ratio of the two. Derived rather
 /// than tuned, so a change to a badge's radius cannot leave its initials
 /// behind — which is exactly how they got left behind the first time.
-double riderInitialsIconSize({
+double sailorInitialsIconSize({
   required double badgeDiameter,
-  double rasterSize = riderSymbolRasterSize,
+  double rasterSize = sailorSymbolRasterSize,
 }) => badgeDiameter / rasterSize;
 
 /// A motorcycle glyph standing in for the plain circle/Material icon
-/// previously used for rider map markers, tinted by the caller (role colour)
+/// previously used for sailor map markers, tinted by the caller (role colour)
 /// exactly like the `Icon` widget it replaces.
 class MotorcycleIcon extends StatelessWidget {
   const MotorcycleIcon({
@@ -375,15 +375,15 @@ class MotorcycleIcon extends StatelessWidget {
   );
 }
 
-/// A white bike silhouette on a filled circle in the rider's colour - reads
+/// A white bike silhouette on a filled circle in the sailor's colour - reads
 /// clearly against any basemap, unlike a flat-tinted icon alone, and matches
 /// the badge look used for the "you are here" marker.
-class RiderMarkerBadge extends StatelessWidget {
-  const RiderMarkerBadge({
+class SailorMarkerBadge extends StatelessWidget {
+  const SailorMarkerBadge({
     super.key,
     required this.style,
     required this.badgeColor,
-    this.symbol = riderSymbolDefault,
+    this.symbol = sailorSymbolDefault,
     this.displayName = '',
     this.size = 34,
     this.borderColor = RouteTrailStyle.casing,
@@ -393,7 +393,7 @@ class RiderMarkerBadge extends StatelessWidget {
 
   final MotorcycleIconStyle style;
   final Color badgeColor;
-  final RiderSymbol symbol;
+  final SailorSymbol symbol;
   final String displayName;
   final double size;
   final Color borderColor;
@@ -415,33 +415,33 @@ class RiderMarkerBadge extends StatelessWidget {
     ),
     child: Center(
       child: switch (symbol.kind) {
-        RiderSymbolKind.motorcycle => MotorcycleIcon(
+        SailorSymbolKind.motorcycle => MotorcycleIcon(
           style: style,
           // Dark, not white. Every badge fill is light because it has to be
           // found on a dark basemap, so a white glyph on top had almost no
-          // contrast at all - 1.76:1 on the default rider green, 1.53:1 on
+          // contrast at all - 1.76:1 on the default sailor green, 1.53:1 on
           // yellow. See `RouteTrailStyle.markerGlyph` (#133).
           color: glyphColor,
           size: size * 0.62,
         ),
-        RiderSymbolKind.initials => Padding(
+        SailorSymbolKind.initials => Padding(
           // The same fill as the raster the native map draws, so the two
           // renderers of the same marker agree (#259). Measured against the
           // coloured circle rather than the widget's outer box, because the
           // border is drawn inside that box and the raster has no border at
           // all — basing it on the outer box left the two 6% apart.
           padding: EdgeInsets.all(
-            (size - 2 * borderWidth) * (1 - riderInitialsBadgeFill) / 2,
+            (size - 2 * borderWidth) * (1 - sailorInitialsBadgeFill) / 2,
           ),
           child: FittedBox(
-            key: const Key('rider-marker-initials-fill'),
+            key: const Key('sailor-marker-initials-fill'),
             fit: BoxFit.contain,
             child: Text(
               symbol.initialsFor(displayName),
               maxLines: 1,
               style: TextStyle(
                 color: symbol.initialsInk.color,
-                shadows: riderInitialsShadows(
+                shadows: sailorInitialsShadows(
                   symbol.initialsInk.color,
                   size * 0.025,
                 ),
@@ -457,7 +457,7 @@ class RiderMarkerBadge extends StatelessWidget {
             ),
           ),
         ),
-        RiderSymbolKind.emoji => Text(
+        SailorSymbolKind.emoji => Text(
           symbol.emoji!,
           maxLines: 1,
           style: TextStyle(fontSize: size * 0.55, height: 1),
@@ -476,19 +476,19 @@ Future<Uint8List> loadMotorcycleIconPng(MotorcycleIconStyle style) async {
   return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
 }
 
-Future<({Uint8List bytes, bool sdf})> rasterizeRiderSymbolPng({
-  required RiderSymbol symbol,
+Future<({Uint8List bytes, bool sdf})> rasterizeSailorSymbolPng({
+  required SailorSymbol symbol,
   required String displayName,
   required MotorcycleIconStyle motorcycleStyle,
-  double size = riderSymbolRasterSize,
+  double size = sailorSymbolRasterSize,
 }) async {
-  if (symbol.kind == RiderSymbolKind.motorcycle) {
+  if (symbol.kind == SailorSymbolKind.motorcycle) {
     return (bytes: await loadMotorcycleIconPng(motorcycleStyle), sdf: true);
   }
-  final glyph = symbol.kind == RiderSymbolKind.initials
+  final glyph = symbol.kind == SailorSymbolKind.initials
       ? symbol.initialsFor(displayName)
       : symbol.emoji!;
-  final initials = symbol.kind == RiderSymbolKind.initials;
+  final initials = symbol.kind == SailorSymbolKind.initials;
   return (
     bytes: await _rasterizePng(
       size: size,
@@ -508,7 +508,10 @@ Future<({Uint8List bytes, bool sdf})> rasterizeRiderSymbolPng({
               fontWeight: initials ? FontWeight.w900 : FontWeight.normal,
               letterSpacing: initials ? -3 : null,
               shadows: initials
-                  ? riderInitialsShadows(symbol.initialsInk.color, size * 0.012)
+                  ? sailorInitialsShadows(
+                      symbol.initialsInk.color,
+                      size * 0.012,
+                    )
                   : null,
             ),
           ),
@@ -517,8 +520,8 @@ Future<({Uint8List bytes, bool sdf})> rasterizeRiderSymbolPng({
           // The same fill the Flutter badge uses, so the raster is the badge
           // rather than something drawn inside it. The layer completes the
           // other half by scaling this square onto the badge itself; see
-          // [riderInitialsIconSize].
-          final available = size * riderInitialsBadgeFill;
+          // [sailorInitialsIconSize].
+          final available = size * sailorInitialsBadgeFill;
           final scale = math.min(
             available / painter.width,
             available / painter.height,
@@ -539,14 +542,14 @@ Future<({Uint8List bytes, bool sdf})> rasterizeRiderSymbolPng({
         );
       },
     ),
-    // Initials now carry rider-selected ink and their own contrast edge. A
+    // Initials now carry sailor-selected ink and their own contrast edge. A
     // non-SDF image preserves those colours; MapLibre ignores iconColor for it
     // just as it already does for emoji rasters.
     sdf: false,
   );
 }
 
-List<Shadow> riderInitialsShadows(Color ink, double offset) {
+List<Shadow> sailorInitialsShadows(Color ink, double offset) {
   final edge = ink.computeLuminance() > 0.48
       ? const Color(0xE610151C)
       : const Color(0xE6FFFFFF);

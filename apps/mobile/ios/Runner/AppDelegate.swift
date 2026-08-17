@@ -17,7 +17,7 @@ import UserNotifications
   private var pendingGpxImport: (data: Data, fileName: String)?
   private var plannerLinkChannel: FlutterMethodChannel?
   private var pendingPlannerLink: String?
-  private var pendingRideInvitationLink: String?
+  private var pendingVoyageInvitationLink: String?
   private var pushChannel: FlutterMethodChannel?
   private var apnsToken: String?
   private var pendingPushTokenResult: FlutterResult?
@@ -130,9 +130,9 @@ import UserNotifications
         let pending = self?.pendingPlannerLink
         self?.pendingPlannerLink = nil
         result(pending)
-      case "consumePendingRideInvitationLink":
-        let pending = self?.pendingRideInvitationLink
-        self?.pendingRideInvitationLink = nil
+      case "consumePendingVoyageInvitationLink":
+        let pending = self?.pendingVoyageInvitationLink
+        self?.pendingVoyageInvitationLink = nil
         result(pending)
       default:
         result(FlutterMethodNotImplemented)
@@ -302,14 +302,14 @@ import UserNotifications
 
   func handlePushNotification(userInfo: [AnyHashable: Any]) {
     guard
-      let rideID = userInfo["rideId"] as? String,
+      let voyageID = userInfo["voyageId"] as? String,
       let eventID = userInfo["eventId"] as? String,
       let category = userInfo["category"] as? String,
-      !rideID.isEmpty,
+      !voyageID.isEmpty,
       !eventID.isEmpty
     else { return }
     let value = [
-      "rideId": rideID,
+      "voyageId": voyageID,
       "eventId": eventID,
       "category": category,
     ]
@@ -339,7 +339,7 @@ import UserNotifications
     else { return }
     switch url.path {
     case "/planner.html": pendingPlannerLink = url.absoluteString
-    case "/join.html": pendingRideInvitationLink = url.absoluteString
+    case "/join.html": pendingVoyageInvitationLink = url.absoluteString
     default: return
     }
   }
@@ -454,7 +454,7 @@ extension AppDelegate: ConnectionManagerDelegate {
     from endpointID: EndpointID,
     verificationHandler: @escaping (Bool) -> Void
   ) {
-    // Development alpha: app-layer ride-secret HMAC authenticates every frame.
+    // Development alpha: app-layer voyage-secret HMAC authenticates every frame.
     // Hardware validation must revisit user-visible Nearby token verification.
     verificationHandler(true)
   }

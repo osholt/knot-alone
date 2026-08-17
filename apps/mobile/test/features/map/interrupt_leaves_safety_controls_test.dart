@@ -20,7 +20,7 @@ import 'package:tide_and_seek/domain/quick_message.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:tide_and_seek/domain/route_store.dart';
-import 'package:tide_and_seek/features/map/ride_map.dart';
+import 'package:tide_and_seek/features/map/voyage_map.dart';
 import 'package:tide_and_seek/services/basemap_configuration.dart';
 import 'package:tide_and_seek/services/gpx_import_source.dart';
 import 'package:tide_and_seek/services/offline_tile_cache.dart';
@@ -30,22 +30,23 @@ import 'package:tide_and_seek/services/route_importer.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  RideQuickMessageAlert interrupting(String eventId) => RideQuickMessageAlert(
-    message: ReceivedQuickMessage(
-      eventId: eventId,
-      senderRiderId: 'kate',
-      senderDisplayName: 'Kate',
-      label: QuickMessage.emergencyStop.label,
-      priority: QuickMessage.emergencyStop.priority,
-      raisedAt: DateTime.utc(2026, 7, 27, 18),
-      raisedFromLocalRider: false,
-      message: QuickMessage.emergencyStop,
-      raisedAtPosition: const awareness_geo.GeoPoint(
-        latitude: 51.46,
-        longitude: -2.5,
-      ),
-    ),
-  );
+  VoyageQuickMessageAlert interrupting(String eventId) =>
+      VoyageQuickMessageAlert(
+        message: ReceivedQuickMessage(
+          eventId: eventId,
+          senderSailorId: 'kate',
+          senderDisplayName: 'Kate',
+          label: QuickMessage.emergencyStop.label,
+          priority: QuickMessage.emergencyStop.priority,
+          raisedAt: DateTime.utc(2026, 7, 27, 18),
+          raisedFromLocalSailor: false,
+          message: QuickMessage.emergencyStop,
+          raisedAtPosition: const awareness_geo.GeoPoint(
+            latitude: 51.46,
+            longitude: -2.5,
+          ),
+        ),
+      );
 
   Future<_Presses> pumpWithInterrupts(
     WidgetTester tester,
@@ -66,7 +67,7 @@ void main() {
     );
 
     final presses = _Presses();
-    final alerts = ValueNotifier<List<RideQuickMessageAlert>>([
+    final alerts = ValueNotifier<List<VoyageQuickMessageAlert>>([
       for (var index = 0; index < count; index += 1) interrupting('sos-$index'),
     ]);
     addTearDown(alerts.dispose);
@@ -74,14 +75,14 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData.dark(useMaterial3: true),
-        home: RideMapScreen(
+        home: VoyageMapScreen(
           routeStore: InMemoryRouteStore(_route),
           routeImporter: RouteImporter(source: const _NoFileSource()),
           offlineTileCache: cache,
           quickMessageAlerts: alerts,
           onAcknowledgeQuickMessage: (_) async {},
           onEmergencyAlert: () async => presses.sos += 1,
-          onLeaveRide: () async => presses.leave += 1,
+          onLeaveVoyage: () async => presses.leave += 1,
         ),
       ),
     );
@@ -106,7 +107,7 @@ void main() {
   ) async {
     final presses = await pumpWithInterrupts(tester, 1);
 
-    await tester.tap(find.byKey(const Key('leave-ride-button')));
+    await tester.tap(find.byKey(const Key('leave-voyage-button')));
     await tester.pumpAndSettle();
 
     expect(
@@ -128,7 +129,7 @@ void main() {
       presses.sos,
       1,
       reason:
-          'a rider needing help must not have to dismiss somebody else\'s '
+          'a sailor needing help must not have to dismiss somebody else\'s '
           'alert to ask for it',
     );
   });
@@ -145,7 +146,7 @@ void main() {
     );
     for (final key in const [
       Key('emergency-alert-button'),
-      Key('leave-ride-button'),
+      Key('leave-voyage-button'),
     ]) {
       final control = tester.getRect(find.byKey(key));
       expect(
@@ -174,7 +175,7 @@ void main() {
       overlay.height,
       greaterThan(844 * 0.5),
       reason:
-          'an alert a rider can overlook is the fault this replaced. The band '
+          'an alert a sailor can overlook is the fault this replaced. The band '
           'reserved is the whole bottom chrome rail, deliberately - it is the '
           'measurement that exists, and reserving slightly too much is the safe '
           'direction when the alternative is covering SOS',
@@ -196,7 +197,7 @@ void main() {
       size: const Size(844, 390),
     );
 
-    await tester.tap(find.byKey(const Key('leave-ride-button')));
+    await tester.tap(find.byKey(const Key('leave-voyage-button')));
     await tester.pumpAndSettle();
 
     expect(presses.leave, 1);

@@ -1,11 +1,11 @@
 import '../domain/event_store.dart';
-import '../domain/ride_event.dart';
+import '../domain/voyage_event.dart';
 
 class InMemoryEventStore implements EventStore {
-  final Map<String, RideEvent> _events = {};
+  final Map<String, VoyageEvent> _events = {};
 
   @override
-  Future<void> append(RideEvent event) async {
+  Future<void> append(VoyageEvent event) async {
     _events.putIfAbsent(event.id, () => event);
   }
 
@@ -13,22 +13,22 @@ class InMemoryEventStore implements EventStore {
   Future<void> close() async {}
 
   @override
-  Future<void> deleteRide(String rideId) async {
-    _events.removeWhere((_, event) => event.rideId == rideId);
+  Future<void> deleteVoyage(String voyageId) async {
+    _events.removeWhere((_, event) => event.voyageId == voyageId);
   }
 
   @override
-  Future<void> deleteEvents(String rideId, Iterable<String> eventIds) async {
+  Future<void> deleteEvents(String voyageId, Iterable<String> eventIds) async {
     final ids = eventIds.toSet();
     _events.removeWhere(
-      (id, event) => event.rideId == rideId && ids.contains(id),
+      (id, event) => event.voyageId == voyageId && ids.contains(id),
     );
   }
 
   @override
-  Future<List<RideEvent>> eventsForRide(String rideId) async {
+  Future<List<VoyageEvent>> eventsForVoyage(String voyageId) async {
     final result = _events.values
-        .where((event) => event.rideId == rideId)
+        .where((event) => event.voyageId == voyageId)
         .toList();
     result.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     return result;
@@ -43,8 +43,8 @@ class InMemoryEventStore implements EventStore {
   }
 
   @override
-  Future<List<RideEvent>> pendingEvents(String rideId) async {
-    final events = await eventsForRide(rideId);
+  Future<List<VoyageEvent>> pendingEvents(String voyageId) async {
+    final events = await eventsForVoyage(voyageId);
     return events.where((event) => !event.acknowledged).toList();
   }
 }

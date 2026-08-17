@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     trusted_hosts: list[str] = Field(default_factory=lambda: ["*"])
     forwarded_allow_ips: str = "127.0.0.1"
     auto_create_schema: bool = False
-    ride_retention_hours: int = Field(default=72, ge=24, le=24 * 30)
-    ended_ride_grace_hours: int = Field(default=24, ge=1, le=72)
+    voyage_retention_hours: int = Field(default=72, ge=24, le=24 * 30)
+    ended_voyage_grace_hours: int = Field(default=24, ge=1, le=72)
     idempotency_retention_hours: int = Field(default=24, ge=1, le=72)
     rate_limit_requests: int = Field(default=600, ge=10, le=100_000)
     rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
         le=24 * 3600,
     )
     # Road ratings are one small request each, deliberately unauthenticated and
-    # spread over hours by the client, so a genuine rider needs a handful an hour
+    # spread over hours by the client, so a genuine sailor needs a handful an hour
     # at most. The cap is what stands between the tally and ballot stuffing from
     # one source, since there is no submitter identity to deduplicate on.
     discovery_rating_rate_limit_requests: int = Field(default=30, ge=1, le=1000)
@@ -60,15 +60,15 @@ class Settings(BaseSettings):
     maximum_event_bytes: int = Field(default=8 * 1024, ge=1024, le=64 * 1024)
     maximum_upload_events: int = Field(default=20, ge=1, le=100)
     maximum_download_events: int = Field(default=100, ge=1, le=500)
-    maximum_active_rides: int = Field(default=100, ge=1, le=100_000)
-    maximum_events_per_ride: int = Field(default=5_000, ge=100, le=100_000)
-    maximum_stored_bytes_per_ride: int = Field(
+    maximum_active_voyages: int = Field(default=100, ge=1, le=100_000)
+    maximum_events_per_voyage: int = Field(default=5_000, ge=100, le=100_000)
+    maximum_stored_bytes_per_voyage: int = Field(
         default=25 * 1024 * 1024,
         ge=1024 * 1024,
         le=1024 * 1024 * 1024,
     )
-    maximum_replays_per_ride: int = Field(default=5_000, ge=1, le=100_000)
-    maximum_replay_bytes_per_ride: int = Field(
+    maximum_replays_per_voyage: int = Field(default=5_000, ge=1, le=100_000)
+    maximum_replay_bytes_per_voyage: int = Field(
         default=25 * 1024 * 1024,
         ge=1024 * 1024,
         le=1024 * 1024 * 1024,
@@ -81,11 +81,11 @@ class Settings(BaseSettings):
     minimum_client_protocol: int = Field(default=1, ge=1, le=1000)
     supported_capabilities: list[str] = Field(
         default_factory=lambda: [
-            "ride-start-v1",
+            "voyage-start-v1",
             "membership-v1",
             "pre-start-presence-v1",
             # Presence that spans the pre-start and started phases and reports a
-            # cursor-independent ride roster. Advertised alongside the legacy
+            # cursor-independent voyage roster. Advertised alongside the legacy
             # pre-start capability so an older client keeps working unchanged.
             "live-presence-v2",
             "route-revisions-v1",
@@ -93,29 +93,29 @@ class Settings(BaseSettings):
             "observer-access-v1",
             "traffic-incidents-v1",
             "traffic-reroutes-v1",
-            # A leader asking a named rider to be the Sweeper, and that
-            # rider's answer. Both are ordinary journal events; the capability
+            # A skipper asking a named sailor to be the Sweeper, and that
+            # sailor's answer. Both are ordinary journal events; the capability
             # exists so a client can name the limitation instead of appearing to
             # have asked somebody who was never asked.
-            "tec-role-assignment-v1",
-            # A separated rider's advisory rejoin route, addressed to the ride
-            # leader only.
+            "sweeper-role-assignment-v1",
+            # A separated sailor's advisory rejoin route, addressed to the voyage
+            # skipper only.
             "rejoin-route-sharing-v1",
-            # A rider's own phone number, addressed to the ride's coordination
-            # roles. Optional throughout and never inferred: a ride in which
+            # A sailor's own phone number, addressed to the voyage's coordination
+            # roles. Optional throughout and never inferred: a voyage in which
             # nobody shares one carries no numbers at all. Named so a client can
             # report the limitation instead of appearing to have shared.
-            "rider-contact-sharing-v1",
-            # Anonymous rider verdicts on catalogued roads. Not an event type:
+            "sailor-contact-sharing-v1",
+            # Anonymous sailor verdicts on catalogued roads. Not an event type:
             # a standalone unauthenticated endpoint, negotiated here so a client
-            # facing an older relay names the limitation and keeps the rider's
+            # facing an older relay names the limitation and keeps the sailor's
             # answer on the phone instead of losing it.
             "road-ratings-v1",
-            # The leader un-ending a ride that ended by mistake. Named so a
+            # The skipper un-ending a voyage that ended by mistake. Named so a
             # client facing an older relay hides the action rather than putting
-            # its leader back on the map while every other rider still sees a
-            # finished ride.
-            "ride-reopen-v1",
+            # its skipper back on the map while every other sailor still sees a
+            # finished voyage.
+            "voyage-reopen-v1",
         ]
     )
     required_capabilities: list[str] = Field(default_factory=list)
@@ -135,7 +135,7 @@ class Settings(BaseSettings):
     plan_lookup_rate_limit_requests: int = Field(default=30, ge=1, le=1000)
     plan_lookup_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
     pre_start_presence_ttl_seconds: int = Field(default=45, ge=15, le=300)
-    maximum_pre_start_presence_riders: int = Field(default=200, ge=2, le=1000)
+    maximum_pre_start_presence_sailors: int = Field(default=200, ge=2, le=1000)
     observer_read_rate_limit_requests: int = Field(default=120, ge=10, le=10_000)
     observer_read_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
     observer_ip_abuse_rate_limit_requests: int = Field(default=5000, ge=100, le=100_000)
@@ -146,7 +146,7 @@ class Settings(BaseSettings):
         le=100_000,
     )
     observer_create_rate_limit_window_seconds: int = Field(default=3600, ge=60, le=86400)
-    maximum_observer_grants_per_ride: int = Field(default=50, ge=1, le=500)
+    maximum_observer_grants_per_voyage: int = Field(default=50, ge=1, le=500)
     tomtom_traffic_api_key: SecretStr | None = None
     traffic_provider_timeout_seconds: int = Field(default=8, ge=2, le=30)
     traffic_incident_cache_seconds: int = Field(default=60, ge=30, le=300)

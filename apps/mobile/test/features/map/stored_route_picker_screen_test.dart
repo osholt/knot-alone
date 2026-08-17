@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tide_and_seek/domain/completed_ride_store.dart';
+import 'package:tide_and_seek/domain/completed_voyage_store.dart';
 import 'package:tide_and_seek/domain/distance_unit.dart';
 import 'package:tide_and_seek/domain/imported_route.dart';
 import 'package:tide_and_seek/domain/recorded_route_store.dart';
@@ -22,17 +22,17 @@ void main() {
     }),
   );
 
-  testWidgets('shows approximate endpoints beside an unhelpful ride title', (
+  testWidgets('shows approximate endpoints beside an unhelpful voyage title', (
     tester,
   ) async {
     final recorded = InMemoryRecordedRouteStore();
-    await recorded.save(_route(id: '392725', name: 'Ride 392725'));
+    await recorded.save(_route(id: '392725', name: 'Voyage 392725'));
 
     await _pump(tester, recorded: recorded, places: places);
 
-    expect(find.text('Ride library'), findsOneWidget);
+    expect(find.text('Voyage library'), findsOneWidget);
     expect(find.text('RECORDED ROUTES'), findsOneWidget);
-    expect(find.text('Ride 392725'), findsOneWidget);
+    expect(find.text('Voyage 392725'), findsOneWidget);
     expect(find.textContaining('Kingswood to Chippenham'), findsOneWidget);
     expect(find.text('Test offline places'), findsOneWidget);
   });
@@ -59,7 +59,7 @@ void main() {
     expect(find.text('Saved route 0'), findsOneWidget);
   });
 
-  testWidgets('ride details and exports remain reachable from the library', (
+  testWidgets('voyage details and exports remain reachable from the library', (
     tester,
   ) async {
     final recorded = InMemoryRecordedRouteStore();
@@ -70,12 +70,14 @@ void main() {
       tester,
       recorded: recorded,
       places: places,
-      openPreviousRideArchive: (_) async {
+      openPreviousVoyageArchive: (_) async {
         opened += 1;
         return null;
       },
     );
-    await tester.tap(find.byKey(const Key('ride-library-details-and-exports')));
+    await tester.tap(
+      find.byKey(const Key('voyage-library-details-and-exports')),
+    );
     await tester.pump();
 
     expect(opened, 1);
@@ -87,7 +89,7 @@ Future<void> _pump(
   required RecordedRouteStore recorded,
   required ApproximatePlaceIndex places,
   Future<StoredRouteSelection?> Function(BuildContext context)?
-  openPreviousRideArchive,
+  openPreviousVoyageArchive,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -95,11 +97,11 @@ Future<void> _pump(
       home: StoredRoutePickerScreen(
         library: StoredRouteLibrary(
           recordedRoutes: recorded,
-          completedRides: InMemoryCompletedRideStore(),
+          completedVoyages: InMemoryCompletedVoyageStore(),
           approximatePlaceIndex: places,
         ),
         distanceUnit: DistanceUnit.miles,
-        openPreviousRideArchive: openPreviousRideArchive,
+        openPreviousVoyageArchive: openPreviousVoyageArchive,
       ),
     ),
   );

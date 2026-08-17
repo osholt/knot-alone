@@ -16,7 +16,7 @@ import '../services/test_control_configuration.dart';
 /// ## Both values come from the iOS Settings app
 ///
 /// Neither the switch nor the token is set inside the app. Both live in
-/// `ios/Runner/Settings.bundle`, so a rider poking around this app finds no
+/// `ios/Runner/Settings.bundle`, so a sailor poking around this app finds no
 /// control offering to let another machine drive it.
 ///
 /// ## Why the operator supplies the token rather than the app minting one
@@ -27,7 +27,7 @@ import '../services/test_control_configuration.dart';
 /// open the app, read 32 characters and pass them to whoever was driving - and
 /// on iOS the act of leaving the app to send the token suspends it. Setting up
 /// two phones took five attempts, and none of the failures had anything to do
-/// with the ride under test.
+/// with the voyage under test.
 ///
 /// An operator-supplied token fixes that at the root. It survives restarts,
 /// reinstalls and suspension; it can be agreed in advance and written down once;

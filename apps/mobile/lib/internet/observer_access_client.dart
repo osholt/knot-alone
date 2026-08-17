@@ -4,22 +4,22 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
-import '../domain/ride_session.dart';
+import '../domain/voyage_session.dart';
 import 'internet_relay_client.dart';
 
 enum ObserverAccessScope {
-  rider,
+  sailor,
   group;
 
   String get label => switch (this) {
-    ObserverAccessScope.rider => 'Just me',
+    ObserverAccessScope.sailor => 'Just me',
     ObserverAccessScope.group => 'Whole group',
   };
 
   static ObserverAccessScope fromName(Object? name) =>
       name == ObserverAccessScope.group.name
       ? ObserverAccessScope.group
-      : ObserverAccessScope.rider;
+      : ObserverAccessScope.sailor;
 }
 
 class ObserverAccessConfiguration {
@@ -56,7 +56,7 @@ class ObserverAccessConfiguration {
     }
     final relayUri = relay.baseUri;
     if (relayUri == null || relayUri.origin != web.origin) {
-      return 'Observer links must use the same service host as the ride relay.';
+      return 'Observer links must use the same service host as the voyage relay.';
     }
     return null;
   }
@@ -68,7 +68,7 @@ class ObserverGrant {
     required this.label,
     required this.createdAt,
     required this.expiresAt,
-    this.scope = ObserverAccessScope.rider,
+    this.scope = ObserverAccessScope.sailor,
     this.revokedAt,
   });
 
@@ -275,10 +275,10 @@ class ObserverPublishedSnapshot {
   const ObserverPublishedSnapshot({
     required this.subjectName,
     required this.snapshotGeneratedAt,
-    required this.rideStatus,
+    required this.voyageStatus,
     required this.statusUpdatedAt,
     required this.assistanceUpdatedAt,
-    this.scope = ObserverAccessScope.rider,
+    this.scope = ObserverAccessScope.sailor,
     this.position,
     this.participants = const [],
     this.route,
@@ -288,7 +288,7 @@ class ObserverPublishedSnapshot {
   final ObserverAccessScope scope;
   final String subjectName;
   final DateTime snapshotGeneratedAt;
-  final String rideStatus;
+  final String voyageStatus;
   final DateTime statusUpdatedAt;
   final DateTime assistanceUpdatedAt;
   final ObserverPublishedPosition? position;
@@ -297,10 +297,10 @@ class ObserverPublishedSnapshot {
   final ObserverPublishedAssistance? assistance;
 
   Map<String, Object?> toJson() => {
-    if (scope != ObserverAccessScope.rider) 'scope': scope.name,
+    if (scope != ObserverAccessScope.sailor) 'scope': scope.name,
     'subjectName': subjectName,
     'snapshotGeneratedAt': snapshotGeneratedAt.toUtc().toIso8601String(),
-    'rideStatus': rideStatus,
+    'voyageStatus': voyageStatus,
     'statusUpdatedAt': statusUpdatedAt.toUtc().toIso8601String(),
     'assistanceUpdatedAt': assistanceUpdatedAt.toUtc().toIso8601String(),
     'position': position?.toJson(),
@@ -317,10 +317,10 @@ abstract interface class ObserverAccessApi {
   ObserverAccessConfiguration get configuration;
 
   Future<ObserverGrantCredentials> create(
-    RideSession session, {
+    VoyageSession session, {
     required String label,
     required Duration duration,
-    ObserverAccessScope scope = ObserverAccessScope.rider,
+    ObserverAccessScope scope = ObserverAccessScope.sailor,
   });
 
   Future<ObserverGrant> inspect(ObserverGrantCredentials credentials);
@@ -351,10 +351,10 @@ class HttpObserverAccessClient implements ObserverAccessApi {
 
   @override
   Future<ObserverGrantCredentials> create(
-    RideSession session, {
+    VoyageSession session, {
     required String label,
     required Duration duration,
-    ObserverAccessScope scope = ObserverAccessScope.rider,
+    ObserverAccessScope scope = ObserverAccessScope.sailor,
   }) async {
     final minutes = duration.inMinutes;
     if (label.trim().isEmpty || label.trim().length > 80) {
@@ -367,7 +367,7 @@ class HttpObserverAccessClient implements ObserverAccessApi {
         'Observer access must last between 30 minutes and 24 hours.',
       );
     }
-    final request = http.Request('POST', _rideGrantsUri(session.rideId))
+    final request = http.Request('POST', _voyageGrantsUri(session.voyageId))
       ..headers['content-type'] = 'application/json'
       ..body = jsonEncode({
         'label': label.trim(),
@@ -378,7 +378,7 @@ class HttpObserverAccessClient implements ObserverAccessApi {
           'groupDisclosureConfirmed': true,
         },
       });
-    final response = await _send(request, bearer: _rideBearer(session));
+    final response = await _send(request, bearer: _voyageBearer(session));
     final decoded = _jsonObject(response);
     try {
       final credentials = ObserverGrantCredentials(
@@ -527,10 +527,10 @@ class HttpObserverAccessClient implements ObserverAccessApi {
     }
   }
 
-  Uri _rideGrantsUri(String rideId) {
+  Uri _voyageGrantsUri(String voyageId) {
     final prefix = _apiPrefix;
     return Uri.parse(
-      '$prefix/v1/rides/${Uri.encodeComponent(rideId)}/observer-grants',
+      '$prefix/v1/voyages/${Uri.encodeComponent(voyageId)}/observer-grants',
     );
   }
 
@@ -545,16 +545,16 @@ class HttpObserverAccessClient implements ObserverAccessApi {
   String get _apiPrefix =>
       configuration.relay.baseUri!.toString().replaceFirst(RegExp(r'/$'), '');
 
-  String _rideBearer(RideSession session) {
+  String _voyageBearer(VoyageSession session) {
     if (session.inviteSecret.length < 16) {
       throw const InternetRelayException(
-        'Observer access requires an authenticated ride.',
+        'Observer access requires an authenticated voyage.',
       );
     }
     final digest = Hmac(
       sha256,
       utf8.encode(session.inviteSecret),
-    ).convert(utf8.encode('ride-relay-internet-token-v1\n${session.rideId}'));
+    ).convert(utf8.encode('ride-relay-internet-token-v1\n${session.voyageId}'));
     return 'rr1_${base64Url.encode(digest.bytes).replaceAll('=', '')}';
   }
 

@@ -175,13 +175,13 @@ def create_app(
     )
     join_code_requests = Counter(
         "tide_and_seek_join_code_requests_total",
-        "Six-digit ride-code lookup requests",
+        "Six-digit voyage-code lookup requests",
         ("outcome",),
         registry=registry,
     )
     plan_requests = Counter(
         "tide_and_seek_plan_requests_total",
-        "Pre-ride GPX plan requests",
+        "Pre-voyage GPX plan requests",
         ("outcome",),
         registry=registry,
     )
@@ -414,7 +414,7 @@ def create_app(
                 status_code=409,
                 content={
                     "code": "server_upgrade_required",
-                    "message": "This app is newer than the configured ride service.",
+                    "message": "This app is newer than the configured voyage service.",
                     "serverProtocol": settings.protocol_version,
                 },
             )
@@ -510,9 +510,9 @@ def create_app(
     ) -> Response:
         """Count one anonymous verdict on a catalogued road (#159).
 
-        Unauthenticated on purpose. A ride bearer would tell the relay which ride
+        Unauthenticated on purpose. A voyage bearer would tell the relay which voyage
         the rating came from, and the relay already knows which device IDs synced
-        that ride - so authenticating the submission is precisely what would make
+        that voyage - so authenticating the submission is precisely what would make
         it attributable. There is nothing here to authenticate: the payload has no
         subject, and the reply carries no body and no server-assigned identifier
         for a caller to be correlated by later.
@@ -586,7 +586,7 @@ def create_app(
         return JSONResponse(
             status_code=429,
             headers={"retry-after": str(min(retry_after, 300))},
-            content={"error": "Ride-code lookup rate limit exceeded"},
+            content={"error": "Voyage-code lookup rate limit exceeded"},
         )
 
     def join_code_rate_limit(request: Request) -> Response | None:
@@ -596,9 +596,9 @@ def create_app(
             return None
         return _join_code_rate_limit_response(retry_after)
 
-    @app.put("/api/v1/join-codes/{ride_code}", include_in_schema=False)
+    @app.put("/api/v1/join-codes/{voyage_code}", include_in_schema=False)
     def register_join_code(
-        ride_code: str,
+        voyage_code: str,
         payload: RegisterJoinCodeRequest,
         request: Request,
         session: Session = Depends(database_session),
@@ -607,11 +607,11 @@ def create_app(
             return compatibility_error
         authorization = request.headers.get("authorization", "")
         if not authorization.startswith("Bearer "):
-            raise RelayServiceError(401, "Ride credential required")
+            raise RelayServiceError(401, "Voyage credential required")
         service.register_join_code(
             session,
-            ride_code=ride_code,
-            ride_id=payload.rideId,
+            voyage_code=voyage_code,
+            voyage_id=payload.voyageId,
             invite_secret=payload.inviteSecret,
             bearer_token=authorization[7:],
             resolve_token=payload.resolveToken,
@@ -620,19 +620,19 @@ def create_app(
         return Response(status_code=204)
 
     @app.get(
-        "/api/v1/join-codes/{ride_code}",
+        "/api/v1/join-codes/{voyage_code}",
         include_in_schema=False,
         response_model=None,
     )
     def resolve_join_code(
-        ride_code: str,
+        voyage_code: str,
         request: Request,
         session: Session = Depends(database_session),
     ) -> Response:
         if compatibility_error := client_compatibility_error(request, client_protocol(request)):
             return compatibility_error
-        if len(ride_code) != 6 or not ride_code.isascii() or not ride_code.isdecimal():
-            raise RelayServiceError(400, "Ride code must be six digits")
+        if len(voyage_code) != 6 or not voyage_code.isascii() or not voyage_code.isdecimal():
+            raise RelayServiceError(400, "Voyage code must be six digits")
         resolve_token = request.headers.get("x-tide-and-seek-join-token") or None
         if limited := join_code_rate_limit(request):
             return limited
@@ -642,7 +642,7 @@ def create_app(
                 return _join_code_rate_limit_response(retry_after)
         result = service.resolve_join_code(
             session,
-            ride_code=ride_code,
+            voyage_code=voyage_code,
             resolve_token=resolve_token,
         )
         join_code_requests.labels(outcome="resolved").inc()
@@ -707,28 +707,28 @@ def create_app(
         return JSONResponse(content=GetPlanResponse.model_validate(result).model_dump())
 
     @app.post(
-        "/api/v1/rides/{ride_id}/observer-grants",
+        "/api/v1/voyages/{voyage_id}/observer-grants",
         include_in_schema=False,
         response_model=CreateObserverGrantResponse,
         status_code=201,
     )
     def post_observer_grant(
-        ride_id: str,
+        voyage_id: str,
         payload: CreateObserverGrantRequest,
         request: Request,
         session: Session = Depends(database_session),
     ) -> dict[str, object]:
-        bearer_token = _ride_bearer(request)
+        bearer_token = _voyage_bearer(request)
         if not RIDE_API_TOKEN.fullmatch(bearer_token):
-            raise RelayServiceError(401, "Ride credential rejected")
+            raise RelayServiceError(401, "Voyage credential rejected")
         client_ip = request.client.host if request.client is not None else "unknown"
-        # Carrier-grade NAT must not make a few active rides exhaust each
+        # Carrier-grade NAT must not make a few active voyages exhaust each
         # other's normal creation allowance. The IP ceiling only bounds
-        # broad abuse; each well-shaped ride secret gets the tighter budget.
+        # broad abuse; each well-shaped voyage secret gets the tighter budget.
         retry_after = observer_create_ip_abuse_limiter.check(f"ip:{client_ip}")
         if retry_after is None:
             retry_after = observer_create_limiter.check(
-                f"ride:{sha256(bearer_token.encode()).hex()}"
+                f"voyage:{sha256(bearer_token.encode()).hex()}"
             )
         if retry_after is not None:
             return JSONResponse(
@@ -739,7 +739,7 @@ def create_app(
         grant, management_token, publisher_token, observer_token = create_observer_grant(
             session,
             settings=settings,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             bearer_token=bearer_token,
             request=payload,
         )
@@ -756,7 +756,7 @@ def create_app(
         client_ip = request.client.host if request.client is not None else "unknown"
         digest = token_hash(supplied_token).hex()
         # Valid grants get a per-secret operational budget. The much higher
-        # IP budget only bounds random-token abuse and must not make riders
+        # IP budget only bounds random-token abuse and must not make sailors
         # sharing carrier-grade NAT exhaust each other's normal allowance.
         retry_after = observer_ip_abuse_limiter.check(f"ip:{client_ip}")
         if retry_after is None:
@@ -855,9 +855,9 @@ def create_app(
             observer_token=observer_token,
         )
 
-    @app.post("/api/v1/rides/{ride_id}/events:sync", include_in_schema=False)
+    @app.post("/api/v1/voyages/{voyage_id}/events:sync", include_in_schema=False)
     async def synchronize(
-        ride_id: str,
+        voyage_id: str,
         request: Request,
         background_tasks: BackgroundTasks,
         session: Session = Depends(database_session),
@@ -881,7 +881,7 @@ def create_app(
 
         authorization = request.headers.get("authorization", "")
         if not authorization.startswith("Bearer "):
-            raise RelayServiceError(401, "Ride credential required")
+            raise RelayServiceError(401, "Voyage credential required")
         bearer_token = authorization[7:]
         idempotency_key = request.headers.get("idempotency-key", "")
         expected_key = f"rr1-{base64url(sha256(body))}"
@@ -913,7 +913,7 @@ def create_app(
         try:
             result = service.synchronize(
                 session,
-                ride_id=ride_id,
+                voyage_id=voyage_id,
                 bearer_token=bearer_token,
                 idempotency_key=idempotency_key,
                 request_hash=sha256(body),
@@ -941,17 +941,17 @@ def create_app(
                 session_factory,
                 push_dispatcher,
                 push_deliveries,
-                ride_id,
+                voyage_id,
                 parsed.events,
             )
         return Response(content=encoded, media_type="application/json")
 
     @app.put(
-        "/api/v1/rides/{ride_id}/push-registrations/{installation_id}",
+        "/api/v1/voyages/{voyage_id}/push-registrations/{installation_id}",
         response_model=PushRegistrationResponse,
     )
     def put_push_registration(
-        ride_id: str,
+        voyage_id: str,
         installation_id: str,
         payload: PushRegistrationRequest,
         request: Request,
@@ -960,8 +960,8 @@ def create_app(
         registration = register_push(
             session,
             cipher=cipher,
-            ride_id=ride_id,
-            bearer_token=_ride_bearer(request),
+            voyage_id=voyage_id,
+            bearer_token=_voyage_bearer(request),
             installation_id=installation_id,
             device_header=request.headers.get("x-tide-and-seek-device", ""),
             request=payload,
@@ -969,32 +969,32 @@ def create_app(
         return registration_json(registration)
 
     @app.delete(
-        "/api/v1/rides/{ride_id}/push-registrations/{installation_id}",
+        "/api/v1/voyages/{voyage_id}/push-registrations/{installation_id}",
         status_code=204,
         response_model=None,
     )
     def delete_push_registration(
-        ride_id: str,
+        voyage_id: str,
         installation_id: str,
         request: Request,
         session: Session = Depends(database_session),
     ) -> Response:
         revoke_push(
             session,
-            ride_id=ride_id,
-            bearer_token=_ride_bearer(request),
+            voyage_id=voyage_id,
+            bearer_token=_voyage_bearer(request),
             installation_id=installation_id,
             device_header=request.headers.get("x-tide-and-seek-device", ""),
         )
         return Response(status_code=204)
 
     @app.post(
-        "/api/v1/rides/{ride_id}/presence:sync",
+        "/api/v1/voyages/{voyage_id}/presence:sync",
         include_in_schema=False,
         response_model=None,
     )
     async def synchronize_pre_start_presence(
-        ride_id: str,
+        voyage_id: str,
         request: Request,
         session: Session = Depends(database_session),
     ) -> Response:
@@ -1016,7 +1016,7 @@ def create_app(
 
         authorization = request.headers.get("authorization", "")
         if not authorization.startswith("Bearer "):
-            raise RelayServiceError(401, "Ride credential required")
+            raise RelayServiceError(401, "Voyage credential required")
         bearer_token = authorization[7:]
         client_ip = request.client.host if request.client is not None else "unknown"
         retry_after = limiter.check(f"ip:{client_ip}")
@@ -1049,7 +1049,7 @@ def create_app(
             raise RelayServiceError(400, "A live presence capability is required")
         result = service.synchronize_pre_start_presence(
             session,
-            ride_id=ride_id,
+            voyage_id=voyage_id,
             bearer_token=bearer_token,
             device_header=request.headers.get("x-tide-and-seek-device", ""),
             request=payload,
@@ -1065,10 +1065,10 @@ def create_app(
     return app
 
 
-def _ride_bearer(request: Request) -> str:
+def _voyage_bearer(request: Request) -> str:
     authorization = request.headers.get("authorization", "")
     if not authorization.startswith("Bearer "):
-        raise RelayServiceError(401, "Ride credential required")
+        raise RelayServiceError(401, "Voyage credential required")
     return authorization[7:]
 
 
@@ -1083,12 +1083,12 @@ def _dispatch_push_events(
     session_factory: sessionmaker[Session],
     dispatcher: PushDispatcher,
     delivery_counter: Counter,
-    ride_id: str,
+    voyage_id: str,
     events: list[dict[str, object]],
 ) -> None:
     with session_factory() as session:
         try:
-            report = dispatcher.dispatch(session, ride_id=ride_id, events=events)
+            report = dispatcher.dispatch(session, voyage_id=voyage_id, events=events)
             for outcome, count in (
                 ("delivered", report.delivered),
                 ("failed", report.failed),

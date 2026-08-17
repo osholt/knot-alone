@@ -1,5 +1,5 @@
 import '../domain/geo_point.dart';
-import '../domain/rider_location.dart';
+import '../domain/sailor_location.dart';
 import 'geo_calculations.dart';
 
 /// Why a fix became a durable position report.
@@ -11,22 +11,22 @@ enum PositionReportReason {
   /// Nothing has been reported yet, so there is no baseline to measure against.
   firstFix,
 
-  /// The rider has travelled at least [PositionReportPolicy.distanceMeters]
+  /// The sailor has travelled at least [PositionReportPolicy.distanceMeters]
   /// since the last report, and has ended up somewhere meaningfully different.
   movedFarEnough,
 
-  /// Withholding this fix would draw the trail somewhere the rider was not: a
+  /// Withholding this fix would draw the trail somewhere the sailor was not: a
   /// fix already withheld sits more than [PositionReportPolicy.shapeToleranceMeters]
   /// from the straight line the two reports would be joined by.
   changedShape,
 
   /// The keep-alive: nothing has been reported for
-  /// [PositionReportPolicy.keepAliveAfter], whether or not the rider has moved.
+  /// [PositionReportPolicy.keepAliveAfter], whether or not the sailor has moved.
   keepAlive,
 }
 
 extension PositionReportReasonLabels on PositionReportReason {
-  /// True when this report exists because of where the rider is, rather than to
+  /// True when this report exists because of where the sailor is, rather than to
   /// prove they are still there.
   bool get isMovement =>
       this == PositionReportReason.movedFarEnough ||
@@ -35,7 +35,7 @@ extension PositionReportReasonLabels on PositionReportReason {
 
 /// When a GPS fix is worth turning into a durable, relayed position report.
 ///
-/// Three layers decide how often a rider's position is published, and they are
+/// Three layers decide how often a sailor's position is published, and they are
 /// deliberately different sizes:
 ///
 ///  1. The platform `distanceFilter` (10 m, in `DeviceLocationSource`) decides
@@ -46,7 +46,7 @@ extension PositionReportReasonLabels on PositionReportReason {
 ///     cutting across it. Raising it to 20 m would leave the two layers
 ///     fighting: the app could no longer see inside its own threshold.
 ///  2. This policy decides which of those fixes becomes a durable
-///     `riderLocationUpdated` event — the expensive one: signed, journalled,
+///     `sailorLocationUpdated` event — the expensive one: signed, journalled,
 ///     uploaded, replayed, and drawn as a trail.
 ///  3. The ephemeral presence channel is *not* gated here. Every fix goes to it,
 ///     because that channel is a fixed-cost poll that runs whether or not there
@@ -96,17 +96,17 @@ class PositionReportPolicy {
   /// Measured as distance travelled along the fixes, not as straight-line
   /// displacement from the last report, and the distinction is not academic: on
   /// a hairpin, displacement grows far more slowly than travel, so a
-  /// displacement threshold is not reached until the rider is most of the way
+  /// displacement threshold is not reached until the sailor is most of the way
   /// round the bend and the chord then cuts across it. Measured that way the
   /// same hairpin is cut by 16 m.
   static const defaultDistanceMeters = 18.0;
 
-  /// 10 m — one platform filter, half the threshold. The rider has to have ended
+  /// 10 m — one platform filter, half the threshold. The sailor has to have ended
   /// up somewhere, not merely accumulated distance.
   ///
   /// This is what stops a stationary phone reporting. A receiver sitting still
   /// wanders, and wander accumulates travel indefinitely while going nowhere; a
-  /// travel threshold on its own would read that as a rider moving. Displacement
+  /// travel threshold on its own would read that as a sailor moving. Displacement
   /// from the last reported position cannot accumulate, so wander inside ±5 m —
   /// which is what a fix this app accepts looks like — can never clear it.
   static const defaultMinimumDisplacementMeters = 10.0;
@@ -145,14 +145,14 @@ class PositionReportPolicy {
   ///
   ///  - `RouteDeviationConfig.staleAfter` (30 s). A position older than that is
   ///    reported as `gpsStale` — "No recent GPS position is available" — and at
-  ///    90 s it escalates to the coordinators. A stationary rider whose receiver
+  ///    90 s it escalates to the coordinators. A stationary sailor whose receiver
   ///    is working must never produce that alarm, so the keep-alive has to
   ///    refresh the position well inside 30 s.
   ///  - `PresenceFreshnessPolicy.liveWithin` (20 s). Keeping the interval under
-  ///    it means a stationary rider's own marker stays `live` rather than
+  ///    it means a stationary sailor's own marker stays `live` rather than
   ///    flickering to `ageing` between keep-alives.
   ///
-  /// 15 s satisfies both with margin and matches the ride shell's existing
+  /// 15 s satisfies both with margin and matches the voyage shell's existing
   /// staleness-refresh period, so the two ticks stay in step. It is 4 reports a
   /// minute while stationary, against roughly 60 at the 1 Hz the platform
   /// delivers while moving.
@@ -165,7 +165,7 @@ class PositionReportPolicy {
   final Duration keepAliveAfter;
 }
 
-/// The running decision for one rider's fixes. Stateful, because every rule is
+/// The running decision for one sailor's fixes. Stateful, because every rule is
 /// relative to what was last reported.
 class PositionReportGate {
   PositionReportGate({this.policy = const PositionReportPolicy()});
@@ -203,7 +203,7 @@ class PositionReportGate {
   ///
   /// Returns null to withhold it. Withholding is not discarding: the fix has
   /// already gone to the ephemeral presence channel by the time this is asked,
-  /// so the group still sees the rider. What is withheld is a journal event.
+  /// so the group still sees the sailor. What is withheld is a journal event.
   ///
   /// Judged on [LocationSample.recordedAt] rather than a wall clock, so a
   /// replayed or simulated fix sequence behaves identically to a live one.
@@ -224,7 +224,7 @@ class PositionReportGate {
     if (previous == null || previousAt == null) {
       return PositionReportReason.firstFix;
     }
-    // An out-of-order fix says nothing new about where the rider is now, and
+    // An out-of-order fix says nothing new about where the sailor is now, and
     // accepting it would rewind the baseline every rule is measured against.
     if (!sample.recordedAt.isAfter(previousAt)) return null;
     final moving = _isMoving(sample);
@@ -261,7 +261,7 @@ class PositionReportGate {
   }
 
   /// Whether joining [previous] straight to [candidate] would put the trail more
-  /// than [PositionReportPolicy.shapeToleranceMeters] from a place the rider
+  /// than [PositionReportPolicy.shapeToleranceMeters] from a place the sailor
   /// demonstrably was.
   bool _wouldMisdrawTrail(GeoPoint previous, GeoPoint candidate) {
     for (final point in _withheld) {
@@ -283,7 +283,7 @@ class PositionReportGate {
   }
 
   /// Forgets the baseline, so the next fix reports unconditionally. Used when
-  /// the rider's reporting stops and starts again — a ride start, or location
+  /// the sailor's reporting stops and starts again — a voyage start, or location
   /// sharing being turned back on — because the gap in between is not travel.
   void reset() {
     _reportedPosition = null;

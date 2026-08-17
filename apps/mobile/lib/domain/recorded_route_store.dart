@@ -1,7 +1,7 @@
 import 'imported_route.dart';
 
 /// A library of saved recordings, distinct from [RouteStore]'s single
-/// "active route for this ride" slot - a leader may record several routes
+/// "active route for this voyage" slot - a skipper may record several routes
 /// ahead of time and pick one later.
 abstract interface class RecordedRouteStore {
   Future<List<ImportedRoute>> list();

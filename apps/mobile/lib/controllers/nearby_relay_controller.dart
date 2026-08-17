@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../domain/rider_location.dart';
-import '../domain/ride_event.dart';
-import '../domain/ride_session.dart';
+import '../domain/sailor_location.dart';
+import '../domain/voyage_event.dart';
+import '../domain/voyage_session.dart';
 import '../relay/relay_engine.dart';
 import '../relay/relay_presence.dart';
 
-/// Narrow UI integration seam; it does not couple the ride controller to a
+/// Narrow UI integration seam; it does not couple the voyage controller to a
 /// particular radio SDK.
 class NearbyRelayController extends ChangeNotifier
     implements RelayPresenceGateway {
@@ -25,30 +25,30 @@ class NearbyRelayController extends ChangeNotifier
 
   RelayStatus get status => _status;
   int get peerCount => _status.peerIds.length;
-  Stream<RideEvent> get receivedEvents => _engine.receivedEvents;
+  Stream<VoyageEvent> get receivedEvents => _engine.receivedEvents;
   @override
   Stream<RelayPresenceUpdate> get presenceUpdates => _engine.receivedPresence;
 
-  Future<void> start(RideSession session) => _engine.start(
+  Future<void> start(VoyageSession session) => _engine.start(
     RelayEngineConfig(
-      rideId: session.rideId,
-      rideSecret: session.inviteSecret,
-      localDeviceId: session.localRiderId,
+      voyageId: session.voyageId,
+      voyageSecret: session.inviteSecret,
+      localDeviceId: session.localSailorId,
       endpointName: session.displayName,
     ),
   );
 
-  Future<void> publish(RideEvent event) => _engine.enqueueLocal(event);
+  Future<void> publish(VoyageEvent event) => _engine.enqueueLocal(event);
 
   @override
   Future<void> publishPresence(
-    RiderLocation? position, {
+    SailorLocation? position, {
     bool clear = false,
     Duration ttl = const Duration(seconds: 45),
   }) => _engine.publishPresence(position, clear: clear, ttl: ttl);
 
   @Deprecated('Use publish')
-  Future<void> relay(RideEvent event) => publish(event);
+  Future<void> relay(VoyageEvent event) => publish(event);
 
   Future<void> stop() => _engine.stop();
 
