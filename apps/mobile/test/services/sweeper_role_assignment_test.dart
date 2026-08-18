@@ -429,7 +429,7 @@ void main() {
         roleChanged(
           id: 'f-handover-to',
           deviceId: 'dave',
-          role: VoyageRole.lead,
+          role: VoyageRole.skipper,
           after: const Duration(seconds: 41),
         ),
         response(
@@ -455,7 +455,7 @@ void main() {
         roleChanged(
           id: 'e-handover-to',
           deviceId: 'dave',
-          role: VoyageRole.lead,
+          role: VoyageRole.skipper,
           after: const Duration(seconds: 31),
         ),
         request(

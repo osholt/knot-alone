@@ -190,7 +190,7 @@ class SailorContactRecipients {
     required String? skipperSailorId,
     required Iterable<String> sweeperSailorIds,
   }) {
-    if (localRole == VoyageRole.lead || localRole == VoyageRole.sweeper) {
+    if (localRole == VoyageRole.skipper || localRole == VoyageRole.sweeper) {
       return const SailorContactRecipients.voyageGroup();
     }
     return SailorContactRecipients.addressed([

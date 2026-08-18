@@ -1,4 +1,5 @@
 import '../controllers/voyage_controller.dart';
+import '../domain/voyage_role.dart';
 import '../controllers/situational_awareness_controller.dart';
 import '../relay/live_presence.dart';
 import 'voyage_membership.dart';
@@ -54,7 +55,7 @@ class TestControlSnapshot {
               'voyageCode': session.voyageCode,
               'localSailorId': session.localSailorId,
               'displayName': session.displayName,
-              'role': session.role.name,
+              'role': session.role.wireName,
               // No inviteSecret, no joinToken - see the class comment.
             },
       'roster': [
@@ -72,7 +73,7 @@ class TestControlSnapshot {
   ) => {
     'sailorId': participant.sailorId,
     'displayName': participant.displayName,
-    'role': participant.role.name,
+    'role': participant.role.wireName,
     'state': participant.state.name,
     'isLocal': participant.isLocal,
     'hasLastKnownLocation': participant.lastKnownLocation != null,
@@ -86,7 +87,7 @@ class TestControlSnapshot {
   ) => {
     'sailorId': sailor.sailorId,
     'displayName': sailor.displayName,
-    'role': sailor.role.name,
+    'role': sailor.role.wireName,
     'freshness': sailor.freshness.name,
     'isLocal': sailor.isLocal,
     'hasPosition': sailor.location != null,

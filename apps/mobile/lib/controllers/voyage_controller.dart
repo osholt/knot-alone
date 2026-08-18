@@ -209,7 +209,7 @@ class VoyageController extends ChangeNotifier {
 
   bool get voyageStarted => _lifecycle.started;
   DateTime? get voyageStartedAt => _lifecycle.startedAt;
-  bool get isLocalVoyageSkipper => _session?.role == VoyageRole.lead;
+  bool get isLocalVoyageSkipper => _session?.role == VoyageRole.skipper;
   VoyagePhase get voyagePhase => voyageEnded
       ? VoyagePhase.ended
       : voyageStarted
@@ -745,7 +745,7 @@ class VoyageController extends ChangeNotifier {
     final activeSession = _requireSession();
     if (activeSession.isSimulation ||
         activeSession.coordinationMode == VoyageCoordinationMode.solo ||
-        activeSession.role != VoyageRole.lead) {
+        activeSession.role != VoyageRole.skipper) {
       return;
     }
     var session = activeSession;
@@ -879,7 +879,7 @@ class VoyageController extends ChangeNotifier {
         type: VoyageEventType.sailorJoined,
         payload: {
           'displayName': session.displayName,
-          'role': session.role.name,
+          'role': session.role.wireName,
           'vesselStyle': session.sailorSymbol.wireValue(session.vesselStyle),
           'sailorColor': session.sailorColor.name,
         },
@@ -895,7 +895,7 @@ class VoyageController extends ChangeNotifier {
       await _sessionStore.save(updated);
       await _record(
         type: VoyageEventType.roleChanged,
-        payload: {'role': role.name},
+        payload: {'role': role.wireName},
       );
     });
   }
@@ -930,13 +930,13 @@ class VoyageController extends ChangeNotifier {
     return sweeperRoleAssignments.pendingFor(localSailorId);
   }
 
-  /// The sailor currently holding [VoyageRole.lead] in the reconciled roster.
+  /// The sailor currently holding [VoyageRole.skipper] in the reconciled roster.
   ///
   /// Used to address a skipper-only event. Null when the skipper has left or is
   /// not yet known, in which case the caller must not send rather than
   /// broadcasting to the group.
   String? get skipperSailorId => liveParticipants
-      .where((participant) => participant.role == VoyageRole.lead)
+      .where((participant) => participant.role == VoyageRole.skipper)
       .map((participant) => participant.sailorId)
       .firstOrNull;
 
@@ -1278,7 +1278,7 @@ class VoyageController extends ChangeNotifier {
     if (voyageStarted || voyageEnded) return;
     await _run(() async {
       final session = _requireSession();
-      if (session.role != VoyageRole.lead) {
+      if (session.role != VoyageRole.skipper) {
         throw const FormatException(
           'Only the voyage skipper can start the voyage.',
         );
@@ -1361,7 +1361,7 @@ class VoyageController extends ChangeNotifier {
       if (!voyageStarted) {
         throw const FormatException('Start the voyage before pausing it.');
       }
-      if (session.role != VoyageRole.lead) {
+      if (session.role != VoyageRole.skipper) {
         throw const FormatException(
           'Only the voyage skipper can pause the group.',
         );
@@ -1413,7 +1413,7 @@ class VoyageController extends ChangeNotifier {
     if (activeSession == null || !voyageEnded) {
       return VoyageReopenOutcome.notEnded;
     }
-    if (activeSession.role != VoyageRole.lead) {
+    if (activeSession.role != VoyageRole.skipper) {
       return VoyageReopenOutcome.notSkipper;
     }
     final endedAt = _voyageEndedAt;
@@ -1557,7 +1557,7 @@ class VoyageController extends ChangeNotifier {
       joinToken: _generateJoinToken(),
       localSailorId: _localSailorIdForVoyage(voyageId),
       displayName: normalisedDisplayName,
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: now,
       isSimulation: isSimulation,
       simulationSailorCount: simulationSailorCount,
@@ -1575,7 +1575,7 @@ class VoyageController extends ChangeNotifier {
       type: VoyageEventType.voyageCreated,
       payload: {
         'displayName': session.displayName,
-        'role': session.role.name,
+        'role': session.role.wireName,
         if (isSimulation) 'simulation': true,
         'vesselStyle': session.sailorSymbol.wireValue(session.vesselStyle),
         'sailorColor': session.sailorColor.name,

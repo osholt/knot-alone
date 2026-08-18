@@ -10,12 +10,12 @@ void main() {
 
   test('skipper receives along-route TEC distance and estimated time gap', () {
     final status = const SkipperVoyageStatusCalculator().calculate(
-      localRole: VoyageRole.lead,
+      localRole: VoyageRole.skipper,
       localSailorId: 'lead',
       localLocation: _location(
         id: 'lead',
         name: 'Lead',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         longitude: 0.015,
         speed: 10,
         at: now,
@@ -54,12 +54,12 @@ void main() {
       List<SailorLocation> sailorLocations = const [],
       Iterable<String> registeredSweeperSailorIds = const [],
     }) => const SkipperVoyageStatusCalculator().calculate(
-      localRole: VoyageRole.lead,
+      localRole: VoyageRole.skipper,
       localSailorId: 'lead',
       localLocation: _location(
         id: 'lead',
         name: 'Lead',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         longitude: 0.015,
         speed: 10,
         at: now,
@@ -186,7 +186,7 @@ void main() {
 
   test('a fresh TEC without a skipper fix keeps the age but not the gap', () {
     final status = const SkipperVoyageStatusCalculator().calculate(
-      localRole: VoyageRole.lead,
+      localRole: VoyageRole.skipper,
       localSailorId: 'lead',
       localLocation: null,
       sailorLocations: [
@@ -213,12 +213,12 @@ void main() {
 
   test('closed loop uses the short gap across its start and finish', () {
     final status = const SkipperVoyageStatusCalculator().calculate(
-      localRole: VoyageRole.lead,
+      localRole: VoyageRole.skipper,
       localSailorId: 'lead',
       localLocation: _location(
         id: 'lead',
         name: 'Lead',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         longitude: 0,
         speed: 10,
         at: now,
@@ -253,7 +253,7 @@ void main() {
 
   test('skipper receives simple unacknowledged off-course alerts', () {
     final status = const SkipperVoyageStatusCalculator().calculate(
-      localRole: VoyageRole.lead,
+      localRole: VoyageRole.skipper,
       localSailorId: 'lead',
       localLocation: null,
       sailorLocations: [
@@ -312,7 +312,7 @@ void main() {
       );
 
       final status = const SkipperVoyageStatusCalculator().calculate(
-        localRole: VoyageRole.lead,
+        localRole: VoyageRole.skipper,
         localSailorId: 'lead',
         localLocation: null,
         sailorLocations: [
@@ -386,7 +386,7 @@ void main() {
     // raised by another device. Only the one who is not on the skipper's actual
     // track should reach the skipper's count.
     final status = const SkipperVoyageStatusCalculator().calculate(
-      localRole: VoyageRole.lead,
+      localRole: VoyageRole.skipper,
       localSailorId: 'lead',
       localLocation: null,
       sailorLocations: [
@@ -564,12 +564,12 @@ void main() {
         ),
       ]) {
         final status = calculator.calculate(
-          localRole: VoyageRole.lead,
+          localRole: VoyageRole.skipper,
           localSailorId: 'lead',
           localLocation: _location(
             id: 'lead',
             name: 'Lead',
-            role: VoyageRole.lead,
+            role: VoyageRole.skipper,
             longitude: 0,
             speed: 10,
             at: now,

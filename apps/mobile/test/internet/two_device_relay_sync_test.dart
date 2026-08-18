@@ -52,7 +52,7 @@ void main() {
   test(
     'an idle device with an empty outbound queue still receives a peer',
     () async {
-      final skipper = device('skipper', role: VoyageRole.lead);
+      final skipper = device('skipper', role: VoyageRole.skipper);
       final follower = device('follower');
 
       // The skipper is parked on a desk: it uploads its own creation event once
@@ -82,7 +82,7 @@ void main() {
   );
 
   test('the same holds with the roles the other way round', () async {
-    final skipper = device('skipper', role: VoyageRole.lead);
+    final skipper = device('skipper', role: VoyageRole.skipper);
     final follower = device('follower');
     await follower.enqueue('follower-joined', VoyageEventType.sailorJoined);
     await follower.start();
@@ -104,7 +104,7 @@ void main() {
   test(
     'positions keep arriving in both directions while one device is idle',
     () async {
-      final skipper = device('skipper', role: VoyageRole.lead);
+      final skipper = device('skipper', role: VoyageRole.skipper);
       final follower = device('follower');
       await skipper.start();
       await follower.start();
@@ -127,7 +127,7 @@ void main() {
   test(
     'a repeated upload after a lost acknowledgement still delivers the peer',
     () async {
-      final skipper = device('skipper', role: VoyageRole.lead);
+      final skipper = device('skipper', role: VoyageRole.skipper);
       final follower = device('follower');
       await skipper.enqueue(
         'skipper-position-1',
@@ -156,7 +156,7 @@ void main() {
   );
 
   test('device clocks that disagree do not stop journal delivery', () async {
-    final skipper = device('skipper', role: VoyageRole.lead);
+    final skipper = device('skipper', role: VoyageRole.skipper);
     final follower = device('follower');
     await skipper.start();
     await follower.start();

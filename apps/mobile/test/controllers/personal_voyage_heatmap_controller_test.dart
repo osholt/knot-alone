@@ -176,7 +176,7 @@ CompletedVoyage _voyage(
   voyageCode: id.padLeft(6, '0'),
   voyageName: null,
   localDisplayName: 'Oliver',
-  localRole: VoyageRole.lead,
+  localRole: VoyageRole.skipper,
   startedAt: DateTime.utc(2026, 8, 12, 9),
   endedAt: DateTime.utc(2026, 8, 12, 10),
   archivedAt: DateTime.utc(2026, 8, 12, 10, 1),

@@ -19,7 +19,7 @@ void main() {
         joinToken: 'test-join-token-0123456789',
         localSailorId: 'lead',
         displayName: 'Demo Lead',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         joinedAt: DateTime.utc(2026, 7, 17),
         isSimulation: true,
       );
@@ -87,7 +87,7 @@ void main() {
       joinToken: 'test-join-token-0123456789',
       localSailorId: 'lead',
       displayName: 'Demo Lead',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 17),
       isSimulation: true,
     );
@@ -167,7 +167,7 @@ void main() {
       joinToken: 'test-join-token-0123456789',
       localSailorId: 'lead',
       displayName: 'Demo Lead',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 17),
       isSimulation: true,
     );

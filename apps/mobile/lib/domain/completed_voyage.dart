@@ -117,7 +117,7 @@ class CompletedVoyage {
       voyageCode: json['voyageCode']! as String,
       voyageName: json['voyageName'] as String?,
       localDisplayName: json['localDisplayName']! as String,
-      localRole: VoyageRole.values.byName(json['localRole']! as String),
+      localRole: VoyageRoleWire.parse(json['localRole']! as String),
       startedAt: DateTime.parse(json['startedAt']! as String).toUtc(),
       endedAt: DateTime.parse(json['endedAt']! as String).toUtc(),
       archivedAt: DateTime.parse(json['archivedAt']! as String).toUtc(),

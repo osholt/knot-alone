@@ -384,7 +384,7 @@ class SituationalAwarenessController extends ChangeNotifier {
   };
 
   void _evaluateLocation(SailorLocation location) {
-    if (location.role == VoyageRole.lead) {
+    if (location.role == VoyageRole.skipper) {
       _recordSkipperTrailPoint(location.sample);
     }
     // Per-role, and re-applied on every fix so a hand-over mid-voyage moves both
@@ -522,7 +522,7 @@ class SituationalAwarenessController extends ChangeNotifier {
     // The skipper is always the end of their own trail, so exempting them says
     // nothing; leave their verdict to the geometry.
     final exempt =
-        location.role != VoyageRole.lead &&
+        location.role != VoyageRole.skipper &&
         SkipperTrackExemption.isFollowingSkipperTrack(
           position: location.sample.position,
           accuracyMeters: location.sample.accuracyMeters,

@@ -95,7 +95,7 @@ VoyageSession _session() => VoyageSession(
   joinToken: 'test-join-token-0123456789',
   localSailorId: 'sailor-1',
   displayName: 'Oliver',
-  role: VoyageRole.lead,
+  role: VoyageRole.skipper,
   joinedAt: DateTime.utc(2026, 7, 16, 12),
 );
 

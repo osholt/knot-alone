@@ -40,7 +40,7 @@ void main() {
   }
 
   test('a sailor visible before the start stays visible across it', () async {
-    final skipper = device('skipper', 'Lead', role: VoyageRole.lead);
+    final skipper = device('skipper', 'Lead', role: VoyageRole.skipper);
     final follower = device('follower', 'Alex');
     relay.join('skipper', 'Lead', 'lead');
     relay.join('follower', 'Alex', 'sailor');
@@ -70,7 +70,7 @@ void main() {
   test(
     'the skipper sees a sailor who joins an already-started voyage',
     () async {
-      final skipper = device('skipper', 'Lead', role: VoyageRole.lead);
+      final skipper = device('skipper', 'Lead', role: VoyageRole.skipper);
       relay.join('skipper', 'Lead', 'lead');
       await skipper.start();
       relay.startVoyage();
@@ -96,7 +96,7 @@ void main() {
   test(
     'the joiner sees the skipper advancing, not one frozen position',
     () async {
-      final skipper = device('skipper', 'Lead', role: VoyageRole.lead);
+      final skipper = device('skipper', 'Lead', role: VoyageRole.skipper);
       relay.join('skipper', 'Lead', 'lead');
       await skipper.start();
       relay.startVoyage();
@@ -118,7 +118,7 @@ void main() {
   );
 
   test('a sailor who restarts the app rejoins without re-opting in', () async {
-    final skipper = device('skipper', 'Lead', role: VoyageRole.lead);
+    final skipper = device('skipper', 'Lead', role: VoyageRole.skipper);
     relay.join('skipper', 'Lead', 'lead');
     relay.join('follower', 'Alex', 'sailor');
     await skipper.start();
@@ -144,7 +144,7 @@ void main() {
   });
 
   test('presence resumes by itself after a network loss', () async {
-    final skipper = device('skipper', 'Lead', role: VoyageRole.lead);
+    final skipper = device('skipper', 'Lead', role: VoyageRole.skipper);
     final follower = device('follower', 'Alex');
     relay.join('skipper', 'Lead', 'lead');
     relay.join('follower', 'Alex', 'sailor');
@@ -183,7 +183,7 @@ void main() {
   test(
     'a position that stops updating ages, goes stale, then disappears',
     () async {
-      final skipper = device('skipper', 'Lead', role: VoyageRole.lead);
+      final skipper = device('skipper', 'Lead', role: VoyageRole.skipper);
       final follower = device('follower', 'Alex');
       relay.join('skipper', 'Lead', 'lead');
       await skipper.start();
@@ -358,7 +358,7 @@ void main() {
   test(
     'stopping clears this device from the relay and its peer demotes it',
     () async {
-      final skipper = device('skipper', 'Lead', role: VoyageRole.lead);
+      final skipper = device('skipper', 'Lead', role: VoyageRole.skipper);
       final follower = device('follower', 'Alex');
       await skipper.start();
       await follower.start();
@@ -383,7 +383,7 @@ void main() {
   );
 
   test('an explicit departure removes a sailor immediately', () async {
-    final skipper = device('skipper', 'Lead', role: VoyageRole.lead);
+    final skipper = device('skipper', 'Lead', role: VoyageRole.skipper);
     final follower = device('follower', 'Alex');
     relay.join('skipper', 'Lead', 'lead');
     relay.join('follower', 'Alex', 'sailor');

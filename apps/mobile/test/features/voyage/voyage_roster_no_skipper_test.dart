@@ -102,7 +102,7 @@ void main() {
     await tester.tap(find.byKey(const Key('roster-take-the-lead-button')));
     await tester.pumpAndSettle();
 
-    expect(controller.session?.role, VoyageRole.lead);
+    expect(controller.session?.role, VoyageRole.skipper);
     expect(controller.voyageHasNoSkipper, isFalse);
     expect(controller.skipperSailorId, controller.session!.localSailorId);
     // Recorded as this sailor's own role change, which is what makes it

@@ -18,7 +18,7 @@ void main() {
     joinToken: 'test-join-token-0123456789',
     localSailorId: 'local',
     displayName: 'Oliver',
-    role: VoyageRole.lead,
+    role: VoyageRole.skipper,
     joinedAt: DateTime.utc(2026, 7, 23, 10),
   );
 
@@ -154,7 +154,7 @@ SailorLocation _location({
 }) => SailorLocation(
   sailorId: sailorId,
   displayName: displayName,
-  role: sailorId == 'local' ? VoyageRole.lead : VoyageRole.sailor,
+  role: sailorId == 'local' ? VoyageRole.skipper : VoyageRole.sailor,
   sample: LocationSample(
     position: GeoPoint(latitude: latitude, longitude: -2.4),
     recordedAt: receivedAt,

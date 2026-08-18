@@ -200,7 +200,7 @@ ObserverPublishedSnapshot buildGroupObserverSnapshot({
             .toUpperCase();
         return ObserverPublishedGroupParticipant(
           displayName: _boundedObserverText(participant.displayName, 80),
-          role: participant.role.name,
+          role: participant.role.wireName,
           color: '#$color',
           position: sample == null
               ? null
@@ -1358,7 +1358,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
             } else {
               await _voyageRouteStore!.saveActiveRoute(route);
             }
-          } else if (session.role != VoyageRole.lead) {
+          } else if (session.role != VoyageRole.skipper) {
             route = null;
             await _voyageRouteStore!.clearActiveRoute();
           } else {
@@ -1415,7 +1415,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     if (widget.enableNativeServices && !_isSimulation) {
       final session = widget.voyageController.session;
       final groupVoyage = widget.voyageController.coordinationMode.isGroup;
-      if (groupVoyage && session?.role == VoyageRole.lead) {
+      if (groupVoyage && session?.role == VoyageRole.skipper) {
         try {
           await widget.voyageController.publishVoyageCode();
         } on VoyageCodeDirectoryException catch (error) {
@@ -2055,7 +2055,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
             final isSweeper = _effectiveSweeperSailorIds.contains(
               location.sailorId,
             );
-            final isLead = location.role == VoyageRole.lead;
+            final isLead = location.role == VoyageRole.skipper;
             // A position past its freshness threshold is demoted explicitly in
             // the label. The identity fill remains stable across surfaces.
             final freshness =
@@ -2079,7 +2079,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
                 : isSweeper
                 ? 'Sweeper'
                 : isLead
-                ? 'Lead'
+                ? 'Skipper'
                 : null;
             final label = [
               location.displayName,
@@ -2220,7 +2220,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     // group locally, so completion must work from its skipper, follower and TEC
     // perspectives alike.
     if (session == null ||
-        (!_isSimulation && session.role != VoyageRole.lead)) {
+        (!_isSimulation && session.role != VoyageRole.skipper)) {
       return;
     }
     final route = _activeRoute;
@@ -2320,7 +2320,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
         sailorId: sailor.id,
         displayName: sailor.displayName,
         kind: SailorTrailRecorder.kindFor(
-          isSkipper: sailor.role == VoyageRole.lead,
+          isSkipper: sailor.role == VoyageRole.skipper,
           isOffRoute: sailor.isOffRoute,
         ),
         // Voyage Lab maintains its own ephemeral history; the same per-sailor
@@ -2357,7 +2357,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
               longitude: location.sample.position.longitude,
               recordedAt: location.sample.recordedAt,
             ),
-            isSkipper: location.role == VoyageRole.lead,
+            isSkipper: location.role == VoyageRole.skipper,
             isOffRoute: _isOffRouteState(
               alerts[location.sailorId]?.assessment.state,
             ),
@@ -2366,7 +2366,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
                     .participantFor(location.sailorId)
                     ?.isEligibleForLivePosition ==
                 true,
-            journalTrail: location.role == VoyageRole.lead
+            journalTrail: location.role == VoyageRole.skipper
                 ? [
                     for (final sample in awareness.skipperTrailSamples)
                       route_domain.GeoPoint(
@@ -2864,7 +2864,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
                 // record in the voyage roster instead (#144).
                 participants: widget.voyageController.liveParticipants,
                 coordinationMode: widget.voyageController.coordinationMode,
-                isSkipper: session.role == VoyageRole.lead,
+                isSkipper: session.role == VoyageRole.skipper,
                 busy: widget.voyageController.busy || _loading,
                 routeName: _activeRoute?.name,
                 onStartVoyage: _confirmStartVoyage,
@@ -3290,7 +3290,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     final sharedNumbers = widget.voyageController.receivedSailorContacts;
     final session = widget.voyageController.session;
     if (session != null &&
-        (session.role == VoyageRole.lead ||
+        (session.role == VoyageRole.skipper ||
             session.role == VoyageRole.sweeper)) {
       contacts[session.localSailorId] = MapEmergencyContact(
         sailorId: session.localSailorId,
@@ -3299,7 +3299,8 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
       );
     }
     for (final sailor in _awarenessController?.sailorLocations ?? const []) {
-      if (sailor.role != VoyageRole.lead && sailor.role != VoyageRole.sweeper) {
+      if (sailor.role != VoyageRole.skipper &&
+          sailor.role != VoyageRole.sweeper) {
         continue;
       }
       final shared = sharedNumbers[sailor.sailorId];
@@ -3529,9 +3530,9 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
 
   String? get _currentSkipperSailorId {
     final session = widget.voyageController.session;
-    if (session?.role == VoyageRole.lead) return session!.localSailorId;
+    if (session?.role == VoyageRole.skipper) return session!.localSailorId;
     for (final sailor in _awarenessController?.sailorLocations ?? const []) {
-      if (sailor.role == VoyageRole.lead) return sailor.sailorId;
+      if (sailor.role == VoyageRole.skipper) return sailor.sailorId;
     }
     return null;
   }
@@ -3553,7 +3554,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     final controller = widget.voyageController;
     _diagnostics?.recordNote(
       'start voyage tapped on the phone: '
-      'role=${controller.session?.role.name ?? 'none'} '
+      'role=${controller.session?.role.wireName ?? 'none'} '
       'started=${controller.voyageStarted} '
       'busy=${controller.busy} '
       'route=${_activeRoute == null ? 'none' : 'selected'}',
@@ -3566,7 +3567,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     }
     _voyageStartFlowInProgress = true;
     try {
-      if (controller.session?.role != VoyageRole.lead ||
+      if (controller.session?.role != VoyageRole.skipper ||
           controller.voyageStarted) {
         _diagnostics?.recordNote(
           'start voyage refused before the dialog: not the skipper, or already '
@@ -3775,7 +3776,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     canToggleVoyagePause:
         !_isSimulation &&
         widget.voyageController.voyageStarted &&
-        widget.voyageController.session?.role == VoyageRole.lead,
+        widget.voyageController.session?.role == VoyageRole.skipper,
     onToggleVoyagePause: _toggleVoyagePause,
     onLeaveOrEndVoyage: _confirmLeaveVoyageFromMap,
   );
@@ -4192,7 +4193,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     if (session == null) return;
     final sailors = <String>[];
     String labelFor(String name, VoyageRole role) => switch (role) {
-      VoyageRole.lead => '$name (Lead)',
+      VoyageRole.skipper => '$name (Lead)',
       VoyageRole.sweeper => '$name (Sweeper)',
       _ => name,
     };
@@ -4395,7 +4396,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
         controller.voyageStarted ||
         controller.busy ||
         controller.coordinationMode != VoyageCoordinationMode.solo ||
-        controller.session?.role != VoyageRole.lead) {
+        controller.session?.role != VoyageRole.skipper) {
       return;
     }
     await _leaveVoyage();

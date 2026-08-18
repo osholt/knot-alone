@@ -39,7 +39,7 @@ void main() {
   test(
     "a peer whose clock is behind stays live, and is named rather than aged out",
     () async {
-      final skipper = device('skipper', 'Lead', role: VoyageRole.lead);
+      final skipper = device('skipper', 'Lead', role: VoyageRole.skipper);
       final follower = device(
         'follower',
         'Alex',
@@ -80,7 +80,7 @@ void main() {
   test(
     'a peer whose clock is ahead is judged on the relay clock too',
     () async {
-      final skipper = device('skipper', 'Lead', role: VoyageRole.lead);
+      final skipper = device('skipper', 'Lead', role: VoyageRole.skipper);
       final follower = device(
         'follower',
         'Alex',
@@ -120,7 +120,7 @@ void main() {
       final skipper = device(
         'skipper',
         'Lead',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         clockOffset: const Duration(seconds: 90),
       );
       final follower = device('follower', 'Alex');
@@ -143,7 +143,7 @@ void main() {
   );
 
   test('one unreadable position does not hide the others', () async {
-    final skipper = device('skipper', 'Lead', role: VoyageRole.lead);
+    final skipper = device('skipper', 'Lead', role: VoyageRole.skipper);
     final follower = device('follower', 'Alex');
     relay.join('follower', 'Alex', 'sailor');
     await follower.start();
@@ -164,7 +164,7 @@ void main() {
     final skipper = device(
       'skipper',
       'Lead',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       clockOffset: const Duration(seconds: -45),
     );
     await skipper.start();
@@ -176,7 +176,7 @@ void main() {
   test(
     'a position stops being retained on the relay clock, not the peer\'s',
     () async {
-      final skipper = device('skipper', 'Lead', role: VoyageRole.lead);
+      final skipper = device('skipper', 'Lead', role: VoyageRole.skipper);
       final follower = device(
         'follower',
         'Alex',

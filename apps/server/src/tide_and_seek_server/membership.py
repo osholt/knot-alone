@@ -67,8 +67,16 @@ def project_membership_events(
             member.state = "left"
 
 
+# `lead` is the pre-#49 spelling of `skipper`; both are accepted so a roster
+# rebuilt from stored events keeps the skipper it had.
+KNOWN_ROLES = frozenset({"skipper", "lead", "sailor", "sweeper", "marker"})
+
+# The roles that coordinate a voyage, under either spelling.
+COORDINATOR_ROLES = frozenset({"skipper", "lead", "sweeper"})
+
+
 def safe_role(value: object) -> str:
-    if value in {"lead", "sailor", "sweeper", "marker"}:
+    if value in KNOWN_ROLES:
         return str(value)
     return "sailor"
 

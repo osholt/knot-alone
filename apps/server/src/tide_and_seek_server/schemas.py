@@ -12,6 +12,15 @@ from pydantic import (
     model_validator,
 )
 
+VoyageRoleName = Literal["skipper", "lead", "sailor", "sweeper", "marker"]
+"""Roles the relay accepts on the wire.
+
+`lead` is the pre-#49 spelling of `skipper` and is still accepted, because a
+`Literal` that dropped it would 422 every payload from an app that has not
+updated - which on a boat means crew sharing silently stops working mid-passage.
+The app reads either and writes `skipper`.
+"""
+
 
 class SyncRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -52,7 +61,7 @@ class PresencePositionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     displayName: str = Field(min_length=1, max_length=80)
-    role: Literal["lead", "sailor", "sweeper", "marker"]
+    role: VoyageRoleName
     motorcycleStyle: str = Field(min_length=1, max_length=40)
     sailorColor: str = Field(min_length=1, max_length=40)
     sample: PresenceLocationSample
@@ -137,7 +146,7 @@ class PushRegistrationRequest(BaseModel):
     platform: Literal["ios", "android"]
     provider: Literal["apns", "fcm"]
     token: str = Field(min_length=16, max_length=4096)
-    role: Literal["lead", "sailor", "sweeper", "marker"]
+    role: VoyageRoleName
     preferences: PushPreferences = Field(default_factory=PushPreferences)
 
     @model_validator(mode="after")
@@ -155,7 +164,7 @@ class PushRegistrationResponse(BaseModel):
     installationId: str
     platform: Literal["ios", "android"]
     provider: Literal["apns", "fcm"]
-    role: Literal["lead", "sailor", "sweeper", "marker"]
+    role: VoyageRoleName
     preferences: PushPreferences
     registeredAt: datetime
     updatedAt: datetime
@@ -411,7 +420,7 @@ class PublishObserverGroupParticipant(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     displayName: str = Field(min_length=1, max_length=80)
-    role: Literal["lead", "sweeper", "marker", "sailor"]
+    role: VoyageRoleName
     color: str = Field(pattern=r"^#[0-9A-Fa-f]{6}$")
     position: ObserverPosition | None
 

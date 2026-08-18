@@ -46,7 +46,7 @@ void main() {
                 now: now,
                 localSailorId: 'skipper',
                 localDisplayName: 'Lead',
-                localRole: VoyageRole.lead,
+                localRole: VoyageRole.skipper,
                 localJoinedAt: joinedAt,
                 localVesselStyle: vesselIconStyleDefault,
                 localSailorColor: sailorColorDefault,
@@ -107,7 +107,7 @@ void main() {
       now: joinedAt.add(const Duration(minutes: 2, seconds: 30)),
       localSailorId: 'skipper',
       localDisplayName: 'Lead',
-      localRole: VoyageRole.lead,
+      localRole: VoyageRole.skipper,
       localJoinedAt: joinedAt,
       localVesselStyle: vesselIconStyleDefault,
       localSailorColor: sailorColorDefault,
@@ -193,7 +193,7 @@ void main() {
     ]) {
       final participants = reduce(ordering);
       final skippers = participants
-          .where((participant) => participant.role == VoyageRole.lead)
+          .where((participant) => participant.role == VoyageRole.skipper)
           .toList();
 
       expect(
@@ -242,7 +242,7 @@ void main() {
           now: joinedAt.add(const Duration(minutes: 1)),
           localSailorId: 'skipper',
           localDisplayName: 'Lead',
-          localRole: VoyageRole.lead,
+          localRole: VoyageRole.skipper,
           localJoinedAt: joinedAt,
           localVesselStyle: vesselIconStyleDefault,
           localSailorColor: sailorColorDefault,

@@ -13,7 +13,7 @@ void main() {
 
   test('ends only when every known sailor is near the destination', () {
     final arrived = [
-      _location('lead', VoyageRole.lead, destination, now),
+      _location('lead', VoyageRole.skipper, destination, now),
       _location(
         'sweeper',
         VoyageRole.sweeper,
@@ -57,7 +57,7 @@ void main() {
       sailorLocations: [
         _location(
           'lead',
-          VoyageRole.lead,
+          VoyageRole.skipper,
           const GeoPoint(latitude: 51.5001, longitude: -2.5001),
           now,
         ),
@@ -85,7 +85,7 @@ void main() {
       detector.everyoneReachedDestination(
         destination: destination,
         sailorLocations: [
-          _location('lead', VoyageRole.lead, destination, now),
+          _location('lead', VoyageRole.skipper, destination, now),
           _location(
             'sweeper',
             VoyageRole.sweeper,
@@ -102,7 +102,7 @@ void main() {
 
   test('keeps a voyage open while the route is still ahead of the group', () {
     final atDestination = [
-      _location('lead', VoyageRole.lead, destination, now),
+      _location('lead', VoyageRole.skipper, destination, now),
     ];
 
     for (final fraction in [0.0, 0.02, 0.5, 0.89]) {
@@ -125,7 +125,7 @@ void main() {
         detector.everyoneReachedDestination(
           destination: destination,
           sailorLocations: [
-            _location('lead', VoyageRole.lead, destination, now),
+            _location('lead', VoyageRole.skipper, destination, now),
           ],
           now: now,
           routeProgressFraction: fraction,
@@ -157,7 +157,7 @@ void main() {
       }
       return detector.everyoneReachedDestination(
         destination: finish,
-        sailorLocations: [_location('lead', VoyageRole.lead, finish, now)],
+        sailorLocations: [_location('lead', VoyageRole.skipper, finish, now)],
         now: now,
         routeProgressFraction: geometry.totalMeters <= 0
             ? 0

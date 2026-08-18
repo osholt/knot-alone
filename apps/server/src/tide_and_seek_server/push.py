@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from .config import Settings
 from .crypto import DataCipher, base64url, sha256, token_hash
-from .membership import MembershipEvent, project_membership_events
+from .membership import COORDINATOR_ROLES, MembershipEvent, project_membership_events
 from .models import PushDelivery, PushRegistration, StoredEvent, Voyage, VoyageMember
 from .schemas import PushRegistrationRequest
 from .service import RelayServiceError
@@ -445,7 +445,7 @@ def classify_push_event(
     if not isinstance(event_id, str) or not isinstance(payload, dict):
         return None
     recipients = _recipient_ids(payload)
-    coordinator_roles = frozenset({"lead", "sweeper"})
+    coordinator_roles = COORDINATOR_ROLES
 
     if event_type == "statusMessage":
         message_type = payload.get("message")
@@ -480,7 +480,7 @@ def classify_push_event(
                 body="Open Tide and Seek for the latest group status.",
                 critical=False,
                 recipient_ids=recipients,
-                recipient_roles=frozenset({"lead", "sweeper", "marker"}),
+                recipient_roles=COORDINATOR_ROLES | {"marker"},
             )
         return None
 

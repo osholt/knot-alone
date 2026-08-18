@@ -449,7 +449,7 @@ class VoyageMembershipReducer {
         if (displayName == null || role == null) continue;
         final isLocal = event.deviceId == localSailorId;
         final joiningRole = isLocal ? localRole : role;
-        if (joiningRole == VoyageRole.lead) {
+        if (joiningRole == VoyageRole.skipper) {
           leadClaimedAt[event.deviceId] = event.createdAt;
         }
         participants[event.deviceId] = VoyageParticipant(
@@ -537,7 +537,7 @@ class VoyageMembershipReducer {
       if (event.type == VoyageEventType.roleChanged) {
         final role = _role(event.payload['role']);
         if (role == null) continue;
-        if (role == VoyageRole.lead) {
+        if (role == VoyageRole.skipper) {
           leadClaimedAt[event.deviceId] = event.createdAt;
         }
         participants[event.deviceId] = existing.copyWith(
@@ -736,7 +736,7 @@ class VoyageMembershipReducer {
     return List.unmodifiable(_withOneSkipper(result, leadClaimedAt));
   }
 
-  /// Leaves exactly one sailor holding [VoyageRole.lead].
+  /// Leaves exactly one sailor holding [VoyageRole.skipper].
   ///
   /// A tester found that two sailors could hold lead at the same time, and that
   /// either could then end the voyage for everyone (#284). #241 restricted that
@@ -761,7 +761,7 @@ class VoyageMembershipReducer {
     Map<String, DateTime> leadClaimedAt,
   ) {
     final skippers = participants
-        .where((participant) => participant.role == VoyageRole.lead)
+        .where((participant) => participant.role == VoyageRole.skipper)
         .toList(growable: false);
     if (skippers.length < 2) return participants;
 
@@ -787,7 +787,7 @@ class VoyageMembershipReducer {
 
     return [
       for (final participant in participants)
-        participant.role == VoyageRole.lead &&
+        participant.role == VoyageRole.skipper &&
                 participant.sailorId != winner!.sailorId
             // Demoted to sailor rather than dropped: they are still in the voyage,
             // they just do not lead it, and saying so is what stops their phone
@@ -878,11 +878,7 @@ class VoyageMembershipReducer {
 
   static VoyageRole? _role(Object? value) {
     if (value is! String) return null;
-    try {
-      return VoyageRole.values.byName(value);
-    } on ArgumentError {
-      return null;
-    }
+    return VoyageRoleWire.tryParse(value);
   }
 
   static String? _nonEmptyString(Object? value) {

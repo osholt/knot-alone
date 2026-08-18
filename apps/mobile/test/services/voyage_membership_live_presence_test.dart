@@ -29,7 +29,7 @@ void main() {
     now: now,
     localSailorId: 'local',
     localDisplayName: 'Oliver',
-    localRole: VoyageRole.lead,
+    localRole: VoyageRole.skipper,
     localJoinedAt: startedAt,
     localVesselStyle: vesselIconStyleDefault,
     localSailorColor: sailorColorDefault,

@@ -22,7 +22,7 @@ void main() {
       joinToken: 'test-join-token-0123456789',
       localSailorId: 'lead',
       displayName: 'Demo Lead',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 17),
       isSimulation: true,
     );
@@ -78,7 +78,7 @@ void main() {
       joinToken: 'test-join-token-0123456789',
       localSailorId: 'lead',
       displayName: 'Demo Lead',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 17),
       isSimulation: true,
     );
@@ -140,7 +140,7 @@ void main() {
         joinToken: 'test-join-token-0123456789',
         localSailorId: 'lead',
         displayName: 'Demo Lead',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         joinedAt: DateTime.utc(2026, 7, 17),
         isSimulation: true,
       ),
@@ -165,7 +165,7 @@ void main() {
         joinToken: 'test-join-token-0123456789',
         localSailorId: 'lead',
         displayName: 'Demo Lead',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         joinedAt: DateTime.utc(2026, 7, 17),
         isSimulation: true,
         simulationSailorCount: 30,
@@ -205,7 +205,7 @@ void main() {
 
   test('retains a recent trail for the simulated skipper', () async {
     final initialSkipper = simulation.sailors.singleWhere(
-      (sailor) => sailor.role == VoyageRole.lead,
+      (sailor) => sailor.role == VoyageRole.skipper,
     );
     final sweeper = simulation.sailors.singleWhere(
       (sailor) => sailor.role == VoyageRole.sweeper,
@@ -223,7 +223,7 @@ void main() {
     await simulation.advance(const Duration(seconds: 1));
 
     final movingSkipper = simulation.sailors.singleWhere(
-      (sailor) => sailor.role == VoyageRole.lead,
+      (sailor) => sailor.role == VoyageRole.skipper,
     );
     expect(movingSkipper.travelTrail.length, greaterThan(1));
   });
@@ -237,7 +237,7 @@ void main() {
     );
     expect(follower.displayName, 'You · Follower');
     expect(follower.progress, lessThan(skipper.progress));
-    expect(skipper.role, VoyageRole.lead);
+    expect(skipper.role, VoyageRole.skipper);
 
     simulation.setLocalRole(VoyageRole.sweeper);
     expect(simulation.localRole, VoyageRole.sweeper);
@@ -262,7 +262,7 @@ void main() {
       (sailor) => sailor.displayName == 'Maya',
     );
     expect(follower.role, VoyageRole.sailor);
-    expect(skipper.role, VoyageRole.lead);
+    expect(skipper.role, VoyageRole.skipper);
     expect(follower.progress, lessThan(skipper.progress));
   });
 
@@ -304,7 +304,7 @@ void main() {
           joinToken: 'test-join-token-0123456789',
           localSailorId: 'lead',
           displayName: 'Demo Lead',
-          role: VoyageRole.lead,
+          role: VoyageRole.skipper,
           joinedAt: DateTime.utc(2026, 7, 17),
           isSimulation: true,
         ),
@@ -372,7 +372,7 @@ void main() {
           joinToken: 'test-join-token-0123456789',
           localSailorId: 'lead',
           displayName: 'Demo Lead',
-          role: VoyageRole.lead,
+          role: VoyageRole.skipper,
           joinedAt: DateTime.utc(2026, 7, 17),
           isSimulation: true,
         ),
@@ -397,7 +397,7 @@ void main() {
       final maya = markerSimulation.sailors.singleWhere(
         (sailor) => sailor.id == 'voyage-lab-maya',
       );
-      expect(markerSimulation.localRole, VoyageRole.lead);
+      expect(markerSimulation.localRole, VoyageRole.skipper);
       expect(markerSimulation.automaticMarkerActive, isTrue);
       expect(markerSimulation.automaticMarkerIsLocal, isFalse);
       expect(markerSimulation.automaticMarkerSailorName, 'Maya');

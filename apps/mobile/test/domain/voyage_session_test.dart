@@ -12,7 +12,7 @@ void main() {
     joinToken: 'aTokenWithPlentyOfEntropy',
     localSailorId: 'lead',
     displayName: 'Demo Lead',
-    role: VoyageRole.lead,
+    role: VoyageRole.skipper,
     joinedAt: DateTime.utc(2026, 7, 17),
     isSimulation: true,
   );
@@ -31,7 +31,7 @@ void main() {
         joinToken: 'aTokenWithPlentyOfEntropy',
         localSailorId: 'lead',
         displayName: 'Demo Lead',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         joinedAt: DateTime.utc(2026, 7, 17),
         isSimulation: true,
         simulationSailorCount: 30,
@@ -64,7 +64,7 @@ void main() {
         joinToken: 'aTokenWithPlentyOfEntropy',
         localSailorId: 'lead',
         displayName: 'Demo Lead',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         joinedAt: DateTime.utc(2026, 7, 17),
         coordinationMode: VoyageCoordinationMode.solo,
       );
@@ -91,7 +91,7 @@ void main() {
         joinToken: 'aTokenWithPlentyOfEntropy',
         localSailorId: 'lead',
         displayName: 'Demo Lead',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         joinedAt: DateTime.utc(2026, 7, 17),
         sailorSymbol: const SailorSymbol.initials(),
       );

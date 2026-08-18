@@ -230,16 +230,12 @@ class VoyageRouteReducer {
     VoyageEvent event,
     Map<String, VoyageRole> roles,
   ) =>
-      roles[event.deviceId] == VoyageRole.lead &&
+      roles[event.deviceId] == VoyageRole.skipper &&
       event.payload['skipperSailorId'] == event.deviceId;
 
   static VoyageRole? _role(Object? value) {
     if (value is! String) return null;
-    try {
-      return VoyageRole.values.byName(value);
-    } on ArgumentError {
-      return null;
-    }
+    return VoyageRoleWire.tryParse(value);
   }
 
   static String? _string(Object? value) =>

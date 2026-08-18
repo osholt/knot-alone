@@ -55,7 +55,7 @@ void main() {
   test('new voyage is persisted with lead role and a signed event', () async {
     await controller.createVoyage('Oliver');
 
-    expect(controller.session?.role, VoyageRole.lead);
+    expect(controller.session?.role, VoyageRole.skipper);
     expect(controller.session?.displayName, 'Oliver');
     expect(controller.session?.voyageCode, matches(RegExp(r'^\d{6}$')));
     expect(controller.events, hasLength(1));
@@ -338,7 +338,7 @@ void main() {
         controller.participants
             .singleWhere((participant) => participant.sailorId == 'follower')
             .role,
-        VoyageRole.lead,
+        VoyageRole.skipper,
       );
     },
   );
@@ -605,7 +605,7 @@ void main() {
 
     final archived = (await completedVoyageStore.list()).single;
     expect(archived.title, 'Peak District');
-    expect(archived.localRole, VoyageRole.lead);
+    expect(archived.localRole, VoyageRole.skipper);
     expect(archived.endedAt, DateTime.utc(2026, 7, 16, 12));
     expect(archived.toJson().toString(), isNot(contains(inviteSecret)));
     expect(archived.toJson().toString(), isNot(contains(joinToken)));
@@ -1250,7 +1250,7 @@ void main() {
             'sailorId': sailorId,
             'displayName': sailorId,
             'phone': phone,
-            'sharedByRole': VoyageRole.lead.name,
+            'sharedByRole': VoyageRole.skipper.name,
           },
           'recipientSailorIds': ?recipientSailorIds,
         },

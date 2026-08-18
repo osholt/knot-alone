@@ -144,7 +144,7 @@ class _ObserverAccessSheetState extends State<ObserverAccessSheet> {
                           'sailor’s last-known position and freshness, and the '
                           'planned route outline. Tell the whole group before '
                           'creating this link.'
-                    : 'This follows only your phone. Other sailors and the '
+                    : 'This follows only this device. Other sailors and the '
                           'planned route stay private.',
                 style: const TextStyle(color: Color(0xFFA9B4C2)),
               ),

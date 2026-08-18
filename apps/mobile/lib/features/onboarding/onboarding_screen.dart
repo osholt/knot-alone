@@ -113,7 +113,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       const SizedBox(height: 16),
       const Text(
         'Tide and Seek coordinates a private crew with a shared '
-        'roster, route and safety alerts. Voyage events are kept on your phone '
+        'roster, route and safety alerts. Voyage events are kept on this device '
         'first, then relayed by the internet or nearby devices when available.',
         style: TextStyle(color: Color(0xFFBCC5D0), height: 1.5, fontSize: 17),
       ),
@@ -127,7 +127,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       const _InfoCard(
         icon: Icon(Icons.cloud_off_outlined),
         title: 'Designed for patchy coverage',
-        body: 'Losing a relay does not erase the voyage journal on your phone.',
+        body:
+            'Losing a relay does not erase the voyage journal on this device.',
       ),
     ],
   );
@@ -258,7 +259,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       const SizedBox(height: 14),
       const _InfoCard(
         icon: MarineGlyphIcon(MarineGlyph.skipper),
-        title: 'Lead',
+        title: 'Skipper',
         body:
             'Creates the private code, publishes the group route, starts, pauses and ends the voyage.',
       ),

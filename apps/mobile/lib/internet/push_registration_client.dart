@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import '../domain/voyage_role.dart';
+
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
@@ -73,7 +75,7 @@ class HttpPushRegistrationClient implements PushRegistrationApi {
       'platform': token.platform,
       'provider': token.provider.name,
       'token': token.value,
-      'role': session.role.name,
+      'role': session.role.wireName,
       'preferences': preferences.toJson(),
     });
     final response = await _send(

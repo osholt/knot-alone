@@ -445,13 +445,10 @@ class PreStartPresenceController extends ChangeNotifier {
     return PresenceAvailability.serviceUnreachable;
   }
 
-  static VoyageRole _roleFor(String value) {
-    for (final role in VoyageRole.values) {
-      if (role.name == value) return role;
-    }
-    // An unknown future role must not drop the sailor from the roster.
-    return VoyageRole.sailor;
-  }
+  static VoyageRole _roleFor(String value) =>
+      // An unknown future role must not drop the sailor from the roster, and a
+      // role written by a pre-#49 build still reads as the skipper.
+      VoyageRoleWire.tryParse(value) ?? VoyageRole.sailor;
 
   static int _byJoinedAt(
     PresenceRosterMember left,
