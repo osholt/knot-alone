@@ -64,6 +64,121 @@ void main() {
     ]);
     expect(edited.shapingPoints.single.legIndex, 1);
   });
+
+  group('naming a mark (#43)', () {
+    test('sets the name and changes nothing else about the passage', () {
+      final route = _route();
+      final renamed = renameRouteWaypoint(route, 1, 'Needles Fairway');
+
+      expect(renamed.waypoints[1].name, 'Needles Fairway');
+      expect(renamed.waypoints[1].point, route.waypoints[1].point);
+      expect(renamed.waypoints.map((mark) => mark.point), [
+        for (final mark in route.waypoints) mark.point,
+      ]);
+      expect(renamed.paths, route.paths);
+      // The distinguishing property. Insert and remove clear the manoeuvres
+      // because the geometry moved; a rename must not, or the courses and
+      // times already on screen would blank out for a typed word.
+      expect(renamed.maneuvers, route.maneuvers);
+    });
+
+    test('trims the name, and a blank one clears it', () {
+      expect(
+        renameRouteWaypoint(_route(), 1, '  Nab Tower  ').waypoints[1].name,
+        'Nab Tower',
+      );
+      expect(renameRouteWaypoint(_route(), 1, '   ').waypoints[1].name, isNull);
+      expect(renameRouteWaypoint(_route(), 1, null).waypoints[1].name, isNull);
+    });
+
+    test('the start and the destination can be named too', () {
+      final route = renameRouteWaypoint(_route(), 0, 'Lymington');
+      expect(
+        renameRouteWaypoint(route, 2, 'Cowes').waypoints.map((m) => m.name),
+        ['Lymington', 'Existing stop', 'Cowes'],
+      );
+    });
+
+    test('refuses an index that is not on the passage', () {
+      expect(
+        () => renameRouteWaypoint(_route(), 3, 'Nowhere'),
+        throwsA(isA<FormatException>()),
+      );
+      expect(
+        () => renameRouteWaypoint(_route(), -1, 'Nowhere'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('survives a JSON round-trip', () {
+      final renamed = renameRouteWaypoint(_route(), 1, 'Needles Fairway');
+      final restored = ImportedRoute.fromJsonString(renamed.toJsonString());
+      expect(restored.waypoints[1].name, 'Needles Fairway');
+    });
+  });
+
+  group('naming a new mark (#43)', () {
+    test('takes the lowest number no mark is already using', () {
+      expect(nextMarkName(_route()), 'Mark 1');
+
+      final withMarks = renameRouteWaypoint(
+        renameRouteWaypoint(_route(), 0, 'Mark 1'),
+        1,
+        'Mark 2',
+      );
+      expect(nextMarkName(withMarks), 'Mark 3');
+    });
+
+    test('fills a gap rather than counting past it', () {
+      final gapped = renameRouteWaypoint(
+        renameRouteWaypoint(_route(), 0, 'Mark 1'),
+        1,
+        'Mark 3',
+      );
+      expect(nextMarkName(gapped), 'Mark 2');
+    });
+
+    // The bug this replaces: the old name came from the waypoint count, so
+    // removing one mark and adding another produced a duplicate. Two marks
+    // answering to "Mark 5" stops "steer for Mark 5" being an instruction.
+    test('does not collide after a remove and a re-add', () {
+      var route = _route();
+      for (var placed = 0; placed < 3; placed += 1) {
+        route = insertRouteWaypoint(
+          route,
+          RouteWaypoint(
+            name: nextMarkName(route),
+            point: GeoPoint(
+              latitude: 51.005 + placed * 0.001,
+              longitude: -2.005,
+            ),
+          ),
+        );
+      }
+      route = removeRouteWaypoint(route, 1);
+      route = insertRouteWaypoint(
+        route,
+        RouteWaypoint(
+          name: nextMarkName(route),
+          point: const GeoPoint(latitude: 51.017, longitude: -2.017),
+        ),
+      );
+
+      final names = [for (final mark in route.waypoints) ?mark.name];
+      expect(
+        names.toSet().length,
+        names.length,
+        reason: 'two marks must never share a name',
+      );
+    });
+
+    test('ignores case and surrounding space when checking what is taken', () {
+      expect(
+        nextMarkName(renameRouteWaypoint(_route(), 0, '  mark 1 ')),
+        'Mark 2',
+      );
+    });
+  });
 }
 
 ImportedRoute _route() => ImportedRoute(

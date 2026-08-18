@@ -123,3 +123,66 @@ double routeProgressForPoint(ImportedRoute route, GeoPoint point) {
   }
   return nearestProgress;
 }
+
+/// Renames a mark, leaving the passage itself untouched.
+///
+/// Deliberately does **not** go through [_withWaypoints]. Insert and remove
+/// change the geometry, so they clear the manoeuvres and the planned duration
+/// and force a re-plan. A name change does none of that: the courses, the
+/// distances and the times are all exactly what they were. Routing it through
+/// the re-planner would throw away a correct plan and make the sailor watch a
+/// progress bar for typing a word.
+///
+/// A blank name clears it rather than storing an empty string, so a cleared
+/// name reads the same as a mark that never had one - which is what GPX
+/// round-trips and what the review list's fallback labelling already handles.
+ImportedRoute renameRouteWaypoint(
+  ImportedRoute route,
+  int index,
+  String? name,
+) {
+  if (index < 0 || index >= route.waypoints.length) {
+    throw const FormatException('That mark is not on this passage.');
+  }
+  final trimmed = name?.trim();
+  final existing = route.waypoints[index];
+  final waypoints = [...route.waypoints];
+  waypoints[index] = RouteWaypoint(
+    point: existing.point,
+    name: trimmed == null || trimmed.isEmpty ? null : trimmed,
+    description: existing.description,
+    symbol: existing.symbol,
+  );
+  return ImportedRoute(
+    id: route.id,
+    name: route.name,
+    description: route.description,
+    importedAt: route.importedAt,
+    sourceFileName: route.sourceFileName,
+    paths: route.paths,
+    waypoints: List.unmodifiable(waypoints),
+    shapingPoints: route.shapingPoints,
+    maneuvers: route.maneuvers,
+    markerReview: route.markerReview,
+    preferences: route.preferences,
+    plannedDuration: route.plannedDuration,
+  );
+}
+
+/// A default name for a newly placed mark that no existing mark is using.
+///
+/// Naming from the waypoint count collides: place a mark on a five-mark passage
+/// and it becomes "Mark 5"; remove a different mark and place another, and the
+/// count is five again, so two marks on the same passage answer to the same
+/// name. Two identically named marks in a passage brief is a real hazard rather
+/// than an untidiness - "steer for Mark 5" stops being an instruction.
+String nextMarkName(ImportedRoute route) {
+  final taken = {
+    for (final waypoint in route.waypoints)
+      if (waypoint.name case final name?) name.trim().toLowerCase(),
+  };
+  for (var number = 1; ; number += 1) {
+    final candidate = 'Mark $number';
+    if (!taken.contains(candidate.toLowerCase())) return candidate;
+  }
+}

@@ -152,6 +152,22 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
   ImportedRoute? get comparisonRoute => widget.comparisonRoute;
   bool get canEditStops => widget.canEditStops;
 
+  /// Whether the marks in the ordered list can be renamed and removed.
+  ///
+  /// Not [canEditStops]. That flag separates a destination plan from an
+  /// imported route, and gating the delete button on it left a one-way door:
+  /// #37 let a sailor add a mark to an imported passage, and this list then
+  /// refused to take it off again. What actually decides the question is
+  /// whether the passage can be re-planned at all, which is `onReshapeRoute`.
+  ///
+  /// The second clause matters as much as the first. `_reviewWaypoints`
+  /// synthesises a start and an end from the geometry when a route carries no
+  /// waypoints of its own, purely so the list has something to show. Those have
+  /// no index into `route.waypoints`, so editing them would rename or remove the
+  /// wrong thing - or throw. An imported track stays read-only.
+  bool get canEditMarks =>
+      widget.onReshapeRoute != null && route.waypoints.isNotEmpty;
+
   /// The route as reviewed so far. Everything downstream - the plan, the pins,
   /// the counts - reads this, so the map and the list can never disagree about
   /// which positions are still suggested.
@@ -421,12 +437,30 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
     if (_reshaping || _reshapeQueued || widget.onReshapeRoute == null) return;
     final candidate = insertRouteWaypoint(
       route,
-      RouteWaypoint(point: point, name: 'Mark ${route.waypoints.length}'),
+      RouteWaypoint(point: point, name: nextMarkName(route)),
     );
     await _recalculateEditedRoute(
       candidate,
       failurePrefix: 'Could not add a mark there.',
     );
+  }
+
+  /// Renames a mark from the ordered list.
+  ///
+  /// Does not go through [_recalculateEditedRoute], and that is the point: a
+  /// name change moves nothing, so the courses, distances and times on screen
+  /// stay correct. Re-planning would blank them and show a progress bar while
+  /// the sailor typed a word into a passage they had already checked.
+  Future<void> _renameMark(int index) async {
+    if (!canEditMarks || index < 0 || index >= route.waypoints.length) return;
+    final waypoint = route.waypoints[index];
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => _MarkNameDialog(initialName: waypoint.name),
+    );
+    if (name == null || !mounted) return;
+    setState(() => _route = renameRouteWaypoint(_route, index, name));
+    widget.onRouteChanged?.call(route);
   }
 
   Future<void> _recalculateEditedRoute(
@@ -767,6 +801,11 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
             Expanded(
               flex: 6,
               child: ListView(
+                // Keyed so tests can scroll *this* list rather than picking a
+                // Scrollable by position. The map and the leg table bring their
+                // own, and `find.byType(Scrollable).last` has already broken
+                // once here when a new one appeared (#36).
+                key: const Key('route-review-detail'),
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                 children: [
                   Text(
@@ -1008,23 +1047,48 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                             subtitle: entry.$2.description == null
                                 ? null
                                 : Text(entry.$2.description!),
-                            trailing:
-                                canEditStops &&
-                                    entry.$1 > 0 &&
-                                    entry.$1 < reviewWaypoints.length - 1
-                                ? IconButton(
-                                    key: Key(
-                                      'remove-reviewed-waypoint-${entry.$1}',
-                                    ),
-                                    tooltip: 'Remove this waypoint',
-                                    onPressed: _reshaping || _reshapeQueued
-                                        ? null
-                                        : () => unawaited(
-                                            _removeWaypoint(entry.$1),
+                            // Renaming is offered on every mark including
+                            // the start and the destination - "Lymington" is a
+                            // better passage brief than "Start". Removal is
+                            // not: taking away an end of the passage does not
+                            // shorten it, it asks what the passage now is, and
+                            // `removeRouteWaypoint` refuses for that reason.
+                            trailing: !canEditMarks
+                                ? null
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        key: Key(
+                                          'rename-reviewed-waypoint-${entry.$1}',
+                                        ),
+                                        tooltip: 'Name this mark',
+                                        onPressed: _reshaping || _reshapeQueued
+                                            ? null
+                                            : () => unawaited(
+                                                _renameMark(entry.$1),
+                                              ),
+                                        icon: const Icon(Icons.edit_outlined),
+                                      ),
+                                      if (entry.$1 > 0 &&
+                                          entry.$1 < reviewWaypoints.length - 1)
+                                        IconButton(
+                                          key: Key(
+                                            'remove-reviewed-waypoint-${entry.$1}',
                                           ),
-                                    icon: const Icon(Icons.delete_outline),
-                                  )
-                                : null,
+                                          tooltip: 'Remove this mark',
+                                          onPressed:
+                                              _reshaping || _reshapeQueued
+                                              ? null
+                                              : () => unawaited(
+                                                  _removeWaypoint(entry.$1),
+                                                ),
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                           ),
                     ],
                   ),
@@ -1056,6 +1120,63 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
       ),
     );
   }
+}
+
+/// The name-a-mark prompt, as its own widget so it owns its controller.
+///
+/// Built inline first, which disposed the controller as soon as `showDialog`
+/// returned - while the dialog was still animating out and the field was still
+/// being laid out. That threw "A TextEditingController was used after being
+/// disposed" on every save. A controller has to outlive the widget reading it,
+/// and the only thing that knows when that is, is the widget itself.
+class _MarkNameDialog extends StatefulWidget {
+  const _MarkNameDialog({this.initialName});
+
+  final String? initialName;
+
+  @override
+  State<_MarkNameDialog> createState() => _MarkNameDialogState();
+}
+
+class _MarkNameDialogState extends State<_MarkNameDialog> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialName ?? '',
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Name this mark'),
+    content: TextField(
+      key: const Key('mark-name-field'),
+      controller: _controller,
+      autofocus: true,
+      textCapitalization: TextCapitalization.words,
+      textInputAction: TextInputAction.done,
+      decoration: const InputDecoration(
+        labelText: 'Mark name',
+        hintText: 'Needles Fairway',
+        helperText: 'Leave it empty to clear the name.',
+      ),
+      onSubmitted: (value) => Navigator.of(context).pop(value),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        key: const Key('save-mark-name'),
+        onPressed: () => Navigator.of(context).pop(_controller.text),
+        child: const Text('Save'),
+      ),
+    ],
+  );
 }
 
 bool _sameMapPoint(GeoPoint first, GeoPoint second) {
