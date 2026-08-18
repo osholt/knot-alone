@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from .config import Settings
 from .crypto import DataCipher, base64url, sha256, token_hash
 from .membership import MembershipEvent, project_membership_events
-from .models import PushDelivery, PushRegistration, Voyage, VoyageMember, StoredEvent
+from .models import PushDelivery, PushRegistration, StoredEvent, Voyage, VoyageMember
 from .schemas import PushRegistrationRequest
 from .service import RelayServiceError
 
@@ -332,7 +332,9 @@ class PushDispatcher:
                 state=row.state,
                 last_seen_at=_as_utc(row.last_seen_at),
             )
-            for row in session.scalars(select(VoyageMember).where(VoyageMember.voyage_id == voyage_id))
+            for row in session.scalars(
+                select(VoyageMember).where(VoyageMember.voyage_id == voyage_id)
+            )
         }
         for membership in result.values():
             if membership.state == "left":
@@ -352,7 +354,9 @@ class PushDispatcher:
         session.execute(delete(VoyageMember).where(VoyageMember.voyage_id == voyage.id))
         events: list[MembershipEvent] = []
         rows = session.scalars(
-            select(StoredEvent).where(StoredEvent.voyage_id == voyage.id).order_by(StoredEvent.sequence)
+            select(StoredEvent)
+            .where(StoredEvent.voyage_id == voyage.id)
+            .order_by(StoredEvent.sequence)
         ).all()
         for row in rows:
             try:

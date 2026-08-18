@@ -21,10 +21,10 @@ from .models import (
     IdempotencyReplay,
     ObserverGrant,
     PreStartPosition,
+    StoredEvent,
     Voyage,
     VoyageJoinCode,
     VoyagePlan,
-    StoredEvent,
 )
 from .schemas import PresenceSyncRequest, SyncRequest, SyncResponse
 
@@ -196,7 +196,9 @@ class RelayService:
                 )
                 voyage.last_seen_at = now
                 if voyage.ended_at is None:
-                    voyage.delete_after = now + timedelta(hours=self._settings.voyage_retention_hours)
+                    voyage.delete_after = now + timedelta(
+                        hours=self._settings.voyage_retention_hours
+                    )
                 return response
 
             existing_event_ids = self._validate_event_conflicts(session, voyage_id, events)
@@ -220,7 +222,9 @@ class RelayService:
                 if event.event_type in ("voyageEnded", "voyageReopened")
             ]
             if lifecycle and lifecycle[-1] == "voyageEnded":
-                session.execute(delete(PreStartPosition).where(PreStartPosition.voyage_id == voyage_id))
+                session.execute(
+                    delete(PreStartPosition).where(PreStartPosition.voyage_id == voyage_id)
+                )
             response = self._build_response(
                 session,
                 voyage_id=voyage_id,
@@ -294,7 +298,9 @@ class RelayService:
             phase = self._voyage_presence_phase(session, voyage_id)
             members = self._presence_members(session, voyage_id)
             if phase == "ended":
-                session.execute(delete(PreStartPosition).where(PreStartPosition.voyage_id == voyage_id))
+                session.execute(
+                    delete(PreStartPosition).where(PreStartPosition.voyage_id == voyage_id)
+                )
                 positions: list[dict[str, Any]] = []
             else:
                 existing = session.get(
@@ -675,7 +681,9 @@ class RelayService:
     ) -> None:
         replay_count = (
             session.scalar(
-                select(func.count(IdempotencyReplay.id)).where(IdempotencyReplay.voyage_id == voyage_id)
+                select(func.count(IdempotencyReplay.id)).where(
+                    IdempotencyReplay.voyage_id == voyage_id
+                )
             )
             or 0
         )

@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 
-from tide_and_seek_server.models import IdempotencyReplay, Voyage, StoredEvent
+from tide_and_seek_server.models import IdempotencyReplay, StoredEvent, Voyage
 from tide_and_seek_server.service import purge_expired
 
 from .conftest import voyage_token
@@ -218,7 +218,9 @@ def test_idle_polling_does_not_accumulate_replay_records(client, synchronize) ->
     with factory() as session:
         assert (
             session.scalar(
-                select(func.count(IdempotencyReplay.id)).where(IdempotencyReplay.voyage_id == voyage_id)
+                select(func.count(IdempotencyReplay.id)).where(
+                    IdempotencyReplay.voyage_id == voyage_id
+                )
             )
             == 0
         )
@@ -227,7 +229,10 @@ def test_idle_polling_does_not_accumulate_replay_records(client, synchronize) ->
 def test_conflicting_event_identity_is_rejected_atomically(client, synchronize, make_event) -> None:
     voyage_id = "voyage-conflict"
     original = make_event(voyage_id, "event-1", payload={"value": 1})
-    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[original]).status_code == 200
+    assert (
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[original]).status_code
+        == 200
+    )
 
     conflict = make_event(voyage_id, "event-1", payload={"value": 2})
     response = synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[conflict])
