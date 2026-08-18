@@ -76,6 +76,8 @@ import 'marine_glyphs.dart';
 import '../../services/passage_planning.dart';
 import '../../services/passage_legs.dart';
 import 'passage_leg_table.dart';
+import '../../services/navigation_instruments.dart';
+import 'navigation_instrument_panel.dart';
 
 @visibleForTesting
 GroupMiniMapRenderer groupMiniMapRenderer({
@@ -1525,6 +1527,12 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                         value: _MapAction.passagePlan,
                         child: Text('Passage plan and legs'),
                       ),
+                    // Offered without a route: COG, SOG and fix age are true
+                    // whether or not a passage is loaded (#34).
+                    const PopupMenuItem(
+                      value: _MapAction.instruments,
+                      child: Text('Navigation instruments'),
+                    ),
                     // Always offered, route or not: what the map is made of is
                     // not a property of the plan.
                     const PopupMenuItem(
@@ -5176,11 +5184,53 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         await showChartProvenanceSheet(context);
       case _MapAction.passagePlan:
         await _showPassagePlan();
+      case _MapAction.instruments:
+        await _showNavigationInstruments();
       case _MapAction.clearOfflineTiles:
         await _mapLibreOfflineManager.clearAll();
         await widget.offlineTileCache.clearAll();
         _showMessage('Offline map data cleared.');
     }
+  }
+
+  /// The instrument panel: what the receiver measures and what follows from it.
+  ///
+  /// Computed from the current fix each time it is opened rather than streamed:
+  /// a sheet the sailor has deliberately opened is read, not watched, and a
+  /// panel that ticked underneath them would make the fix age harder to read
+  /// rather than easier. Live instruments belong on the navigation canvas, which
+  /// is its own piece of work.
+  Future<void> _showNavigationInstruments() async {
+    final fix = _navigationFix;
+    final position = fix?.point ?? _effectivePosition;
+    if (position == null) {
+      _showMessage('No position yet, so there is nothing to measure.');
+      return;
+    }
+    final route = _route;
+    final instruments = NavigationInstruments.compute(
+      fix: NavigationFix(
+        point: position,
+        recordedAt: fix?.recordedAt ?? DateTime.now(),
+        courseOverGroundDegrees: fix?.headingDegrees,
+        speedOverGroundMetersPerSecond: fix?.speedMetersPerSecond,
+        accuracyMeters: fix?.accuracyMeters,
+      ),
+      plan: route == null ? PassagePlan.empty : PassagePlan.of(route),
+      now: DateTime.now(),
+    );
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+          child: NavigationInstrumentPanel(instruments: instruments),
+        ),
+      ),
+    );
   }
 
   /// The passage as a leg table: course, distance and time per mark.
@@ -5515,6 +5565,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
 enum _MapAction {
   chartSources,
   passagePlan,
+  instruments,
   importGpx,
   loadDemo,
   personalVoyageHeatmap,
