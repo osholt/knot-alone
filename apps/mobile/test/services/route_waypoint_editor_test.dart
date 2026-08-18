@@ -164,10 +164,7 @@ void main() {
         ),
       );
 
-      final names = [
-        for (final mark in route.waypoints)
-          if (mark.name case final name?) name,
-      ];
+      final names = [for (final mark in route.waypoints) ?mark.name];
       expect(
         names.toSet().length,
         names.length,
