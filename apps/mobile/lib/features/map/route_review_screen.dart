@@ -123,6 +123,11 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
   late Duration? _duration = widget.duration;
   late double? _twistinessScore = widget.twistinessScore;
   final List<List<RouteShapingPoint>> _reshapeHistory = [];
+
+  /// Whether a tap on the chart adds a mark (#32). Mutually exclusive with
+  /// reshaping: both want the same gesture surface, and a sailor in one mode
+  /// should not be surprised by the other.
+  bool _addMarkEnabled = false;
   Timer? _reshapeTimer;
   int _reshapeGeneration = 0;
   String? _activeShapingPointId;
@@ -407,6 +412,23 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
     );
   }
 
+  /// Inserts a mark where the sailor tapped.
+  ///
+  /// [insertRouteWaypoint] places it on the leg nearest the tap rather than at
+  /// the end, so tapping between two marks splits that leg - which is what
+  /// tapping there means.
+  Future<void> _addMarkAt(GeoPoint point) async {
+    if (_reshaping || _reshapeQueued || widget.onReshapeRoute == null) return;
+    final candidate = insertRouteWaypoint(
+      route,
+      RouteWaypoint(point: point, name: 'Mark ${route.waypoints.length}'),
+    );
+    await _recalculateEditedRoute(
+      candidate,
+      failurePrefix: 'Could not add a mark there.',
+    );
+  }
+
   Future<void> _recalculateEditedRoute(
     ImportedRoute candidate, {
     required String failurePrefix,
@@ -584,6 +606,8 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                         onReshapeStart: _beginRouteReshape,
                         onReshapeUpdate: _updateRouteReshape,
                         onReshapeEnd: _endRouteReshape,
+                        addMarkEnabled: _addMarkEnabled,
+                        onAddMark: (point) => unawaited(_addMarkAt(point)),
                       )
                     : FlutterMap(
                         key: const Key('route-review-map'),
@@ -599,6 +623,21 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                           interactionOptions: const InteractionOptions(
                             flags: InteractiveFlag.all,
                           ),
+                          // Wired on both renderers so adding a mark does not
+                          // depend on which one this build fell back to (#32).
+                          // MapLibre routes its tap through the preview widget's
+                          // own hit-testing; here the map hands us the position
+                          // directly.
+                          onTap: _addMarkEnabled
+                              ? (_, position) => unawaited(
+                                  _addMarkAt(
+                                    GeoPoint(
+                                      latitude: position.latitude,
+                                      longitude: position.longitude,
+                                    ),
+                                  ),
+                                )
+                              : null,
                         ),
                         children: [
                           if (basemapConfiguration.usesLegacyRaster)
@@ -822,9 +861,37 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                           label: Text(
                             _reshapeEnabled ? 'Finish drawing' : 'Redraw a leg',
                           ),
-                          onSelected: (selected) =>
-                              setState(() => _reshapeEnabled = selected),
+                          onSelected: (selected) => setState(() {
+                            _reshapeEnabled = selected;
+                            // One editing mode at a time: they share the
+                            // gesture surface.
+                            if (selected) _addMarkEnabled = false;
+                          }),
                         ),
+                        // Gated on being able to re-plan, not on
+                        // [canEditStops]. That flag distinguishes a destination
+                        // plan from an imported route, and adding a mark to an
+                        // imported passage - nudging it clear of a bank, adding
+                        // a waypoint off a headland - is exactly the adjustment a
+                        // sailor wants to make to someone else's GPX (#32).
+                        if (widget.onReshapeRoute != null)
+                          FilterChip(
+                            key: const Key('toggle-add-marks'),
+                            selected: _addMarkEnabled,
+                            avatar: const Icon(
+                              Icons.add_location_alt_outlined,
+                              size: 18,
+                            ),
+                            label: Text(
+                              _addMarkEnabled ? 'Finish adding' : 'Add a mark',
+                            ),
+                            onSelected: (selected) => setState(() {
+                              _addMarkEnabled = selected;
+                              // One editing mode at a time: they share the
+                              // gesture surface.
+                              if (selected) _reshapeEnabled = false;
+                            }),
+                          ),
                         if (_reshapeHistory.isNotEmpty)
                           ActionChip(
                             key: const Key('undo-route-reshape'),
