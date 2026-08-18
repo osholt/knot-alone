@@ -1,11 +1,55 @@
 # Tide and Seek — Product Requirements and Delivery Plan
 
-Status: concept scaffold
+Status: **inherited app renamed and de-roaded; marine capability barely started**
+
+Last reviewed: 18 August 2026. See "Where this actually is" for the honest state,
+which is some way behind what the requirements below describe.
 
 Name: **Tide and Seek**
 
 Platforms: iOS and Android
 Initial users: UK coastal yacht sailors, primarily solo or small crews
+
+## Where this actually is
+
+The requirements below describe the product. This section describes the build, so
+the two are not confused. Written 18 August 2026.
+
+### Working
+
+Inherited from Tail End Charlie and carried across intact: the live group map,
+six-digit voyage codes and QR join, roster and roles, SOS and quick messages, GPX
+import and export, offline tile caching, the local voyage journal, recap, and the
+simulator. Roughly 1,580 tests.
+
+Done since the rename: the road features stripped, the full domain rename, vessel
+icons and the marine glyph set, chart-provenance UI, size-driven layout for iPad,
+and passage legs that are no longer road routes.
+
+### Not started
+
+**Tides. Weather. Depth. Real charts. Anchor watch. MOB. AIS. NMEA.** No code
+exists for any of them. Every occurrence of the word "tide" in the source is the
+app's own name.
+
+### Known to be wrong or missing
+
+| Area | State | Issue |
+|---|---|---|
+| Charts | A road basemap with an OpenSeaMap seamark overlay painted on. No depth, no soundings, no contours. | #17, #6 |
+| Depth shading | Blocked on whether UKHO's "not for use in the creation of navigational products" clause governs its free data | #29 |
+| Passage planning | Rhumb-line legs between waypoints. No land avoidance, no tidal gates, no waypoint editor on the chart | #8 |
+| Tides | Nothing | #11 |
+| Weather | Nothing | #12 |
+| Safety gates | No at-sea testing has happened at all | #10 |
+| Road leftovers | OSRM/Valhalla engines unreachable but present; road-only route preferences still in the UI | #31 |
+
+### The honest summary
+
+This is a **crew-coordination app that speaks marine**, not a boating app. The
+coordination half is real and tested. The sailing half is a seamark overlay and a
+provenance sheet. Nothing here should be relied on at sea, and #10 exists because
+none of it has been near water.
 
 ## Problem statement
 
@@ -219,25 +263,114 @@ Lagging indicators:
 
 ## Open questions
 
-- **Blocking — licensing/product:** Which nautical-chart provider permits the
-  required UK coverage, offline use, attribution, and update-status display?
-- **Blocking — licensing:** Which tide/current, weather/wind, and pilotage sources
-  permit caching and crew redistribution?
-- **Blocking — product:** Is the initial sailing envelope coastal passages only,
-  and what vessel/area constraints define the field test?
-- **Blocking — safety:** Which calculations are useful context versus too easy to
-  mistake for a safe-course recommendation?
+Answers found since this was written are recorded here rather than left as
+questions, because a stale open question reads as "nobody has looked".
+
+### Answered
+
+**Which chart provider permits UK coverage, offline use and update-status
+display?** None, free. `docs/chart-providers.md` has the working: official charts
+for UK and Mediterranean waters are commercial without exception, and UKHO AVCS
+has no self-serve tier. Free official charts exist only for the USA, New Zealand,
+Brazil, Norway and inland EU waters. What is drawn today is OpenSeaMap seamarks
+over a general basemap, labelled as not a chart.
+
+**Do UK leisure sailors legally need official charts?** No. SOLAS V
+passage-planning duties apply to pleasure craft, but no statute requires *official*
+charts aboard a UK pleasure vessel under 13.7 m; MCA guidance places the duty on
+the skipper. So this is a positioning choice, not a prerequisite — but the app
+must not imply it is a chart when it is not.
+
+**Which tide source?** The **UKHO Tidal API** has a free *Discovery* tier: a
+one-year subscription, current plus six days of tidal events for 607 UK stations,
+10 requests/second and 10,000/month. *Premium* is £300+VAT a year and adds a year
+of predictions plus tidal-stream locations. This is the most promising licensed
+marine data found so far — **subject to the same licence check that blocked the
+bathymetry** (#11).
+
+**Which weather source?** **Open-Meteo**. The data is CC BY 4.0, so caching and
+showing it to crew are permitted with attribution — which the `ChartSource` model
+already knows how to express. The free endpoint is for non-commercial use at
+10,000 calls/day; commercial use needs a paid subscription. A marine endpoint
+provides wave forecasts (#12).
+
+**What should passage planning do?** Rhumb-line legs between the sailor's own
+waypoints, stating plainly that they are not checked against land or hazards
+(#19). Road routing is gone. Land avoidance needs chart data the build does not
+have, so it is not attempted rather than approximated.
+
+### Still open
+
+- **Blocking — licensing:** Does the UKHO Tidal API licence permit use in a
+  navigation app, offline caching, and display to crew? The bathymetry precedent
+  says do not assume: UKHO has published "the data sets must not be used for
+  navigation or in the creation of navigational products" as a term on top of the
+  OGL. One email answers this and #29 together.
+- **Blocking — product:** Is the sailing envelope coastal passages only, and what
+  vessel and area define the field test?
+- **Blocking — safety:** Which calculations are useful context versus too easily
+  mistaken for a safe-course recommendation? Tidal gates are the sharp case: a
+  "you can cross at 14:20" that is wrong is worse than no gate at all.
 - **Blocking — privacy:** Exact shared-position retention and observer precision.
-- **Non-blocking — design:** Final product name, domains, icon, and permanent IDs.
+- **Blocking — commercial:** Does this stay a personal app? It decides the
+  Open-Meteo tier, whether Premium tides are worth £300/yr, and whether paid
+  charts (#6) are ever on the table.
 - **Non-blocking — engineering:** First external-instrument integration target.
 
 ## Delivery phases
 
-1. **Foundation:** isolate the derivative, settle the voyage model, remove
-   motorcycle/road UI and data, and keep inherited CI green.
-2. **Core solo slice:** licensed chart decision/spike, local voyage, marine map,
-   track, route/waypoints, core calculations, offline readiness, and simulator.
-3. **Crew and context:** anonymous sharing, tides/currents, weather/wind,
-   discovery/pilotage packs, and exports.
-4. **Release evidence:** security protocol, privacy/licence review, battery and
-   background tests, at-sea field matrix, accessibility, and store review.
+Ordered by what unblocks what, and by what is dangerous if left. Each item names
+its issue; the issues carry the detail.
+
+### Phase 1 — Foundation (done)
+
+Isolate the derivative, settle the voyage model, strip the road features and
+vocabulary, keep CI green. Remaining scraps: #31 (dead road engines), #24
+(motorcycle words in comments), #20 (biker-places data), #27 (repo name).
+
+### Phase 2 — Stop being wrong (mostly done)
+
+Everything here is about the app not asserting things that are false.
+
+- [x] Chart provenance on screen, and "not for navigation" said plainly — #17
+- [x] Passage legs that are courses, not road routes — #19
+- [x] Marine iconography and vocabulary — #30
+- [ ] Settle the UKHO licence question, which gates both depth and tides — #29
+
+### Phase 3 — A passage you can actually plan
+
+The first phase that adds sailing capability rather than removing road
+assumptions. Tides before weather: for UK coastal sailing the tide decides
+whether the passage works at all, and the data is more tractable.
+
+- [ ] Waypoint editing on the chart, with a leg table: course, distance, ETA — #32
+- [ ] Tidal heights and curves from the UKHO Tidal API, with provenance — #11
+- [ ] Tidal windows and gates, built on the heights — #33
+- [ ] Weather and wind from Open-Meteo, with forecast run time and age — #12
+- [ ] Navigation instruments: COG, SOG, XTE, VMG, fix age — #34
+
+### Phase 4 — Trustworthy offline
+
+Making the above survive losing signal, which is the normal condition at sea.
+
+- [ ] Offline passage packs: chart corridor, tides, forecast, verified — #13
+- [ ] Coastal depth, if the licence permits — #29
+- [ ] Crew sharing hardened: per-device authority, encrypted payloads — #14, #25
+
+### Phase 5 — Evidence before anyone sails with it
+
+- [ ] Security and privacy review, log redaction, retention — #10
+- [ ] Battery, background and notification behaviour on real devices
+- [ ] At-sea field-test matrix — the gate nothing else substitutes for — #10
+- [ ] Anchor watch and manual MOB, only after the above — #15
+
+### Later
+
+Paid charts (#6), NMEA and AIS (#16), GRIB and weather routing, flotillas.
+
+## Sequencing note
+
+Phases 3 and 4 both assume the licence answers. If UKHO says no to tides, Phase 3
+loses its first item and the honest fallback is harmonic prediction from published
+constituents — a bigger build with its own accuracy caveats. That answer is worth
+chasing before committing to the phase.
