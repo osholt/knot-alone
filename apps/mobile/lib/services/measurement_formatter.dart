@@ -6,14 +6,42 @@ class MeasurementFormatter {
   final DistanceUnit unit;
 
   String distance(double meters) => switch (unit) {
+    DistanceUnit.nauticalMiles => _nauticalDistance(meters),
     DistanceUnit.miles => _imperialDistance(meters),
     DistanceUnit.kilometres => _metricDistance(meters),
   };
 
   String speed(double metersPerSecond) => switch (unit) {
+    DistanceUnit.nauticalMiles => '${_knots(metersPerSecond)} kn',
     DistanceUnit.miles => '${(metersPerSecond * 2.236936).round()} mph',
     DistanceUnit.kilometres => '${(metersPerSecond * 3.6).round()} km/h',
   };
+
+  /// Metres in a nautical mile, by definition.
+  static const metresPerNauticalMile = 1852.0;
+
+  /// Cables below a mile, which is how close-quarters distances are given at
+  /// sea: "two cables off" rather than "0.2 miles". A cable is a tenth of a
+  /// nautical mile.
+  static String _nauticalDistance(double meters) {
+    final miles = meters / metresPerNauticalMile;
+    if (miles < 1) {
+      final cables = miles * 10;
+      return cables < 1
+          ? '${meters.round()} m'
+          : '${cables.toStringAsFixed(cables < 3 ? 1 : 0)} cables';
+    }
+    // Passage distances are quoted to a tenth; more is spurious given the speed
+    // and stream assumptions behind any time derived from them.
+    return '${miles.toStringAsFixed(1)} NM';
+  }
+
+  /// Speeds under ten knots get a decimal, because the difference between 4.5
+  /// and 5.4 matters over a twelve-hour passage.
+  static String _knots(double metersPerSecond) {
+    final knots = metersPerSecond * 3600 / metresPerNauticalMile;
+    return knots < 10 ? knots.toStringAsFixed(1) : knots.round().toString();
+  }
 
   static String _metricDistance(double meters) => meters < 1000
       ? '${_naturalShortDistance(meters)} m'

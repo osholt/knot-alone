@@ -74,6 +74,8 @@ import 'smooth_countdown.dart';
 import 'stored_route_picker.dart';
 import 'marine_glyphs.dart';
 import '../../services/passage_planning.dart';
+import '../../services/passage_legs.dart';
+import 'passage_leg_table.dart';
 
 @visibleForTesting
 GroupMiniMapRenderer groupMiniMapRenderer({
@@ -1517,6 +1519,12 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                       value: _MapAction.clearOfflineTiles,
                       child: Text('Clear downloaded map data'),
                     ),
+                    // Route-derived: a passage plan needs a passage.
+                    if (_route != null)
+                      const PopupMenuItem(
+                        value: _MapAction.passagePlan,
+                        child: Text('Passage plan and legs'),
+                      ),
                     // Always offered, route or not: what the map is made of is
                     // not a property of the plan.
                     const PopupMenuItem(
@@ -5166,11 +5174,48 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         }
       case _MapAction.chartSources:
         await showChartProvenanceSheet(context);
+      case _MapAction.passagePlan:
+        await _showPassagePlan();
       case _MapAction.clearOfflineTiles:
         await _mapLibreOfflineManager.clearAll();
         await widget.offlineTileCache.clearAll();
         _showMessage('Offline map data cleared.');
     }
+  }
+
+  /// The passage as a leg table: course, distance and time per mark.
+  ///
+  /// The marine counterpart of the manoeuvre list below. A passage has no turns
+  /// to enumerate, so what a navigator wants is the legs between the marks (#32).
+  Future<void> _showPassagePlan() async {
+    final route = _route;
+    if (route == null) return;
+    final plan = PassagePlan.of(route);
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        top: false,
+        child: ConstrainedBox(
+          // Sizes to the passage: a two-leg plan is short, a long one scrolls
+          // and still leaves the chart visible behind it.
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+          ),
+          child: PassageLegTable(
+            // Always nautical, whatever the sailor's shore-distance preference:
+            // a leg is quoted in nautical miles because a mile is a minute of
+            // latitude. Making nautical the app-wide default is #34.
+            plan: plan,
+            warnings: RhumbLinePassagePlanner.warningsFor(
+              plan.planningSpeedKnots,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   /// Lists every manoeuvre for the loaded route.
@@ -5469,6 +5514,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
 
 enum _MapAction {
   chartSources,
+  passagePlan,
   importGpx,
   loadDemo,
   personalVoyageHeatmap,

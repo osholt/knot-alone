@@ -109,15 +109,22 @@ class RhumbLinePassagePlanner implements RoadRoutingService {
       // No turn-by-turn on a passage. Intentionally empty.
       maneuvers: const [],
       preferences: preferences,
-      warnings: [
-        'Legs are direct courses between your waypoints. They are not checked '
-            'against land, depth, hazards or traffic schemes — read the chart '
-            'and plan the passage yourself.',
-        'Times assume ${_formatSpeed(planningSpeedKnots)} made good and ignore '
-            'tidal stream, leeway and weather.',
-      ],
+      warnings: warningsFor(planningSpeedKnots),
     );
   }
+
+  /// What any passage planned this way has not accounted for.
+  ///
+  /// Shared with the leg table rather than restated there: the caveats belong to
+  /// how the passage was planned, so a surface showing the figures and the
+  /// planner producing them must not be able to disagree about them.
+  static List<String> warningsFor(double planningSpeedKnots) => [
+    'Legs are direct courses between your waypoints. They are not checked '
+        'against land, depth, hazards or traffic schemes — read the chart '
+        'and plan the passage yourself.',
+    'Times assume ${_formatSpeed(planningSpeedKnots)} made good and ignore '
+        'tidal stream, leeway and weather.',
+  ];
 
   /// Points strictly between [from] and [to], excluding both ends.
   List<GeoPoint> _sampleLeg(GeoPoint from, GeoPoint to, double legMeters) {
