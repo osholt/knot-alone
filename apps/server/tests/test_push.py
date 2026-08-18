@@ -5,7 +5,13 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import delete, func, select
 
 from tide_and_seek_server.crypto import sha256
-from tide_and_seek_server.models import PushDelivery, PushRegistration, Voyage, VoyageMember, StoredEvent
+from tide_and_seek_server.models import (
+    PushDelivery,
+    PushRegistration,
+    StoredEvent,
+    Voyage,
+    VoyageMember,
+)
 from tide_and_seek_server.push import PushMessage, PushProviderResult
 
 from .conftest import voyage_token
@@ -246,7 +252,9 @@ def test_push_membership_projection_does_not_decrypt_large_event_history(
         payload={"message": "emergencyStop", "label": "Emergency stop"},
     )
 
-    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[alert]).status_code == 200
+    assert (
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[alert]).status_code == 200
+    )
 
     assert counter.event_decryptions == 0
     assert provider.tokens == ["fcm-token-lead-123456789"]
@@ -301,17 +309,23 @@ def test_existing_voyage_backfills_membership_projection_only_once(
         payload={"message": "emergencyStop"},
     )
 
-    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[first]).status_code == 200
+    assert (
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[first]).status_code == 200
+    )
     after_backfill = counter.event_decryptions
     assert after_backfill == 3
-    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[second]).status_code == 200
+    assert (
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[second]).status_code == 200
+    )
     assert counter.event_decryptions == after_backfill
     with client.app.state.session_factory() as session:
         voyage = session.get(Voyage, voyage_id)
         assert voyage is not None and voyage.membership_projection_ready
         assert (
             session.scalar(
-                select(func.count(VoyageMember.device_id)).where(VoyageMember.voyage_id == voyage_id)
+                select(func.count(VoyageMember.device_id)).where(
+                    VoyageMember.voyage_id == voyage_id
+                )
             )
             == 2
         )
@@ -369,7 +383,9 @@ def test_nested_off_course_alert_targets_coordinators_and_affected_sailor(
             }
         },
     )
-    assert synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[alert]).status_code == 200
+    assert (
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, events=[alert]).status_code == 200
+    )
 
     assert set(provider.tokens) == {
         "fcm-token-affected-123456789",

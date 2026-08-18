@@ -13,7 +13,7 @@ from tide_and_seek_server.models import ObserverGrant
 from tide_and_seek_server.observer import get_managed_observer_grant
 from tide_and_seek_server.service import RelayServiceError
 
-from .conftest import event, voyage_token, sync_request
+from .conftest import event, sync_request, voyage_token
 
 SECRET = "observer-test-secret-0123456789"
 
@@ -586,7 +586,9 @@ def test_concurrent_creation_cannot_exceed_the_voyage_cap(client) -> None:
         )
         assert (
             len(
-                session.scalars(select(ObserverGrant).where(ObserverGrant.voyage_id == voyage_id)).all()
+                session.scalars(
+                    select(ObserverGrant).where(ObserverGrant.voyage_id == voyage_id)
+                ).all()
             )
             == 1
         )

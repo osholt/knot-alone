@@ -10,7 +10,7 @@ from sqlalchemy import event as sqlalchemy_event
 from sqlalchemy import func, select
 
 from tide_and_seek_server.app import create_app
-from tide_and_seek_server.models import Voyage, StoredEvent
+from tide_and_seek_server.models import StoredEvent, Voyage
 from tide_and_seek_server.rate_limit import SlidingWindowRateLimiter
 from tide_and_seek_server.service import purge_expired
 

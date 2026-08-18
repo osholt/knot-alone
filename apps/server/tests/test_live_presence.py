@@ -93,9 +93,12 @@ def _start(client, synchronize, voyage_id: str, device_id: str = "skipper"):
 def test_presence_survives_the_voyage_started_transition(client, synchronize) -> None:
     voyage_id = "voyage-continuity"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
-    assert _presence(client, voyage_id, "skipper", position=_position(51.0, name="Lead")).status_code
+    assert _presence(
+        client, voyage_id, "skipper", position=_position(51.0, name="Lead")
+    ).status_code
     before = _presence(client, voyage_id, "sailor-a", position=_position(51.5)).json()
     assert {item["sailorId"] for item in before["positions"]} == {"skipper", "sailor-a"}
     assert before["phase"] == "open"
@@ -114,7 +117,8 @@ def test_a_sailor_joining_an_already_started_voyage_appears_without_a_cursor(
 ) -> None:
     voyage_id = "voyage-late-join"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     assert (
         synchronize(
@@ -140,7 +144,9 @@ def test_a_sailor_joining_an_already_started_voyage_appears_without_a_cursor(
         == 200
     )
     assert (
-        _presence(client, voyage_id, "sailor-late", position=_position(51.9, name="Bill")).status_code
+        _presence(
+            client, voyage_id, "sailor-late", position=_position(51.9, name="Bill")
+        ).status_code
         == 200
     )
 
@@ -157,7 +163,8 @@ def test_a_sailor_joining_an_already_started_voyage_appears_without_a_cursor(
 def test_roster_is_served_even_when_the_event_batch_never_advances(client, synchronize) -> None:
     voyage_id = "voyage-wedged-batch"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     assert (
         synchronize(
@@ -179,7 +186,8 @@ def test_roster_is_served_even_when_the_event_batch_never_advances(client, synch
 def test_sailor_left_marks_the_member_rather_than_hiding_the_history(client, synchronize) -> None:
     voyage_id = "voyage-left"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     assert (
         synchronize(
@@ -216,7 +224,8 @@ def test_sailor_left_marks_the_member_rather_than_hiding_the_history(client, syn
 def test_a_rejoin_clears_the_departure_and_its_time(client, synchronize) -> None:
     voyage_id = "voyage-left-then-back"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     assert (
         synchronize(
@@ -252,7 +261,8 @@ def test_a_rejoin_clears_the_departure_and_its_time(client, synchronize) -> None
 def test_voyage_ended_discards_live_positions(client, synchronize) -> None:
     voyage_id = "voyage-ended-presence"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     assert _presence(client, voyage_id, "sailor-a", position=_position(51.0)).status_code == 200
     assert (
@@ -290,7 +300,8 @@ def test_reopening_a_voyage_restores_its_running_phase(client, synchronize) -> N
     """
     voyage_id = "voyage-reopened-presence"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     for index, event_type in enumerate(("voyageStarted", "voyageEnded", "voyageReopened")):
         assert (
@@ -325,7 +336,8 @@ def test_reopening_a_voyage_restores_its_running_phase(client, synchronize) -> N
 def test_ending_after_a_reopen_ends_the_voyage_again(client, synchronize) -> None:
     voyage_id = "voyage-reended-presence"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     assert _presence(client, voyage_id, "sailor-a", position=_position(51.0)).status_code == 200
     for index, event_type in enumerate(("voyageEnded", "voyageReopened", "voyageEnded")):
@@ -363,11 +375,16 @@ def test_a_legacy_publisher_stays_visible_to_a_live_presence_peer_and_is_flagged
     device is told the peer's build is older."""
     voyage_id = "voyage-mixed-versions"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     assert (
         _presence(
-            client, voyage_id, "sailor-old", capabilities=LEGACY, position=_position(51.3, name="Bill")
+            client,
+            voyage_id,
+            "sailor-old",
+            capabilities=LEGACY,
+            position=_position(51.3, name="Bill"),
         ).status_code
         == 200
     )
@@ -377,7 +394,9 @@ def test_a_legacy_publisher_stays_visible_to_a_live_presence_peer_and_is_flagged
     )
     assert _start(client, synchronize, voyage_id).status_code == 200
 
-    observed = _presence(client, voyage_id, "skipper", position=_position(51.01, name="Lead")).json()
+    observed = _presence(
+        client, voyage_id, "skipper", position=_position(51.01, name="Lead")
+    ).json()
 
     flags = {item["sailorId"]: item["livePresence"] for item in observed["positions"]}
     assert flags["sailor-old"] is False
@@ -389,7 +408,8 @@ def test_a_legacy_reader_after_start_does_not_destroy_a_live_peers_position(
 ) -> None:
     voyage_id = "voyage-legacy-nondestructive"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     assert _presence(client, voyage_id, "sailor-a", position=_position(51.4)).status_code == 200
     assert _start(client, synchronize, voyage_id).status_code == 200
@@ -403,7 +423,8 @@ def test_a_legacy_reader_after_start_does_not_destroy_a_live_peers_position(
 def test_unknown_capability_strings_are_ignored(client, synchronize) -> None:
     voyage_id = "voyage-unknown-capability"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
 
     response = _presence(
@@ -421,7 +442,8 @@ def test_unknown_capability_strings_are_ignored(client, synchronize) -> None:
 def test_presence_requires_at_least_one_presence_capability(client, synchronize) -> None:
     voyage_id = "voyage-no-capability"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
 
     response = _presence(client, voyage_id, "sailor-a", capabilities=["voyage-start-v1"])
@@ -433,7 +455,8 @@ def test_presence_requires_at_least_one_presence_capability(client, synchronize)
 def test_presence_rejects_a_client_below_the_minimum_protocol(client, synchronize) -> None:
     voyage_id = "voyage-presence-old-client"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     client.app.state.settings.minimum_client_protocol = 2
 
@@ -446,7 +469,8 @@ def test_presence_rejects_a_client_below_the_minimum_protocol(client, synchroniz
 def test_presence_rejects_a_client_newer_than_the_service(client, synchronize) -> None:
     voyage_id = "voyage-presence-new-client"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
 
     response = client.post(
@@ -467,7 +491,8 @@ def test_presence_rejects_a_client_newer_than_the_service(client, synchronize) -
 def test_a_started_voyage_still_expires_a_position_by_ttl(client, synchronize) -> None:
     voyage_id = "voyage-started-ttl"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     assert _presence(client, voyage_id, "sailor-a", position=_position(51.0)).status_code == 200
     assert _start(client, synchronize, voyage_id).status_code == 200
@@ -492,7 +517,8 @@ def test_a_started_voyage_still_expires_a_position_by_ttl(client, synchronize) -
 def test_members_are_withheld_from_a_legacy_reader(client, synchronize) -> None:
     voyage_id = "voyage-legacy-members"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     assert (
         synchronize(
@@ -513,7 +539,8 @@ def test_members_are_withheld_from_a_legacy_reader(client, synchronize) -> None:
 def test_a_membership_event_without_a_usable_payload_is_skipped(client, synchronize) -> None:
     voyage_id = "voyage-bad-membership"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     assert (
         synchronize(
@@ -543,7 +570,8 @@ def test_a_membership_event_without_a_usable_payload_is_skipped(client, synchron
 def test_a_repeated_publish_replaces_rather_than_duplicating(client, synchronize) -> None:
     voyage_id = "voyage-duplicate-publish"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     body = _position(51.0)
 
@@ -566,7 +594,8 @@ def test_presence_reports_the_relay_clock_alongside_its_arrival_stamps(client, s
     """
     voyage_id = "voyage-server-time"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     assert _presence(client, voyage_id, "sailor-a", position=_position(51.0)).status_code == 200
 
@@ -586,7 +615,8 @@ def test_presence_serves_a_position_whose_publisher_clock_is_behind(client, sync
     """A phone with a wrong clock still publishes, and is still served."""
     voyage_id = "voyage-skewed-publisher"
     assert (
-        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code == 200
+        synchronize(client, voyage_id=voyage_id, secret=SECRET, device_id="skipper").status_code
+        == 200
     )
     recorded_at = datetime.now(UTC) - timedelta(minutes=4)
 

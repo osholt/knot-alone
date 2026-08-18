@@ -131,7 +131,9 @@ def test_voyage_code_registration_requires_matching_credential(client) -> None:
             "inviteSecret": SECRET,
             "resolveToken": RESOLVE_TOKEN,
         },
-        headers={"authorization": f"Bearer {voyage_token('voyage-join-code', 'wrong-secret-value')}"},
+        headers={
+            "authorization": f"Bearer {voyage_token('voyage-join-code', 'wrong-secret-value')}"
+        },
     )
     assert response.status_code == 403
 

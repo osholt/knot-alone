@@ -15,7 +15,7 @@ from sqlalchemy import select
 from tide_and_seek_server.models import StoredEvent
 from tide_and_seek_server.service import RelayService
 
-from .conftest import event, voyage_token, sync_request
+from .conftest import event, sync_request, voyage_token
 
 SECRET = "0123456789abcdef0123456789abcdef"
 OBSERVER_SECRET = "observer-rejoin-secret-0123456789"
@@ -142,7 +142,9 @@ def test_new_event_retention_is_capped_tightly(client, synchronize, make_event) 
     with factory() as session:
         stored = {
             row.event_id: row.expires_at.replace(tzinfo=UTC)
-            for row in session.scalars(select(StoredEvent).where(StoredEvent.voyage_id == voyage_id))
+            for row in session.scalars(
+                select(StoredEvent).where(StoredEvent.voyage_id == voyage_id)
+            )
         }
 
     # A sailor's intended path is treated as perishably as where they actually
@@ -193,7 +195,9 @@ def test_a_shared_phone_number_is_accepted_and_capped(client, synchronize, make_
 
     factory = client.app.state.session_factory
     with factory() as session:
-        stored = session.scalars(select(StoredEvent).where(StoredEvent.voyage_id == voyage_id)).one()
+        stored = session.scalars(
+            select(StoredEvent).where(StoredEvent.voyage_id == voyage_id)
+        ).one()
 
     expires_at = stored.expires_at.replace(tzinfo=UTC)
     assert expires_at < before + timedelta(hours=3)
