@@ -195,6 +195,66 @@ void main() {
     });
   });
 
+  // The embedded form exists because the review screen already scrolls. It broke
+  // twice: once by taking a flex share of an unbounded height, and once by
+  // introducing a nested Scrollable that silently became the target of
+  // `find.byType(Scrollable).last` in another screen's tests.
+  group('embedded in a scrolling screen', () {
+    testWidgets('adds no scrollable of its own', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(useMaterial3: true),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: PassageLegTable(plan: twoLegs, scrollable: false),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Scrollable), findsOneWidget);
+      expect(find.byKey(const Key('passage-leg-list')), findsNothing);
+    });
+
+    testWidgets('still shows every leg and the totals', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(useMaterial3: true),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: PassageLegTable(plan: twoLegs, scrollable: false),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('passage-leg-1')), findsOneWidget);
+      expect(find.byKey(const Key('passage-leg-2')), findsOneWidget);
+      expect(find.byKey(const Key('passage-plan-totals')), findsOneWidget);
+    });
+
+    testWidgets('survives an unbounded height', (tester) async {
+      // A Column inside a scroll view offers infinite height. Taking a flex
+      // share of that is a layout error, not a long list.
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(useMaterial3: true),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Column(
+                children: [PassageLegTable(plan: twoLegs, scrollable: false)],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('formatting helpers', () {
     test('a course is always three figures', () {
       expect(formatCourse(7), '007°T');

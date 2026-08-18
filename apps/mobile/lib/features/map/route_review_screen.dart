@@ -14,6 +14,8 @@ import '../../services/route_reshape_planner.dart';
 import '../../services/route_waypoint_editor.dart';
 import 'maneuver_list_screen.dart';
 import 'resolved_route_map_preview.dart';
+import '../../services/passage_legs.dart';
+import 'passage_leg_table.dart';
 
 enum RouteReviewAction { cancel, edit, confirm }
 
@@ -473,6 +475,9 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
         .where((points) => points.isNotEmpty)
         .toList(growable: false);
     final reviewWaypoints = _reviewWaypoints(route);
+    // Derived from the route under review, so it follows a reshape or a removed
+    // waypoint without any extra plumbing.
+    final passagePlan = PassagePlan.of(route);
     final visiblePointsOfInterest = canEditStops && _showPointsOfInterest
         ? _nearbyPointsOfInterest
         : const <BikerPlace>[];
@@ -883,6 +888,18 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                     ],
                   ],
                   const SizedBox(height: 8),
+                  // The legs, before the ordered list of marks. Reviewing a
+                  // passage is deciding whether to sail it, and that decision is
+                  // made on the courses and distances rather than on the names
+                  // (#32). Shown only when there are marks to make legs from - an
+                  // imported track has geometry but nothing to tabulate.
+                  if (passagePlan.hasLegs) ...[
+                    _PassageLegsSection(
+                      plan: passagePlan,
+                      distanceUnit: distanceUnit,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   ExpansionTile(
                     key: const Key('route-review-points-section'),
                     tilePadding: EdgeInsets.zero,
@@ -1120,5 +1137,45 @@ class _WarningCard extends StatelessWidget {
         ),
       ],
     ),
+  );
+}
+
+/// The leg table, collapsed into the review screen.
+///
+/// The full [PassageLegTable] is a standalone surface with its own heading and
+/// the planner's caveats; here those caveats already appear in the review
+/// screen's own warning cards, so this shows the figures and lets the
+/// surrounding screen carry the qualifications.
+class _PassageLegsSection extends StatelessWidget {
+  const _PassageLegsSection({required this.plan, required this.distanceUnit});
+
+  final PassagePlan plan;
+  final DistanceUnit distanceUnit;
+
+  @override
+  Widget build(BuildContext context) => ExpansionTile(
+    key: const Key('route-review-legs-section'),
+    tilePadding: EdgeInsets.zero,
+    childrenPadding: EdgeInsets.zero,
+    // Expanded for a passage a sailor actually planned, collapsed for a long
+    // imported track: the same threshold the ordered-marks section uses. A
+    // hundred expanded legs also push everything below them out of the built
+    // area of the scroll view, which is how this was found.
+    initiallyExpanded: plan.legs.length <= 8,
+    title: Text(
+      'Legs (${plan.legs.length})',
+      style: Theme.of(context).textTheme.titleMedium,
+    ),
+    subtitle: const Text('Course to steer, distance and time for each leg.'),
+    children: [
+      PassageLegTable(
+        plan: plan,
+        distanceUnit: distanceUnit,
+        // The screen's own warning cards already carry the planner's caveats.
+        warnings: const [],
+        // The review screen owns the scrolling.
+        scrollable: false,
+      ),
+    ],
   );
 }
