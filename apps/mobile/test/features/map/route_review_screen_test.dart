@@ -361,6 +361,184 @@ void main() {
     });
   });
 
+  group('editing a mark (#43)', () {
+    Future<ImportedRoute?> pumpPassage(
+      WidgetTester tester, {
+      bool replannable = true,
+      ImportedRoute? route,
+    }) async {
+      ImportedRoute? changed;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RouteReviewScreen(
+            route: route ?? _passage(),
+            distanceUnit: DistanceUnit.nauticalMiles,
+            basemapConfiguration: const BasemapConfiguration(),
+            onRouteChanged: (updated) => changed = updated,
+            onReshapeRoute: replannable
+                ? (candidate, shapingPoints) async => RouteReshapeResult(
+                    route: candidate.withShapingPoints(shapingPoints),
+                    distanceMeters: 1800,
+                    duration: const Duration(minutes: 6),
+                  )
+                : null,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // The marks list now sits below the leg table, which is far enough down
+      // the lazily-built detail list that it is not constructed at all until
+      // scrolled to. Reviewing a passage is done on the courses first and the
+      // names second, so that order is deliberate - the tests just have to
+      // follow the sailor's thumb.
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('route-review-points-section')),
+        240,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('route-review-detail')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return changed;
+    }
+
+    // The one-way door this ticket closes. #37 let a mark be added to an
+    // imported passage; the delete button stayed gated on canEditStops, so on
+    // that same passage there was no way to take it off again.
+    testWidgets('an imported passage can have a mark removed', (tester) async {
+      await pumpPassage(tester);
+      expect(
+        find.byKey(const Key('remove-reviewed-waypoint-1')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the start and the destination cannot be removed', (
+      tester,
+    ) async {
+      await pumpPassage(tester);
+      expect(find.byKey(const Key('remove-reviewed-waypoint-0')), findsNothing);
+      expect(find.byKey(const Key('remove-reviewed-waypoint-2')), findsNothing);
+    });
+
+    testWidgets('every mark can be renamed, including the ends', (
+      tester,
+    ) async {
+      await pumpPassage(tester);
+      for (final index in [0, 1, 2]) {
+        expect(
+          find.byKey(Key('rename-reviewed-waypoint-$index')),
+          findsOneWidget,
+          reason: 'mark $index should be nameable',
+        );
+      }
+    });
+
+    testWidgets('naming a mark updates the list without a re-plan', (
+      tester,
+    ) async {
+      var replans = 0;
+      ImportedRoute? changed;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RouteReviewScreen(
+            route: _passage(),
+            distanceUnit: DistanceUnit.nauticalMiles,
+            basemapConfiguration: const BasemapConfiguration(),
+            onRouteChanged: (updated) => changed = updated,
+            onReshapeRoute: (candidate, shapingPoints) async {
+              replans += 1;
+              return RouteReshapeResult(
+                route: candidate.withShapingPoints(shapingPoints),
+                distanceMeters: 1800,
+                duration: const Duration(minutes: 6),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('route-review-points-section')),
+        240,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('route-review-detail')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('rename-reviewed-waypoint-1')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('mark-name-field')),
+        'Needles Fairway',
+      );
+      await tester.tap(find.byKey(const Key('save-mark-name')));
+      await tester.pumpAndSettle();
+
+      // The list labels a mark by role and name - "Stop 1: Needles Fairway" -
+      // so this asserts on the tile rather than on a bare string, which also
+      // keeps it from matching the leg table's "from Needles Fairway".
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('route-review-waypoint-1')),
+          matching: find.textContaining('Needles Fairway'),
+        ),
+        findsOneWidget,
+      );
+      expect(changed?.waypoints[1].name, 'Needles Fairway');
+      // A name moves nothing, so the passage must not be re-planned and the
+      // courses and times already on screen must not blank out.
+      expect(replans, 0, reason: 'renaming must not re-plan the passage');
+    });
+
+    testWidgets('cancelling the name dialog leaves the mark alone', (
+      tester,
+    ) async {
+      await pumpPassage(tester);
+
+      await tester.tap(find.byKey(const Key('rename-reviewed-waypoint-1')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('mark-name-field')),
+        'Discarded',
+      );
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Discarded'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('route-review-waypoint-1')),
+          matching: find.textContaining('Middle mark'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    // The synthesised-waypoint trap. A recorded track has geometry and no
+    // waypoints, so the list invents a start and an end to have something to
+    // show. Those have no index into route.waypoints, so an edit control on
+    // them would rename or remove the wrong mark.
+    testWidgets('a track with no waypoints of its own stays read-only', (
+      tester,
+    ) async {
+      await pumpPassage(tester, route: _route(0.02));
+      expect(find.byKey(const Key('rename-reviewed-waypoint-0')), findsNothing);
+      expect(find.byKey(const Key('remove-reviewed-waypoint-1')), findsNothing);
+    });
+
+    testWidgets('a passage that cannot be re-planned stays read-only', (
+      tester,
+    ) async {
+      await pumpPassage(tester, replannable: false);
+      expect(find.byKey(const Key('rename-reviewed-waypoint-1')), findsNothing);
+      expect(find.byKey(const Key('remove-reviewed-waypoint-1')), findsNothing);
+    });
+  });
+
   testWidgets('keeps disconnected imported paths visually separate', (
     tester,
   ) async {
@@ -557,4 +735,36 @@ ImportedRoute _route(double longitudeDelta) => ImportedRoute(
     ),
   ],
   waypoints: const [],
+);
+
+/// A passage carrying its own named marks, which is what makes them editable.
+ImportedRoute _passage() => ImportedRoute(
+  id: 'passage',
+  name: 'Solent passage',
+  importedAt: DateTime.utc(2026, 8, 18),
+  sourceFileName: 'passage.gpx',
+  paths: const [
+    RoutePath(
+      kind: RoutePathKind.route,
+      points: [
+        GeoPoint(latitude: 50.75, longitude: -1.52),
+        GeoPoint(latitude: 50.74, longitude: -1.40),
+        GeoPoint(latitude: 50.76, longitude: -1.30),
+      ],
+    ),
+  ],
+  waypoints: const [
+    RouteWaypoint(
+      name: 'Lymington',
+      point: GeoPoint(latitude: 50.75, longitude: -1.52),
+    ),
+    RouteWaypoint(
+      name: 'Middle mark',
+      point: GeoPoint(latitude: 50.74, longitude: -1.40),
+    ),
+    RouteWaypoint(
+      name: 'Cowes',
+      point: GeoPoint(latitude: 50.76, longitude: -1.30),
+    ),
+  ],
 );
