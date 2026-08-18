@@ -718,6 +718,97 @@ void main() {
     expect(find.byKey(const Key('maneuver-list')), findsOneWidget);
     expect(find.text('2nd exit, straight on'), findsOneWidget);
   });
+
+  group('side by side on a tablet (#47)', () {
+    // Real device point sizes, so a breakpoint that drifts onto one of them
+    // fails here rather than on a boat.
+    const iPadLandscape = Size(1366, 1024);
+    const iPadPortrait = Size(1024, 1366);
+    const phonePortrait = Size(390, 844);
+    const phoneLandscape = Size(844, 390);
+
+    Future<void> pumpAt(WidgetTester tester, Size size) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RouteReviewScreen(
+            route: _passage(),
+            distanceUnit: DistanceUnit.nauticalMiles,
+            basemapConfiguration: const BasemapConfiguration(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    /// The chart pane and the detail list, as laid out.
+    (Rect chart, Rect detail) panes(WidgetTester tester) => (
+      tester.getRect(find.byKey(const Key('route-review-map'))),
+      tester.getRect(find.byKey(const Key('route-review-detail'))),
+    );
+
+    testWidgets('an iPad in landscape puts the chart beside the detail', (
+      tester,
+    ) async {
+      await pumpAt(tester, iPadLandscape);
+      final (chart, detail) = panes(tester);
+
+      expect(
+        chart.right,
+        lessThanOrEqualTo(detail.left),
+        reason: 'the chart should be left of the detail, not above it',
+      );
+      // Both full height, which is the whole point: neither pane is squeezed
+      // into half a screen when the screen is 1024pt tall.
+      expect(chart.height, greaterThan(900));
+      expect(detail.height, greaterThan(900));
+      expect(
+        chart.width,
+        greaterThan(detail.width),
+        reason: 'the chart is what the decision is made on',
+      );
+    });
+
+    testWidgets('an iPad in portrait keeps the chart above the detail', (
+      tester,
+    ) async {
+      await pumpAt(tester, iPadPortrait);
+      final (chart, detail) = panes(tester);
+      expect(chart.bottom, lessThanOrEqualTo(detail.top));
+    });
+
+    testWidgets('a phone stacks in both orientations', (tester) async {
+      await pumpAt(tester, phonePortrait);
+      var (chart, detail) = panes(tester);
+      expect(chart.bottom, lessThanOrEqualTo(detail.top));
+
+      // Landscape on a phone is the case with the least vertical room of all.
+      // Splitting it into two columns would leave the leg table a few rows
+      // tall, so it stacks like everything else.
+      await pumpAt(tester, phoneLandscape);
+      (chart, detail) = panes(tester);
+      expect(chart.bottom, lessThanOrEqualTo(detail.top));
+    });
+
+    testWidgets('the legs and the marks are both reachable on a tablet', (
+      tester,
+    ) async {
+      await pumpAt(tester, iPadLandscape);
+      expect(
+        find.byKey(const Key('route-review-legs-section')),
+        findsOneWidget,
+      );
+      // 1024pt of detail column is enough for the summary, the legs and the
+      // marks without the chart scrolling away, which is what stacking cost.
+      expect(
+        find.byKey(const Key('route-review-points-section')),
+        findsOneWidget,
+      );
+    });
+  });
 }
 
 ImportedRoute _route(double longitudeDelta) => ImportedRoute(

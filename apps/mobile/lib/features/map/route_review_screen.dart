@@ -14,6 +14,7 @@ import '../../services/route_reshape_planner.dart';
 import '../../services/route_waypoint_editor.dart';
 import 'maneuver_list_screen.dart';
 import 'resolved_route_map_preview.dart';
+import 'voyage_layout.dart';
 import '../../services/passage_legs.dart';
 import 'passage_leg_table.dart';
 
@@ -565,6 +566,7 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
       ?materialWarning,
     ];
     final formatter = MeasurementFormatter(distanceUnit);
+    final layout = VoyageLayout.of(context);
     final maneuverCount = const NavigationGuidancePlanner()
         .instructions(route)
         .length;
@@ -598,11 +600,24 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
         ],
       ),
       body: SafeArea(
-        child: Column(
+        // Chart above detail on a phone; chart beside detail on a tablet in
+        // landscape. Both panes are already flexible, so the only thing that
+        // changes is which way the box runs.
+        //
+        // The condition is `canHostSidePanel` rather than `isLandscape`: a
+        // phone on its side is the case with the *least* vertical room, and
+        // splitting it into two columns would leave the leg table four rows
+        // tall. A tablet in portrait is left alone too - it is tall, not wide.
+        child: Flex(
+          direction: layout.canHostSidePanel ? Axis.horizontal : Axis.vertical,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              flex: 5,
+              // Stacked, the detail gets the larger share because it holds the
+              // legs, the marks and the confirm button. Side by side, the chart
+              // takes it back: a wide text column is harder to read, not
+              // easier, and the chart is what the decision is made on.
+              flex: layout.canHostSidePanel ? 6 : 5,
               child: ColoredBox(
                 color: const Color(0xFF111720),
                 child: allPoints.isEmpty
@@ -799,7 +814,7 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
               ),
             ),
             Expanded(
-              flex: 6,
+              flex: layout.canHostSidePanel ? 5 : 6,
               child: ListView(
                 // Keyed so tests can scroll *this* list rather than picking a
                 // Scrollable by position. The map and the leg table bring their
