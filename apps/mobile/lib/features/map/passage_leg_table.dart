@@ -34,6 +34,7 @@ class PassageLegTable extends StatelessWidget {
     this.warnings = const [],
     this.onSelectLeg,
     this.selectedLegNumber,
+    this.scrollable = true,
   });
 
   final PassagePlan plan;
@@ -48,6 +49,14 @@ class PassageLegTable extends StatelessWidget {
   final ValueChanged<PassageLeg>? onSelectLeg;
   final int? selectedLegNumber;
 
+  /// Whether this owns the scrolling.
+  ///
+  /// True in a bottom sheet, which gives it a bounded height to scroll within.
+  /// False when embedded in a screen that already scrolls — there the height is
+  /// unbounded, and taking a flex share of infinity is a layout error rather
+  /// than a long list.
+  final bool scrollable;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -56,6 +65,7 @@ class PassageLegTable extends StatelessWidget {
 
     return Column(
       key: const Key('passage-leg-table'),
+      mainAxisSize: scrollable ? MainAxisSize.max : MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -120,10 +130,26 @@ class PassageLegTable extends StatelessWidget {
               style: theme.textTheme.bodyMedium,
             ),
           )
+        else if (!scrollable)
+          // A Column, not a ListView, when the parent scrolls. A nested
+          // scrollable would be invisible to the sailor but very visible to
+          // anything walking the widget tree - it silently became the target of
+          // `find.byType(Scrollable).last` in the review screen's own tests, and
+          // it would take the same scroll gestures the parent wants.
+          for (var index = 0; index < plan.legs.length; index += 1)
+            _LegRow(
+              leg: plan.legs[index],
+              formatter: formatter,
+              minimumHeight: layout.minimumTapTarget,
+              selected: plan.legs[index].number == selectedLegNumber,
+              onTap: onSelectLeg == null
+                  ? null
+                  : () => onSelectLeg!(plan.legs[index]),
+            )
         else
-          // Flexible with shrinkWrap rather than Expanded: a two-leg passage
-          // should not leave two thirds of the sheet empty, and a twenty-leg one
-          // still needs to scroll.
+          // Flexible with shrinkWrap: a two-leg passage should not leave two
+          // thirds of the sheet empty, and a twenty-leg one still needs to
+          // scroll within the height the sheet gives it.
           Flexible(
             child: ListView.builder(
               shrinkWrap: true,
@@ -143,6 +169,10 @@ class PassageLegTable extends StatelessWidget {
                     ),
             ),
           ),
+        // The totals row belongs to the embedded form too; the scrolling form
+        // renders it as the list's last item so it scrolls with the legs.
+        if (!scrollable && plan.hasLegs)
+          _TotalsRow(plan: plan, formatter: formatter),
       ],
     );
   }
