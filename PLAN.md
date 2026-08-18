@@ -13,18 +13,27 @@ Initial users: UK coastal yacht sailors, primarily solo or small crews
 ## Where this actually is
 
 The requirements below describe the product. This section describes the build, so
-the two are not confused. Written 18 August 2026.
+the two are not confused. Written 18 August 2026, updated 19 August 2026.
 
 ### Working
 
 Inherited from Tail End Charlie and carried across intact: the live group map,
 six-digit voyage codes and QR join, roster and roles, SOS and quick messages, GPX
 import and export, offline tile caching, the local voyage journal, recap, and the
-simulator. Roughly 1,580 tests.
+simulator. Roughly 1,700 tests.
 
 Done since the rename: the road features stripped, the full domain rename, vessel
 icons and the marine glyph set, chart-provenance UI, size-driven layout for iPad,
 and passage legs that are no longer road routes.
+
+Done since: a passage leg table in nautical units, marks placed and named on the
+chart, navigation instruments that degrade with fix age, Open-Meteo wind and sea
+state, a Solent demo passage, and the chart sitting beside the detail on a tablet
+in landscape.
+
+**Build 22 (1.0.1) is on TestFlight**, internal testing only. That is the first
+time any of this has been on a device that is not a simulator, and it immediately
+found user-visible road vocabulary the earlier passes missed (#49).
 
 ### Not started
 
@@ -38,18 +47,28 @@ app's own name.
 |---|---|---|
 | Charts | A road basemap with an OpenSeaMap seamark overlay painted on. No depth, no soundings, no contours. | #17, #6 |
 | Depth shading | Blocked on whether UKHO's "not for use in the creation of navigational products" clause governs its free data | #29 |
-| Passage planning | Rhumb-line legs between waypoints. No land avoidance, no tidal gates, no waypoint editor on the chart | #8 |
+| Passage planning | Rhumb-line legs with a leg table; marks can be placed, named and removed on the chart. No land avoidance, no tidal gates, no drag-to-move, no leg reordering | #8, #32 |
 | Tides | Nothing | #11 |
-| Weather | Nothing | #12 |
+| Weather | Open-Meteo wind, gusts, pressure, visibility and open-water wave, labelled a forecast rather than an observation. No GRIB, no routing | #12 |
+| Instruments | COG, SOG, XTE, bearing and distance to the active mark, all dimming together once the fix is stale. Never verified against a real GNSS fix | #34 |
+| Onboarding | Sells crew coordination first on a solo-first app, and its crew-facing name field cannot be skipped | #49 |
 | Safety gates | No at-sea testing has happened at all | #10 |
 | Road leftovers | OSRM/Valhalla engines unreachable but present; road-only route preferences still in the UI | #31 |
 
 ### The honest summary
 
-This is a **crew-coordination app that speaks marine**, not a boating app. The
-coordination half is real and tested. The sailing half is a seamark overlay and a
-provenance sheet. Nothing here should be relied on at sea, and #10 exists because
-none of it has been near water.
+This is a **crew-coordination app that speaks marine**, and it has started to
+grow a boating app inside it. The coordination half is real and tested. The
+sailing half is now a passage you can plan, tabulate and steer to, with wind and
+sea state beside it - on top of a road basemap with a seamark overlay, and with
+no tide, no depth and no chart.
+
+Tide is the gap that matters most for UK coastal sailing, and it is the one
+gated on a licence question nobody has answered (#29). Until then a passage this
+app plans is a passage in still water.
+
+Nothing here should be relied on at sea. #10 exists because none of it has been
+near water, and being on TestFlight does not change that.
 
 ## Problem statement
 
@@ -343,11 +362,14 @@ The first phase that adds sailing capability rather than removing road
 assumptions. Tides before weather: for UK coastal sailing the tide decides
 whether the passage works at all, and the data is more tractable.
 
+- [x] Weather and wind from Open-Meteo, with forecast run time and age — #12
+- [x] Navigation instruments: COG, SOG, XTE, fix age — #34 *(never seen a real fix)*
 - [ ] Waypoint editing on the chart, with a leg table: course, distance, ETA — #32
+      *(leg table, mark placing, naming and removal done; drag-to-move, leg
+      reordering and tap-a-leg-to-centre remain)*
 - [ ] Tidal heights and curves from the UKHO Tidal API, with provenance — #11
-- [ ] Tidal windows and gates, built on the heights — #33
-- [ ] Weather and wind from Open-Meteo, with forecast run time and age — #12
-- [ ] Navigation instruments: COG, SOG, XTE, VMG, fix age — #34
+      *(parked: the licence question, #29)*
+- [ ] Tidal windows and gates, built on the heights — #33 *(parked behind #11)*
 
 ### Phase 4 — Trustworthy offline
 
@@ -356,6 +378,18 @@ Making the above survive losing signal, which is the normal condition at sea.
 - [ ] Offline passage packs: chart corridor, tides, forecast, verified — #13
 - [ ] Coastal depth, if the licence permits — #29
 - [ ] Crew sharing hardened: per-device authority, encrypted payloads — #14, #25
+
+### Phase 4a — What TestFlight found
+
+Not planned; discovered by putting build 22 on a device. Kept as its own group
+because "we shipped it and then looked at it" is a different kind of work from
+the phases around it, and there will be more of it after every build.
+
+- [ ] Crew roles and onboarding copy still speak road, and onboarding is
+      crew-first on a solo-first app — #49
+- [ ] Associated Domains points at a placeholder that can never resolve — #40
+- [ ] The iOS launch image is still the Flutter placeholder — #41
+- [ ] Release builds are hand-assembled and not reproducible — #42
 
 ### Phase 5 — Evidence before anyone sails with it
 
