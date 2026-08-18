@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/domain/distance_unit.dart';
 import 'package:tide_and_seek/domain/imported_route.dart';
@@ -194,6 +195,170 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.text('Route points (3)'), findsOneWidget);
+  });
+
+  // #32. Adding a mark by tapping the chart is a mode, not a default: a chart is
+  // panned far more often than it is edited, and a stray tap that silently added
+  // a mark would be discovered later, in the leg table, by a sailor who did not
+  // do it.
+  group('adding a mark', () {
+    Future<ImportedRoute?> pumpEditable(WidgetTester tester) async {
+      ImportedRoute? recalculated;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RouteReviewScreen(
+            route: _route(0.02),
+            distanceUnit: DistanceUnit.nauticalMiles,
+            basemapConfiguration: const BasemapConfiguration(),
+            canEditStops: true,
+            onReshapeRoute: (candidate, shapingPoints) async {
+              recalculated = candidate;
+              return RouteReshapeResult(
+                route: candidate.withShapingPoints(shapingPoints),
+                distanceMeters: 1800,
+                duration: const Duration(minutes: 6),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return recalculated;
+    }
+
+    testWidgets('is offered as a mode alongside redrawing', (tester) async {
+      await pumpEditable(tester);
+      expect(find.byKey(const Key('toggle-add-marks')), findsOneWidget);
+      expect(find.text('Add a mark'), findsOneWidget);
+    });
+
+    testWidgets('is offered for an imported route too, not just a plan', (
+      tester,
+    ) async {
+      // canEditStops distinguishes a destination plan from an imported route.
+      // Adding a mark to someone else's GPX is exactly the adjustment a sailor
+      // wants, so this is gated on being able to re-plan instead.
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RouteReviewScreen(
+            route: _route(0.02),
+            distanceUnit: DistanceUnit.nauticalMiles,
+            basemapConfiguration: const BasemapConfiguration(),
+            onReshapeRoute: (candidate, shapingPoints) async =>
+                RouteReshapeResult(
+                  route: candidate.withShapingPoints(shapingPoints),
+                  distanceMeters: 1800,
+                  duration: const Duration(minutes: 6),
+                ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('toggle-add-marks')), findsOneWidget);
+    });
+
+    testWidgets('is absent when the route cannot be re-planned', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RouteReviewScreen(
+            route: _route(0.02),
+            distanceUnit: DistanceUnit.nauticalMiles,
+            basemapConfiguration: const BasemapConfiguration(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('toggle-add-marks')), findsNothing);
+    });
+
+    testWidgets('a tap on the chart inserts a mark and re-plans', (
+      tester,
+    ) async {
+      ImportedRoute? recalculated;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RouteReviewScreen(
+            route: _route(0.02),
+            distanceUnit: DistanceUnit.nauticalMiles,
+            basemapConfiguration: const BasemapConfiguration(),
+            canEditStops: true,
+            onReshapeRoute: (candidate, shapingPoints) async {
+              recalculated = candidate;
+              return RouteReshapeResult(
+                route: candidate.withShapingPoints(shapingPoints),
+                distanceMeters: 1800,
+                duration: const Duration(minutes: 6),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final before = recalculated?.waypoints.length;
+
+      await tester.tap(find.byKey(const Key('toggle-add-marks')));
+      await tester.pumpAndSettle();
+
+      // The wired callback is invoked directly rather than by synthesising a tap
+      // on the map. Whether flutter_map turns a pointer into onTap is its own
+      // business; what matters here is that the option is wired only in add-mark
+      // mode and that invoking it inserts a mark.
+      final map = tester.widget<FlutterMap>(
+        find.byKey(const Key('route-review-map')),
+      );
+      expect(map.options.onTap, isNotNull);
+      map.options.onTap!(
+        TapPosition(Offset.zero, Offset.zero),
+        const LatLng(51.001, -1.995),
+      );
+      await tester.pumpAndSettle();
+
+      expect(recalculated, isNotNull);
+      expect(
+        recalculated!.waypoints.length,
+        (before ?? 2) + 1,
+        reason: 'the tap should have added one mark',
+      );
+      // Inserted between the existing marks rather than appended past the
+      // destination, because that is what tapping mid-passage means.
+      expect(recalculated!.waypoints.first.name, 'Start');
+      expect(recalculated!.waypoints.last.name, 'Destination');
+    });
+
+    testWidgets('the chart does not add marks outside the mode', (
+      tester,
+    ) async {
+      await pumpEditable(tester);
+      final map = tester.widget<FlutterMap>(
+        find.byKey(const Key('route-review-map')),
+      );
+      expect(map.options.onTap, isNull);
+    });
+
+    // The two modes share one gesture surface, so a sailor must never be in both.
+    testWidgets('turning it on turns redrawing off, and vice versa', (
+      tester,
+    ) async {
+      await pumpEditable(tester);
+
+      // Redrawing starts on for an editable route.
+      expect(find.text('Finish drawing'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('toggle-add-marks')));
+      await tester.pumpAndSettle();
+      expect(find.text('Finish adding'), findsOneWidget);
+      expect(find.text('Draw route around'), findsNothing);
+      expect(find.text('Finish drawing'), findsNothing);
+      expect(find.text('Redraw a leg'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('toggle-route-reshape')));
+      await tester.pumpAndSettle();
+      expect(find.text('Finish drawing'), findsOneWidget);
+      expect(find.text('Add a mark'), findsOneWidget);
+      expect(find.text('Finish adding'), findsNothing);
+    });
   });
 
   testWidgets('keeps disconnected imported paths visually separate', (

@@ -68,6 +68,8 @@ class ResolvedRouteMapPreview extends StatefulWidget {
     this.onReshapeStart,
     this.onReshapeUpdate,
     this.onReshapeEnd,
+    this.addMarkEnabled = false,
+    this.onAddMark,
   });
 
   final List<List<GeoPoint>> paths;
@@ -82,6 +84,17 @@ class ResolvedRouteMapPreview extends StatefulWidget {
   final ValueChanged<RoutePreviewReshapeStart>? onReshapeStart;
   final ValueChanged<GeoPoint>? onReshapeUpdate;
   final VoidCallback? onReshapeEnd;
+
+  /// Whether a tap on open water adds a mark (#32).
+  ///
+  /// Deliberately a mode rather than always-on. A chart is panned and zoomed far
+  /// more often than it is edited, and a stray tap that silently added a mark to
+  /// a passage would be discovered later, in the leg table, by a sailor who did
+  /// not do it.
+  final bool addMarkEnabled;
+
+  /// Called with the tapped position when it hits neither a pin nor the route.
+  final ValueChanged<GeoPoint>? onAddMark;
 
   /// Handed the map's controller once created, so a caller can snapshot it.
   /// Exposed for the recap export, which needs MapLibre's own snapshot because
@@ -203,15 +216,17 @@ class _ResolvedRouteMapPreviewState extends State<ResolvedRouteMapPreview> {
                 ),
               ),
             ),
-            if (widget.reshapeEnabled)
+            if (widget.reshapeEnabled || widget.addMarkEnabled)
               Positioned.fill(
                 child: GestureDetector(
                   key: const Key('route-preview-reshape-surface'),
                   behavior: HitTestBehavior.opaque,
-                  onPanStart: _beginReshape,
-                  onPanUpdate: _updateReshape,
-                  onPanEnd: (_) => _endReshape(),
-                  onPanCancel: _endReshape,
+                  // Dragging is reshaping. In add-mark mode the drag handlers
+                  // are absent so the map keeps its own pan.
+                  onPanStart: widget.reshapeEnabled ? _beginReshape : null,
+                  onPanUpdate: widget.reshapeEnabled ? _updateReshape : null,
+                  onPanEnd: widget.reshapeEnabled ? (_) => _endReshape() : null,
+                  onPanCancel: widget.reshapeEnabled ? _endReshape : null,
                   onTapUp: (details) => unawaited(
                     _handlePointTap(_platformPoint(details.localPosition)),
                   ),
@@ -238,7 +253,7 @@ class _ResolvedRouteMapPreviewState extends State<ResolvedRouteMapPreview> {
                 top: 8,
                 child: _RouteComparisonLegend(),
               ),
-            if (widget.reshapeEnabled)
+            if (widget.reshapeEnabled || widget.addMarkEnabled)
               Positioned(
                 right: 8,
                 top: widget.referencePaths.isEmpty ? 8 : 66,
@@ -247,26 +262,33 @@ class _ResolvedRouteMapPreviewState extends State<ResolvedRouteMapPreview> {
                   onZoomOut: () => unawaited(_zoomBy(-1)),
                 ),
               ),
-            if (widget.reshapeEnabled)
-              const Positioned(
+            if (widget.reshapeEnabled || widget.addMarkEnabled)
+              Positioned(
                 left: 58,
                 right: 58,
                 bottom: 10,
                 child: IgnorePointer(
                   child: DecoratedBox(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Color(0xE61A2029),
                       borderRadius: BorderRadius.all(Radius.circular(18)),
                     ),
                     child: Padding(
-                      padding: EdgeInsets.symmetric(
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 7,
                       ),
                       child: Text(
-                        'Drag route or handle · +/− zoom · exit Reshape to pan',
+                        widget.addMarkEnabled
+                            ? 'Tap the chart to add a mark · +/− zoom · '
+                                  'exit Add marks to pan'
+                            : 'Drag route or handle · +/− zoom · '
+                                  'exit Reshape to pan',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ),
@@ -538,7 +560,24 @@ class _ResolvedRouteMapPreviewState extends State<ResolvedRouteMapPreview> {
         closestDistance = distance;
       }
     }
-    if (closest >= 0 && closestDistance <= 30) callback(closest);
+    if (closest >= 0 && closestDistance <= 30) {
+      callback(closest);
+      return;
+    }
+    await _reportAddMark(controller, tap);
+  }
+
+  /// A tap that hit neither a pin nor the route: open water, so it is a new mark.
+  Future<void> _reportAddMark(
+    ml.MapLibreMapController controller,
+    math.Point<double> tap,
+  ) async {
+    final addMark = widget.onAddMark;
+    if (!widget.addMarkEnabled || addMark == null) return;
+    final location = await controller.toLatLng(tap);
+    addMark(
+      GeoPoint(latitude: location.latitude, longitude: location.longitude),
+    );
   }
 
   void _beginReshape(DragStartDetails details) {
