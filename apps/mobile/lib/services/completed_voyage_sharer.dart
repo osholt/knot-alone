@@ -27,7 +27,7 @@ class SystemCompletedVoyageSharer implements CompletedVoyageSharer {
   @override
   Future<void> shareSummary(
     CompletedVoyage voyage, {
-    DistanceUnit distanceUnit = DistanceUnit.kilometres,
+    DistanceUnit distanceUnit = DistanceUnit.nauticalMiles,
     Rect? sharePositionOrigin,
   }) async {
     final distance = MeasurementFormatter(

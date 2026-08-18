@@ -1,45 +1,68 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/services/demo_route_loader.dart';
-import 'package:tide_and_seek/services/navigation_guidance.dart';
+import 'package:tide_and_seek/services/passage_legs.dart';
 
+/// #35. The demo used to be a 10.9-mile motorcycle road route from a Kingswood
+/// car park to a pub in Old Sodbury, with four turn instructions and a waypoint
+/// called "second-bike-drop marker point". It is the option a new sailor is most
+/// likely to tap, so it is the app's self-description.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('bundled demo follows roads from Kings Oak to Cross Hands', () async {
+  test('the demo is a Solent passage, in legs', () async {
     final route = await const BundledDemoRouteLoader().load();
 
-    expect(route.name, "King's Oak Academy to Cross Hands Hotel");
-    expect(route.pathPointCount, greaterThan(450));
-    expect(route.waypoints, hasLength(3));
-    expect(route.waypoints.first.name, "King's Oak Academy car park");
-    expect(route.waypoints.last.name, 'Cross Hands Hotel car park');
-    expect(route.maneuvers, hasLength(5));
-    final instructions = collapseManeuvers(route.maneuvers);
-    expect(instructions, hasLength(4));
-    expect(instructions.last.direction, ManeuverDirection.straight);
-    expect(instructions.last.text, '2nd exit, straight on');
-    expect(instructions.last.exitNumber, 2);
+    expect(route.name, 'Lymington to Cowes');
+    expect(route.waypoints, hasLength(5));
+    expect(route.waypoints.first.name, 'Lymington River entrance');
+    expect(route.waypoints.last.name, 'Cowes harbour entrance');
 
-    final points = route.paths.single.points;
-    expect(points.first.latitude, closeTo(51.462674, 0.00001));
-    expect(points.first.longitude, closeTo(-2.484519, 0.00001));
-    expect(points.last.latitude, closeTo(51.528729, 0.00001));
-    expect(points.last.longitude, closeTo(-2.342245, 0.00001));
+    // Four legs of a real crossing, about 8.6 nautical miles.
+    final plan = PassagePlan.of(route);
+    expect(plan.legs, hasLength(4));
+    expect(plan.totalDistanceMeters / 1852, closeTo(8.6, 0.3));
+    // Broadly eastward across the Solent.
+    expect(plan.legs.first.courseDegreesTrue, closeTo(96, 5));
   });
 
-  test(
-    'bundled demo includes map-derived second-bike-drop decisions',
-    () async {
-      final maneuvers = await const BundledDemoRouteLoader().loadManeuvers();
+  test('it carries no manoeuvres, because a passage has none', () async {
+    final route = await const BundledDemoRouteLoader().load();
+    expect(route.maneuvers, isEmpty);
+  });
 
-      expect(maneuvers, hasLength(5));
-      expect(maneuvers.first.type, 'end of road');
-      expect(
-        maneuvers.map((maneuver) => maneuver.name),
-        contains('Gorse Lane'),
-      );
-      expect(maneuvers.map((maneuver) => maneuver.type), contains('rotary'));
-      expect(maneuvers.last.type, 'exit rotary');
-    },
-  );
+  test('its geometry follows the legs it declares', () async {
+    final route = await const BundledDemoRouteLoader().load();
+    final points = route.paths.single.points;
+
+    // Sampled along each rhumb line, so the drawn line is the steered course
+    // rather than two points joined on screen.
+    expect(points.length, greaterThan(60));
+    expect(points.first.latitude, closeTo(50.7378, 0.001));
+    expect(points.first.longitude, closeTo(-1.5095, 0.001));
+    expect(points.last.latitude, closeTo(50.7680, 0.001));
+    expect(points.last.longitude, closeTo(-1.2980, 0.001));
+  });
+
+  test('it says it is not a planned passage', () async {
+    final route = await const BundledDemoRouteLoader().load();
+    final description = route.description?.toLowerCase() ?? '';
+
+    // A demo route in a navigation app must not look like checked chart work.
+    expect(description, contains('approximate'));
+    expect(description, contains('not be used for navigation'));
+  });
+
+  test('nothing about it is a road', () async {
+    final route = await const BundledDemoRouteLoader().load();
+    final text = [
+      route.name,
+      route.description ?? '',
+      ...route.waypoints.map((waypoint) => waypoint.name ?? ''),
+      ...route.waypoints.map((waypoint) => waypoint.description ?? ''),
+    ].join(' ').toLowerCase();
+
+    for (final banned in ['road', 'car park', 'bike', 'junction', 'twisty']) {
+      expect(text, isNot(contains(banned)), reason: banned);
+    }
+  });
 }

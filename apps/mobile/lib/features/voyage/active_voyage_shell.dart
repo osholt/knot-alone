@@ -1816,26 +1816,16 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     if (notify) setState(() {});
   }
 
+  /// The points the simulator treats as interesting along a route.
+  ///
+  /// The route's marks. This used to prefer manoeuvres bundled with the demo
+  /// road route, which no longer exist: a passage has no turns, and the demo is
+  /// now a Solent crossing whose marks are the points that matter (#35). The
+  /// waypoint path was already the fallback here, so this is one source rather
+  /// than two.
   Future<List<awareness_geo.GeoPoint>> _simulationJunctions(
     route_domain.ImportedRoute? route,
   ) async {
-    if (route?.sourceFileName == 'demo_route.gpx') {
-      try {
-        return simulationMarkerManeuvers(
-              await const BundledDemoRouteLoader().loadManeuvers(),
-            )
-            .map(
-              (maneuver) => awareness_geo.GeoPoint(
-                latitude: maneuver.position.latitude,
-                longitude: maneuver.position.longitude,
-              ),
-            )
-            .toList(growable: false);
-      } on FormatException {
-        // Keep the demo usable if a local asset is damaged. GPX waypoints are
-        // a less detailed but still valid fallback for the simulation.
-      }
-    }
     return route?.waypoints
             .map(
               (waypoint) => awareness_geo.GeoPoint(

@@ -13,7 +13,7 @@ class VoyageRecapCard extends StatelessWidget {
     super.key,
     required this.summary,
     required this.routePoints,
-    this.distanceUnit = DistanceUnit.kilometres,
+    this.distanceUnit = DistanceUnit.nauticalMiles,
     this.mapLayer,
     this.basemapAttribution,
     this.dark = true,

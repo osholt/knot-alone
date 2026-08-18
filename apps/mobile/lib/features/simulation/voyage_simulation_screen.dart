@@ -14,7 +14,7 @@ class VoyageSimulationScreen extends StatelessWidget {
   const VoyageSimulationScreen({
     super.key,
     required this.controller,
-    this.distanceUnit = DistanceUnit.miles,
+    this.distanceUnit = DistanceUnit.nauticalMiles,
     required this.onRestart,
     required this.onExit,
     required this.onRoleChanged,

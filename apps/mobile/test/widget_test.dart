@@ -466,7 +466,8 @@ void main() {
       ),
     );
 
-    expect(distanceUnits.value, DistanceUnit.kilometres);
+    // Nautical by default, whatever the locale (#34).
+    expect(distanceUnits.value, DistanceUnit.nauticalMiles);
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     expect(find.text('DISTANCE UNITS'), findsOneWidget);

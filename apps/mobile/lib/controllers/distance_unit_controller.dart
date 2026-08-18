@@ -27,12 +27,17 @@ class DistanceUnitController extends ChangeNotifier
     return DistanceUnitController._(preferences, locale, override);
   }
 
-  static DistanceUnit defaultForLocale(Locale locale) {
-    final country = locale.countryCode?.toUpperCase();
-    return country == 'GB' || country == 'UK' || country == 'US'
-        ? DistanceUnit.miles
-        : DistanceUnit.kilometres;
-  }
+  /// Nautical miles, whatever the locale.
+  ///
+  /// The road build picked miles for GB and US and kilometres elsewhere, which is
+  /// how shore distances work. At sea there is one unit and it is the same in
+  /// every country: a nautical mile is a minute of latitude, which is why a
+  /// chart's latitude scale is a distance scale (#34).
+  ///
+  /// [locale] is retained because a sailor may still prefer a shore unit, and the
+  /// override that expresses that preference goes through the same seam.
+  static DistanceUnit defaultForLocale(Locale locale) =>
+      DistanceUnit.nauticalMiles;
 
   DistanceUnit get localeDefault => defaultForLocale(locale);
 

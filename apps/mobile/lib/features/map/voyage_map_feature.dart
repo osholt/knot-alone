@@ -213,7 +213,7 @@ class VoyageMapFeature extends StatefulWidget {
     this.mapStyleString,
     this.completedVoyageStore,
     this.personalVoyageHeatmap,
-    this.distanceUnit = DistanceUnit.kilometres,
+    this.distanceUnit = DistanceUnit.nauticalMiles,
     this.showRouteProgress = true,
     this.basemapConfiguration = const BasemapConfiguration(),
     this.localVesselStyle = vesselIconStyleDefault,
@@ -270,7 +270,7 @@ class VoyageMapFeature extends StatefulWidget {
     CompletedVoyageStore? completedVoyageStore,
     PersonalVoyageHeatmapController? personalVoyageHeatmap,
     bool canEditRoute = true,
-    DistanceUnit distanceUnit = DistanceUnit.kilometres,
+    DistanceUnit distanceUnit = DistanceUnit.nauticalMiles,
     bool showRouteProgress = true,
     bool darkMapStyle = false,
     bool restrainedLightMapStyle = true,
@@ -670,7 +670,7 @@ class VoyageMapScreen extends StatefulWidget {
     this.completedVoyageStore,
     this.personalVoyageHeatmap,
     this.storedRouteLibrary,
-    this.distanceUnit = DistanceUnit.kilometres,
+    this.distanceUnit = DistanceUnit.nauticalMiles,
     this.showRouteProgress = true,
     this.disposeOfflineTileCache = false,
     this.localVesselStyle = vesselIconStyleDefault,
@@ -7394,7 +7394,9 @@ class _JunctionMarkerOverlay extends StatelessWidget {
                     _MarkerMetric(
                       icon: Icons.shield_outlined,
                       label:
-                          'TEC ${MeasurementFormatter(distanceUnit).distance(sweeperDistance)} away',
+                          'Sweeper '
+                          '${MeasurementFormatter(distanceUnit).distance(sweeperDistance)} '
+                          'away',
                       color: const Color(0xFF68A9FF),
                     ),
                 ],
@@ -7444,9 +7446,16 @@ class _MarkerMetric extends StatelessWidget {
       children: [
         Icon(icon, size: 15, color: color ?? const Color(0xFFB7C2CF)),
         const SizedBox(width: 5),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        // Flexible because the label is not fixed-width: nautical distances read
+        // longer than road ones ("2.5 cables" against "0.2 mi"), which overflowed
+        // this row by 47px inside the compact marker card (#34).
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
         ),
       ],
     ),

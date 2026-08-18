@@ -220,18 +220,12 @@ void main() {
       importedAt: DateTime.utc(2026),
     );
 
-    expect(route.name, "King's Oak Academy to Cross Hands Hotel");
-    expect(route.pathPointCount, greaterThan(450));
-    expect(route.waypoints, hasLength(3));
+    expect(route.name, 'Lymington to Cowes');
+    expect(route.waypoints, hasLength(5));
     expect(route.paths.single.kind.name, 'track');
-    expect(
-      route.paths.single.points.first.latitude,
-      closeTo(51.462674, 0.00001),
-    );
-    expect(
-      route.paths.single.points.last.latitude,
-      closeTo(51.528729, 0.00001),
-    );
+    expect(route.pathPointCount, greaterThan(60));
+    expect(route.paths.single.points.first.latitude, closeTo(50.7378, 0.001));
+    expect(route.paths.single.points.last.latitude, closeTo(50.7680, 0.001));
   });
 }
 

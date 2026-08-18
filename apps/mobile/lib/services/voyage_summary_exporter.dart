@@ -224,7 +224,7 @@ class VoyageSummaryExporter {
 
   String toPlainText(
     VoyageSummary summary, {
-    DistanceUnit distanceUnit = DistanceUnit.kilometres,
+    DistanceUnit distanceUnit = DistanceUnit.nauticalMiles,
   }) {
     final distance = MeasurementFormatter(
       distanceUnit,
@@ -426,7 +426,7 @@ abstract interface class VoyageSummarySharer {
   Future<void> share(
     VoyageSession session,
     Iterable<VoyageEvent> events, {
-    DistanceUnit distanceUnit = DistanceUnit.kilometres,
+    DistanceUnit distanceUnit = DistanceUnit.nauticalMiles,
     Rect? sharePositionOrigin,
     String? diagnostics,
   });
@@ -443,7 +443,7 @@ class SystemVoyageSummarySharer implements VoyageSummarySharer {
   Future<void> share(
     VoyageSession session,
     Iterable<VoyageEvent> events, {
-    DistanceUnit distanceUnit = DistanceUnit.kilometres,
+    DistanceUnit distanceUnit = DistanceUnit.nauticalMiles,
     Rect? sharePositionOrigin,
     // Present only when an instrumented build was recording (#419). One more
     // attachment on the share a sailor already does, rather than a second flow

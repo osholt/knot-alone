@@ -22,7 +22,7 @@ class VoyageRecapScreen extends StatefulWidget {
     super.key,
     required this.summary,
     required this.routePoints,
-    this.distanceUnit = DistanceUnit.kilometres,
+    this.distanceUnit = DistanceUnit.nauticalMiles,
     this.basemapConfiguration = const BasemapConfiguration(),
     this.mapBuilder,
   });
@@ -44,7 +44,7 @@ class VoyageRecapScreen extends StatefulWidget {
     BuildContext context, {
     required VoyageSummary summary,
     required List<GeoPoint> routePoints,
-    DistanceUnit distanceUnit = DistanceUnit.kilometres,
+    DistanceUnit distanceUnit = DistanceUnit.nauticalMiles,
     BasemapConfiguration basemapConfiguration = const BasemapConfiguration(),
   }) => Navigator.of(context).push(
     MaterialPageRoute<void>(

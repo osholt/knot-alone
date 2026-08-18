@@ -11,7 +11,6 @@ import '../../services/biker_place_catalogue.dart';
 import '../../services/measurement_formatter.dart';
 import '../../services/navigation_guidance.dart';
 import '../../services/route_reshape_planner.dart';
-import '../../services/route_twistiness.dart';
 import '../../services/route_waypoint_editor.dart';
 import 'maneuver_list_screen.dart';
 import 'resolved_route_map_preview.dart';
@@ -756,29 +755,15 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                               '$maneuverCount turn '
                               'instruction${maneuverCount == 1 ? '' : 's'}',
                         ),
-                      // The same score, thresholds and wording the web planner
-                      // shows for the same geometry (#46, #182).
-                      _SummaryItem(
-                        icon: Icons.moving,
-                        label: RouteTwistiness.describe(
-                          twistinessScore ??
-                              RouteTwistiness.score(
-                                previewPaths
-                                    .expand((points) => points)
-                                    .toList(growable: false),
-                                distanceMeters: effectiveDistance,
-                              ),
-                        ),
-                      ),
+                      // No twistiness score (#35). It scored how enjoyable a
+                      // road was to ride; on a passage between two marks it
+                      // described the shape of a straight line and read as
+                      // "5°/km · Gentle" across the Solent.
                     ],
                   ),
-                  if (route.preferences case final preferences?) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      'Planned with: ${preferences.summary}',
-                      style: const TextStyle(color: Color(0xFF98A3B1)),
-                    ),
-                  ],
+                  // "Planned with: motorways excluded, unsurfaced byways
+                  // avoided" said nothing about a passage (#35). Removing the
+                  // road preferences themselves is #31.
                   if (!basemapConfiguration.usesMapLibre &&
                       !basemapConfiguration.usesLegacyRaster) ...[
                     const SizedBox(height: 10),
@@ -824,10 +809,13 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                           key: const Key('toggle-route-reshape'),
                           selected: _reshapeEnabled,
                           avatar: const Icon(Icons.gesture, size: 18),
+                          // Kept, reworded (#35). It re-plans the leg through
+                          // points the sailor draws, which used to mean
+                          // re-snapping to roads and now means rhumb legs
+                          // through them (#19) - the one way to pull a leg
+                          // around an island while the app has no land data.
                           label: Text(
-                            _reshapeEnabled
-                                ? 'Finish drawing'
-                                : 'Draw route around',
+                            _reshapeEnabled ? 'Finish drawing' : 'Redraw a leg',
                           ),
                           onSelected: (selected) =>
                               setState(() => _reshapeEnabled = selected),

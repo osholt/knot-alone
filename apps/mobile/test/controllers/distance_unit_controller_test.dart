@@ -7,19 +7,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('defaults UK and US locales to miles and other locales to km', () {
-    expect(
-      DistanceUnitController.defaultForLocale(const Locale('en', 'GB')),
-      DistanceUnit.miles,
-    );
-    expect(
-      DistanceUnitController.defaultForLocale(const Locale('en', 'US')),
-      DistanceUnit.miles,
-    );
-    expect(
-      DistanceUnitController.defaultForLocale(const Locale('fr', 'FR')),
-      DistanceUnit.kilometres,
-    );
+  // #34. The road build defaulted GB and US to miles and everywhere else to
+  // kilometres, which is how shore distances work. At sea there is one unit and
+  // it does not vary by country.
+  test('defaults every locale to nautical miles', () {
+    for (final locale in const [
+      Locale('en', 'GB'),
+      Locale('en', 'US'),
+      Locale('fr', 'FR'),
+      Locale('de', 'DE'),
+    ]) {
+      expect(
+        DistanceUnitController.defaultForLocale(locale),
+        DistanceUnit.nauticalMiles,
+        reason: '$locale',
+      );
+    }
   });
 
   test('persists an override and can return to the locale default', () async {
@@ -28,7 +31,7 @@ void main() {
     );
     addTearDown(controller.dispose);
 
-    expect(controller.value, DistanceUnit.miles);
+    expect(controller.value, DistanceUnit.nauticalMiles);
     expect(controller.followsLocale, isTrue);
 
     await controller.setUnit(DistanceUnit.kilometres);
@@ -42,7 +45,7 @@ void main() {
     expect(reloaded.value, DistanceUnit.kilometres);
 
     await reloaded.useLocaleDefault();
-    expect(reloaded.value, DistanceUnit.miles);
+    expect(reloaded.value, DistanceUnit.nauticalMiles);
     expect(reloaded.followsLocale, isTrue);
   });
 }

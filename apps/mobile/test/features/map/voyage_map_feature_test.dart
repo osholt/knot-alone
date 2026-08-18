@@ -1283,6 +1283,10 @@ void main() {
           skipperStatus: skipperStatus,
           distanceUnit: DistanceUnit.miles,
           onRouteChanged: publishedRoutes.add,
+          // The demo passage carries no manoeuvres (#35), so loading it takes
+          // the "keep the original" path and saves a copy. Injected here so the
+          // test does not reach the real documents directory.
+          recordedRouteStore: InMemoryRecordedRouteStore(),
           voyageStarted: false,
         ),
       ),
@@ -1307,10 +1311,7 @@ void main() {
     }
 
     expect(find.text('Review route'), findsOneWidget);
-    expect(
-      find.text("King's Oak Academy to Cross Hands Hotel"),
-      findsOneWidget,
-    );
+    expect(find.text('Lymington to Cowes'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.byKey(const Key('confirm-reviewed-route')),
       250,

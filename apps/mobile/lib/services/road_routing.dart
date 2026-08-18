@@ -1119,7 +1119,7 @@ class DestinationRoutePlanner {
     List<String> stopQueries = const [],
     required String query,
     DestinationMatch? selectedDestination,
-    DistanceUnit distanceUnit = DistanceUnit.kilometres,
+    DistanceUnit distanceUnit = DistanceUnit.nauticalMiles,
     RoutePreferences preferences = RoutePreferences.defaults,
   }) async {
     final warnings = <String>[];
@@ -1240,7 +1240,7 @@ class DestinationRoutePlanner {
     String? originQuery,
     List<String> stopQueries = const [],
     required String query,
-    DistanceUnit distanceUnit = DistanceUnit.kilometres,
+    DistanceUnit distanceUnit = DistanceUnit.nauticalMiles,
     RoutePreferences preferences = RoutePreferences.defaults,
   }) async {
     return (await planForReview(
