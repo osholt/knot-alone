@@ -78,6 +78,8 @@ import '../../services/passage_legs.dart';
 import 'passage_leg_table.dart';
 import '../../services/navigation_instruments.dart';
 import 'navigation_instrument_panel.dart';
+import '../../services/marine_forecast.dart';
+import 'marine_forecast_panel.dart';
 
 @visibleForTesting
 GroupMiniMapRenderer groupMiniMapRenderer({
@@ -1532,6 +1534,10 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                     const PopupMenuItem(
                       value: _MapAction.instruments,
                       child: Text('Navigation instruments'),
+                    ),
+                    const PopupMenuItem(
+                      value: _MapAction.weather,
+                      child: Text('Wind and weather'),
                     ),
                     // Always offered, route or not: what the map is made of is
                     // not a property of the plan.
@@ -5186,11 +5192,52 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         await _showPassagePlan();
       case _MapAction.instruments:
         await _showNavigationInstruments();
+      case _MapAction.weather:
+        await _showWeather();
       case _MapAction.clearOfflineTiles:
         await _mapLibreOfflineManager.clearAll();
         await widget.offlineTileCache.clearAll();
         _showMessage('Offline map data cleared.');
     }
+  }
+
+  /// Wind, pressure, visibility and sea state for where the sailor is.
+  ///
+  /// Fetched when opened rather than polled: the free endpoint has a daily call
+  /// budget and no uptime guarantee, so asking once when a sailor wants to know
+  /// spends it where it is useful. A failure is shown in the sheet rather than as
+  /// an error, because no forecast is an ordinary condition at sea (#12).
+  Future<void> _showWeather() async {
+    final position = _effectivePosition;
+    if (position == null) {
+      _showMessage('No position yet, so there is nowhere to forecast for.');
+      return;
+    }
+    MarineForecast? forecast;
+    ForecastException? failure;
+    try {
+      forecast = await OpenMeteoForecastService(
+        client: _routingClient,
+      ).fetch(latitude: position.latitude, longitude: position.longitude);
+    } on ForecastException catch (error) {
+      failure = error;
+    }
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+          child: MarineForecastPanel(
+            forecast: forecast,
+            failure: failure,
+            now: DateTime.now().toUtc(),
+          ),
+        ),
+      ),
+    );
   }
 
   /// The instrument panel: what the receiver measures and what follows from it.
@@ -5566,6 +5613,7 @@ enum _MapAction {
   chartSources,
   passagePlan,
   instruments,
+  weather,
   importGpx,
   loadDemo,
   personalVoyageHeatmap,
