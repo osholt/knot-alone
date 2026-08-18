@@ -99,6 +99,32 @@ abstract final class MarineLayers {
         'behind it.',
   );
 
+  /// The weather and sea-state forecast (#12).
+  ///
+  /// Not a chart layer and not drawn on the map, but it is marine data shown to a
+  /// sailor, so it belongs in the same provenance model: the sheet that says what
+  /// the map is made of should also say where the wind came from.
+  ///
+  /// Continuously updated with no published model run - see
+  /// `marine_forecast.dart` - so freshness is judged on the validity time of each
+  /// forecast rather than on an edition.
+  static const openMeteoForecast = ChartSource(
+    id: 'open-meteo-forecast',
+    displayName: 'Open-Meteo forecast',
+    authority: ChartAuthority.surveyDerived,
+    licence: ChartLicence(
+      name: 'CC BY 4.0 (free endpoint is non-commercial)',
+      attribution: 'Weather data by Open-Meteo.com (CC BY 4.0)',
+      url: 'https://open-meteo.com/en/license',
+      permitsOfflineCache: true,
+    ),
+    continuouslyUpdated: true,
+    coverageNote:
+        'Model output for wind, pressure, visibility and open-water wave. Not a '
+        'weather station reading, and not the sea you will meet in a tide race '
+        'or under a lee shore.',
+  );
+
   /// Release year of the EMODnet product actually served by [bathymetryTiles].
   static final emodnetRelease = DateTime.utc(2024);
 
@@ -156,6 +182,7 @@ abstract final class MarineLayers {
     emodnetBathymetry,
     ukhoWrecks,
     openSeaMapSeamarks,
+    openMeteoForecast,
   ];
 
   /// The sources actually on screen.
@@ -177,6 +204,12 @@ abstract final class MarineLayers {
       reason:
           'Its colour ramp is built for ocean depths, so it renders shelf '
           'water white and adds nothing over a sailing area.',
+    ),
+    UnusedChartSource(
+      source: openMeteoForecast,
+      reason:
+          'Shown in Wind and weather rather than drawn on the chart. Fetched '
+          'when you open it, not continuously.',
     ),
     UnusedChartSource(
       source: ukhoWrecks,
