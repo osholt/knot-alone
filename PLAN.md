@@ -385,11 +385,19 @@ Not planned; discovered by putting build 22 on a device. Kept as its own group
 because "we shipped it and then looked at it" is a different kind of work from
 the phases around it, and there will be more of it after every build.
 
-- [ ] Crew roles and onboarding copy still speak road, and onboarding is
-      crew-first on a solo-first app — #49
-- [ ] Associated Domains points at a placeholder that can never resolve — #40
-- [ ] The iOS launch image is still the Flutter placeholder — #41
-- [ ] Release builds are hand-assembled and not reproducible — #42
+- [x] Crew roles and onboarding copy spoke road, and onboarding was crew-first
+      on a solo-first app — #49
+- [x] Associated Domains pointed at a placeholder that could never resolve, and
+      every invitation led with a link that could not open — #40, #51
+- [x] The iOS launch image was the Flutter placeholder — #41
+- [x] Release builds were hand-assembled and not reproducible — #42
+- [x] A solo sailor with no voyage was told to wait for the skipper's route,
+      the wrong answer removed — #53 stays open for the right one
+- [ ] The `Marker` role outlived junction markers — #57
+
+**Build 23 (1.0.2)** carries all of the above. Nine of the eleven things in this
+phase were found by putting a build on a device rather than by reading the code,
+which is the argument for doing it early and often.
 
 ### Phase 5 — Evidence before anyone sails with it
 
