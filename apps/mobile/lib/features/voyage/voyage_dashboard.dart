@@ -435,7 +435,7 @@ class _VoyageCodeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = controller.session!;
-    if (session.role != VoyageRole.lead) {
+    if (session.role != VoyageRole.skipper) {
       return const SizedBox.shrink();
     }
     return Card(

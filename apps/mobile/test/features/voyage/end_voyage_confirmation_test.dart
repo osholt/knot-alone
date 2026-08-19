@@ -68,7 +68,7 @@ void main() {
     // Three surfaces offered this and expressed the condition three ways, two
     // of them wrong. `VoyageController.endVoyage` accepts `isLocalVoyageSkipper`; the
     // shell's end-voyage guard and the map's exit dialog both read
-    // `session?.role == VoyageRole.lead`, which is a different thing.
+    // `session?.role == VoyageRole.skipper`, which is a different thing.
     Future<VoyageController> controllerFor() async {
       var id = 0;
       final controller = VoyageController(
@@ -90,7 +90,7 @@ void main() {
       final controller = await controllerFor();
       addTearDown(controller.dispose);
 
-      expect(controller.session?.role, VoyageRole.lead);
+      expect(controller.session?.role, VoyageRole.skipper);
       expect(canEndVoyageForEveryone(controller), isTrue);
     });
 

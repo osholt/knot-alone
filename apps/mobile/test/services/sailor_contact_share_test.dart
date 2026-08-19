@@ -108,13 +108,13 @@ void main() {
           deviceId: 'skipper',
           sailorId: 'skipper',
           displayName: 'Oliver',
-          role: VoyageRole.lead,
+          role: VoyageRole.skipper,
           recipientSailorIds: null,
         ),
       ], localSailorId: 'ordinary-sailor');
 
       expect(result['skipper']!.toVoyageGroup, isTrue);
-      expect(result['skipper']!.sharedByRole, VoyageRole.lead);
+      expect(result['skipper']!.sharedByRole, VoyageRole.skipper);
     });
 
     test('a malformed recipient list fails closed rather than reading as '
@@ -259,7 +259,7 @@ void main() {
       expect(recipients.isEmpty, isTrue);
     });
 
-    for (final role in [VoyageRole.lead, VoyageRole.sweeper]) {
+    for (final role in [VoyageRole.skipper, VoyageRole.sweeper]) {
       test('a ${role.name} offers theirs to the voyage', () {
         final recipients = SailorContactRecipients.resolve(
           localRole: role,

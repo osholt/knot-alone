@@ -2253,7 +2253,7 @@ void main() {
             MapEmergencyContact(
               sailorId: 'lead',
               displayName: 'Oliver',
-              role: VoyageRole.lead,
+              role: VoyageRole.skipper,
             ),
             MapEmergencyContact(
               sailorId: 'sweeper',
@@ -2322,7 +2322,7 @@ void main() {
             MapEmergencyContact(
               sailorId: 'lead',
               displayName: 'Oliver',
-              role: VoyageRole.lead,
+              role: VoyageRole.skipper,
               phoneNumber: '+44 7700 900321',
               contactShareEventId: 'lead-share',
             ),
@@ -2420,7 +2420,7 @@ void main() {
             MapEmergencyContact(
               sailorId: 'lead',
               displayName: 'Oliver',
-              role: VoyageRole.lead,
+              role: VoyageRole.skipper,
             ),
           ],
           onEmergencyAlert: () async {},
@@ -4388,7 +4388,7 @@ CompletedVoyage _completedHeatmapVoyage(ImportedRoute traveledRoute) =>
       voyageCode: '392725',
       voyageName: 'Previous voyage',
       localDisplayName: 'Oliver',
-      localRole: VoyageRole.lead,
+      localRole: VoyageRole.skipper,
       startedAt: DateTime.utc(2026, 8, 12, 9),
       endedAt: DateTime.utc(2026, 8, 12, 10),
       archivedAt: DateTime.utc(2026, 8, 12, 10, 1),

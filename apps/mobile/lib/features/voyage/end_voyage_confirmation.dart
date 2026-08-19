@@ -24,7 +24,7 @@ import '../../controllers/voyage_controller.dart';
 /// three separate expressions of it and two were wrong. `VoyageController.endVoyage`
 /// accepts `isLocalVoyageSkipper`, and the voyage menu offers the action on the same
 /// — but the shell's end-voyage guard and the map's exit dialog both read
-/// `session?.role == VoyageRole.lead`, which is **false while the skipper is acting
+/// `session?.role == VoyageRole.skipper`, which is **false while the skipper is acting
 /// as the marker**. So a skipper marking a junction was refused an action the
 /// controller would have accepted: End voyage did nothing at all, and LEAVE showed
 /// the follower's dialog with no "End for everyone" (#306).

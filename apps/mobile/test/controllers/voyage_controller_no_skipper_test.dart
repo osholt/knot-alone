@@ -132,7 +132,7 @@ void main() {
     await controller.setRole(VoyageRole.sailor);
     expect(controller.voyageHasNoSkipper, isTrue);
 
-    await controller.setRole(VoyageRole.lead);
+    await controller.setRole(VoyageRole.skipper);
 
     expect(controller.voyageHasNoSkipper, isFalse);
     expect(controller.skipperSailorId, controller.session!.localSailorId);
@@ -145,7 +145,7 @@ void main() {
     expect(controller.voyageHasNoSkipper, isTrue);
 
     // endVoyage requires the lead role, so take it back to end the voyage.
-    await controller.setRole(VoyageRole.lead);
+    await controller.setRole(VoyageRole.skipper);
     await controller.endVoyage();
 
     expect(
@@ -172,7 +172,7 @@ void main() {
       type: VoyageEventType.roleChanged,
       priority: EventPriority.important,
       createdAt: now,
-      payload: {'role': VoyageRole.lead.name},
+      payload: {'role': VoyageRole.skipper.name},
       // Signed with the wrong secret: a device outside the voyage.
       signature: VoyageEventAuthenticator.sign(
         VoyageEvent(
@@ -182,7 +182,7 @@ void main() {
           type: VoyageEventType.roleChanged,
           priority: EventPriority.important,
           createdAt: now,
-          payload: {'role': VoyageRole.lead.name},
+          payload: {'role': VoyageRole.skipper.name},
           signature: '',
         ),
         'not-this-voyages-secret',

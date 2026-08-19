@@ -91,7 +91,7 @@ void main() {
         registeredSweeperSailorIds(
           simulatedSailors: null,
           liveParticipants: [
-            participant(sailorId: 'lead', role: VoyageRole.lead),
+            participant(sailorId: 'lead', role: VoyageRole.skipper),
             participant(sailorId: 'charlie', role: VoyageRole.sweeper),
           ],
         ),
@@ -104,7 +104,7 @@ void main() {
         registeredSweeperSailorIds(
           simulatedSailors: null,
           liveParticipants: [
-            participant(sailorId: 'lead', role: VoyageRole.lead),
+            participant(sailorId: 'lead', role: VoyageRole.skipper),
             participant(sailorId: 'alex', role: VoyageRole.sailor),
           ],
         ),
@@ -117,7 +117,7 @@ void main() {
         registeredSweeperSailorIds(
           simulatedSailors: null,
           liveParticipants: [
-            participant(sailorId: 'lead', role: VoyageRole.lead),
+            participant(sailorId: 'lead', role: VoyageRole.skipper),
             participant(
               sailorId: 'charlie',
               role: VoyageRole.sweeper,
@@ -133,7 +133,7 @@ void main() {
       expect(
         registeredSweeperSailorIds(
           simulatedSailors: [
-            _simulated(id: 'voyage-lab-maya', role: VoyageRole.lead),
+            _simulated(id: 'voyage-lab-maya', role: VoyageRole.skipper),
             _simulated(id: 'voyage-lab-charlie', role: VoyageRole.sweeper),
           ],
           liveParticipants: const [],

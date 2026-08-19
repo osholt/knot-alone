@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import '../domain/voyage_role.dart';
+
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -1089,7 +1091,7 @@ class HttpPreStartPresenceClient implements PreStartPresenceApi {
             ? null
             : {
                 'displayName': position.displayName,
-                'role': position.role.name,
+                'role': position.role.wireName,
                 'vesselStyle': position.sailorSymbol.wireValue(
                   position.vesselStyle,
                 ),

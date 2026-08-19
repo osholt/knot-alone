@@ -5729,7 +5729,7 @@ class MapEmergencyContact {
   bool get hasPhoneNumber => (phoneNumber ?? '').isNotEmpty;
 
   String get shortRoleLabel => switch (role) {
-    VoyageRole.lead => 'the skipper',
+    VoyageRole.skipper => 'the skipper',
     VoyageRole.sweeper => 'the sweeper',
     _ => displayName,
   };
@@ -5737,7 +5737,7 @@ class MapEmergencyContact {
   /// "Oliver (skipper)". Used at the point of dialling, where the sailor needs to
   /// know both who and which role.
   String get roleQualifiedName => switch (role) {
-    VoyageRole.lead => '$displayName (skipper)',
+    VoyageRole.skipper => '$displayName (skipper)',
     VoyageRole.sweeper => '$displayName (sweeper)',
     _ => displayName,
   };

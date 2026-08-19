@@ -88,7 +88,7 @@ class VoyageSession {
     'joinToken': joinToken,
     'localSailorId': localSailorId,
     'displayName': displayName,
-    'role': role.name,
+    'role': role.wireName,
     'joinedAt': joinedAt.toUtc().toIso8601String(),
     if (isSimulation) 'isSimulation': true,
     if (isSimulation) 'simulationSailorCount': simulationSailorCount,
@@ -106,7 +106,7 @@ class VoyageSession {
     joinToken: _joinTokenOrFallback(json['joinToken']),
     localSailorId: json['localSailorId']! as String,
     displayName: json['displayName']! as String,
-    role: VoyageRole.values.byName(json['role']! as String),
+    role: VoyageRoleWire.parse(json['role']! as String),
     joinedAt: DateTime.parse(json['joinedAt']! as String).toLocal(),
     isSimulation: json['isSimulation'] as bool? ?? false,
     simulationSailorCount: _simulationSailorCount(

@@ -50,7 +50,7 @@ class SweeperRoleAssignment {
 
   final String requestId;
 
-  /// The sailor who issued it, verified to have held [VoyageRole.lead] at the
+  /// The sailor who issued it, verified to have held [VoyageRole.skipper] at the
   /// moment the event was created.
   final String skipperSailorId;
 
@@ -161,7 +161,7 @@ class SweeperRoleAssignmentState {
 /// harmless:
 ///
 /// * A request is admissible only from a device whose latest signed role **at
-///   that point in the journal** is [VoyageRole.lead], and only when the payload
+///   that point in the journal** is [VoyageRole.skipper], and only when the payload
 ///   names its own author as the skipper. This is exactly how
 ///   [VoyageLifecycleReducer] admits `voyageStarted`, and how #99 rejects a forged
 ///   departure.
@@ -331,7 +331,7 @@ class SweeperRoleAssignmentReducer {
     // Only the current skipper may initiate, and the event must name its own
     // author as that skipper. A request forged or replayed by another device
     // fails one of these and is dropped whole.
-    if (roles[event.deviceId] != VoyageRole.lead) return null;
+    if (roles[event.deviceId] != VoyageRole.skipper) return null;
     if (event.payload['skipperSailorId'] != event.deviceId) return null;
     final requestId = _identifier(event.payload['requestId']);
     final targetSailorId = _identifier(event.payload['targetSailorId']);
@@ -360,10 +360,6 @@ class SweeperRoleAssignmentReducer {
 
   static VoyageRole? _role(Object? value) {
     if (value is! String) return null;
-    try {
-      return VoyageRole.values.byName(value);
-    } on ArgumentError {
-      return null;
-    }
+    return VoyageRoleWire.tryParse(value);
   }
 }

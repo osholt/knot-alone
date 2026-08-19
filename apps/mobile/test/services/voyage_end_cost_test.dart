@@ -36,7 +36,7 @@ void main() {
     joinToken: 'cost-token',
     localSailorId: 'sailor-0',
     displayName: 'Oliver',
-    role: VoyageRole.lead,
+    role: VoyageRole.skipper,
     joinedAt: DateTime.utc(2026, 7, 27, 9),
   );
 
@@ -225,7 +225,7 @@ List<VoyageEvent> _journal(
     deviceId: session.localSailorId,
     type: VoyageEventType.voyageCreated,
     createdAt: session.joinedAt,
-    payload: {'role': VoyageRole.lead.name, 'displayName': 'Oliver'},
+    payload: {'role': VoyageRole.skipper.name, 'displayName': 'Oliver'},
   ),
   _signed(
     session,
@@ -265,7 +265,7 @@ VoyageEvent _locationEvent(
       'location': SailorLocation(
         sailorId: 'sailor-$sailor',
         displayName: sailor == 0 ? 'Oliver' : 'Sailor $sailor',
-        role: sailor == 0 ? VoyageRole.lead : VoyageRole.sailor,
+        role: sailor == 0 ? VoyageRole.skipper : VoyageRole.sailor,
         sample: LocationSample(
           position: GeoPoint(
             latitude: 51.46 + index * 0.00006,

@@ -16,7 +16,7 @@ void main() {
       joinToken: 'test-join-token-0123456789',
       localSailorId: 'device-a',
       displayName: 'Oliver',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 16, 9, 55),
     );
     final events = [
@@ -75,7 +75,7 @@ void main() {
       joinToken: 'test-join-token-0123456789',
       localSailorId: 'device-a',
       displayName: 'Oliver',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 16, 9, 55),
     );
     final events = [
@@ -133,7 +133,7 @@ void main() {
       joinToken: 'test-join-token-0123456789',
       localSailorId: 'device-a',
       displayName: 'Oliver',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 16, 9, 55),
     );
     final events = [
@@ -177,7 +177,7 @@ void main() {
       joinToken: 'test-join-token-0123456789',
       localSailorId: 'device-a',
       displayName: 'Oliver',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 16, 9, 55),
     );
     final events = [
@@ -245,7 +245,7 @@ void main() {
       joinToken: 'test-join-token-0123456789',
       localSailorId: 'device-a',
       displayName: 'Oliver',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 16, 9, 55),
     );
     final events = [
@@ -320,7 +320,7 @@ void main() {
       joinToken: 'test-join-token-0123456789',
       localSailorId: 'device-a',
       displayName: 'Oliver',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 16, 9, 55),
     );
     const exporter = VoyageSummaryExporter();
@@ -342,7 +342,7 @@ void main() {
       joinToken: 'test-join-token-0123456789',
       localSailorId: 'device-a',
       displayName: 'Oliver',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 16, 9, 55),
     );
     final events = [
@@ -396,7 +396,7 @@ void main() {
       localSailorId: 'device-a',
       displayName: 'Oliver',
       // Solo: the sailor creates the voyage, so they lead it.
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 16, 9, 55),
     );
 

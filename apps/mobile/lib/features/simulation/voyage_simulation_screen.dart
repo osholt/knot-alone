@@ -181,7 +181,7 @@ class _SimulationControls extends StatelessWidget {
               showSelectedIcon: false,
               segments: const [
                 ButtonSegment(
-                  value: VoyageRole.lead,
+                  value: VoyageRole.skipper,
                   icon: MarineGlyphIcon(MarineGlyph.skipper),
                   label: Text('Skipper'),
                 ),

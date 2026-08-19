@@ -50,7 +50,7 @@ void main() {
             MapEmergencyContact(
               sailorId: 'lead',
               displayName: 'Oliver',
-              role: VoyageRole.lead,
+              role: VoyageRole.skipper,
             ),
             MapEmergencyContact(
               sailorId: 'sweeper',

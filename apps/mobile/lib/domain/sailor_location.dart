@@ -73,7 +73,7 @@ class SailorLocation {
   Map<String, Object?> toJson() => {
     'sailorId': sailorId,
     'displayName': displayName,
-    'role': role.name,
+    'role': role.wireName,
     'sample': sample.toJson(),
     'receivedAt': receivedAt.toUtc().toIso8601String(),
     'vesselStyle': sailorSymbol.wireValue(vesselStyle),
@@ -83,7 +83,7 @@ class SailorLocation {
   factory SailorLocation.fromJson(Map<String, Object?> json) => SailorLocation(
     sailorId: json['sailorId']! as String,
     displayName: json['displayName']! as String,
-    role: VoyageRole.values.byName(json['role']! as String),
+    role: VoyageRoleWire.parse(json['role']! as String),
     sample: LocationSample.fromJson(
       Map<String, Object?>.from(json['sample']! as Map),
     ),

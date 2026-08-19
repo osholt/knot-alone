@@ -282,9 +282,9 @@ class VoyageSimulationController extends ChangeNotifier {
         id: 'voyage-lab-maya',
         displayName: 'Maya',
         index: 1,
-        role: _selectedLocalRole == VoyageRole.lead
+        role: _selectedLocalRole == VoyageRole.skipper
             ? VoyageRole.sailor
-            : VoyageRole.lead,
+            : VoyageRole.skipper,
       ),
       sailor(
         id: offRouteSailorId,
@@ -330,7 +330,7 @@ class VoyageSimulationController extends ChangeNotifier {
   }
 
   List<GeoPoint> _displayTrailFor(_SimulatedAgent agent) {
-    if (agent.role != VoyageRole.lead) return agent.travelTrail;
+    if (agent.role != VoyageRole.skipper) return agent.travelTrail;
     final sweeper = _agent(sweeperSailorId);
     final routeTrail = _routeSampler.pointsBetween(
       math.min(sweeper.progressMeters, agent.progressMeters),
@@ -779,8 +779,8 @@ class VoyageSimulationController extends ChangeNotifier {
       agent.role = VoyageRole.sailor;
     }
     _agents.first.role = _selectedLocalRole;
-    if (_selectedLocalRole != VoyageRole.lead) {
-      _agent('voyage-lab-maya').role = VoyageRole.lead;
+    if (_selectedLocalRole != VoyageRole.skipper) {
+      _agent('voyage-lab-maya').role = VoyageRole.skipper;
     }
     if (_selectedLocalRole != VoyageRole.sweeper) {
       _agent(sweeperSailorId).role = VoyageRole.sweeper;
@@ -799,7 +799,7 @@ class VoyageSimulationController extends ChangeNotifier {
           (_activeMarkerSailorId == null && agent.isLocal));
 
   _SimulatedAgent _leadAgent() => _agents.firstWhere(
-    (agent) => agent.role == VoyageRole.lead,
+    (agent) => agent.role == VoyageRole.skipper,
     orElse: () => _agents.first,
   );
 
@@ -827,7 +827,7 @@ class VoyageSimulationController extends ChangeNotifier {
   String get _markerSailorPresentVerb => automaticMarkerIsLocal ? 'are' : 'is';
 
   String get _localPerspectiveName => switch (_selectedLocalRole) {
-    VoyageRole.lead => _session.displayName,
+    VoyageRole.skipper => _session.displayName,
     VoyageRole.sailor => 'You · Follower',
     VoyageRole.sweeper => 'You · TEC',
     VoyageRole.marker => 'You · Marker',

@@ -126,7 +126,7 @@ class _VoyageRosterSheetState extends State<VoyageRosterSheet> {
             if (widget.controller.voyageHasNoSkipper)
               _MissingSkipperNotice(
                 onTakeLead: () async {
-                  await widget.controller.setRole(VoyageRole.lead);
+                  await widget.controller.setRole(VoyageRole.skipper);
                   if (context.mounted) Navigator.pop(context);
                 },
               ),
@@ -601,12 +601,10 @@ class _ParticipantTile extends StatelessWidget {
     );
   }
 
-  static String _roleLabel(VoyageRole role) => switch (role) {
-    VoyageRole.lead => 'Lead',
-    VoyageRole.sweeper => 'Sweeper',
-    VoyageRole.marker => 'Marker',
-    VoyageRole.sailor => 'Sailor',
-  };
+  // Deferred to `VoyageRoleLabel` rather than restated. This copy is how the
+  // roster came to say "Lead" while the glyph beside it said Skipper (#49):
+  // two switches over the same enum, only one of them updated.
+  static String _roleLabel(VoyageRole role) => role.label;
 
   static String _lastSeenLabel(DateTime value, DateTime now) {
     final age = now.difference(value);

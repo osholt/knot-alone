@@ -102,7 +102,7 @@ void main() {
       joinToken: 'private-join-token',
       localSailorId: 'local-sailor',
       displayName: 'Local sailor',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: now,
     );
     const sharedNumber = '+44 7700 900321';
@@ -151,7 +151,7 @@ void main() {
       joinToken: 'private-join-token',
       localSailorId: 'skipper-private-id',
       displayName: 'Oliver',
-      role: VoyageRole.lead,
+      role: VoyageRole.skipper,
       joinedAt: now,
       voyageName: 'Sunday voyage',
     );
@@ -159,7 +159,7 @@ void main() {
       VoyageParticipant(
         sailorId: 'skipper-private-id',
         displayName: 'Oliver',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         joinedAt: now,
         lastSeenAt: now,
         state: VoyageMembershipState.active,

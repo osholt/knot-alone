@@ -20,7 +20,7 @@ void main() {
   test('every counted sailor is either rendered or stated, never neither', () {
     final view = VoyageLiveView.reconcile(
       participants: [
-        _participant('skipper', 'Lead', role: VoyageRole.lead),
+        _participant('skipper', 'Lead', role: VoyageRole.skipper),
         _participant('follower', 'Alex'),
         _participant('sam', 'Sam'),
       ],
@@ -58,7 +58,7 @@ void main() {
     // is allowed only while the reason is on the roster row.
     final view = VoyageLiveView.reconcile(
       participants: [
-        _participant('skipper', 'Lead', role: VoyageRole.lead),
+        _participant('skipper', 'Lead', role: VoyageRole.skipper),
         _participant('follower', 'Alex', state: VoyageMembershipState.inactive),
       ],
       presence: [
@@ -84,7 +84,7 @@ void main() {
     () {
       final view = VoyageLiveView.reconcile(
         participants: [
-          _participant('skipper', 'Lead', role: VoyageRole.lead),
+          _participant('skipper', 'Lead', role: VoyageRole.skipper),
           _participant('follower', 'Alex'),
         ],
         presence: const [],
@@ -107,7 +107,7 @@ void main() {
   test('a sailor who has left is neither counted nor rendered', () {
     final view = VoyageLiveView.reconcile(
       participants: [
-        _participant('skipper', 'Lead', role: VoyageRole.lead),
+        _participant('skipper', 'Lead', role: VoyageRole.skipper),
         _participant('gone', 'Gone', state: VoyageMembershipState.left),
       ],
       presence: [
@@ -132,7 +132,7 @@ void main() {
     // is readable and it is not a marker: the sailor is not there.
     final view = VoyageLiveView.reconcile(
       participants: [
-        _participant('skipper', 'Lead', role: VoyageRole.lead),
+        _participant('skipper', 'Lead', role: VoyageRole.skipper),
         _participant(
           'gone',
           'Gone',
@@ -170,7 +170,7 @@ void main() {
   test('a stale position is still rendered, and still counted', () {
     final view = VoyageLiveView.reconcile(
       participants: [
-        _participant('skipper', 'Lead', role: VoyageRole.lead),
+        _participant('skipper', 'Lead', role: VoyageRole.skipper),
         _participant('follower', 'Alex', state: VoyageMembershipState.inactive),
       ],
       presence: [

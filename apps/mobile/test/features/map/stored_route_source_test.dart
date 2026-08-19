@@ -334,7 +334,7 @@ CompletedVoyage _completedVoyage({
   voyageCode: voyageCode,
   voyageName: 'Sunday run',
   localDisplayName: 'Alex',
-  localRole: VoyageRole.lead,
+  localRole: VoyageRole.skipper,
   startedAt: DateTime.utc(2026, 7, 26, 9),
   endedAt: DateTime.utc(2026, 7, 26, 12),
   archivedAt: DateTime.utc(2026, 7, 26, 12, 5),

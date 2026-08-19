@@ -192,7 +192,12 @@ void main() {
       now: now,
       localSailorId: 'local',
       internetPresence: [
-        _location('bill', 'Impostor', recordedAt: now, role: VoyageRole.lead),
+        _location(
+          'bill',
+          'Impostor',
+          recordedAt: now,
+          role: VoyageRole.skipper,
+        ),
       ],
       roster: [
         PresenceRosterMember(

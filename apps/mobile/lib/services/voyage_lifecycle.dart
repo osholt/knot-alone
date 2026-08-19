@@ -47,7 +47,7 @@ class VoyageLifecycleReducer {
           if (role != null) roles[event.deviceId] = role;
           break;
         case VoyageEventType.voyageStarted:
-          if (roles[event.deviceId] == VoyageRole.lead &&
+          if (roles[event.deviceId] == VoyageRole.skipper &&
               event.payload['skipperSailorId'] == event.deviceId) {
             return VoyageLifecycle(startEvent: event);
           }
@@ -87,10 +87,6 @@ class VoyageLifecycleReducer {
 
   static VoyageRole? _roleFromPayload(Object? value) {
     if (value is! String) return null;
-    try {
-      return VoyageRole.values.byName(value);
-    } on ArgumentError {
-      return null;
-    }
+    return VoyageRoleWire.tryParse(value);
   }
 }

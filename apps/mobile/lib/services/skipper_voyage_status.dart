@@ -181,7 +181,7 @@ class SkipperVoyageStatusCalculator {
     String? assignedSweeperSailorId,
     DateTime? now,
   }) {
-    if (localRole != VoyageRole.lead) return null;
+    if (localRole != VoyageRole.skipper) return null;
     final evaluatedAt = now ?? DateTime.now();
     final currentSailorIds = sailorLocations
         .map((location) => location.sailorId)

@@ -76,13 +76,13 @@ void main() {
         joinToken: 'test-join-token-0123456789',
         localSailorId: 'local',
         displayName: 'Oliver',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         joinedAt: now,
       );
       final position = SailorLocation(
         sailorId: 'local',
         displayName: 'Oliver',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         sample: LocationSample(
           position: const GeoPoint(latitude: 51.2, longitude: -2.4),
           recordedAt: now,
@@ -144,7 +144,7 @@ void main() {
         joinToken: 'test-join-token-0123456789',
         localSailorId: 'local',
         displayName: 'Oliver',
-        role: VoyageRole.lead,
+        role: VoyageRole.skipper,
         joinedAt: DateTime.utc(2026, 7, 23),
       );
 
