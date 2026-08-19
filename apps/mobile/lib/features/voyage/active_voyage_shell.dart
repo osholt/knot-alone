@@ -825,7 +825,7 @@ class _PreStartVoyagePanel extends StatelessWidget {
                 Expanded(
                   child: Text(
                     routeName == null
-                        ? 'No route selected'
+                        ? 'No passage planned'
                         : 'Route: $routeName',
                     maxLines: 2,
                     style: const TextStyle(
@@ -838,7 +838,9 @@ class _PreStartVoyagePanel extends StatelessWidget {
                   TextButton(
                     key: const Key('pre-start-choose-route'),
                     onPressed: busy ? null : onChooseRoute,
-                    child: Text(routeName == null ? 'Choose route' : 'Change'),
+                    child: Text(
+                      routeName == null ? 'Plan a passage' : 'Change',
+                    ),
                   ),
               ],
             ),
@@ -3609,7 +3611,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
                   _StartVoyageDecision.chooseRoute,
                 ),
                 icon: const Icon(Icons.route_outlined),
-                label: const Text('Choose route'),
+                label: const Text('Plan a passage'),
               ),
             ] else
               FilledButton.icon(

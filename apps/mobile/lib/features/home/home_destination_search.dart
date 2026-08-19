@@ -59,8 +59,8 @@ enum VoyageStartChoice {
   };
 
   String get label => switch (this) {
-    VoyageStartChoice.solo => 'Voyage solo',
-    VoyageStartChoice.group => 'Voyage as a group',
+    VoyageStartChoice.solo => 'Sail on my own',
+    VoyageStartChoice.group => 'Sail with crew',
   };
 
   String get detail => switch (this) {
@@ -136,7 +136,9 @@ enum HomeSearchHandoffKind {
   /// Join somebody else's voyage with their six-digit code.
   joinWithCode,
 
-  /// Recall a route planned on the web planner, by its code.
+  /// Recall a passage published to the relay, by its code (#68). The web
+  /// planner this once meant does not exist for this app, and nothing here
+  /// posts a plan yet - only fetches one.
   plannedRouteCode,
 
   /// Voyage something already on the phone.
@@ -348,7 +350,7 @@ class _HomeDestinationSearchSheetState
                   key: const Key('home-search-planned-code'),
                   leading: const Icon(Icons.route_outlined),
                   title: const Text('Recall a planned route'),
-                  subtitle: const Text('With a code from the web planner'),
+                  subtitle: const Text('With a code someone gave you'),
                   onTap: () => Navigator.of(context).pop(
                     const HomeSearchHandoff(
                       HomeSearchHandoffKind.plannedRouteCode,

@@ -30,7 +30,7 @@ class RouteProgressPanel extends StatelessWidget {
       '$timeRemaining and ${formatter.distance(progress.remainingDistanceMeters)} remaining',
       if (arrival != '—') 'route ETA $arrival',
       if (nextName != null && nextDistance != null)
-        'next stop $nextName, ${formatter.distance(nextDistance)}'
+        'next mark $nextName, ${formatter.distance(nextDistance)}'
             '${nextArrival == '—' ? '' : ', ETA $nextArrival'}',
     ].join('. ');
 

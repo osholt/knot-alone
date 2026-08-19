@@ -608,7 +608,7 @@ void main() {
         findsNothing,
       );
       expect(find.text('Import GPX'), findsNothing);
-      expect(find.text('Use demo route'), findsNothing);
+      expect(find.text('Use the demo passage'), findsNothing);
       expect(
         find.byKey(const Key('dismiss-waiting-route-prompt')),
         findsOneWidget,
@@ -819,8 +819,8 @@ void main() {
     expect(find.text('Use a saved passage'), findsOneWidget);
     await tester.ensureVisible(find.text('Import GPX'));
     expect(find.text('Import GPX'), findsOneWidget);
-    await tester.ensureVisible(find.text('Use demo route'));
-    expect(find.text('Use demo route'), findsOneWidget);
+    await tester.ensureVisible(find.text('Use the demo passage'));
+    expect(find.text('Use the demo passage'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -1370,8 +1370,8 @@ void main() {
     expect(find.textContaining('2.0 mi'), findsOneWidget);
     expect(find.textContaining('0.1 mi'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Use demo route'));
-    await tester.tap(find.text('Use demo route'));
+    await tester.ensureVisible(find.text('Use the demo passage'));
+    await tester.tap(find.text('Use the demo passage'));
     for (var i = 0; i < 5; i += 1) {
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -1435,8 +1435,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    await tester.ensureVisible(find.text('Use demo route'));
-    await tester.tap(find.text('Use demo route'));
+    await tester.ensureVisible(find.text('Use the demo passage'));
+    await tester.tap(find.text('Use the demo passage'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 

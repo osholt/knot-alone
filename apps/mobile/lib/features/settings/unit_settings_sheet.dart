@@ -265,7 +265,7 @@ class UnitSettingsSheet extends StatelessWidget {
               title: const Text('Show route time and distance'),
               subtitle: const Text(
                 'Shows the current time, total distance and estimated time '
-                'remaining, plus the next named stop and its ETA. Estimates '
+                'remaining, plus the next named mark and its ETA. Estimates '
                 'use your recent speed over ground and stay blank until you move.',
               ),
             ),

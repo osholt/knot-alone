@@ -70,14 +70,14 @@ void main() {
     final confirm = find.byKey(const Key('confirm-reviewed-route'));
     expect(confirm, findsOneWidget);
     expect(tester.getTopLeft(confirm).dy, lessThan(80));
-    expect(find.text('Route points (102)'), findsOneWidget);
+    expect(find.text('Marks (102)'), findsOneWidget);
     expect(
       find.byKey(const Key('route-review-waypoint-0')),
       findsNothing,
       reason: 'the long detail list starts collapsed',
     );
 
-    await tester.tap(find.text('Route points (102)'));
+    await tester.tap(find.text('Marks (102)'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('route-review-waypoint-0')), findsOneWidget);
