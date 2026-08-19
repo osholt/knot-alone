@@ -8,13 +8,13 @@ import '../../domain/distance_unit.dart';
 import '../../domain/imported_route.dart';
 import '../../services/basemap_configuration.dart';
 import '../../services/measurement_formatter.dart';
-import '../../services/navigation_guidance.dart';
 import '../../services/route_reshape_planner.dart';
 import '../../services/route_waypoint_editor.dart';
-import 'maneuver_list_screen.dart';
+import 'passage_maneuver_list.dart';
 import 'resolved_route_map_preview.dart';
 import 'voyage_layout.dart';
 import '../../services/passage_legs.dart';
+import '../../services/passage_maneuvers.dart';
 import 'passage_leg_table.dart';
 
 enum RouteReviewAction { cancel, edit, confirm }
@@ -426,9 +426,7 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
     ];
     final formatter = MeasurementFormatter(distanceUnit);
     final layout = VoyageLayout.of(context);
-    final maneuverCount = const NavigationGuidancePlanner()
-        .instructions(route)
-        .length;
+    final maneuverPlan = PassageManeuverPlan.of(passagePlan);
 
     return Scaffold(
       appBar: AppBar(
@@ -658,12 +656,12 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                         label:
                             '${reviewWaypoints.length} route point${reviewWaypoints.length == 1 ? '' : 's'}',
                       ),
-                      if (maneuverCount > 0)
+                      if (maneuverPlan.hasManeuvers)
                         _SummaryItem(
                           icon: Icons.turn_slight_right,
                           label:
-                              '$maneuverCount turn '
-                              'instruction${maneuverCount == 1 ? '' : 's'}',
+                              '${maneuverPlan.maneuvers.length} '
+                              'alteration${maneuverPlan.maneuvers.length == 1 ? '' : 's'}',
                         ),
                       // No twistiness score (#35). It scored how enjoyable a
                       // road was to ride; on a passage between two marks it
@@ -900,16 +898,21 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  if (maneuverCount > 0) ...[
+                  // Was "All turns (n)", counted from OSRM steps and therefore
+                  // always zero since #19. Now the alterations of course the
+                  // passage asks for, derived from its own marks (#63).
+                  if (maneuverPlan.hasManeuvers) ...[
                     OutlinedButton.icon(
                       key: const Key('review-maneuver-list'),
-                      onPressed: () => ManeuverListScreen.show(
+                      onPressed: () => PassageManeuverList.show(
                         context,
-                        route: route,
+                        plan: maneuverPlan,
                         distanceUnit: distanceUnit,
                       ),
                       icon: const Icon(Icons.list_alt),
-                      label: Text('All turns ($maneuverCount)'),
+                      label: Text(
+                        'All alterations (${maneuverPlan.maneuvers.length})',
+                      ),
                     ),
                     const SizedBox(height: 10),
                   ],

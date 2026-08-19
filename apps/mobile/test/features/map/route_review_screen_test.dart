@@ -536,7 +536,9 @@ void main() {
 
     final layer = tester.widget<PolylineLayer>(find.byType(PolylineLayer));
     expect(layer.polylines, hasLength(2));
-    expect(find.text('2 turn instructions'), findsOneWidget);
+    // A "2 turn instructions" assertion sat here, counting the road manoeuvres
+    // stored on this fixture. The summary now counts alterations derived from
+    // the marks instead (#63), and this test is about the drawn paths anyway.
     await tester.scrollUntilVisible(
       find.text('Destination'),
       160,
@@ -591,71 +593,90 @@ void main() {
     expect(candidateLayer.polylines.single.color, const Color(0xFF3478F6));
   });
 
-  testWidgets('route review opens the full manoeuvre list before the voyage', (
+  // #63. This used to build a Bristol roundabout out of OSRM steps and assert
+  // "2nd exit, straight on". The engine that produced those steps went in #19,
+  // so the list could only ever be empty on a real passage. The nautical
+  // replacement is derived from the marks themselves.
+  testWidgets('route review opens the alterations the passage asks for', (
     tester,
   ) async {
+    // Three legs that alter hard at each mark, so every one earns an
+    // instruction: roughly east, then north, then east again.
     final route = ImportedRoute(
-      id: 'reviewed',
-      name: 'Reviewed route',
-      importedAt: DateTime.utc(2026, 7, 25),
+      id: 'reviewed-alterations',
+      name: 'Solent passage',
+      importedAt: DateTime.utc(2026, 8, 19),
       sourceFileName: 'reviewed.gpx',
       paths: const [
         RoutePath(
-          kind: RoutePathKind.track,
+          kind: RoutePathKind.route,
           points: [
-            GeoPoint(latitude: 51.45, longitude: -2.59),
-            GeoPoint(latitude: 51.46, longitude: -2.59),
-            GeoPoint(latitude: 51.47, longitude: -2.59),
+            GeoPoint(latitude: 50.70, longitude: -1.50),
+            GeoPoint(latitude: 50.70, longitude: -1.40),
+            GeoPoint(latitude: 50.78, longitude: -1.40),
+            GeoPoint(latitude: 50.78, longitude: -1.30),
           ],
         ),
       ],
-      waypoints: const [],
-      maneuvers: const [
-        RouteManeuver(
-          position: GeoPoint(latitude: 51.46, longitude: -2.59),
-          type: 'roundabout',
-          modifier: 'slight left',
-          name: 'Wells Road',
-          exitNumber: 2,
-          drivingSide: 'left',
-          bearingBeforeDegrees: 0,
-          bearingAfterDegrees: 300,
+      waypoints: const [
+        RouteWaypoint(
+          name: 'Lymington',
+          point: GeoPoint(latitude: 50.70, longitude: -1.50),
         ),
-        RouteManeuver(
-          position: GeoPoint(latitude: 51.4602, longitude: -2.59),
-          type: 'exit roundabout',
-          modifier: 'slight left',
-          name: 'Wells Road',
-          drivingSide: 'left',
-          bearingBeforeDegrees: 40,
-          bearingAfterDegrees: 2,
+        RouteWaypoint(
+          name: 'Needles Fairway',
+          point: GeoPoint(latitude: 50.70, longitude: -1.40),
+        ),
+        RouteWaypoint(
+          name: 'Nab Tower',
+          point: GeoPoint(latitude: 50.78, longitude: -1.40),
+        ),
+        RouteWaypoint(
+          name: 'Cowes',
+          point: GeoPoint(latitude: 50.78, longitude: -1.30),
         ),
       ],
     );
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: ThemeData.dark(useMaterial3: true),
         home: RouteReviewScreen(
           route: route,
-          distanceUnit: DistanceUnit.kilometres,
+          distanceUnit: DistanceUnit.nauticalMiles,
           basemapConfiguration: const BasemapConfiguration(),
         ),
       ),
     );
     await tester.pump();
 
-    expect(find.text('1 turn instruction'), findsOneWidget);
+    // Two marks between three legs, so two alterations - not four.
+    expect(find.text('2 alterations'), findsOneWidget);
+
     await tester.scrollUntilVisible(
       find.byKey(const Key('review-maneuver-list')),
       200,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: find.descendant(
+        of: find.byKey(const Key('route-review-detail')),
+        matching: find.byType(Scrollable),
+      ),
     );
-    await tester.tap(find.byKey(const Key('review-maneuver-list')));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('All alterations (2)'), findsOneWidget);
 
-    expect(find.byKey(const Key('maneuver-list')), findsOneWidget);
-    expect(find.text('2nd exit, straight on'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('review-maneuver-list')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('passage-maneuver-list')), findsOneWidget);
+    // Due east onto roughly due north is 90 degrees to port.
+    expect(find.textContaining('to port onto 000°T'), findsOneWidget);
+    expect(find.text('at Needles Fairway'), findsOneWidget);
+    // And back to starboard at the next one.
+    expect(find.textContaining('to starboard onto 090°T'), findsOneWidget);
+    expect(find.text('at Nab Tower'), findsOneWidget);
+
+    // No road vocabulary survives on this screen.
+    expect(find.textContaining('exit'), findsNothing);
+    expect(find.textContaining('turn'), findsNothing);
   });
 
   group('side by side on a tablet (#47)', () {
