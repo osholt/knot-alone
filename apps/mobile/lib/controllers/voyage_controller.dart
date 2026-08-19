@@ -27,7 +27,6 @@ import '../services/nearby_bridge.dart';
 import '../services/completed_voyage_archiver.dart';
 import '../services/voyage_event_authenticator.dart';
 import '../services/voyage_lifecycle.dart';
-import '../services/voyage_invitation_link.dart';
 import '../services/voyage_membership.dart';
 import '../services/received_quick_message.dart';
 import '../services/voyage_route_reducer.dart';
@@ -565,6 +564,19 @@ class VoyageController extends ChangeNotifier {
     toWholeGroup: event.payload['recipientSailorIds'] == null,
   );
 
+  /// The message sent to invite someone onto a voyage.
+  ///
+  /// Deliberately carries **no URL** (#51). It used to lead with
+  /// `voyageInvitationUrl`, which builds an `https://tideandseek.invalid/...`
+  /// address - a reserved TLD (RFC 2606) that can never resolve, on a build
+  /// with no Associated Domain to claim it and no custom URL scheme either. So
+  /// every invitation opened with the one thing in it that fails when tapped,
+  /// and offered the six digits that work underneath.
+  ///
+  /// The code comes first now because it is what the recipient will actually
+  /// type. The link returns the day there is a real domain serving an
+  /// `apple-app-site-association` file - that is #40, and one domain answers
+  /// both.
   String get voyageCodeShareText {
     final activeSession = _requireSession();
     final name = activeSession.voyageName;
@@ -573,13 +585,9 @@ class VoyageController extends ChangeNotifier {
       activeSession.voyageCode,
       activeSession.joinToken,
     );
-    final link = voyageInvitationUrl(
-      activeSession.voyageCode,
-      activeSession.joinToken,
-    );
-    return 'Join $group in Tide and Seek: $link\n\n'
-        'Enter voyage code ${activeSession.voyageCode} in the app, or paste this '
-        'private invite: $invite.';
+    return 'Join $group in Tide and Seek.\n\n'
+        'Voyage code: ${activeSession.voyageCode}\n\n'
+        'Or paste this private invite into the app: $invite';
   }
 
   Future<void> initialize() async {

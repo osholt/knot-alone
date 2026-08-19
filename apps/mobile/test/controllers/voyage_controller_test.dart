@@ -463,11 +463,40 @@ void main() {
 
       expect(
         controller.voyageCodeShareText,
-        contains('voyage code ${skipperSession.voyageCode} in the'),
+        contains('Voyage code: ${skipperSession.voyageCode}'),
       );
       expect(
         controller.voyageCodeShareText,
         contains('${skipperSession.voyageCode}#${skipperSession.joinToken}'),
+      );
+    },
+  );
+
+  // #51. The message used to open with an `https://tideandseek.invalid/...`
+  // address: a reserved TLD that cannot resolve, on a build with no Associated
+  // Domain and no custom URL scheme. Every invitation therefore led with the
+  // one thing in it that failed when tapped.
+  test(
+    'voyage code share text contains nothing that fails when tapped',
+    () async {
+      await controller.createVoyage('Lead');
+
+      expect(controller.voyageCodeShareText, isNot(contains('http')));
+      expect(controller.voyageCodeShareText, isNot(contains('.invalid')));
+    },
+  );
+
+  test(
+    'the voyage code is the first actionable thing in the share text',
+    () async {
+      await controller.createVoyage('Lead');
+      final text = controller.voyageCodeShareText;
+      final activeSession = controller.session!;
+
+      expect(
+        text.indexOf('Voyage code: ${activeSession.voyageCode}'),
+        lessThan(text.indexOf(activeSession.joinToken)),
+        reason: 'the six digits are what a recipient will actually type',
       );
     },
   );
