@@ -212,6 +212,7 @@ class VoyageMapFeature extends StatefulWidget {
     this.navigationExportCoordinator,
     this.routeStore,
     this.canEditRoute = true,
+    this.inVoyage = true,
     this.offlineTileCache,
     this.mapLibreOfflineManager,
     this.mapStyleString,
@@ -274,6 +275,7 @@ class VoyageMapFeature extends StatefulWidget {
     CompletedVoyageStore? completedVoyageStore,
     PersonalVoyageHeatmapController? personalVoyageHeatmap,
     bool canEditRoute = true,
+    bool inVoyage = true,
     DistanceUnit distanceUnit = DistanceUnit.nauticalMiles,
     bool showRouteProgress = true,
     bool darkMapStyle = false,
@@ -329,6 +331,7 @@ class VoyageMapFeature extends StatefulWidget {
     completedVoyageStore: completedVoyageStore,
     personalVoyageHeatmap: personalVoyageHeatmap,
     canEditRoute: canEditRoute,
+    inVoyage: inVoyage,
     distanceUnit: distanceUnit,
     showRouteProgress: showRouteProgress,
     basemapConfiguration: BasemapConfiguration.fromEnvironment().forBrightness(
@@ -420,6 +423,18 @@ class VoyageMapFeature extends StatefulWidget {
   final NavigationExportCoordinator? navigationExportCoordinator;
   final RouteStore? routeStore;
   final bool canEditRoute;
+
+  /// Whether this map is showing a voyage at all.
+  ///
+  /// Distinct from [canEditRoute], which answers a different question and had
+  /// been carrying both. The home screen's backdrop sets `canEditRoute: false`
+  /// because there is no voyage route to edit - and the route prompt read that
+  /// as "somebody else owns the route", so a solo sailor who had just chosen
+  /// "Sail on my own" was told to wait for a skipper who did not exist (#53).
+  ///
+  /// Three states, not two: plan one yourself, wait for the skipper, or there
+  /// is no voyage and the question does not arise.
+  final bool inVoyage;
   final OfflineTileCache? offlineTileCache;
   final MapLibreOfflineManager? mapLibreOfflineManager;
   final String? mapStyleString;
@@ -572,6 +587,7 @@ class _VoyageMapFeatureState extends State<VoyageMapFeature> {
         onLeaveVoyage: widget.onLeaveVoyage,
         onOpenVoyageMenu: widget.onOpenVoyageMenu,
         canEditRoute: widget.canEditRoute,
+        inVoyage: widget.inVoyage,
         onRouteChanged: widget.onRouteChanged,
         onRouteCommitted: widget.onRouteCommitted,
         onNavigationGuidanceChanged: widget.onNavigationGuidanceChanged,
@@ -656,6 +672,7 @@ class VoyageMapScreen extends StatefulWidget {
     this.onLeaveVoyage,
     this.onOpenVoyageMenu,
     this.canEditRoute = true,
+    this.inVoyage = true,
     this.onRouteChanged,
     this.onRouteCommitted,
     this.onNavigationGuidanceChanged,
@@ -757,6 +774,7 @@ class VoyageMapScreen extends StatefulWidget {
   final Future<void> Function()? onLeaveVoyage;
   final Future<void> Function()? onOpenVoyageMenu;
   final bool canEditRoute;
+  final bool inVoyage;
   final ValueChanged<ImportedRoute?>? onRouteChanged;
   final ValueChanged<ImportedRoute?>? onRouteCommitted;
   final ValueChanged<NavigationGuidance?>? onNavigationGuidanceChanged;
@@ -1599,7 +1617,14 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                 // it gives way. Route entry stays reachable from the voyage
                 // menu's "Change route" and from the app bar whenever this card
                 // is showing.
+                // `inVoyage` because "there is no route" has three causes,
+                // not two: plan one yourself, wait for the skipper, or there is
+                // no voyage and the question does not arise. The home screen's
+                // backdrop is the third, and it used to fall through to the
+                // second - telling a solo sailor to wait for a skipper who did
+                // not exist (#53).
                 if (_route == null &&
+                    widget.inVoyage &&
                     !hideChrome &&
                     !widget.voyageStarted &&
                     !_waitingRoutePromptDismissed)
@@ -1618,6 +1643,9 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                             onLoadDemo: _loadDemoRoute,
                             onDismiss: _continueWithoutRoute,
                           )
+                        // Only a crew member is waiting on anybody. With no
+                        // voyage at all this branch is unreachable, because the
+                        // whole prompt is gated on `inVoyage` above (#53).
                         : _WaitingForSkipperRoutePrompt(
                             onDismiss: _continueWithoutRoute,
                           ),

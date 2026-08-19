@@ -649,6 +649,75 @@ void main() {
     expect(find.text('Choose a route'), findsNothing);
   });
 
+  // #53. The home screen's backdrop passes `canEditRoute: false` because there
+  // is no voyage route to edit. The prompt read that as "somebody else owns the
+  // route", so a solo sailor who had just chosen "Sail on my own" landed on the
+  // chart and was told to wait for a skipper who did not exist.
+  testWidgets('a map with no voyage asks nobody for a route', (tester) async {
+    final directory = Directory.systemTemp.createTempSync(
+      'map-no-voyage-no-prompt-test',
+    );
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final cache = OfflineTileCache(
+      rootDirectory: directory,
+      configuration: const BasemapConfiguration(),
+      httpClient: MockClient((_) async => http.Response('', 404)),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(useMaterial3: true),
+        home: VoyageMapScreen(
+          routeStore: InMemoryRouteStore(),
+          routeImporter: RouteImporter(source: const _NoFileSource()),
+          offlineTileCache: cache,
+          // What the home backdrop passes: no voyage, so no route to edit.
+          canEditRoute: false,
+          inVoyage: false,
+          voyageStarted: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Waiting for the skipper’s route'), findsNothing);
+    expect(find.text('Choose a route'), findsNothing);
+    expect(find.byKey(const Key('dismiss-waiting-route-prompt')), findsNothing);
+  });
+
+  // The crew-member case must survive: someone who has joined a voyage with no
+  // shared route genuinely is waiting on the skipper, and that copy is right.
+  testWidgets('a crew member in a voyage is still told what they wait for', (
+    tester,
+  ) async {
+    final directory = Directory.systemTemp.createTempSync(
+      'map-crew-still-waits-test',
+    );
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final cache = OfflineTileCache(
+      rootDirectory: directory,
+      configuration: const BasemapConfiguration(),
+      httpClient: MockClient((_) async => http.Response('', 404)),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(useMaterial3: true),
+        home: VoyageMapScreen(
+          routeStore: InMemoryRouteStore(),
+          routeImporter: RouteImporter(source: const _NoFileSource()),
+          offlineTileCache: cache,
+          canEditRoute: false,
+          inVoyage: true,
+          voyageStarted: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Waiting for the skipper’s route'), findsOneWidget);
+  });
+
   testWidgets('skipper can dismiss the route chooser and use the live map', (
     tester,
   ) async {
