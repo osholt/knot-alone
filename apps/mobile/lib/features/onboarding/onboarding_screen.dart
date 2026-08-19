@@ -27,7 +27,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _step = 0;
   bool _educationSkipped = false;
   bool _permissionsDeferred = false;
-  String? _nameError;
   bool _saving = false;
 
   @override
@@ -107,14 +106,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 28),
       Text(
-        'Keep the whole voyage together',
+        'Plan a passage, sail it, keep the log',
         style: Theme.of(context).textTheme.displaySmall,
       ),
       const SizedBox(height: 16),
       const Text(
-        'Tide and Seek coordinates a private crew with a shared '
-        'roster, route and safety alerts. Voyage events are kept on this device '
-        'first, then relayed by the internet or nearby devices when available.',
+        'Tide and Seek plans a passage as legs you can steer, and keeps the '
+        'voyage journal on this device. Sailing with others is optional: share '
+        'a six-digit code and the crew sees the same passage, the same roster '
+        'and the same alerts.',
         style: TextStyle(color: Color(0xFFBCC5D0), height: 1.5, fontSize: 17),
       ),
       const SizedBox(height: 24),
@@ -130,6 +130,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         body:
             'Losing a relay does not erase the voyage journal on this device.',
       ),
+      const SizedBox(height: 12),
+      const _InfoCard(
+        icon: Icon(Icons.warning_amber_outlined),
+        title: 'Not a chart, and not for navigation',
+        body:
+            'Courses are direct lines between your marks, unchecked against '
+            'land, depth or traffic. Read the chart and plan the passage '
+            'yourself.',
+      ),
     ],
   );
 
@@ -137,12 +146,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Text(
-        'How the group sees you',
+        'How you appear on a shared voyage',
         style: Theme.of(context).textTheme.headlineMedium,
       ),
       const SizedBox(height: 10),
       const Text(
-        'Your saved name, symbol and colour are prefilled whenever you create or join a voyage.',
+        'Only used when you share a voyage. Your saved name, symbol and colour '
+        'are prefilled whenever you create or join one.',
         style: TextStyle(color: Color(0xFFABB5C1), height: 1.4),
       ),
       const SizedBox(height: 24),
@@ -151,12 +161,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         controller: _nameController,
         maxLength: 24,
         textCapitalization: TextCapitalization.words,
-        onChanged: (_) => setState(() => _nameError = null),
         decoration: InputDecoration(
           labelText: 'Sailor name',
-          hintText: 'How the group will recognise you',
+          hintText: 'How a crew would recognise you',
+          helperText:
+              'Optional — leave it blank to sail as $defaultSailorName.',
           counterText: '',
-          errorText: _nameError,
         ),
       ),
       const SizedBox(height: 20),
@@ -386,17 +396,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 12),
       Text(
-        '${_nameController.text.trim()}, choose how you want to begin. You can edit your profile or replay this guide from Settings.',
+        // Greets by name only when there is one. Interpolating a blank name
+        // opened this line with a comma (#49).
+        '$_greeting You can edit your profile or replay this guide from '
+        'Settings.',
         style: const TextStyle(color: Color(0xFFBCC5D0), height: 1.5),
       ),
       const SizedBox(height: 28),
+      // Sailing alone comes first, and is the primary button, because that is
+      // what this app is for. Onboarding used to offer only "Create a voyage"
+      // and "Join a voyage" - two crew activities - so a solo sailor had to
+      // pick one to get in (#49).
       FilledButton.icon(
+        key: const Key('onboarding-solo-voyage'),
+        onPressed: _saving ? null : () => _complete(null),
+        icon: const MarineGlyphIcon(MarineGlyph.sailor),
+        label: const Text('Sail on my own'),
+      ),
+      const SizedBox(height: 12),
+      OutlinedButton.icon(
         key: const Key('onboarding-create-voyage'),
         onPressed: _saving
             ? null
             : () => _complete(OnboardingVoyageChoice.create),
-        icon: const Icon(Icons.add_road),
-        label: const Text('Create a voyage'),
+        icon: const Icon(Icons.groups_outlined),
+        label: const Text('Create a voyage to share'),
       ),
       const SizedBox(height: 12),
       OutlinedButton.icon(
@@ -445,33 +469,37 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   );
 
-  void _continue() {
-    if (_step == 1 && !_validateName()) return;
-    setState(() => _step += 1);
+  void _continue() => setState(() => _step += 1);
+
+  void _skipEducation() => setState(() {
+    _educationSkipped = true;
+    _step = _stepCount - 1;
+  });
+
+  /// The name to sail under when none was given.
+  ///
+  /// A name used to be mandatory, and "Skip tour" did not skip it (#49), so a
+  /// solo sailor could not reach a solo-first app without first naming
+  /// themselves for a crew they may never have. The roster and the journal do
+  /// need *a* name, so one is supplied rather than the requirement being
+  /// dropped - and it is stated on the field rather than appearing as a
+  /// surprise on the first shared voyage.
+  String get _displayName {
+    final typed = _nameController.text.trim();
+    return typed.isEmpty ? defaultSailorName : typed;
   }
 
-  void _skipEducation() {
-    if (!_validateName()) {
-      setState(() => _step = 1);
-      return;
-    }
-    setState(() {
-      _educationSkipped = true;
-      _step = _stepCount - 1;
-    });
+  String get _greeting {
+    final typed = _nameController.text.trim();
+    return typed.isEmpty
+        ? 'Choose how you want to begin.'
+        : '$typed, choose how you want to begin.';
   }
 
-  bool _validateName() {
-    if (_nameController.text.trim().isNotEmpty) return true;
-    setState(() => _nameError = 'Enter the name your group will recognise.');
-    return false;
-  }
-
-  Future<void> _complete(OnboardingVoyageChoice choice) async {
-    if (!_validateName()) return;
+  Future<void> _complete(OnboardingVoyageChoice? choice) async {
     setState(() => _saving = true);
     await widget.sailorProfile.completeOnboarding(
-      displayName: _nameController.text,
+      displayName: _displayName,
       vesselStyle: _vesselStyle,
       sailorSymbol: _sailorSymbol,
       sailorColor: _sailorColor,
