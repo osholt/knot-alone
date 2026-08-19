@@ -479,7 +479,7 @@ class PresenceLimitation {
     message:
         'The voyage service is too old to pass on your phone number, so nobody '
         'has been given it. Your emergency alert still reaches the skipper and '
-        'TEC in the app.',
+        'Sweeper in the app.',
   );
 }
 

@@ -44,7 +44,7 @@ extension SweeperGapTrendLabel on SweeperGapTrend {
   /// cannot tell red from green at all.
   String get label => switch (this) {
     SweeperGapTrend.unknown => 'Trend unknown',
-    SweeperGapTrend.stopped => 'TEC stopped',
+    SweeperGapTrend.stopped => 'Sweeper stopped',
     SweeperGapTrend.closing => 'Closing',
     SweeperGapTrend.holding => 'Holding',
     SweeperGapTrend.opening => 'Gap increasing',

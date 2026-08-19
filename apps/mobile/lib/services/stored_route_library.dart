@@ -275,7 +275,7 @@ class StoredRouteLibrary {
         StoredRouteOrigin.previousVoyagePlan =>
           'The planned route of voyage ${candidate.voyageCode}.',
         StoredRouteOrigin.previousVoyageTrack =>
-          'Recorded while riding voyage ${candidate.voyageCode}.',
+          'Recorded while sailing voyage ${candidate.voyageCode}.',
       };
 
   /// Stands in for the file name a GPX import carries, so every surface that

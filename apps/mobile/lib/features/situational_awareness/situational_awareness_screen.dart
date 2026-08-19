@@ -67,7 +67,7 @@ class SituationalAwarenessScreen extends StatelessWidget {
               ],
               if (controller.routeAlerts.isNotEmpty) ...[
                 const SizedBox(height: 20),
-                const _SectionHeader(title: 'RIDERS NEEDING ATTENTION'),
+                const _SectionHeader(title: 'SAILORS NEEDING ATTENTION'),
                 const SizedBox(height: 10),
                 ...controller.routeAlerts.map((alert) {
                   return Padding(

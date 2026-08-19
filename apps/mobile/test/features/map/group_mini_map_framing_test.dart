@@ -191,7 +191,7 @@ void main() {
     });
   });
 
-  // The 2 August 2026 report: the caption read "2 RIDERS", the mini-map drew no
+  // The 2 August 2026 report: the caption read "2 SAILORS", the mini-map drew no
   // markers at all, and the scale bar said 200 m. The caption counts the roster
   // while the framing only receives sailors the map can place, so a sailor who has
   // joined without a first position leaves one point here and two in the caption.

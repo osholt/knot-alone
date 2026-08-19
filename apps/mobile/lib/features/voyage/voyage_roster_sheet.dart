@@ -346,7 +346,7 @@ class _MissingSkipperNotice extends StatelessWidget {
                   const Text(
                     'The skipper has left. Nobody is setting the pace, the '
                     'Sweeper has no line to follow, and route changes '
-                    'cannot be published until somebody takes the lead.',
+                    'cannot be published until somebody is the skipper.',
                     style: TextStyle(color: Color(0xFFE4D6D2), height: 1.35),
                   ),
                   const SizedBox(height: 8),
@@ -354,7 +354,7 @@ class _MissingSkipperNotice extends StatelessWidget {
                     key: const Key('roster-take-the-lead-button'),
                     onPressed: () => unawaited(onTakeLead()),
                     icon: const Icon(Icons.flag_outlined, size: 18),
-                    label: const Text('Take the lead'),
+                    label: const Text('Become the skipper'),
                   ),
                 ],
               ),
@@ -520,7 +520,7 @@ class _ParticipantTile extends StatelessWidget {
         ? 'Sweeper'
         : participant.role == VoyageRole.sweeper &&
               effectiveSweeperSailorId != null
-        ? 'Sailor · previous TEC selection superseded'
+        ? 'Sailor · previous Sweeper selection superseded'
         : _roleLabel(participant.role);
     final lastSeen = _lastSeenLabel(participant.lastSeenAt, now);
     final attention = participant.attentionLabel;
@@ -595,7 +595,7 @@ class _ParticipantTile extends StatelessWidget {
             : TextButton(
                 key: Key('ask-sweeper-${participant.sailorId}'),
                 onPressed: onAskToBeSweeper,
-                child: const Text('Ask to be TEC'),
+                child: const Text('Ask to be Sweeper'),
               ),
       ),
     );

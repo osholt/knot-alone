@@ -93,13 +93,18 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Where are you going?',
+              'Where are you bound?',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 6),
+            // Said before they tap, not after. This sheet used to promise a
+            // "road-following GPX route" and #19 deleted the router that would
+            // have produced one; what it lays is a single direct leg (#61).
             const Text(
               'Enter a place, postcode, or latitude and longitude. Tide and Seek '
-              'will generate a road-following GPX route from your location.',
+              'lays a direct course from your position — one leg, not checked '
+              'against land, depth or traffic. Add marks on the chart to shape '
+              'it.',
               style: TextStyle(color: Color(0xFF98A3B1)),
             ),
             const SizedBox(height: 18),
@@ -176,97 +181,23 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
               onSubmitted: (_) => _submit(),
               decoration: InputDecoration(
                 labelText: 'Destination',
-                hintText: 'e.g. Matlock Bath or 53.12, -1.56',
+                hintText: 'e.g. Cowes or 50.76, -1.30',
                 errorText: _error,
                 prefixIcon: const Icon(Icons.place_outlined),
               ),
             ),
-            const SizedBox(height: 18),
-            Text(
-              'Route preferences',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'The same preferences as the web planner, so a route planned '
-              'here and one planned on the website mean the same thing.',
-              style: TextStyle(color: Color(0xFF98A3B1), fontSize: 12),
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<RouteStyle>(
-              key: const Key('route-style-field'),
-              initialValue: _preferences.style,
-              decoration: const InputDecoration(labelText: 'Routing style'),
-              items: RouteStyle.values
-                  .map(
-                    (style) => DropdownMenuItem(
-                      value: style,
-                      child: Text(style.label),
-                    ),
-                  )
-                  .toList(growable: false),
-              onChanged: (value) => setState(
-                () => _preferences = _preferences.copyWith(style: value),
-              ),
-            ),
-            SwitchListTile(
-              key: const Key('avoid-motorways-switch'),
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Avoid motorways'),
-              value: _preferences.avoidMotorways,
-              onChanged: (value) => setState(
-                () =>
-                    _preferences = _preferences.copyWith(avoidMotorways: value),
-              ),
-            ),
-            SwitchListTile(
-              key: const Key('avoid-major-roads-switch'),
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Avoid major roads'),
-              subtitle: const Text('The quieter-road option.'),
-              value: _preferences.avoidMajorRoads,
-              onChanged: (value) => setState(
-                () => _preferences = _preferences.copyWith(
-                  avoidMajorRoads: value,
-                ),
-              ),
-            ),
-            SwitchListTile(
-              key: const Key('avoid-tolls-switch'),
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Avoid toll roads'),
-              value: _preferences.avoidTolls,
-              onChanged: (value) => setState(
-                () => _preferences = _preferences.copyWith(avoidTolls: value),
-              ),
-            ),
-            SwitchListTile(
-              key: const Key('avoid-ferries-switch'),
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Avoid ferries'),
-              value: _preferences.avoidFerries,
-              onChanged: (value) => setState(
-                () => _preferences = _preferences.copyWith(avoidFerries: value),
-              ),
-            ),
-            SwitchListTile(
-              key: const Key('avoid-unsurfaced-byways-switch'),
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Avoid unsurfaced byways'),
-              subtitle: const Text(
-                'On by default. A byway open to all traffic is legal to voyage '
-                'but often unsurfaced. Turn this off to allow ways '
-                'OpenStreetMap tags as unsurfaced or as a track.',
-              ),
-              value: _preferences.bywaySurface.avoidsUnsurfaced,
-              onChanged: (value) => setState(
-                () => _preferences = _preferences.copyWith(
-                  bywaySurface: value
-                      ? BywaySurfacePreference.avoidUnsurfaced
-                      : BywaySurfacePreference.allowUnsurfaced,
-                ),
-              ),
-            ),
+            // The road-routing preferences panel used to sit here: a routing
+            // style offering "Twisty (up to 50% longer)", and switches for
+            // motorways, major roads, tolls, ferries and unsurfaced byways.
+            // Every one was inert - `RhumbLinePassagePlanner` accepts
+            // `preferences` and passes them through untouched (#19) - and
+            // "Avoid ferries" on a sailing app told a sailor, correctly, that
+            // the app did not know what it was.
+            //
+            // Removed rather than reworded: there is no marine equivalent to
+            // reword them into. A passage is shaped by placing marks, which is
+            // what the chart is for. `RoutePreferences` itself survives until
+            // #31, because it is serialised into saved routes and GPX.
             const SizedBox(height: 14),
             DropdownButtonFormField<_DestinationHandoff>(
               key: const Key('destination-handoff-field'),
@@ -295,7 +226,7 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
               key: const Key('plan-destination-button'),
               onPressed: _submit,
               icon: const Icon(Icons.alt_route),
-              label: const Text('Plan road route'),
+              label: const Text('Lay a course'),
             ),
           ],
         ),

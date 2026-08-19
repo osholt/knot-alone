@@ -181,7 +181,7 @@ class _VoyageInvitationLinkGateState extends State<VoyageInvitationLinkGate> {
           title: const Text('Could not join this voyage'),
           content: Text(
             widget.voyageController.errorMessage ??
-                'That invitation could not be checked. Ask the voyage lead to '
+                'That invitation could not be checked. Ask the skipper to '
                     'share a new one.',
           ),
           actions: [

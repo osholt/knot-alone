@@ -55,7 +55,7 @@ class VoyageInvitationLinkController extends ChangeNotifier
     if (invitation == null) {
       _pending = null;
       _errorMessage =
-          'That voyage invitation is incomplete or malformed. Ask the voyage lead to share it again.';
+          'That voyage invitation is incomplete or malformed. Ask the skipper to share it again.';
     } else {
       _pending = invitation;
       _errorMessage = null;

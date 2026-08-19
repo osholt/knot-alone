@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tide_and_seek/domain/route_preferences.dart';
 import 'package:tide_and_seek/features/map/destination_route_sheet.dart';
 
 void main() {
@@ -110,111 +109,68 @@ void main() {
     expect(request?.stopQueries, const ['Second', 'First']);
   });
 
-  testWidgets('unsurfaced byways are avoided until a sailor says otherwise', (
-    tester,
-  ) async {
-    DestinationPlanRequest? request;
+  // #61. Both tests that used to live here drove the road-routing preferences
+  // panel: a routing style offering "Twisty (up to 50% longer)", and switches
+  // for motorways, major roads, tolls, ferries and unsurfaced byways. Every one
+  // was inert, because `RhumbLinePassagePlanner` accepts `preferences` and
+  // passes them through untouched (#19). They tested that a sailor could set
+  // something that changed nothing.
+  //
+  // What replaces them is the property that matters: the panel is gone, and the
+  // sheet says what it actually does.
+  testWidgets('no road-routing preference is offered', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
           builder: (context) => Scaffold(
             body: FilledButton(
-              onPressed: () async {
-                request = await DestinationRouteSheet.show(context);
-              },
+              onPressed: () => DestinationRouteSheet.show(context),
               child: const Text('Open'),
             ),
           ),
         ),
       ),
     );
-
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const Key('destination-field')),
-      'Matlock Bath',
-    );
 
-    final bywaySwitch = find.byKey(const Key('avoid-unsurfaced-byways-switch'));
-    await tester.scrollUntilVisible(
-      bywaySwitch,
-      250,
-      scrollable: find.byType(Scrollable).last,
-    );
-    expect(
-      tester.widget<SwitchListTile>(bywaySwitch).value,
-      isTrue,
-      reason: 'the documented default is to avoid them',
-    );
-
-    await tester.tap(find.byKey(const Key('avoid-motorways-switch')));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('plan-destination-button')),
-      250,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.tap(find.byKey(const Key('plan-destination-button')));
-    await tester.pumpAndSettle();
-
-    expect(request?.preferences.avoidMotorways, isTrue);
-    expect(
-      request?.preferences.bywaySurface,
-      BywaySurfacePreference.avoidUnsurfaced,
-    );
-    // Avoiding motorways alone is not a byway decision, and vice versa.
-    expect(request?.preferences.style, RouteStyle.quickest);
+    for (final key in [
+      'route-style-field',
+      'avoid-motorways-switch',
+      'avoid-major-roads-switch',
+      'avoid-tolls-switch',
+      'avoid-ferries-switch',
+      'avoid-unsurfaced-byways-switch',
+    ]) {
+      expect(find.byKey(Key(key)), findsNothing, reason: '$key should be gone');
+    }
+    expect(find.text('Route preferences'), findsNothing);
+    // "Avoid ferries" on a sailing app is the one that gave the game away.
+    expect(find.textContaining('ferries'), findsNothing);
+    expect(find.textContaining('web planner'), findsNothing);
   });
 
-  testWidgets('a sailor can ask for twisty roads and for byways', (
-    tester,
-  ) async {
-    DestinationPlanRequest? request;
+  testWidgets('the sheet says it lays one unchecked leg', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
           builder: (context) => Scaffold(
             body: FilledButton(
-              onPressed: () async {
-                request = await DestinationRouteSheet.show(
-                  context,
-                  initialRequest: const DestinationPlanRequest(
-                    query: 'Matlock Bath',
-                    preferences: RoutePreferences(style: RouteStyle.twisty),
-                  ),
-                );
-              },
+              onPressed: () => DestinationRouteSheet.show(context),
               child: const Text('Open'),
             ),
           ),
         ),
       ),
     );
-
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    final bywaySwitch = find.byKey(const Key('avoid-unsurfaced-byways-switch'));
-    await tester.scrollUntilVisible(
-      bywaySwitch,
-      250,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.tap(bywaySwitch);
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('plan-destination-button')),
-      250,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.tap(find.byKey(const Key('plan-destination-button')));
-    await tester.pumpAndSettle();
 
-    expect(request?.preferences.style, RouteStyle.twisty);
-    expect(
-      request?.preferences.bywaySurface,
-      BywaySurfacePreference.allowUnsurfaced,
-    );
-    expect(request?.preferences.requiresMotorcycleCosting, isTrue);
+    // It used to promise a "road-following GPX route" from a router #19 deleted.
+    expect(find.textContaining('road-following'), findsNothing);
+    expect(find.textContaining('direct course'), findsOneWidget);
+    expect(find.textContaining('not checked'), findsOneWidget);
+    expect(find.text('Lay a course'), findsOneWidget);
+    expect(find.text('Plan road route'), findsNothing);
   });
 }

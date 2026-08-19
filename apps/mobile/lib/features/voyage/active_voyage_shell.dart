@@ -3678,7 +3678,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
           'now means:\n\n'
           '· no back-marker to confirm the group is complete\n'
           '· no distance to the back of the group for you\n'
-          '· no TEC for a sailor who falls a long way behind to aim for\n\n'
+          '· no Sweeper for a sailor who falls a long way behind to aim for\n\n'
           'A sailor takes the role from their own Voyage tab. Fine for a small '
           'or solo voyage — worth fixing for a group.',
         ),
@@ -3694,7 +3694,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
               dialogContext,
               _MissingSweeperDecision.assignSweeper,
             ),
-            child: const Text('Assign a TEC'),
+            child: const Text('Assign a Sweeper'),
           ),
           FilledButton(
             key: const Key('start-without-sweeper-button'),
@@ -4193,7 +4193,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     if (session == null) return;
     final sailors = <String>[];
     String labelFor(String name, VoyageRole role) => switch (role) {
-      VoyageRole.skipper => '$name (Lead)',
+      VoyageRole.skipper => '$name (Skipper)',
       VoyageRole.sweeper => '$name (Sweeper)',
       _ => name,
     };

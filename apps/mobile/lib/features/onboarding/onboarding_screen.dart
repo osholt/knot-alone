@@ -218,7 +218,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       const SizedBox(height: 14),
       const Text(
-        'Lead and Sweeper use reserved role colours during a voyage.',
+        'Skipper and Sweeper use reserved role colours during a voyage.',
         style: TextStyle(color: Color(0xFF7F8A98), fontSize: 12),
       ),
     ],
@@ -297,7 +297,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       const _NumberedStep(
         number: '2',
         text:
-            'Check the pre-start roster. Tracking waits for the lead to tap Start voyage.',
+            'Check the pre-start roster. Tracking waits for the skipper to tap Start voyage.',
       ),
       const _NumberedStep(
         number: '3',
@@ -307,7 +307,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       const _NumberedStep(
         number: '4',
         text:
-            'Leave stops sharing for you; End voyage is a lead-only group action.',
+            'Leave stops sharing for you; End voyage is a skipper-only group action.',
       ),
       const SizedBox(height: 14),
       const Text(

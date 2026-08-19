@@ -316,7 +316,7 @@ void main() {
       find.descendant(
         of: find.byKey(const Key('roster-sailor-dave')),
         matching: find.textContaining(
-          'Sailor · previous TEC selection superseded',
+          'Sailor · previous Sweeper selection superseded',
         ),
       ),
       findsOneWidget,

@@ -168,7 +168,7 @@ class OsrmImportedTrackMatcher implements ImportedTrackMatcher {
     if (meanDeviation > maximumMeanDeviationMeters ||
         maximumDeviation > maximumPointDeviationMeters) {
       throw FormatException(
-        'The road route moved too far from the imported line '
+        'The re-planned passage moved too far from the imported line '
         '(${meanDeviation.round()} m average, '
         '${maximumDeviation.round()} m maximum). '
         'The original line is unchanged.',

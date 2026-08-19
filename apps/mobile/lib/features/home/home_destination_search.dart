@@ -66,7 +66,7 @@ enum VoyageStartChoice {
   String get detail => switch (this) {
     VoyageStartChoice.solo => 'Just you. No code and nobody to wait for.',
     VoyageStartChoice.group =>
-      'Gives you a code to share. Junction drop-off prompts on.',
+      'Gives you a code to share. The crew sees your passage and position.',
   };
 }
 

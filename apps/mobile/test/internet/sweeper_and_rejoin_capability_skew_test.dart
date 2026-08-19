@@ -263,7 +263,7 @@ void main() {
         allOf(
           contains('too old'),
           contains('nobody has been given it'),
-          contains('still reaches the skipper and TEC'),
+          contains('still reaches the skipper and Sweeper'),
         ),
       );
       // No hostname, URL, raw error text or phone number in it.

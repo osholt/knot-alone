@@ -214,7 +214,7 @@ class RouteDeviationDetector {
       evaluatedAt: now,
       message: critical
           ? 'Sailor remains off route; immediate follow-up required.'
-          : 'Sailor is confirmed off route. Lead and TEC should check in.',
+          : 'Sailor is confirmed off the passage. Skipper and Sweeper should check in.',
       distanceFromRouteMeters: distance,
       offRouteSince: since,
     );

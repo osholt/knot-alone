@@ -616,7 +616,7 @@ class _EventRow extends StatelessWidget {
       VoyageEventType.sailorContactShared =>
         event.payload['recipientSailorIds'] == null
             ? 'Phone number shared with the voyage'
-            : 'Phone number shared with the skipper and TEC',
+            : 'Phone number shared with the skipper and Sweeper',
     };
     final time = TimeOfDay.fromDateTime(event.createdAt).format(context);
     return ListTile(
