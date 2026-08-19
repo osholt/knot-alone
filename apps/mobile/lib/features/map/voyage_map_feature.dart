@@ -1433,7 +1433,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                             dimension: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.add_road),
+                        : const Icon(Icons.timeline),
                   ),
                 // Route-derived: importing is the action that creates a
                 // route, so it is offered only while there is none.
@@ -4898,8 +4898,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       if (enrichment.attempted &&
           !enrichment.changed &&
           enrichment.warning != null)
-        'Online road recalculation was unavailable. The original geometry is '
-            'shown and remains usable offline.',
+        'Re-planning the passage online was unavailable. The original '
+            'geometry is shown and remains usable offline.',
     ];
     // The review screen is where suggested marking positions are accepted or
     // rejected, so its decisions have to come back out with the route (#179).
@@ -5559,7 +5559,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                       : 'Keep current route',
                 ),
                 subtitle: _route == null
-                    ? const Text('Use the live group map without navigation')
+                    ? const Text('Go to the chart without a passage')
                     : null,
                 onTap: () {
                   _continueWithoutRoute();
@@ -5568,7 +5568,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.add_road),
+                leading: const Icon(Icons.timeline),
                 title: const Text('Plan a destination'),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
@@ -5980,14 +5980,14 @@ class _EmptyRoutePrompt extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Choose a route',
+                          'Plan a passage',
                           style: Theme.of(context).textTheme.headlineSmall,
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'A route is optional. Continue to the live group map '
-                          'without navigation, or add directions using a '
-                          'destination, saved route or GPX file.',
+                          'A passage is optional. Go straight to the chart and '
+                          'record where you go, or lay one out from a '
+                          'destination, a saved passage or a GPX file.',
                           style: TextStyle(color: Color(0xFF98A3B1)),
                         ),
                         const SizedBox(height: 20),
@@ -5995,7 +5995,7 @@ class _EmptyRoutePrompt extends StatelessWidget {
                           key: const Key('continue-without-route-button'),
                           onPressed: onDismiss,
                           icon: const Icon(Icons.map_outlined),
-                          label: const Text('Continue without a route'),
+                          label: const Text('Just the chart'),
                         ),
                         const SizedBox(height: 8),
                         OutlinedButton.icon(
@@ -6008,8 +6008,8 @@ class _EmptyRoutePrompt extends StatelessWidget {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Icon(Icons.add_road),
-                          label: const Text('Enter destination'),
+                              : const Icon(Icons.timeline),
+                          label: const Text('Lay a course to a place'),
                         ),
                         const SizedBox(height: 8),
                         // Stored geometry is a route source in its own right,
@@ -6019,7 +6019,7 @@ class _EmptyRoutePrompt extends StatelessWidget {
                           key: const Key('use-stored-route-empty-button'),
                           onPressed: importing ? null : onUseStoredRoute,
                           icon: const Icon(Icons.history),
-                          label: const Text('Use a saved route'),
+                          label: const Text('Use a saved passage'),
                         ),
                         const SizedBox(height: 8),
                         OutlinedButton.icon(
@@ -6523,7 +6523,7 @@ class _GroupMiniMapState extends State<_GroupMiniMap> {
                     vertical: 3,
                   ),
                   child: Text(
-                    '$sailorCount RIDERS',
+                    '$sailorCount SAILORS',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,

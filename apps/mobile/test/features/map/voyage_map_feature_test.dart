@@ -571,7 +571,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('group-mini-map')), findsOneWidget);
-    expect(find.text('3 RIDERS'), findsOneWidget);
+    expect(find.text('3 SAILORS'), findsOneWidget);
   });
 
   testWidgets(
@@ -602,7 +602,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Waiting for the skipper’s route'), findsOneWidget);
-      expect(find.text('Choose a route'), findsNothing);
+      expect(find.text('Plan a passage'), findsNothing);
       expect(
         find.byKey(const Key('plan-destination-empty-button')),
         findsNothing,
@@ -646,7 +646,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Waiting for the skipper’s route'), findsNothing);
-    expect(find.text('Choose a route'), findsNothing);
+    expect(find.text('Plan a passage'), findsNothing);
   });
 
   // #53. The home screen's backdrop passes `canEditRoute: false` because there
@@ -681,7 +681,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Waiting for the skipper’s route'), findsNothing);
-    expect(find.text('Choose a route'), findsNothing);
+    expect(find.text('Plan a passage'), findsNothing);
     expect(find.byKey(const Key('dismiss-waiting-route-prompt')), findsNothing);
   });
 
@@ -744,17 +744,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Choose a route'), findsOneWidget);
+    expect(find.text('Plan a passage'), findsOneWidget);
     expect(
       find.byKey(const Key('continue-without-route-button')),
       findsOneWidget,
     );
-    expect(find.textContaining('A route is optional'), findsOneWidget);
+    expect(find.textContaining('A passage is optional'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('continue-without-route-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Choose a route'), findsNothing);
+    expect(find.text('Plan a passage'), findsNothing);
     expect(await store.loadActiveRoute(), isNull);
   });
 
@@ -783,7 +783,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Choose a route'), findsNothing);
+    expect(find.text('Plan a passage'), findsNothing);
   });
 
   testWidgets('every route source is reachable on a small iPhone viewport', (
@@ -815,8 +815,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Enter destination'), findsOneWidget);
-    expect(find.text('Use a saved route'), findsOneWidget);
+    expect(find.text('Lay a course to a place'), findsOneWidget);
+    expect(find.text('Use a saved passage'), findsOneWidget);
     await tester.ensureVisible(find.text('Import GPX'));
     expect(find.text('Import GPX'), findsOneWidget);
     await tester.ensureVisible(find.text('Use demo route'));
@@ -852,10 +852,7 @@ void main() {
       find.byKey(const Key('continue-without-route-sheet-item')),
       findsOneWidget,
     );
-    expect(
-      find.text('Use the live group map without navigation'),
-      findsOneWidget,
-    );
+    expect(find.text('Go to the chart without a passage'), findsOneWidget);
 
     await tester.tap(
       find.byKey(const Key('continue-without-route-sheet-item')),
@@ -866,7 +863,7 @@ void main() {
       find.byKey(const Key('continue-without-route-sheet-item')),
       findsNothing,
     );
-    expect(find.text('Choose a route'), findsNothing);
+    expect(find.text('Plan a passage'), findsNothing);
   });
 
   testWidgets('draws sailor and skipper trails with no route imported', (
@@ -1363,7 +1360,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Enter destination'), findsOneWidget);
+    expect(find.text('Lay a course to a place'), findsOneWidget);
     expect(find.text('Import GPX'), findsOneWidget);
     expect(find.text('ROUTE-ONLY OFFLINE MAP'), findsOneWidget);
     expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
@@ -1623,7 +1620,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Previous voyage route'), findsNothing);
-    expect(find.text('Choose a route'), findsOneWidget);
+    expect(find.text('Plan a passage'), findsOneWidget);
     expect(await newVoyageStore.loadActiveRoute(), isNull);
   });
 
@@ -1659,7 +1656,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Enter destination'));
+    await tester.tap(find.text('Lay a course to a place'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('destination-field')), 'Wrong');
     // The sheet carries the route preferences (#182), so the plan button can
@@ -2117,7 +2114,7 @@ void main() {
       expect(landscapeMiniMap.left, closeTo(10, 1));
       expect(landscapeMiniMap.bottom, closeTo(390 - 10, 1));
       expect(find.byKey(const Key('voyage-clock')), findsOneWidget);
-      expect(find.text('3 RIDERS'), findsOneWidget);
+      expect(find.text('3 SAILORS'), findsOneWidget);
       expect(find.byKey(const Key('mini-map-you-legend')), findsOneWidget);
       expect(find.byKey(const Key('mini-map-north-indicator')), findsOneWidget);
       expect(find.byKey(const Key('mini-map-scale')), findsOneWidget);
@@ -2210,7 +2207,7 @@ void main() {
       ];
       await tester.pump();
       expect(find.byKey(const Key('group-mini-map')), findsOneWidget);
-      expect(find.text('4 RIDERS'), findsOneWidget);
+      expect(find.text('4 SAILORS'), findsOneWidget);
       tester.view.physicalSize = const Size(844, 390);
       await tester.pump();
       final layer = tester.widget<PolylineLayer>(find.byType(PolylineLayer));
@@ -3382,7 +3379,7 @@ void main() {
     expect(find.text('GROUP VOYAGE PAUSED'), findsOneWidget);
     expect(find.byKey(const Key('navigation-guidance-banner')), findsNothing);
     // Not a nag: a route-less voyage is a mode, not a state to prompt about.
-    expect(find.text('Choose a route'), findsNothing);
+    expect(find.text('Plan a passage'), findsNothing);
     // Follow mode has taken the camera but is still easing it into the viewport,
     // and until it arrives the sailor has not been given the viewport (#141).
     expect(find.byKey(const Key('navigation-follow-button')), findsOneWidget);

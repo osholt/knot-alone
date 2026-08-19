@@ -869,14 +869,14 @@ class _VoyageFormState extends State<_VoyageForm> with WidgetsBindingObserver {
               const SizedBox(height: 8),
               Text(
                 widget.creating
-                    ? 'You will become the voyage lead and get a six-digit code to share.'
-                    : 'Enter the six-digit code shared by the voyage lead. You need a connection once to join, then the app keeps using the secure relay.',
+                    ? 'You will be the skipper and get a six-digit code to share.'
+                    : 'Enter the six-digit code shared by the skipper. You need a connection once to join, then the app keeps using the secure relay.',
                 style: const TextStyle(color: Color(0xFFABB5C1)),
               ),
               const SizedBox(height: 24),
               if (widget.creating) ...[
                 Text(
-                  'Who is riding?',
+                  'Who is sailing?',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),

@@ -205,10 +205,10 @@ class VoyageSimulationController extends ChangeNotifier {
           : 'Sailors are through. ${_markerSailorSubject()} $_markerSailorPresentVerb waiting for '
                 'Sweeper.',
     SimulationMarkerPhase.sweeperApproaching =>
-      '${sailorsPassedMarker < sailorsExpectedToPass ? 'Traffic is still clearing. ' : 'All sailors are through. '}TEC is approaching — '
+      '${sailorsPassedMarker < sailorsExpectedToPass ? 'Traffic is still clearing. ' : 'All sailors are through. '}Sweeper is approaching — '
           '${_markerSailorSubject().toLowerCase()} should get ready to get under way.',
     SimulationMarkerPhase.readyToGetUnderWay =>
-      'TEC has passed. ${_markerSailorSubject()} can get under way and return to '
+      'Sweeper has passed. ${_markerSailorSubject()} can get under way and return to '
           'navigation.',
   };
   bool get alexOffRoute => _agent(offRouteSailorId).isOffRoute;
@@ -829,7 +829,7 @@ class VoyageSimulationController extends ChangeNotifier {
   String get _localPerspectiveName => switch (_selectedLocalRole) {
     VoyageRole.skipper => _session.displayName,
     VoyageRole.sailor => 'You · Follower',
-    VoyageRole.sweeper => 'You · TEC',
+    VoyageRole.sweeper => 'You · Sweeper',
     VoyageRole.marker => 'You · Marker',
   };
 

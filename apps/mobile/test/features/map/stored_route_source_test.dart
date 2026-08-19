@@ -211,7 +211,7 @@ void main() {
     await _pumpMap(tester, store: _RecordingRouteStore());
 
     expect(find.text('Import GPX'), findsOneWidget);
-    expect(find.text('Enter destination'), findsOneWidget);
+    expect(find.text('Lay a course to a place'), findsOneWidget);
     expect(find.text('Use demo route'), findsOneWidget);
     expect(
       find.byKey(const Key('use-stored-route-empty-button')),

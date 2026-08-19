@@ -657,7 +657,7 @@ class HttpVoyageCodeDirectory implements VoyageCodeDirectory {
           'Enter a valid six-digit voyage code.',
         ),
         404 => const VoyageCodeDirectoryException(
-          'That voyage code is not active. Check it with the voyage lead.',
+          'That voyage code is not active. Check it with the skipper.',
         ),
         409 => const VoyageCodeDirectoryException(
           'That voyage code is already in use. A new code will be chosen.',

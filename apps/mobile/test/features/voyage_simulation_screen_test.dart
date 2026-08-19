@@ -18,7 +18,7 @@ void main() {
         inviteSecret: 'simulation-secret-that-is-long-enough',
         joinToken: 'test-join-token-0123456789',
         localSailorId: 'lead',
-        displayName: 'Demo Lead',
+        displayName: 'Demo Skipper',
         role: VoyageRole.skipper,
         joinedAt: DateTime.utc(2026, 7, 17),
         isSimulation: true,
@@ -86,7 +86,7 @@ void main() {
       inviteSecret: 'simulation-secret-that-is-long-enough',
       joinToken: 'test-join-token-0123456789',
       localSailorId: 'lead',
-      displayName: 'Demo Lead',
+      displayName: 'Demo Skipper',
       role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 17),
       isSimulation: true,
@@ -131,7 +131,7 @@ void main() {
 
     expect(find.text('Voyage Lab'), findsOneWidget);
     expect(find.text('VIRTUAL FLEET'), findsOneWidget);
-    expect(find.text('Demo Lead'), findsOneWidget);
+    expect(find.text('Demo Skipper'), findsOneWidget);
     expect(find.text('Charlie'), findsOneWidget);
     expect(find.byKey(const Key('simulation-off-route')), findsOneWidget);
     expect(find.byKey(const Key('simulation-role')), findsOneWidget);
@@ -166,7 +166,7 @@ void main() {
       inviteSecret: 'simulation-secret-that-is-long-enough',
       joinToken: 'test-join-token-0123456789',
       localSailorId: 'lead',
-      displayName: 'Demo Lead',
+      displayName: 'Demo Skipper',
       role: VoyageRole.skipper,
       joinedAt: DateTime.utc(2026, 7, 17),
       isSimulation: true,

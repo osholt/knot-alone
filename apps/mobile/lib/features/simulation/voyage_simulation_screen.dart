@@ -308,7 +308,7 @@ class _SimulationControls extends StatelessWidget {
               key: const Key('simulation-sweeper-delay'),
               contentPadding: EdgeInsets.zero,
               title: const Text('Delay Sweeper'),
-              subtitle: const Text('Increases the lead-to-sweeper gap'),
+              subtitle: const Text('Increases the skipper-to-sweeper gap'),
               value: controller.sweeperDelayed,
               onChanged: controller.setSweeperDelayed,
             ),

@@ -709,7 +709,7 @@ class VoyageController extends ChangeNotifier {
   }) async {
     await _run(() async {
       await _createVoyage(
-        displayName: 'Demo Lead',
+        displayName: 'Demo Skipper',
         isSimulation: true,
         simulationSailorCount: _validatedSimulationSailorCount(sailorCount),
         vesselStyle: vesselStyle,
@@ -733,7 +733,7 @@ class VoyageController extends ChangeNotifier {
       _replaceEvents(const []);
       _invalidateMembershipProjection();
       await _createVoyage(
-        displayName: 'Demo Lead',
+        displayName: 'Demo Skipper',
         isSimulation: true,
         simulationSailorCount: _validatedSimulationSailorCount(
           sailorCount ?? activeSession.simulationSailorCount,

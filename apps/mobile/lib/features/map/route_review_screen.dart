@@ -323,7 +323,7 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
           setState(() {
             _route = _lastSuccessfulRoute;
             _reshapeError =
-                'The route could not be reshaped. The last road route is still '
+                'The passage could not be re-planned. The last one is still '
                 'shown and unchanged. $error';
           });
         } finally {
@@ -893,7 +893,7 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Recalculating the road route…',
+                      'Re-planning the passage…',
                       style: TextStyle(color: Color(0xFF98A3B1)),
                     ),
                   ],
@@ -976,8 +976,8 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                         _pointOfInterests.places.isNotEmpty) ...[
                       const SizedBox(height: 6),
                       const Text(
-                        'Drag the blue route to shape it. Tap an orange café or '
-                        'biker place to add it as an ordered waypoint; the live '
+                        'Drag the blue line to shape it. Tap an orange place '
+                        'to add it as an ordered mark; the live '
                         'preview recalculates before you confirm.',
                         style: TextStyle(
                           color: Color(0xFF98A3B1),

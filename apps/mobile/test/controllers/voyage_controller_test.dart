@@ -349,7 +349,7 @@ void main() {
     final firstVoyageId = controller.session!.voyageId;
     expect(controller.session?.isSimulation, isTrue);
     expect(controller.session?.simulationSailorCount, 30);
-    expect(controller.session?.displayName, 'Demo Lead');
+    expect(controller.session?.displayName, 'Demo Skipper');
     expect(controller.events.first.payload['simulation'], isTrue);
     expect(controller.events, hasLength(1));
     expect(controller.voyageStarted, isFalse);
