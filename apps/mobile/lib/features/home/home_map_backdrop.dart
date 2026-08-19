@@ -140,8 +140,12 @@ class _HomeMapBackdropState extends State<HomeMapBackdrop> {
             distanceUnit: widget.distanceUnit,
             onMapStyleResolved: widget.onMapStyleResolved,
             // No voyage yet, so nothing may edit a voyage's route from here and no
-            // voyage surface has anything to say.
+            // voyage surface has anything to say - including the prompt that
+            // asks where the route is. There is no route because there is no
+            // voyage, and the bottom bar already offers both ways to start one
+            // (#53).
             canEditRoute: false,
+            inVoyage: false,
             markerFeaturesEnabled: false,
           )
         else
