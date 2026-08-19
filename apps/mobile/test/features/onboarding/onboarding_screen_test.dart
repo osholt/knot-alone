@@ -9,23 +9,15 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('first run collects the required profile before skip', (
+  testWidgets('first run keeps the chosen profile through a skipped tour', (
     tester,
   ) async {
     final profile = await SailorProfileController.load();
     await tester.pumpWidget(_app(profile));
 
-    expect(find.text('Keep the whole voyage together'), findsOneWidget);
+    expect(find.text('Plan a passage, sail it, keep the log'), findsOneWidget);
     await tester.tap(find.byKey(const Key('onboarding-continue')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('skip-onboarding-tour')));
-    await tester.pump();
-
-    expect(
-      find.text('Enter the name your group will recognise.'),
-      findsOneWidget,
-    );
-    expect(profile.needsOnboarding, isTrue);
 
     await tester.enterText(
       find.byKey(const Key('onboarding-name-field')),
@@ -37,7 +29,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('sailor-custom-initials')),
-      'TEC',
+      'OJH',
     );
     await tester.pump();
     final purpleInk = find.byKey(
@@ -58,9 +50,48 @@ void main() {
     expect(profile.onboardingCompleted, isTrue);
     expect(profile.onboardingEducationSkipped, isTrue);
     expect(profile.displayName, 'Oliver');
-    expect(profile.sailorSymbol.storageValue, 'initials:v1:VEVD:purple');
+    expect(profile.sailorSymbol.storageValue, 'initials:v1:T0pI:purple');
     expect(profile.sailorColor.name, 'purple');
     expect(profile.takePendingVoyageChoice(), OnboardingVoyageChoice.join);
+  });
+
+  // #49. The name was mandatory and "Skip tour" did not skip it, so a solo
+  // sailor could not reach a solo-first app without first naming themselves for
+  // a crew they may never have.
+  testWidgets('a solo sailor can skip the tour without naming themselves', (
+    tester,
+  ) async {
+    final profile = await SailorProfileController.load();
+    await tester.pumpWidget(_app(profile));
+
+    await tester.tap(find.byKey(const Key('onboarding-continue')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('skip-onboarding-tour')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('You are ready to voyage'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('onboarding-solo-voyage')));
+    await tester.pumpAndSettle();
+
+    expect(profile.onboardingCompleted, isTrue);
+    // The roster and the journal still need a name, so one is supplied rather
+    // than the requirement being dropped - and the field says so before the
+    // sailor gets there.
+    expect(profile.displayName, defaultSailorName);
+  });
+
+  testWidgets('the name field says what a blank one means', (tester) async {
+    final profile = await SailorProfileController.load();
+    await tester.pumpWidget(_app(profile));
+
+    await tester.tap(find.byKey(const Key('onboarding-continue')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('leave it blank to sail as $defaultSailorName'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('permission deferral explains degradation and recovery', (
@@ -105,7 +136,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Keep the whole voyage together'), findsOneWidget);
+    expect(find.text('Plan a passage, sail it, keep the log'), findsOneWidget);
     expect(find.byKey(const Key('onboarding-continue')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

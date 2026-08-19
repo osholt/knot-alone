@@ -6,6 +6,18 @@ import '../domain/sailor_color.dart';
 import '../features/map/vessel_icon.dart';
 import '../services/sailor_contact_share.dart';
 
+/// The name a sailor appears under when they gave none.
+///
+/// A sailor name used to be mandatory before the app would open, and "Skip
+/// tour" did not skip it (#49) - so a solo sailor could not reach a solo-first
+/// app without first naming themselves for a crew they may never have.
+///
+/// The roster, the journal and every shared event do need *a* name, so one is
+/// supplied rather than the requirement being dropped. "Skipper" because that
+/// is what a single-handed sailor is, and because it is what a crew would call
+/// whoever set the voyage up.
+const defaultSailorName = 'Skipper';
+
 /// Remembers how a sailor last presented themselves - name, bike, colour -
 /// so the create/join voyage form starts pre-filled instead of blank every
 /// time. Deliberately separate from VoyageSession, which is scoped to one
@@ -157,7 +169,13 @@ class SailorProfileController extends ChangeNotifier {
     SailorSymbol? sailorSymbol,
     required SailorColor sailorColor,
     required bool educationSkipped,
-    required OnboardingVoyageChoice voyageChoice,
+
+    /// What to open on arrival, or null to land on the chart and sail alone.
+    ///
+    /// Nullable since #49. Onboarding used to end on "Create a voyage" or "Join
+    /// a voyage" with no third option, so a solo-first app made every new
+    /// sailor pick a crew activity before it would let them in.
+    required OnboardingVoyageChoice? voyageChoice,
   }) async {
     final normalizedName = displayName.trim();
     if (normalizedName.isEmpty) {
