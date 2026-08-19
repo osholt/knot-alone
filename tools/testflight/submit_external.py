@@ -54,7 +54,7 @@ class AppStoreConnectClient:
         if query:
             url = f"{url}?{urllib.parse.urlencode(query)}"
         encoded_body = None if body is None else json.dumps(body).encode()
-        request = urllib.request.Request(
+        request = urllib.request.Request(  # noqa: S310 - see below
             url,
             data=encoded_body,
             method=method,
@@ -64,20 +64,20 @@ class AppStoreConnectClient:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            # S310 guards against attacker-chosen schemes. Every URL here is
+            # API_ROOT, a literal https:// constant, plus a path this module
+            # writes - there is no scheme to choose.
+            with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
                 payload = response.read()
                 if response.status not in expected:
-                    raise AppStoreConnectError(
-                        f"{method} {path} returned HTTP {response.status}"
-                    )
+                    raise AppStoreConnectError(f"{method} {path} returned HTTP {response.status}")
                 return {} if not payload else json.loads(payload)
         except urllib.error.HTTPError as error:
             response_body = error.read().decode(errors="replace")
             try:
                 errors = json.loads(response_body).get("errors", [])
                 detail = "; ".join(
-                    item.get("detail") or item.get("title") or "unknown error"
-                    for item in errors
+                    item.get("detail") or item.get("title") or "unknown error" for item in errors
                 )
             except json.JSONDecodeError:
                 detail = response_body[:500]
@@ -131,9 +131,7 @@ def wait_for_build(
             if last_state == "VALID":
                 return build
             if last_state in TERMINAL_PROCESSING_FAILURES:
-                raise AppStoreConnectError(
-                    f"Build {build_number} processing ended in {last_state}"
-                )
+                raise AppStoreConnectError(f"Build {build_number} processing ended in {last_state}")
         if time.monotonic() >= deadline:
             raise AppStoreConnectError(
                 f"Build {build_number} did not become VALID within "
@@ -188,9 +186,7 @@ def submit_for_review(client: Any, *, build_id: str, dry_run: bool) -> tuple[str
     if submissions:
         state = submissions[0].get("attributes", {}).get("betaReviewState", "UNKNOWN")
         if state == "REJECTED":
-            raise AppStoreConnectError(
-                "The build has a rejected beta review submission"
-            )
+            raise AppStoreConnectError("The build has a rejected beta review submission")
         if state in ACTIVE_REVIEW_STATES:
             return state, False
         raise AppStoreConnectError(
@@ -264,9 +260,7 @@ def main() -> int:
     group_added = ensure_group_access(
         client, build_id=build["id"], group=group, dry_run=args.dry_run
     )
-    review_state, submitted = submit_for_review(
-        client, build_id=build["id"], dry_run=args.dry_run
-    )
+    review_state, submitted = submit_for_review(client, build_id=build["id"], dry_run=args.dry_run)
     prefix = "Would add" if args.dry_run and group_added else "Added"
     if not group_added:
         prefix = "Already assigned"

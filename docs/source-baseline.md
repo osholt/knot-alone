@@ -113,3 +113,37 @@ Each carries its own `v1`. Change one only as a deliberate, versioned migration.
 Deployment-facing names *were* renamed and need config updated in step: the
 `TIDE_AND_SEEK_*` environment variables, the `tide_and_seek_*` Prometheus metric
 names, and the default database URL. `deploy/` was updated in the same commit.
+
+## Releasing to TestFlight
+
+`tools/release/release.sh` is the whole path: analyse, test, archive, export,
+validate, upload, wait for processing, attach to the internal group and set the
+tester notes from `RELEASE_NOTES.md`.
+
+Written after builds 22 and 23 were both assembled by hand and each one
+rediscovered the same traps (#42). The ones worth knowing without reading the
+script:
+
+- `flutter build ipa` archives correctly and then **fails its own export**. The
+  App Store profile must carry Push Notifications, and the Bundle ID has the
+  capability with no provisioning profile behind it. The archive is good; the
+  script exports it with `xcodebuild` instead.
+- That export needs `-allowProvisioningUpdates` **against Xcode's signed-in
+  account**. Passing the App Store Connect API key gives "Cloud signing
+  permission error" — an App Manager key can upload but cannot cloud-sign.
+- The API key must be App Manager or better. A Developer-role key can do
+  neither.
+- A build is not in `/v1/builds` when `altool` reports success. Build 23 took
+  about two and a half minutes to appear, so "not found" is a state to wait
+  through rather than an error.
+- App Store Connect creates an **empty** `betaBuildLocalizations` record for the
+  app's primary locale by itself. POSTing one 409s with "There is an entity with
+  same 'locale'", so notes are written with PATCH when a record already exists.
+
+Set `ASC_ISSUER_ID` and `ASC_KEY_ID`; the key file is read from
+`~/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8` unless
+`ASC_PRIVATE_KEY` says otherwise. No secret is checked in.
+
+Tester notes live in `RELEASE_NOTES.md` so they are reviewed in a pull request
+rather than typed into a web form, and the script refuses to publish without
+them.

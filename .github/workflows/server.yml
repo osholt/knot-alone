@@ -37,10 +37,16 @@ jobs:
         run: uv run pip-audit --skip-editable
       - run: uv run ruff format --check .
       - run: uv run ruff check .
-      - run: uv run ruff format --check ../../tools/discovery ../../tools/tester_notify
-      - run: uv run ruff check ../../tools/discovery ../../tools/tester_notify
+      # tools/release and tools/testflight talk to App Store Connect and were
+      # neither linted nor tested here, which is how a release path grew that
+      # only one shell history knew (#42).
+      - run: uv run ruff format --check ../../tools/discovery ../../tools/tester_notify ../../tools/release ../../tools/testflight
+      - run: uv run ruff check ../../tools/discovery ../../tools/tester_notify ../../tools/release ../../tools/testflight
       - run: cd ../.. && python3 -m unittest discover -s tools/discovery/tests -v
       - run: cd ../.. && python3 -m unittest discover -s tools/tester_notify/tests -v
+      - run: cd ../.. && python3 -m unittest discover -s tools/release/tests -v
+      - run: cd ../.. && python3 -m unittest discover -s tools/testflight -p 'test_*.py' -v
+      - run: cd ../.. && bash -n tools/release/release.sh
       - run: uv run pytest --cov=tide_and_seek_server --cov-report=term-missing --cov-fail-under=80
 
   postgres-migration:
