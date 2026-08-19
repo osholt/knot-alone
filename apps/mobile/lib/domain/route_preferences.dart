@@ -127,23 +127,15 @@ class RoutePreferences {
       avoidFerries ||
       !bywaySurface.avoidsUnsurfaced;
 
-  /// Valhalla `costing_options.motorcycle`.
-  ///
-  /// Identical to `motorcycleCostingOptions` in `planner-core.mjs`, including
-  /// its numbers. `use_trails` and `exclude_unpaved` are documented Valhalla
-  /// motorcycle/auto options derived from OpenStreetMap surface and track
-  /// tagging, which is what makes the byway preference honour the tags instead
-  /// of guessing from road class.
-  Map<String, Object?> valhallaMotorcycleCostingOptions() => {
-    'use_highways': avoidMajorRoads ? 0.08 : style.highwayPreference ?? 1,
-    'use_tolls': avoidTolls ? 0 : 0.5,
-    'use_ferry': avoidFerries ? 0 : 0.5,
-    'use_trails': bywaySurface.avoidsUnsurfaced ? 0 : 0.5,
-    'exclude_highways': avoidMotorways,
-    'exclude_tolls': avoidTolls,
-    'exclude_ferries': avoidFerries,
-    'exclude_unpaved': bywaySurface.avoidsUnsurfaced,
-  };
+  // `valhallaMotorcycleCostingOptions()` was here (#31). It translated these
+  // preferences into Valhalla's motorcycle costing model, and went with the
+  // service that consumed it - nothing else ever called it.
+  //
+  // The fields below survive on purpose. They are serialised into saved routes
+  // and exported GPX, so a route saved by an earlier build still loads. They no
+  // longer reach any planner: `RhumbLinePassagePlanner` accepts `preferences`
+  // and passes them through untouched, and #61 removed the UI that set them.
+  // Clearing the fields is a migration, and the rest of #31.
 
   /// One sentence a sailor can check the route against, in the same order and
   /// wording as the web planner's status line.
