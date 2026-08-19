@@ -39,7 +39,11 @@ dependencies:
   crypto: ^3.0.7
   file_selector: ^1.1.0
   flutter_map: ^8.3.1
-  flutter_secure_storage: ^11.0.0
+  # Held at 10.x. 11.0.0 requires Android compileSdk 37, and this app takes
+  # `flutter.compileSdkVersion` from the SDK - the Android build fails at
+  # `checkDebugAarMetadata` on the AAR's minimum. Dependabot proposes it (#3);
+  # taking it means an Android toolchain bump, not a version bump.
+  flutter_secure_storage: ^10.3.1
   geolocator: ^14.0.3
   http: ^1.6.0
   latlong2: ^0.10.1
