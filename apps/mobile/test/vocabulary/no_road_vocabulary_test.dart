@@ -71,8 +71,6 @@ void main() {
         'turn-by-turn symbols, unreachable since a passage has no manoeuvres',
     'lib/features/map/maneuver_diagnostics.dart':
         'diagnostics for the same unreachable manoeuvres',
-    'lib/services/biker_place_catalogue.dart':
-        'the biker-places catalogue itself, awaiting removal in #20',
     'lib/features/settings/emergency_info_sheet.dart':
         'an actual telephone number',
     'lib/relay/live_presence.dart': 'an actual telephone number',
@@ -89,8 +87,7 @@ void main() {
         .split('\n')
         .where((line) => !line.trimLeft().startsWith('//'))
         .where((line) => !line.trimLeft().startsWith('///'))
-        // An import path is not something a sailor reads, and
-        // `biker_place_catalogue.dart` is a legitimate file name until #20.
+        // An import path is not something a sailor reads.
         .where((line) => !line.trimLeft().startsWith('import '))
         .where((line) => !line.trimLeft().startsWith('export '))
         .where((line) => !line.trimLeft().startsWith('part '))

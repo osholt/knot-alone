@@ -6,7 +6,6 @@ import 'package:tide_and_seek/domain/distance_unit.dart';
 import 'package:tide_and_seek/domain/imported_route.dart';
 import 'package:tide_and_seek/features/map/route_review_screen.dart';
 import 'package:tide_and_seek/services/basemap_configuration.dart';
-import 'package:tide_and_seek/services/biker_place_catalogue.dart';
 import 'package:tide_and_seek/services/route_reshape_planner.dart';
 
 void main() {
@@ -136,71 +135,11 @@ void main() {
     },
   );
 
-  testWidgets('a mapped point of interest becomes a live route waypoint', (
-    tester,
-  ) async {
-    ImportedRoute? recalculated;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: RouteReviewScreen(
-          route: _route(0.02),
-          distanceUnit: DistanceUnit.miles,
-          basemapConfiguration: const BasemapConfiguration(),
-          canEditStops: true,
-          pointOfInterestLoader: () async => const BikerPlaceCatalogue(
-            places: [
-              BikerPlace(
-                id: 'cafe-1',
-                name: 'Sailor Cafe',
-                address: 'High Street',
-                point: GeoPoint(latitude: 51.001, longitude: -1.99),
-                source: 'Bike + Brew 2026',
-              ),
-            ],
-          ),
-          onReshapeRoute: (candidate, shapingPoints) async {
-            recalculated = candidate;
-            return RouteReshapeResult(
-              route: candidate.withShapingPoints(shapingPoints),
-              distanceMeters: 1800,
-              duration: const Duration(minutes: 6),
-            );
-          },
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
+  // The point-of-interest test was here: it tapped an orange marker and
+  // asserted the cafe became an ordered waypoint. The 141 KB catalogue behind
+  // it was motorcycle cafes, and it is gone (#20). Harbours and marinas are
+  // #13, and need licensed sources rather than a renamed cafe list.
 
-    expect(find.text('Finish drawing'), findsOneWidget);
-    expect(
-      find.byKey(const Key('toggle-route-points-of-interest')),
-      findsOneWidget,
-    );
-    await tester.tap(find.byKey(const Key('route-point-of-interest-cafe-1')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Add as waypoint'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('add-point-of-interest-cafe-1')));
-    await tester.pumpAndSettle();
-
-    expect(recalculated, isNotNull);
-    expect(recalculated!.waypoints.map((point) => point.name), [
-      'Start',
-      'Sailor Cafe',
-      'Destination',
-    ]);
-    await tester.scrollUntilVisible(
-      find.text('Route points (3)'),
-      160,
-      scrollable: find.byType(Scrollable).last,
-    );
-    expect(find.text('Route points (3)'), findsOneWidget);
-  });
-
-  // #32. Adding a mark by tapping the chart is a mode, not a default: a chart is
-  // panned far more often than it is edited, and a stray tap that silently added
-  // a mark would be discovered later, in the leg table, by a sailor who did not
-  // do it.
   group('adding a mark', () {
     Future<ImportedRoute?> pumpEditable(WidgetTester tester) async {
       ImportedRoute? recalculated;
