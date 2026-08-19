@@ -118,77 +118,14 @@ void main() {
     });
   });
 
-  group('Valhalla costing options match motorcycleCostingOptions', () {
-    test('defaults', () {
-      expect(RoutePreferences.defaults.valhallaMotorcycleCostingOptions(), {
-        'use_highways': 1,
-        'use_tolls': 0.5,
-        'use_ferry': 0.5,
-        'use_trails': 0,
-        'exclude_highways': false,
-        'exclude_tolls': false,
-        'exclude_ferries': false,
-        'exclude_unpaved': true,
-      });
-    });
-
-    test('each style sets its own highway preference', () {
-      expect(
-        RouteStyle.values.map(
-          (style) => RoutePreferences(
-            style: style,
-          ).valhallaMotorcycleCostingOptions()['use_highways'],
-        ),
-        [1, 0.6, 0.35, 0.15],
-      );
-    });
-
-    test('avoiding major roads overrides the style highway preference', () {
-      expect(
-        const RoutePreferences(
-          style: RouteStyle.veryTwisty,
-          avoidMajorRoads: true,
-        ).valhallaMotorcycleCostingOptions()['use_highways'],
-        0.08,
-      );
-    });
-
-    test('avoiding motorways excludes rather than penalises them', () {
-      final options = const RoutePreferences(
-        avoidMotorways: true,
-      ).valhallaMotorcycleCostingOptions();
-      expect(options['exclude_highways'], isTrue);
-      // The motorway exclusion is independent of the twistiness setting.
-      expect(options['use_highways'], 1);
-    });
-
-    test('allowing byways relaxes both surface levers together', () {
-      final options = const RoutePreferences(
-        bywaySurface: BywaySurfacePreference.allowUnsurfaced,
-      ).valhallaMotorcycleCostingOptions();
-      expect(options['use_trails'], 0.5);
-      expect(options['exclude_unpaved'], isFalse);
-    });
-
-    test('the whole combination the issue asks for', () {
-      expect(
-        const RoutePreferences(
-          style: RouteStyle.twisty,
-          avoidMotorways: true,
-        ).valhallaMotorcycleCostingOptions(),
-        {
-          'use_highways': 0.35,
-          'use_tolls': 0.5,
-          'use_ferry': 0.5,
-          'use_trails': 0,
-          'exclude_highways': true,
-          'exclude_tolls': false,
-          'exclude_ferries': false,
-          'exclude_unpaved': true,
-        },
-      );
-    });
-  });
+  // The Valhalla costing-options group was here: six tests pinning this
+  // class's translation into Valhalla's motorcycle costing model against the
+  // web planner's numbers. Both the method and the service that consumed it
+  // are gone (#31).
+  //
+  // The serialisation tests below stay, and matter more now: these fields no
+  // longer reach a planner but are still written into saved routes and GPX,
+  // so they have to keep round-tripping until #31 migrates them out.
 
   test('preferences round-trip through JSON', () {
     const preferences = RoutePreferences(
