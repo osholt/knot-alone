@@ -167,7 +167,8 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
   @override
   void initState() {
     super.initState();
-    // A destination plan opens ready to manipulate, matching the web planner.
+    // A destination plan opens ready to manipulate; an imported or recorded
+    // passage keeps the quieter review-only default.
     // Imported/recorded routes retain the quieter review-only default.
     _reshapeEnabled = canEditStops && widget.onReshapeRoute != null;
   }
@@ -440,7 +441,7 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
           if (canEditStops)
             IconButton(
               key: const Key('edit-reviewed-route'),
-              tooltip: 'Edit stops',
+              tooltip: 'Edit marks',
               onPressed: () =>
                   Navigator.of(context).pop(RouteReviewAction.edit),
               icon: const Icon(Icons.edit_location_alt_outlined),
@@ -791,7 +792,7 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                               ),
                               label: Text('Adjustment ${entry.$1 + 1}'),
                               tooltip:
-                                  'Route shaping point. This is not a stop.',
+                                  'Passage shaping point. This is not a mark.',
                               onDeleted: () => _removeShapingPoint(entry.$2.id),
                             ),
                         ],
@@ -817,13 +818,13 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                     childrenPadding: EdgeInsets.zero,
                     initiallyExpanded: reviewWaypoints.length <= 8,
                     title: Text(
-                      'Route points (${reviewWaypoints.length})',
+                      'Marks (${reviewWaypoints.length})',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     subtitle: Text(
                       reviewWaypoints.length > 8
                           ? 'Tap to review the full ordered list.'
-                          : 'Start, stops and destination in order.',
+                          : 'Start, marks and destination in order.',
                     ),
                     children: [
                       if (reviewWaypoints.isEmpty)
@@ -1080,10 +1081,16 @@ String _durationLabel(Duration duration) {
   return remainder == 0 ? '$hours hr' : '$hours hr $remainder min';
 }
 
+/// A passage has marks, and you do not stop at them - you pass them (#68).
+///
+/// That distinction is the whole basis of the manoeuvre list (#63), which
+/// describes these same positions as marks two sections down the same screen.
+/// "Mark n" also matches `nextMarkName`, which has been naming newly placed ones
+/// "Mark 1", "Mark 2" since #43.
 String _waypointRole(int index, int count) {
   if (index == 0) return 'Start';
   if (index == count - 1) return 'Destination';
-  return 'Stop $index';
+  return 'Mark $index';
 }
 
 String _waypointLabel(int index, int count, RouteWaypoint waypoint) {

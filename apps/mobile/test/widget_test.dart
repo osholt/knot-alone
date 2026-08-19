@@ -179,7 +179,10 @@ void main() {
     },
   );
 
-  testWidgets('create voyage accepts a web-planner route code', (tester) async {
+  // Named for a web planner that does not exist for this app (#68). The code
+  // path is real - the relay serves plans by code - so the test stays and only
+  // its name changes.
+  testWidgets('create voyage accepts a shared passage code', (tester) async {
     final controller = await _controller();
     addTearDown(controller.dispose);
     _sharedRoutes.clearPending();
@@ -192,6 +195,10 @@ void main() {
 
     expect(find.byKey(const Key('planned-route-code-field')), findsOneWidget);
     expect(find.text('Planned route code (optional)'), findsOneWidget);
+    // Solo is the default (#68), and solo has no code to share, so this test's
+    // subject - the share-code handoff - needs crew chosen.
+    await tester.tap(find.text('With crew'));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('planned-route-code-field')),
       'AB12CD34',
@@ -220,8 +227,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('voyage-scope-selector')), findsOneWidget);
-    // The junction-handling choice went with the road surfaces; solo versus
-    // crew is the whole decision now.
+    // Solo is the default now (#68), so this reaches Create without touching the
+    // selector - which is the point of a solo-first app. The crew description
+    // appears only once crew is chosen.
+    expect(find.text(VoyageCoordinationMode.solo.description), findsOneWidget);
+    expect(find.text(VoyageCoordinationMode.crew.description), findsNothing);
+
+    await tester.tap(find.text('With crew'));
+    await tester.pumpAndSettle();
     expect(find.text(VoyageCoordinationMode.crew.description), findsOneWidget);
 
     await tester.tap(find.text('Solo'));
@@ -853,6 +866,10 @@ void main() {
     expect(find.byKey(const Key('set-aside-voyage-banner')), findsOneWidget);
 
     await tester.tap(find.text('New voyage'));
+    await tester.pumpAndSettle();
+    // Crew, because "Continue to voyage" is the share-code handoff and solo -
+    // the default since #68 - has no code to share.
+    await tester.tap(find.text('With crew'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.widgetWithText(FilledButton, 'Create voyage'),

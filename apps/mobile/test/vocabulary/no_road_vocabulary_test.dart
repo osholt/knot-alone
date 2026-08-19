@@ -44,6 +44,15 @@ void main() {
     // now because renaming by hand has missed them three times.
     r'\blead\b(?! time)': 'Skipper',
     r'\btec\b': 'Sweeper',
+    // Not a road word, which is why the first pass missed it: there is no Tide
+    // and Seek web planner for a route code to come from (#68).
+    r'\bweb planner\b': 'the relay, or nothing',
+    // "stop" is deliberately absent. A passage has marks and you pass them
+    // rather than stop at them, so the noun is wrong - but "Stop sharing",
+    // "location sharing stops" and "emergency stop" are all correct, and no
+    // regex separates the noun from the verb. The noun uses were fixed by hand
+    // in #68; a rule here would cry wolf on eighteen legitimate strings and get
+    // switched off.
   };
 
   /// Files whose road words are correct, each for a stated reason.
@@ -66,7 +75,8 @@ void main() {
     'lib/services/road_routing.dart':
         'the road routing engines themselves, unreachable and awaiting #31',
     'lib/domain/route_preferences.dart':
-        'road-only preferences still serialised into saved routes, awaiting #31',
+        'road-only preferences still serialised into saved routes, awaiting '
+        '#31; their doc also records the web-planner contract they came from',
     'lib/features/map/maneuver_symbol.dart':
         'turn-by-turn symbols, unreachable since a passage has no manoeuvres',
     'lib/features/map/maneuver_diagnostics.dart':

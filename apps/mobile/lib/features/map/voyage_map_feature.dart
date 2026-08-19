@@ -4655,7 +4655,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     }
   }
 
-  /// Loads a route prepared on the web planner. The plan code has no
+  /// Loads a passage published to the relay by its code. The plan code has no
   /// relationship to a live voyage or its credentials - this only fetches a
   /// GPX file through the same parse-and-activate pipeline as a manual
   /// import, exactly like [_importGpx] and [_importSharedGpx] above.
@@ -6036,7 +6036,7 @@ class _EmptyRoutePrompt extends StatelessWidget {
                         ),
                         TextButton(
                           onPressed: onLoadDemo,
-                          child: const Text('Use demo route'),
+                          child: const Text('Use the demo passage'),
                         ),
                       ],
                     ),

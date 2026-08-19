@@ -212,7 +212,7 @@ void main() {
 
     expect(find.text('Import GPX'), findsOneWidget);
     expect(find.text('Lay a course to a place'), findsOneWidget);
-    expect(find.text('Use demo route'), findsOneWidget);
+    expect(find.text('Use the demo passage'), findsOneWidget);
     expect(
       find.byKey(const Key('use-stored-route-empty-button')),
       findsOneWidget,

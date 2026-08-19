@@ -129,7 +129,7 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
                       controller: _stopControllers[index],
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
-                        labelText: 'Stop ${index + 1}',
+                        labelText: 'Mark ${index + 1}',
                         hintText: 'Place, postcode, or coordinates',
                         prefixIcon: const Icon(Icons.add_location_alt_outlined),
                       ),
@@ -140,7 +140,7 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
                     children: [
                       IconButton(
                         key: Key('move-route-stop-up-$index'),
-                        tooltip: 'Move stop earlier',
+                        tooltip: 'Move mark earlier',
                         onPressed: index == 0
                             ? null
                             : () => _moveStop(index, index - 1),
@@ -148,7 +148,7 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
                       ),
                       IconButton(
                         key: Key('move-route-stop-down-$index'),
-                        tooltip: 'Move stop later',
+                        tooltip: 'Move mark later',
                         onPressed: index == _stopControllers.length - 1
                             ? null
                             : () => _moveStop(index, index + 1),
@@ -156,7 +156,7 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
                       ),
                       IconButton(
                         key: Key('remove-route-stop-$index'),
-                        tooltip: 'Remove stop',
+                        tooltip: 'Remove mark',
                         onPressed: () => _removeStop(index),
                         icon: const Icon(Icons.delete_outline),
                       ),
@@ -170,7 +170,7 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
               key: const Key('add-route-stop'),
               onPressed: _stopControllers.length >= 8 ? null : _addStop,
               icon: const Icon(Icons.add),
-              label: const Text('Add an intermediate stop'),
+              label: const Text('Add an intermediate mark'),
             ),
             const SizedBox(height: 14),
             TextField(
