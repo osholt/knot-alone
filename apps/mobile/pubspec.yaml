@@ -39,11 +39,14 @@ dependencies:
   crypto: ^3.0.7
   file_selector: ^1.1.0
   flutter_map: ^8.3.1
-  flutter_secure_storage: ^10.3.1
+  flutter_secure_storage: ^11.0.0
   geolocator: ^14.0.3
   http: ^1.6.0
   latlong2: ^0.10.1
   maplibre_gl: ^0.26.0
+  # Pinned by the Flutter SDK: flutter_test depends on meta 1.18.0 exactly, so
+  # ^1.19.0 makes flutter_test unresolvable. Dependabot proposes the bump anyway
+  # (#4); it cannot be taken until the SDK moves.
   meta: ^1.18.0
   path: ^1.9.1
   path_provider: ^2.1.5
