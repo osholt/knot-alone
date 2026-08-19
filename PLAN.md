@@ -53,7 +53,9 @@ app's own name.
 | Instruments | COG, SOG, XTE, bearing and distance to the active mark, all dimming together once the fix is stale. Never verified against a real GNSS fix | #34 |
 | Onboarding | Sells crew coordination first on a solo-first app, and its crew-facing name field cannot be skipped | #49 |
 | Safety gates | No at-sea testing has happened at all | #10 |
-| Road leftovers | OSRM/Valhalla engines unreachable but present; road-only route preferences still in the UI | #31 |
+| Road leftovers | Valhalla, the engine dispatcher, the track matcher and the motorcycle cafe catalogue are gone — 5,500 lines. OSRM survives only as the manoeuvre parser the turn-guidance tests need | #31, #63 |
+| Turn-by-turn guidance | 2,350 lines that can never fire: a passage emits no manoeuvres. Needs a decision, not a deletion — a mark approach may still want "in 2 cables, alter to 072" | #63 |
+| Crew roles | `Marker` is the road role where a rider holds a junction; #3 removed junction markers and the role outlived them | #57 |
 
 ### The honest summary
 
@@ -394,6 +396,10 @@ the phases around it, and there will be more of it after every build.
 - [x] A solo sailor with no voyage was told to wait for the skipper's route,
       the wrong answer removed — #53 stays open for the right one
 - [ ] The `Marker` role outlived junction markers — #57
+- [x] The app talked like a motorcycle app on live screens, and the destination
+      planner offered inert road switches including "Avoid ferries" — #61
+- [x] The motorcycle router, engine dispatcher and track matcher deleted — #31
+- [x] The motorcycle cafe catalogue and its map pins deleted — #20
 
 **Build 23 (1.0.2)** carries all of the above. Nine of the eleven things in this
 phase were found by putting a build on a device rather than by reading the code,
