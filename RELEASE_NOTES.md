@@ -1,26 +1,35 @@
-Build 24. The big one is a manoeuvre list that finally means something at sea, and about 5,500 lines of motorcycle code gone from underneath it.
+Build 25. You can now sail the passage, not just plan it — and a fitness review found three places where the app was quietly telling you the wrong thing.
 
-You asked for a manoeuvre list appropriate to nautical navigation. Open the demo passage, review it, and tap "All alterations (3)":
+The one worth knowing about first. Importing a passage as a GPX with a <rte> element — how every plotter exports one — used to say: "Directions could not be built for this route. Re-import it to try again." That was false, and re-importing would have produced the same message forever. The passage was fine; it simply has no turn-by-turn, by design. Fixed.
 
-  Alter 22° to port onto 074°T          at Mid Solent, off Hamstead
-  FROM 096°T · TO RUN 2.7 NM · AT 5 KN 31 min · FROM START 2.7 NM
+Under way, the banner now reads the passage instead of saying nothing useful:
 
-  Alter 15° to port onto 059°T          at Off Salt Mead
-  Alter 42° to starboard onto 101°T     at Gurnard, Cowes approach
+  Leg 1 of 3 to Hamstead
+  3.4 NM to run · then alter 26° to port onto 068°T
 
-The old list was built from road steps — turn left, third exit, get in lane — and had been permanently empty since passages stopped being road routes. This one is derived from the marks you chose, so it needs no connection and cannot go stale.
+  Approaching Hamstead
+  6 cables to run · then alter 26° to port onto 068°T
 
-Three judgements in it I would like you to check:
-- An alteration under 5° does not become an instruction. A helm cannot hold a course that finely. Those marks stay in the leg table with their exact course, and the screen tells you how many were left out.
-- It will not say which side to leave a mark. That needs buoyage the app does not have, and guessing from geometry would be inventing information. The screen says so.
-- 60° is where an alteration gets flagged for a second look.
+  Arriving at Cowes
+  5 cables to run · last mark of the passage
 
-Also worth trying:
-- "Where are you bound?" used to offer a routing style of "Twisty (up to 50% longer)" and switches for motorways, tolls and — on a sailing app — ferries. Every one of them did nothing. The whole panel is gone, and the sheet now says what it does before you tap: one direct leg, unchecked against land, depth or traffic.
-- Creating a voyage now defaults to Solo rather than Group.
-- The review screen calls its marks marks. It used to say "Stop 1", "Stop 2" two sections above the manoeuvre list that correctly called the same positions marks.
-- Settings said "RIDER PROFILE". The roster offered "Ask to be TEC". The map counted "3 RIDERS". All gone, along with about thirty other strings a sailor could read, and a source scan now fails the build if any of them come back.
+And it speaks. At a mile off a mark, and again at two cables: "6 cables to Hamstead, then alter 26 degrees to port onto zero six eight." The speech stack has been complete since before the rename and had never had a phrase to say, because it was fed from a road manoeuvre list that is always empty on a passage.
 
-Still deliberately absent: tides, tidal streams, charted depth, wrecks and obstructions. The free UKHO data may carry a field-of-use restriction that blocks a navigation app and that question is unanswered. With no tide, a passage this plans is a passage in still water. Not a substitute for an official chart.
+Courses are spoken digit by digit — "zero six eight", never "sixty eight", which through wind noise could be 068 or a careless 268. Distances are cables inside a mile, never with a decimal.
 
-Still unverified by me, and the two things I would most value your eyes on: the iPad landscape layout, where the chart sits beside the leg table — pinned by tests but never seen by me on a real device — and the navigation instruments under way, which have never had a live GNSS fix.
+Three things it deliberately will not do:
+- Off track, it tells you which side and gives the leg's own course. It will not compute a course to steer back — that would be the app choosing a course with no chart, no depth and no tide under it.
+- A stale fix outranks an approaching mark. Two cables off on a three-minute-old position, the mark is not the thing to say.
+- No prompt says turn, steer, or head for. "Alter 26 degrees to port" reports the plan you made, at the moment it matters.
+
+Also: there were two manoeuvre lists, and the one the map menu opened was the empty road one — gated on road manoeuvres, so the menu item never appeared at all. One list now, and it is reachable.
+
+Worth trying on this build:
+- Load the demo passage, start the voyage, and watch the banner as you move. It changes at a mile and again at two cables.
+- Turn the voice on. It should say the mark and the alteration once, not once per fix.
+- The ⋮ menu on the map now offers "All alterations on this passage".
+- Try importing a passage from your own plotter, if you have one. That is the path that was broken and I have no real file to test against.
+
+Still deliberately absent: tides, tidal streams, charted depth, wrecks. The UKHO licence question is unanswered, so a passage this plans is still a passage in still water. Not a substitute for an official chart.
+
+Two things I could not verify and would value your eyes on: the under-way banner on a real device with a real fix — the simulator has no GNSS and I could not get a voyage started there — and the iPad landscape layout, which is pinned by tests but has never been seen on an iPad.
