@@ -4,6 +4,10 @@
 source of truth. Derivative iOS and Android sizes are generated from it and
 checked into their platform asset folders.
 
+`tide-and-seek-google-play-icon.png` is the checked-in 512px opaque derivative
+for the Google Play store listing. Regenerate it from the master rather than
+editing it independently.
+
 ## The mark
 
 A masthead sloop low and left, a flybridge motor cruiser high and right, and
@@ -86,6 +90,9 @@ for d, px in {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96,
     subprocess.run(['magick', MASTER, '-resize', f'{px}x{px}',
                     f'android/app/src/main/res/mipmap-{d}/ic_launcher.png'],
                    check=True)
+subprocess.run(['magick', MASTER, '-resize', '512x512', '-strip',
+                'assets/branding/tide-and-seek-google-play-icon.png'],
+               check=True)
 PY
 ```
 
