@@ -173,7 +173,7 @@ void main() {
       ],
     );
 
-    test('a followable line without prompts says to follow the line', () {
+    test('a followable line points at what the passage does have', () {
       final assessment = planner.assess(
         route: routeWith(paths: const [followableLine]),
         position: const GeoPoint(latitude: 0, longitude: 0),
@@ -187,8 +187,10 @@ void main() {
       );
       expect(
         assessment.message,
-        contains('follow the line'),
-        reason: 'the route is usable; only the prompts are missing',
+        contains('leg table'),
+        reason:
+            'the passage is usable and its courses are one tap away; naming '
+            'the absence of turn prompts undersold that (#72)',
       );
     });
 
@@ -1023,9 +1025,11 @@ void _guidanceStateTests() {
       expect(assessment.state, NavigationGuidanceState.active);
     });
 
-    test('an imported track says the line is followable', () {
-      // A GPX track is a line without instructions. Nothing failed, and the
-      // sailor can voyage it.
+    // #72. These two used to give different answers, and one of them was a lie.
+    // A `route`-kind path with no manoeuvres meant "road routing failed" when a
+    // road router existed; since #19 it means "this is a passage". Both kinds
+    // are now reported the same way, because they are the same thing.
+    test('an imported track is followable, and says so', () {
       final assessment = assess(
         _routeWith(
           paths: const [RoutePath(kind: RoutePathKind.track, points: _line)],
@@ -1033,34 +1037,57 @@ void _guidanceStateTests() {
       );
 
       expect(assessment.state, NavigationGuidanceState.noManeuvers);
-      expect(assessment.message, contains('follow the line'));
+      expect(assessment.message, contains('leg table'));
     });
 
-    test('a route whose routing failed says so instead', () {
-      // `RouteGeometryEnricher` turns a `route` path into a `track` when the
-      // engine answers and leaves it a `route` when the request fails. The
-      // warning it returns is gone by riding time; this is what survives.
+    test('a rte-kind passage is not reported as a failure', () {
+      // The defect: every plotter exports a passage as `<rte>`, which imports as
+      // a `route` path, which took the failure branch. A sailor was told their
+      // good passage could not be routed and to re-import it - advice that
+      // produced the identical message every time.
       final assessment = assess(
         _routeWith(
           paths: const [RoutePath(kind: RoutePathKind.route, points: _line)],
         ),
       );
 
-      expect(assessment.state, NavigationGuidanceState.routingUnfinished);
-      expect(assessment.message, contains('could not be built'));
-      // Never the imported-track wording, which would tell a sailor nothing is
-      // wrong when something is.
-      expect(assessment.message, isNot(contains('follow the line')));
+      expect(assessment.state, NavigationGuidanceState.noManeuvers);
+      expect(assessment.message, contains('leg table'));
+      expect(assessment.message, isNot(contains('could not be built')));
+      expect(assessment.message, isNot(contains('Re-import')));
     });
 
-    test('the three states never share a message', () {
+    test('both path kinds are told exactly the same thing', () {
+      String messageFor(RoutePathKind kind) => assess(
+        _routeWith(
+          paths: [RoutePath(kind: kind, points: _line)],
+        ),
+      ).message;
+
+      expect(
+        messageFor(RoutePathKind.route),
+        messageFor(RoutePathKind.track),
+        reason: 'the path kind decides nothing about a passage now',
+      );
+    });
+
+    test('the remaining states never share a message', () {
       final messages = {
         NavigationGuidancePlanner.noTurnInstructionsMessage,
         NavigationGuidancePlanner.noRouteLineMessage,
-        NavigationGuidancePlanner.routingUnfinishedMessage,
       };
 
-      expect(messages, hasLength(3));
+      expect(messages, hasLength(2));
+    });
+
+    test('nothing tells a sailor to re-import a passage', () {
+      // The whole point. Re-importing could never have helped.
+      for (final message in [
+        NavigationGuidancePlanner.noTurnInstructionsMessage,
+        NavigationGuidancePlanner.noRouteLineMessage,
+      ]) {
+        expect(message.toLowerCase(), isNot(contains('re-import')));
+      }
     });
 
     test('a route with no line at all is a third thing again', () {

@@ -8049,15 +8049,11 @@ class _NavigationGuidanceStatusBanner extends StatelessWidget {
         Icons.flag_rounded,
         const Color(0xFF72D69C),
       ),
+      // A mode, not a fault. Every passage is here, and the amber warning icon
+      // this used to draw read as something being wrong (#72).
       NavigationGuidanceState.noManeuvers => (
-        Icons.directions_off_rounded,
-        const Color(0xFFFFC857),
-      ),
-      // Read as a fault rather than a mode: this route was meant to have
-      // directions and does not, which is something the sailor can act on.
-      NavigationGuidanceState.routingUnfinished => (
-        Icons.wrong_location_rounded,
-        const Color(0xFFFF8A65),
+        Icons.timeline_rounded,
+        const Color(0xFF68A9FF),
       ),
       NavigationGuidanceState.noRoute || NavigationGuidanceState.active => (
         Icons.navigation_rounded,

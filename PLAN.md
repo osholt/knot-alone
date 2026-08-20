@@ -405,6 +405,28 @@ the phases around it, and there will be more of it after every build.
 phase were found by putting a build on a device rather than by reading the code,
 which is the argument for doing it early and often.
 
+### Phase 4b — Make the passage coherent
+
+The fitness review of build 24 found the app half-joined-up: a passage can be
+planned in detail and then not sailed. The plan, the instruments and the voice
+all exist and none of them speak to each other. This phase joins them, and it is
+what turns a chart-table aid into something usable under way.
+
+- [x] Stop reporting a correct passage as broken — #72
+- [ ] `PassageGuidance`: one service reading the plan, the alterations and the
+      live fix, and answering "what leg am I on, what is next, how far, and what
+      does the plan ask for there" — #63
+- [ ] The under-way banner reads it, replacing the road guidance planner
+- [ ] Spoken prompts read it: a mark at 1 NM and 2 cables, cross-track beyond a
+      threshold, a stale fix — #73
+- [ ] Retire what that leaves dead: `OsrmRoadRoutingService`, the roundabout and
+      lane machinery, `roundabout_exit_bucket.dart`,
+      `assets/mini_roundabouts.geojson`, `tools/discovery` — the rest of #31
+
+The order matters. Each step is useless without the one before it, and the last
+cannot happen until the first four have taken over everything the road stack
+was still feeding.
+
 ### Phase 5 — Evidence before anyone sails with it
 
 - [ ] Security and privacy review, log redaction, retention — #10

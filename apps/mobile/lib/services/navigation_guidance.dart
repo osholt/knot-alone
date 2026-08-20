@@ -194,15 +194,17 @@ class NavigationGuidance {
 enum NavigationGuidanceState {
   noRoute,
   waitingForLocation,
-  noManeuvers,
 
-  /// The route was meant to be routed and is not.
+  /// A passage carries no manoeuvres, and that is correct.
   ///
-  /// Distinct from [noManeuvers] because the two need different things from a
-  /// sailor: an imported track without prompts is working as intended and can be
-  /// followed, while this one lost its directions to a failure and can be made
-  /// to work again (#303).
-  routingUnfinished,
+  /// `routingUnfinished` sat beside this until #72. It existed because a
+  /// `RoutePathKind.route` path with no manoeuvres used to mean one thing only:
+  /// a road-routing request that failed. #19 deleted the router, so an empty
+  /// manoeuvre list is now the normal state of every passage - and the old
+  /// reading told a sailor whose GPX carried a `<rte>` that their perfectly good
+  /// passage was broken, and to re-import it, which produced the same message
+  /// forever.
+  noManeuvers,
   offRoute,
   active,
   complete,
@@ -310,8 +312,15 @@ class NavigationGuidancePlanner {
   /// where the original can be preserved and compared safely (#325). This
   /// riding-state message stays concise and truthful for someone who chose to
   /// follow the original line.
+  /// What a passage has instead of turn prompts.
+  ///
+  /// Points at what exists rather than naming what does not. A passage carries
+  /// legs, courses and alterations, all of which are one tap away, and the
+  /// previous wording - "No turn prompts for this route" - both used a road word
+  /// and undersold the surface it was standing on (#72).
   static const noTurnInstructionsMessage =
-      'No turn prompts for this route — follow the line on the map.';
+      'Following the passage line. Courses and alterations are in the leg '
+      'table.';
 
   /// Shown when there is no line to follow at all, which is a different problem:
   /// the sailor has nothing, rather than something without prompts. These two
@@ -320,21 +329,15 @@ class NavigationGuidancePlanner {
   static const noRouteLineMessage =
       'This route has no path to follow. Choose or import it again.';
 
-  /// Shown when routing was meant to happen for this route and did not.
-  ///
-  /// `RouteGeometryEnricher` converts a `RoutePathKind.route` path into a
-  /// `track` when the routing engine answers, and leaves it a `route` when the
-  /// request fails. A surviving `route` path with no manoeuvres is therefore a
-  /// routing failure that outlived the import it happened during: the enricher
-  /// returns a warning, but nothing carried it onto the route, so by riding
-  /// time the sailor saw the same words as an imported track (#303).
-  ///
-  /// They are not the same. One is working as intended and can be followed; the
-  /// other can be made to work again, and only this wording tells a sailor which
-  /// they have.
-  static const routingUnfinishedMessage =
-      'Directions could not be built for this route — the line is the raw '
-      'import. Re-import it to try again.';
+  // `routingUnfinishedMessage` was here (#72). It read:
+  //
+  //   "Directions could not be built for this route — the line is the raw
+  //    import. Re-import it to try again."
+  //
+  // Both halves were false on every passage. A GPX carrying a `<rte>` element -
+  // how every plotter exports a passage - took this branch, and re-importing
+  // produced the identical message, because the absence it was reading is by
+  // design since #19. The advice could not succeed.
 
   NavigationGuidance? plan({
     required ImportedRoute? route,
@@ -367,18 +370,12 @@ class NavigationGuidancePlanner {
       );
     }
     if (route.maneuvers.isEmpty) {
-      // A path still marked `route` was never turned into road geometry, which
-      // only happens when the routing request for it failed.
-      final unrouted = route.paths.any(
-        (path) => path.kind == RoutePathKind.route && path.points.length >= 2,
-      );
-      return NavigationGuidanceAssessment(
-        state: unrouted
-            ? NavigationGuidanceState.routingUnfinished
-            : NavigationGuidanceState.noManeuvers,
-        message: unrouted
-            ? routingUnfinishedMessage
-            : noTurnInstructionsMessage,
+      // Always the normal case now. A passage has no manoeuvres, so there is
+      // nothing here to distinguish and nothing to report as a failure (#72).
+      // The path kind used to decide between two messages; it decides nothing.
+      return const NavigationGuidanceAssessment(
+        state: NavigationGuidanceState.noManeuvers,
+        message: noTurnInstructionsMessage,
       );
     }
     final path = _primaryPath(route.paths);
