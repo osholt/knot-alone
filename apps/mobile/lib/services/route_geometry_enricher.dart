@@ -1,5 +1,5 @@
 import '../domain/imported_route.dart';
-import 'road_routing.dart';
+import 'passage_planning_service.dart';
 
 class RouteGeometryEnrichment {
   const RouteGeometryEnrichment({
@@ -19,16 +19,15 @@ class RouteGeometryEnrichment {
 
 class RouteGeometryEnricher {
   const RouteGeometryEnricher({
-    required this.routingService,
+    required this.passagePlanner,
     this.maximumViaPoints = 50,
   });
 
-  final RoadRoutingService routingService;
+  final PassagePlanningService passagePlanner;
   final int maximumViaPoints;
 
   Future<RouteGeometryEnrichment> enrich(ImportedRoute route) async {
     final paths = <RoutePath>[];
-    final maneuvers = <RouteManeuver>[...route.maneuvers];
     var attempted = false;
     var snapped = 0;
     String? warning;
@@ -40,12 +39,8 @@ class RouteGeometryEnricher {
       }
       attempted = true;
       try {
-        final result = await routingService.routeThrough(
+        final result = await passagePlanner.planThrough(
           _sample(path.points, maximumViaPoints),
-          // A route that recorded what it was planned for is re-snapped for the
-          // same thing, so a shared route does not quietly gain a motorway when
-          // it reaches a second sailor's phone (#182).
-          preferences: route.preferences,
         );
         paths.add(
           RoutePath(
@@ -54,23 +49,21 @@ class RouteGeometryEnricher {
             points: result.points,
           ),
         );
-        maneuvers.addAll(result.maneuvers);
         snapped += 1;
       } on Object catch (error) {
         paths.add(path);
-        warning ??= 'Could not match every GPX route point to roads: $error';
+        warning ??= 'Could not lay every GPX passage leg: $error';
       }
     }
 
     if (route.paths.isEmpty && route.waypoints.length >= 2) {
       attempted = true;
       try {
-        final result = await routingService.routeThrough(
+        final result = await passagePlanner.planThrough(
           _sample(
             route.waypoints.map((waypoint) => waypoint.point).toList(),
             maximumViaPoints,
           ),
-          preferences: route.preferences,
         );
         paths.add(
           RoutePath(
@@ -79,10 +72,9 @@ class RouteGeometryEnricher {
             points: result.points,
           ),
         );
-        maneuvers.addAll(result.maneuvers);
         snapped += 1;
       } on Object catch (error) {
-        warning = 'Could not match GPX waypoints to roads: $error';
+        warning = 'Could not lay the GPX waypoint passage: $error';
       }
     }
 
@@ -103,11 +95,9 @@ class RouteGeometryEnricher {
         sourceFileName: route.sourceFileName,
         paths: List.unmodifiable(paths),
         waypoints: route.waypoints,
-        maneuvers: List.unmodifiable(maneuvers),
         // Recalculating geometry must not silently un-reject a marking
         // position a person already rejected for this route (#179).
         markerReview: route.markerReview,
-        preferences: route.preferences,
         plannedDuration: route.plannedDuration,
       ),
       attempted: attempted,

@@ -1,23 +1,18 @@
 /// What the app is allowed to say out loud (#415).
 ///
-/// One switch was not enough. A sailor off route does not want turn-by-turn for a
-/// route they are not on, and a sailor who has silenced the chatter still wants to
-/// be told about a speed camera — so "spoken guidance on or off" cannot express
-/// what is actually wanted.
+/// One switch is not enough: a sailor may silence passage prompts while keeping
+/// stale-position and crew-safety warnings, or may explicitly choose silence.
 ///
 /// The distinction is **navigation against safety**, and it is drawn here rather
 /// than at each call site so it cannot drift: a new thing to say has to declare
 /// which class it belongs to, and the answer is in one place where it can be
 /// argued with.
 enum SpokenAudioMode {
-  /// Everything: turns, distances, and warnings.
+  /// Everything: passage prompts, distances, and warnings.
   everything,
 
-  /// Warnings only. Turn-by-turn is silent; a camera, a hazard or a group
-  /// safety alert is not.
-  ///
-  /// This is the mode #415 was asked for, and the one #430's camera warning has
-  /// to survive.
+  /// Warnings only. Ordinary passage prompts are silent; instrument and group
+  /// safety warnings are not.
   alertsOnly,
 
   /// Nothing at all, including warnings. A sailor who chooses this has chosen it.
@@ -26,11 +21,11 @@ enum SpokenAudioMode {
 
 /// The class a thing to say belongs to.
 enum SpokenAudioClass {
-  /// Turn-by-turn: where to go. Useful, and never urgent.
+  /// Passage guidance: where the next mark and alteration are.
   navigation,
 
-  /// Something the sailor needs to know about the road or the group, whether or
-  /// not they asked for directions. A camera, a hazard, a sailor in trouble.
+  /// Something the sailor needs to know regardless of whether they asked for
+  /// passage guidance: a stale fix or a sailor in trouble.
   safety,
 }
 
@@ -45,22 +40,6 @@ bool spokenAudioAllows(SpokenAudioMode mode, SpokenAudioClass audioClass) =>
       (SpokenAudioMode.silent, _) => false,
       (SpokenAudioMode.alertsOnly, SpokenAudioClass.safety) => true,
       (SpokenAudioMode.alertsOnly, SpokenAudioClass.navigation) => false,
-    };
-
-/// The mode a sailor lands in when they go off route, unless they have chosen
-/// silence.
-///
-/// Turn-by-turn for a route the sailor is not on is worse than nothing: it names
-/// junctions that are not coming. Warnings still apply, because a camera does not
-/// care whether the sailor is on the planned route.
-///
-/// A sailor who chose [SpokenAudioMode.silent] stays there. The mapped speed limit
-/// follows the same rule for a sailor who turned it off, and for the same reason:
-/// an explicit choice outranks an automatic one.
-SpokenAudioMode spokenAudioModeOffRoute(SpokenAudioMode chosen) =>
-    switch (chosen) {
-      SpokenAudioMode.silent => SpokenAudioMode.silent,
-      _ => SpokenAudioMode.alertsOnly,
     };
 
 /// What the control on the map says it will do next, so a sailor pressing it by

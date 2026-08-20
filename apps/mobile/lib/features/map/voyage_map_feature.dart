@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
@@ -18,8 +19,11 @@ import '../../data/json_file_completed_voyage_store.dart';
 import '../../data/json_file_recorded_route_store.dart';
 import '../../data/json_file_route_store.dart';
 import '../../domain/completed_voyage_store.dart';
+import '../../domain/ais_target.dart';
 import '../../domain/distance_unit.dart';
 import '../../domain/imported_route.dart';
+import '../../domain/marine_data.dart';
+import '../../domain/mob_state.dart';
 import '../../domain/quick_message.dart';
 import '../../domain/recorded_route_store.dart';
 import '../../domain/voyage_role.dart';
@@ -27,6 +31,7 @@ import '../../domain/sailor_color.dart';
 import '../../domain/route_store.dart';
 import '../../internet/plan_directory.dart';
 import '../../services/basemap_configuration.dart';
+import '../../services/ais_nmea.dart';
 import '../../services/basemap_status.dart';
 import '../../services/demo_route_loader.dart';
 import 'chart_provenance_sheet.dart';
@@ -44,7 +49,7 @@ import '../../services/marine_tile_layer.dart';
 import '../../services/maplibre_offline_manager.dart';
 import '../../services/map_camera_command.dart';
 import '../../services/measurement_formatter.dart';
-import '../../services/navigation_guidance.dart';
+import '../../services/destination_planning.dart';
 import '../../services/stopped_speed_reading.dart';
 import '../../services/navigation_export.dart';
 import '../../services/navigation_camera.dart';
@@ -52,7 +57,7 @@ import '../../services/navigation_heading.dart';
 import '../../services/offline_tile_cache.dart';
 import '../../services/received_quick_message.dart';
 import '../../services/sailor_trail_recorder.dart';
-import '../../services/road_routing.dart';
+import '../../services/passage_planning_service.dart';
 import '../../services/route_geometry_enricher.dart';
 import '../../services/route_importer.dart';
 import '../../services/route_journey_progress.dart';
@@ -62,14 +67,12 @@ import '../../services/stored_route_library.dart';
 import '../../services/trail_direction_arrows.dart';
 import 'destination_route_sheet.dart';
 import 'map_camera_guard.dart';
-import 'maneuver_symbol.dart';
 import 'group_mini_map_framing.dart';
 import 'vessel_icon.dart';
 import 'navigation_export_sheet.dart';
 import 'route_review_screen.dart';
 import 'route_progress_panel.dart';
 import 'route_trail_style.dart';
-import 'smooth_countdown.dart';
 import 'stored_route_picker.dart';
 import 'marine_glyphs.dart';
 import '../../services/passage_planning.dart';
@@ -82,6 +85,11 @@ import '../../services/navigation_instruments.dart';
 import 'navigation_instrument_panel.dart';
 import '../../services/marine_forecast.dart';
 import 'marine_forecast_panel.dart';
+import '../../services/harmonic_tide_provider.dart';
+import 'tide_prediction_panel.dart';
+import '../../domain/wind_field.dart';
+import '../../services/open_meteo_wind_field.dart';
+import 'wind_field_panel.dart';
 
 @visibleForTesting
 GroupMiniMapRenderer groupMiniMapRenderer({
@@ -198,12 +206,14 @@ class VoyageMapFeature extends StatefulWidget {
     this.voyagePaused = false,
     this.voyageHasNoSkipper = false,
     this.voyageStarted = false,
+    this.mobState = const MobState(),
+    this.onActivateMob,
+    this.onResolveMob,
     this.markerFeaturesEnabled = true,
     this.onLeaveVoyage,
     this.onOpenVoyageMenu,
     this.onRouteChanged,
     this.onRouteCommitted,
-    this.onNavigationGuidanceChanged,
     this.onPassageGuidanceChanged,
     this.onNavigationViewportChanged,
     this.onMapStyleResolved,
@@ -228,6 +238,7 @@ class VoyageMapFeature extends StatefulWidget {
     this.localSailorSymbol = sailorSymbolDefault,
     this.localDisplayName = 'You',
     this.localBadgeColor = const Color(0xFF2F80ED),
+    this.aisTargetSource,
   });
 
   factory VoyageMapFeature.fromEnvironment({
@@ -261,12 +272,14 @@ class VoyageMapFeature extends StatefulWidget {
     bool voyagePaused = false,
     bool voyageHasNoSkipper = false,
     bool voyageStarted = false,
+    MobState mobState = const MobState(),
+    Future<bool> Function(MobFix fix)? onActivateMob,
+    Future<bool> Function(MobResolution resolution)? onResolveMob,
     bool markerFeaturesEnabled = true,
     Future<void> Function()? onLeaveVoyage,
     Future<void> Function()? onOpenVoyageMenu,
     ValueChanged<ImportedRoute?>? onRouteChanged,
     ValueChanged<ImportedRoute?>? onRouteCommitted,
-    ValueChanged<NavigationGuidance?>? onNavigationGuidanceChanged,
     ValueChanged<PassageGuidance?>? onPassageGuidanceChanged,
     ValueChanged<NavigationCameraViewport>? onNavigationViewportChanged,
     ValueChanged<String>? onMapStyleResolved,
@@ -288,6 +301,7 @@ class VoyageMapFeature extends StatefulWidget {
     SailorSymbol localSailorSymbol = sailorSymbolDefault,
     String localDisplayName = 'You',
     Color localBadgeColor = const Color(0xFF2F80ED),
+    AisTargetSource? aisTargetSource,
   }) => VoyageMapFeature(
     key: key,
     currentPosition: currentPosition,
@@ -318,12 +332,14 @@ class VoyageMapFeature extends StatefulWidget {
     voyagePaused: voyagePaused,
     voyageHasNoSkipper: voyageHasNoSkipper,
     voyageStarted: voyageStarted,
+    mobState: mobState,
+    onActivateMob: onActivateMob,
+    onResolveMob: onResolveMob,
     markerFeaturesEnabled: markerFeaturesEnabled,
     onLeaveVoyage: onLeaveVoyage,
     onOpenVoyageMenu: onOpenVoyageMenu,
     onRouteChanged: onRouteChanged,
     onRouteCommitted: onRouteCommitted,
-    onNavigationGuidanceChanged: onNavigationGuidanceChanged,
     onPassageGuidanceChanged: onPassageGuidanceChanged,
     onNavigationViewportChanged: onNavigationViewportChanged,
     onMapStyleResolved: onMapStyleResolved,
@@ -347,6 +363,7 @@ class VoyageMapFeature extends StatefulWidget {
     localSailorSymbol: localSailorSymbol,
     localDisplayName: localDisplayName,
     localBadgeColor: localBadgeColor,
+    aisTargetSource: aisTargetSource,
   );
 
   final ValueListenable<GeoPoint?>? currentPosition;
@@ -412,18 +429,14 @@ class VoyageMapFeature extends StatefulWidget {
   final bool voyagePaused;
   final bool voyageHasNoSkipper;
   final bool voyageStarted;
+  final MobState mobState;
+  final Future<bool> Function(MobFix fix)? onActivateMob;
+  final Future<bool> Function(MobResolution resolution)? onResolveMob;
   final bool markerFeaturesEnabled;
   final Future<void> Function()? onLeaveVoyage;
   final Future<void> Function()? onOpenVoyageMenu;
   final ValueChanged<ImportedRoute?>? onRouteChanged;
   final ValueChanged<ImportedRoute?>? onRouteCommitted;
-  final ValueChanged<NavigationGuidance?>? onNavigationGuidanceChanged;
-
-  /// The passage read against the current fix, for the voice (#73).
-  ///
-  /// Separate from `onNavigationGuidanceChanged` rather than replacing it,
-  /// because they carry different things: that one carries a road manoeuvre,
-  /// which a passage never has, and this one carries prompts.
   final ValueChanged<PassageGuidance?>? onPassageGuidanceChanged;
   final ValueChanged<NavigationCameraViewport>? onNavigationViewportChanged;
   final ValueChanged<String>? onMapStyleResolved;
@@ -459,6 +472,7 @@ class VoyageMapFeature extends StatefulWidget {
   final SailorSymbol localSailorSymbol;
   final String localDisplayName;
   final Color localBadgeColor;
+  final AisTargetSource? aisTargetSource;
 
   @override
   State<VoyageMapFeature> createState() => _VoyageMapFeatureState();
@@ -466,16 +480,22 @@ class VoyageMapFeature extends StatefulWidget {
 
 class _VoyageMapFeatureState extends State<VoyageMapFeature> {
   late Future<_MapDependencies> _dependencies;
+  late AisTargetSource? _aisTargetSource;
 
   @override
   void initState() {
     super.initState();
+    _aisTargetSource = widget.aisTargetSource ?? _environmentAisTargetSource();
     _dependencies = _openDependencies();
   }
 
   @override
   void didUpdateWidget(VoyageMapFeature oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.aisTargetSource, widget.aisTargetSource) &&
+        widget.aisTargetSource != null) {
+      _aisTargetSource = widget.aisTargetSource;
+    }
     if (!identical(oldWidget.routeStore, widget.routeStore) ||
         !identical(oldWidget.offlineTileCache, widget.offlineTileCache) ||
         oldWidget.mapStyleString != widget.mapStyleString ||
@@ -534,6 +554,13 @@ class _VoyageMapFeatureState extends State<VoyageMapFeature> {
     } finally {
       styleRepository.dispose();
     }
+  }
+
+  static AisTargetSource? _environmentAisTargetSource() {
+    final configuration = AisNmeaTcpConfiguration.fromEnvironment();
+    return configuration == null
+        ? null
+        : NmeaTcpAisTargetSource(configuration: configuration);
   }
 
   @override
@@ -595,6 +622,9 @@ class _VoyageMapFeatureState extends State<VoyageMapFeature> {
         voyagePaused: widget.voyagePaused,
         voyageHasNoSkipper: widget.voyageHasNoSkipper,
         voyageStarted: widget.voyageStarted,
+        mobState: widget.mobState,
+        onActivateMob: widget.onActivateMob,
+        onResolveMob: widget.onResolveMob,
         markerFeaturesEnabled: widget.markerFeaturesEnabled,
         onLeaveVoyage: widget.onLeaveVoyage,
         onOpenVoyageMenu: widget.onOpenVoyageMenu,
@@ -602,7 +632,6 @@ class _VoyageMapFeatureState extends State<VoyageMapFeature> {
         inVoyage: widget.inVoyage,
         onRouteChanged: widget.onRouteChanged,
         onRouteCommitted: widget.onRouteCommitted,
-        onNavigationGuidanceChanged: widget.onNavigationGuidanceChanged,
         onPassageGuidanceChanged: widget.onPassageGuidanceChanged,
         onNavigationViewportChanged: widget.onNavigationViewportChanged,
         changeRouteRequestToken: widget.changeRouteRequestToken,
@@ -617,6 +646,7 @@ class _VoyageMapFeatureState extends State<VoyageMapFeature> {
         localSailorSymbol: widget.localSailorSymbol,
         localDisplayName: widget.localDisplayName,
         localBadgeColor: widget.localBadgeColor,
+        aisTargetSource: _aisTargetSource,
       );
     },
   );
@@ -681,6 +711,9 @@ class VoyageMapScreen extends StatefulWidget {
     // embedder says otherwise. VoyageMapFeature always passes the real lifecycle
     // value, including false during assembly.
     this.voyageStarted = true,
+    this.mobState = const MobState(),
+    this.onActivateMob,
+    this.onResolveMob,
     this.markerFeaturesEnabled = true,
     this.onLeaveVoyage,
     this.onOpenVoyageMenu,
@@ -688,7 +721,6 @@ class VoyageMapScreen extends StatefulWidget {
     this.inVoyage = true,
     this.onRouteChanged,
     this.onRouteCommitted,
-    this.onNavigationGuidanceChanged,
     this.onPassageGuidanceChanged,
     this.onNavigationViewportChanged,
     this.changeRouteRequestToken,
@@ -698,7 +730,7 @@ class VoyageMapScreen extends StatefulWidget {
     this.acquireCurrentPosition,
     this.navigationExportCoordinator,
     this.destinationRoutePlanner,
-    this.roadRoutingService,
+    this.passagePlanner,
     this.routeGeometryEnricher,
     this.demoRouteLoader,
     this.recordedRouteStore,
@@ -712,6 +744,7 @@ class VoyageMapScreen extends StatefulWidget {
     this.localSailorSymbol = sailorSymbolDefault,
     this.localDisplayName = 'You',
     this.localBadgeColor = const Color(0xFF2F80ED),
+    this.aisTargetSource,
   });
 
   final RouteStore routeStore;
@@ -784,6 +817,9 @@ class VoyageMapScreen extends StatefulWidget {
   final bool voyagePaused;
   final bool voyageHasNoSkipper;
   final bool voyageStarted;
+  final MobState mobState;
+  final Future<bool> Function(MobFix fix)? onActivateMob;
+  final Future<bool> Function(MobResolution resolution)? onResolveMob;
   final bool markerFeaturesEnabled;
   final Future<void> Function()? onLeaveVoyage;
   final Future<void> Function()? onOpenVoyageMenu;
@@ -791,13 +827,6 @@ class VoyageMapScreen extends StatefulWidget {
   final bool inVoyage;
   final ValueChanged<ImportedRoute?>? onRouteChanged;
   final ValueChanged<ImportedRoute?>? onRouteCommitted;
-  final ValueChanged<NavigationGuidance?>? onNavigationGuidanceChanged;
-
-  /// The passage read against the current fix, for the voice (#73).
-  ///
-  /// Separate from `onNavigationGuidanceChanged` rather than replacing it,
-  /// because they carry different things: that one carries a road manoeuvre,
-  /// which a passage never has, and this one carries prompts.
   final ValueChanged<PassageGuidance?>? onPassageGuidanceChanged;
   final ValueChanged<NavigationCameraViewport>? onNavigationViewportChanged;
   final Object? changeRouteRequestToken;
@@ -807,7 +836,7 @@ class VoyageMapScreen extends StatefulWidget {
   final Future<GeoPoint?> Function()? acquireCurrentPosition;
   final NavigationExportCoordinator? navigationExportCoordinator;
   final DestinationRoutePlanner? destinationRoutePlanner;
-  final RoadRoutingService? roadRoutingService;
+  final PassagePlanningService? passagePlanner;
   final RouteGeometryEnricher? routeGeometryEnricher;
   final Future<ImportedRoute> Function()? demoRouteLoader;
 
@@ -834,6 +863,7 @@ class VoyageMapScreen extends StatefulWidget {
   final SailorSymbol localSailorSymbol;
   final String localDisplayName;
   final Color localBadgeColor;
+  final AisTargetSource? aisTargetSource;
 
   @override
   State<VoyageMapScreen> createState() => _VoyageMapScreenState();
@@ -850,6 +880,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   static const _waypointSource = 'tide-and-seek-waypoints';
   static const _positionSource = 'tide-and-seek-position';
   static const _overlaySource = 'tide-and-seek-overlays';
+  static const _mobSource = 'tide-and-seek-mob';
+  static const _aisMapSource = 'tide-and-seek-ais-targets';
   static const _trailDirectionArrowImage =
       'tide-and-seek-trail-direction-arrow';
 
@@ -859,27 +891,17 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   /// the group's trails the same room they had.
   static const _plannedRouteArrowReserve = 120;
   static const _trailDirectionArrowSampler = TrailDirectionArrowSampler();
-  static const _navigationGuidancePlanner = NavigationGuidancePlanner();
-
   final MapControllerImpl _mapController = MapControllerImpl();
   final RouteProgressTracker _routeProgressTracker = RouteProgressTracker();
   final RouteJourneyProgressTracker _routeJourneyProgressTracker =
       RouteJourneyProgressTracker();
-  final RouteProgressTracker _rejoinProgressTracker = RouteProgressTracker();
 
-  /// The passage read against the current fix (#63).
-  ///
-  /// Beside `_navigationGuidance` rather than replacing it, for one release:
-  /// the road assessment still drives the manoeuvre banner, which cannot fire
-  /// on a passage but is what an imported route carrying manoeuvres would use.
-  /// When #31 finishes taking the road stack out, this is what remains.
   final ValueNotifier<PassageGuidance?> _passageGuidance = ValueNotifier(null);
 
-  final ValueNotifier<NavigationGuidanceAssessment> _navigationGuidance =
-      ValueNotifier(const NavigationGuidanceAssessment.noRoute());
   final Map<int, Offset> _mapPointerOrigins = {};
   late final http.Client _routingClient;
-  late final RoadRoutingService _roadRoutingService;
+  late final OpenMeteoWindFieldService _windFieldService;
+  late final PassagePlanningService _passagePlanner;
   late final DestinationRoutePlanner _defaultDestinationRoutePlanner;
   late final RouteGeometryEnricher _defaultRouteGeometryEnricher;
   PersonalVoyageHeatmapController? _personalVoyageHeatmap;
@@ -906,6 +928,17 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   bool? _basemapTilesReachable;
 
   Timer? _basemapViewLoadWatchdog;
+  Timer? _mobElapsedTimer;
+  Timer? _aisAgeTimer;
+  DateTime _mobNow = DateTime.now().toUtc();
+  bool _mobActionBusy = false;
+  AisTargetSource? _activeAisTargetSource;
+  ReplayAisTargetSource? _aisReplaySource;
+  StreamSubscription<AisTargetSnapshot>? _aisSubscription;
+  AisTargetSnapshot? _aisSnapshot;
+  String? _aisError;
+  bool _aisStarting = false;
+  bool _disposing = false;
 
   /// Which style string the observations above belong to, so a style change
   /// starts them over rather than reporting the previous one's verdict.
@@ -933,7 +966,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
 
   /// The imported or skipper-published route, when there is one.
   ///
-  /// Riding without a GPX is a first-class mode, so **nothing** reads this to
+  /// Sailing without a GPX is a first-class mode, so **nothing** reads this to
   /// decide whether a safety, voyage-lifecycle, camera or presence surface exists
   /// (#124). Every remaining `_route` test in this file is either null-safe data
   /// access or one of these genuinely route-derived surfaces, and each is
@@ -941,7 +974,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   ///
   /// - the app-bar title, and the plan/import/replace, navigate-or-export, fit,
   ///   offline-download and remove-route route actions;
-  /// - "All turns" and the marker plan, which need manoeuvres;
+  /// - passage alterations and the marker review, which need route geometry;
   /// - the empty-route prompt, which exists to acquire a route;
   /// - the remaining planned-route geometry, waypoints, and
   ///   the guidance banner and off-course alerting derived from it.
@@ -1071,8 +1104,6 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   bool _mapLibreOverlaysDirty = false;
   bool _waitingRoutePromptDismissed = false;
   RouteProgressGeometry _progressGeometry = const RouteProgressGeometry.empty();
-  RouteProgressGeometry _rejoinProgressGeometry =
-      const RouteProgressGeometry.empty();
   TileDownloadProgress? _downloadProgress;
   TileDownloadCancellationToken? _downloadCancellation;
 
@@ -1080,9 +1111,6 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
 
   ImportedRoute? get _externalRejoinRoute =>
       widget.rejoinNavigationRoute?.value;
-
-  ImportedRoute? get _rejoinRoute =>
-      _externalRejoinRoute ?? _routeStartConnector;
 
   GeoPoint? get _plannedRouteStart => _route?.paths
       .where((path) => path.points.isNotEmpty)
@@ -1108,9 +1136,6 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     return distance > 250 ? distance : null;
   }
 
-  RouteProgressGeometry get _navigationProgressGeometry =>
-      _rejoinRoute == null ? _progressGeometry : _rejoinProgressGeometry;
-
   DestinationRoutePlanner get _destinationRoutePlanner =>
       widget.destinationRoutePlanner ?? _defaultDestinationRoutePlanner;
 
@@ -1122,21 +1147,19 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     super.initState();
     _routeStartConnector = widget.initialRouteStartConnector;
     _routingClient = http.Client();
-    final routingConfiguration = RoutingConfiguration.fromEnvironment();
-    // A passage planner, not a road router (#19). The inherited pair - OSRM's
-    // car profile with a Valhalla motorcycle fallback - would answer a request
-    // to plan across a stretch of water with a confident road route around it.
-    _roadRoutingService =
-        widget.roadRoutingService ?? const RhumbLinePassagePlanner();
+    _windFieldService = OpenMeteoWindFieldService(client: _routingClient);
+    final searchConfiguration =
+        DestinationSearchConfiguration.fromEnvironment();
+    _passagePlanner = widget.passagePlanner ?? const RhumbLinePassagePlanner();
     _defaultDestinationRoutePlanner = DestinationRoutePlanner(
       searchService: NominatimDestinationSearchService(
         client: _routingClient,
-        baseUrl: routingConfiguration.geocodingBaseUrl,
+        baseUrl: searchConfiguration.geocodingBaseUrl,
       ),
-      routingService: _roadRoutingService,
+      passagePlanner: _passagePlanner,
     );
     _defaultRouteGeometryEnricher = RouteGeometryEnricher(
-      routingService: _roadRoutingService,
+      passagePlanner: _passagePlanner,
     );
     _groupPipBridge = GroupPipBridge();
     _mapLibreOfflineManager =
@@ -1149,10 +1172,10 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     widget.rejoinNavigationRoute?.addListener(_onRejoinNavigationRouteChanged);
     widget.skipperStatus?.addListener(_onGroupPipDataChanged);
     widget.junctionMarkerOverlay?.addListener(_onJunctionMarkerChanged);
-    _rejoinProgressGeometry = _rejoinProgressTracker.update(
-      _rejoinRoute,
-      _effectivePosition,
-    );
+    _syncMobElapsedTimer();
+    if (widget.aisTargetSource case final source?) {
+      unawaited(_attachAisSource(source));
+    }
     // The app-level AnimatedBuilder already listens to this shared controller.
     // Starting the lookup here used to notify that ancestor while its
     // FutureBuilder was still constructing this map (#485).
@@ -1167,6 +1190,20 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   @override
   void didUpdateWidget(VoyageMapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final oldMobId = oldWidget.mobState.activeIncident?.activationEventId;
+    final mobId = widget.mobState.activeIncident?.activationEventId;
+    if (oldMobId != mobId) {
+      _syncMobElapsedTimer();
+      _scheduleMapLibreSync(overlays: true);
+      if (mobId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) unawaited(_showMobOverview());
+        });
+      }
+    }
+    if (!identical(oldWidget.aisTargetSource, widget.aisTargetSource)) {
+      unawaited(_replaceExternalAisSource(widget.aisTargetSource));
+    }
     if (oldWidget.changeRouteRequestToken != widget.changeRouteRequestToken) {
       _maybeHandleChangeRouteRequest();
     }
@@ -1235,8 +1272,115 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     });
   }
 
+  void _syncMobElapsedTimer() {
+    _mobElapsedTimer?.cancel();
+    _mobElapsedTimer = null;
+    _mobNow = DateTime.now().toUtc();
+    if (!widget.mobState.active) return;
+    _mobElapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _mobNow = DateTime.now().toUtc());
+    });
+  }
+
+  Future<void> _replaceExternalAisSource(AisTargetSource? source) async {
+    await _detachAisSource(clearSnapshot: true);
+    if (source != null && mounted) await _attachAisSource(source);
+  }
+
+  Future<void> _attachAisSource(AisTargetSource source) async {
+    if (identical(_activeAisTargetSource, source)) return;
+    await _detachAisSource(clearSnapshot: true);
+    if (!mounted) return;
+    setState(() {
+      _activeAisTargetSource = source;
+      _aisStarting = true;
+      _aisError = null;
+    });
+    _aisSubscription = source.snapshots.listen(
+      (snapshot) {
+        if (_disposing || !mounted) return;
+        setState(() {
+          _aisSnapshot = snapshot;
+          _aisStarting = false;
+          _aisError = null;
+        });
+        _syncAisAgeTimer();
+        _scheduleMapLibreSync(overlays: true);
+      },
+      onError: (Object error) {
+        if (_disposing || !mounted) return;
+        setState(() {
+          _aisStarting = false;
+          _aisError = '$error';
+        });
+      },
+    );
+    try {
+      await source.start();
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _aisStarting = false;
+        _aisError = '$error';
+      });
+    }
+  }
+
+  Future<void> _detachAisSource({required bool clearSnapshot}) async {
+    _aisAgeTimer?.cancel();
+    _aisAgeTimer = null;
+    final subscription = _aisSubscription;
+    final source = _activeAisTargetSource;
+    final stop = source?.stop();
+    _aisSubscription = null;
+    _activeAisTargetSource = null;
+    if (mounted) {
+      setState(() {
+        _aisStarting = false;
+        if (clearSnapshot) {
+          _aisSnapshot = null;
+          _aisError = null;
+        }
+      });
+      _scheduleMapLibreSync(overlays: true);
+    }
+    await subscription?.cancel();
+    await stop;
+  }
+
+  void _syncAisAgeTimer() {
+    _aisAgeTimer?.cancel();
+    _aisAgeTimer = null;
+    if (_disposing || _activeAisTargetSource == null) return;
+    _aisAgeTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (!mounted) return;
+      setState(() {});
+      _scheduleMapLibreSync(overlays: true);
+    });
+  }
+
+  List<MarineDatum<AisTarget>> get _visibleAisTargets {
+    final snapshot = _aisSnapshot;
+    if (snapshot == null) return const [];
+    final now = DateTime.now().toUtc();
+    return snapshot.targets
+        .where(
+          (datum) =>
+              now.difference(datum.value.receivedAt.toUtc()) <=
+              const Duration(minutes: 10),
+        )
+        .take(500)
+        .toList(growable: false);
+  }
+
+  bool _aisTargetIsStale(MarineDatum<AisTarget> datum) =>
+      _aisSnapshot?.connected != true ||
+      datum.freshnessAt(DateTime.now().toUtc()) != MarineDataFreshness.current;
+
   @override
   void dispose() {
+    _disposing = true;
     _downloadCancellation?.cancel();
     widget.currentPosition?.removeListener(_onPositionChanged);
     widget.navigationPosition?.removeListener(_onPositionChanged);
@@ -1251,13 +1395,20 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     _mapLibreController?.removeListener(_scheduleCameraFramingRefresh);
     _mapController.dispose();
     _passageGuidance.dispose();
-    _navigationGuidance.dispose();
     _sailorSpeedStalenessTimer?.cancel();
     _sailorSpeedStalenessTimer = null;
     _sailorStoppedTimer?.cancel();
     _sailorStoppedTimer = null;
     _basemapViewLoadWatchdog?.cancel();
     _basemapViewLoadWatchdog = null;
+    _mobElapsedTimer?.cancel();
+    _mobElapsedTimer = null;
+    _aisAgeTimer?.cancel();
+    _aisAgeTimer = null;
+    _aisSubscription?.cancel();
+    _aisSubscription = null;
+    _activeAisTargetSource?.stop();
+    _aisReplaySource?.dispose();
     _sailorSpeed.dispose();
     _mapBearing.dispose();
     _personalVoyageHeatmap?.removeListener(_onPersonalVoyageHeatmapChanged);
@@ -1275,11 +1426,6 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       setState(() {
         _route = route;
         _setRouteStartConnector(null);
-        _rejoinProgressTracker.reset();
-        _rejoinProgressGeometry = _rejoinProgressTracker.update(
-          _externalRejoinRoute,
-          _effectivePosition,
-        );
         _progressGeometry = _routeProgressTracker.update(
           route,
           _effectivePosition,
@@ -1297,7 +1443,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         _initialCameraPositioned = false;
         _loading = false;
       });
-      _updateNavigationGuidance(_effectivePosition);
+      _updatePassageGuidance(_effectivePosition);
       widget.onRouteChanged?.call(route);
       unawaited(_publishGroupPipSnapshot());
       if (_navigationMode) {
@@ -1423,14 +1569,11 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     final groupMiniMapWidth = layout.groupMiniMapSize.width;
     final groupMiniMapHeight = layout.groupMiniMapSize.height;
     final showVoyageMenu = hideChrome && widget.onOpenVoyageMenu != null;
-    // A route can contain manoeuvres before the device has a usable location.
-    // The guidance banner is only composed into the band while guidance is
-    // actually visible, so nothing reserves space for a banner that is absent.
     final routeStartOfferDistance = _routeStartOfferDistance;
     final hasGuidance =
         routeStartOfferDistance == null &&
         widget.voyageStarted &&
-        _navigationGuidance.value.isVisible;
+        _passageGuidance.value?.hasPassage == true;
     // Leaving a voyage is a voyage-lifecycle action, not a route action (#124).
     final showLeaveVoyage =
         widget.voyageStarted && widget.onLeaveVoyage != null;
@@ -1541,11 +1684,6 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                         ],
                       ),
                     ),
-                    // Gated on the passage's own alterations, not on
-                    // `route.maneuvers` (#31). That field holds road manoeuvres
-                    // and is empty on every passage, so this item never appeared
-                    // at all - the list it opens was unreachable from here for
-                    // as long as the app has been a sailing app.
                     if (_passageAlterationCount > 0)
                       const PopupMenuItem(
                         value: _MapAction.maneuverList,
@@ -1590,6 +1728,22 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                     const PopupMenuItem(
                       value: _MapAction.weather,
                       child: Text('Wind and weather'),
+                    ),
+                    const PopupMenuItem(
+                      value: _MapAction.tides,
+                      child: Text('Offline tides'),
+                    ),
+                    PopupMenuItem(
+                      key: const Key('ais-layer-action'),
+                      value: _MapAction.ais,
+                      child: Text(
+                        widget.aisTargetSource != null
+                            ? 'Received AIS status'
+                            : _activeAisTargetSource?.kind ==
+                                  AisSourceKind.replay
+                            ? 'Stop AIS replay demo'
+                            : 'Start AIS replay demo',
+                      ),
                     ),
                     // Always offered, route or not: what the map is made of is
                     // not a property of the plan.
@@ -1785,7 +1939,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     final landscapeGuidanceWidth = landscapeGuidancePanelWidth(
       viewportWidth: viewportWidth,
       safeRight: safeRight,
-      leftHandTraffic: _routeUsesLeftHandTraffic,
+      leftHandTraffic: true,
     );
     // Sizing follows height, arrangement follows shape - see VoyageLayout.
     final landscape = layout.isLandscape;
@@ -1852,26 +2006,11 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
               onNavigate: _routingToStart ? null : _navigateToRouteStart,
             )
           : hasGuidance
-          ? ValueListenableBuilder<NavigationGuidanceAssessment>(
-              valueListenable: _navigationGuidance,
-              builder: (context, assessment, _) {
-                final guidance = assessment.guidance;
-                return guidance == null
-                    ? ValueListenableBuilder<PassageGuidance?>(
-                        valueListenable: _passageGuidance,
-                        builder: (context, passage, _) =>
-                            _NavigationGuidanceStatusBanner(
-                              assessment: assessment,
-                              compact: cramped,
-                              passage: passage,
-                            ),
-                      )
-                    : _NavigationGuidanceBanner(
-                        guidance: guidance,
-                        distanceUnit: widget.distanceUnit,
-                        compact: cramped,
-                      );
-              },
+          ? ValueListenableBuilder<PassageGuidance?>(
+              valueListenable: _passageGuidance,
+              builder: (context, passage, _) => passage == null
+                  ? const SizedBox.shrink()
+                  : _PassageGuidanceBanner(passage: passage, compact: cramped),
             )
           : null;
       // With nobody holding the TEC role there is nothing honest to show, so
@@ -1922,6 +2061,30 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                         showClock: false,
                       );
               },
+            );
+      final mobIncident = widget.mobState.activeIncident;
+      final mobRecovery = mobIncident == null
+          ? null
+          : _MobRecoveryCard(
+              incident: mobIncident,
+              currentPosition: _effectivePosition,
+              now: _mobNow,
+              distanceUnit: widget.distanceUnit,
+              busy: _mobActionBusy,
+              onShowBoth: mobIncident.fix.hasPosition
+                  ? () => unawaited(_showMobOverview())
+                  : null,
+              onResolve: widget.onResolveMob == null
+                  ? null
+                  : () => unawaited(_confirmMobResolution()),
+            );
+      final aisStatus = _activeAisTargetSource == null
+          ? null
+          : _AisStatusPill(
+              snapshot: _aisSnapshot,
+              starting: _aisStarting,
+              error: _aisError,
+              onTap: () => unawaited(_showAisSourceStatus()),
             );
       // Arriving and approaching a junction are mutually exclusive: the
       // suggestion only appears once the whole group is inside the destination
@@ -1995,6 +2158,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       // Fixed label slots keep the vertical stack the same width through ALERT,
       // ALERT SENT and ALERT SEEN states.
       final sosLabelSlot = 62.0;
+      final mobLabelSlot = 76.0;
       final leaveLabelSlot = 62.0;
       // 48pt is the squeeze a phone in landscape needs to fit the stack, not a
       // target size worth having: null lets each button take its natural,
@@ -2060,6 +2224,39 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                 slotWidth: sosLabelSlot,
               ),
             );
+      final mobButton = !widget.voyageStarted || widget.onActivateMob == null
+          ? null
+          : FloatingActionButton.extended(
+              key: const Key('mob-button'),
+              extendedPadding: actionPadding,
+              heroTag: 'tide-and-seek-mob',
+              tooltip: widget.mobState.active
+                  ? 'Show the marked man overboard position'
+                  : 'Mark a man overboard position',
+              onPressed: _mobActionBusy
+                  ? null
+                  : widget.mobState.active
+                  ? () => unawaited(_showMobOverview())
+                  : _confirmMobActivation,
+              backgroundColor: const Color(0xFFB7193F),
+              foregroundColor: Colors.white,
+              icon: _ActionIconSlot(
+                child: _mobActionBusy
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.crisis_alert),
+              ),
+              label: _ActionLabel(
+                widget.mobState.active ? 'MOB ACTIVE' : 'MOB',
+                widest: 'MOB ACTIVE',
+                slotWidth: mobLabelSlot,
+              ),
+            );
       final leaveButton = showLeaveVoyage
           ? FloatingActionButton.extended(
               key: const Key('leave-voyage-button'),
@@ -2079,7 +2276,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
               ),
             )
           : null;
-      final hasActions = sosButton != null || leaveButton != null;
+      final hasActions =
+          mobButton != null || sosButton != null || leaveButton != null;
       // One arrangement per orientation, fixed for every state (#142). #139 used
       // a `Wrap` in landscape, and a `Wrap` decides its runs from its children's
       // measured widths - so the moment SOS said "ALERT SENT" the rail could no
@@ -2090,6 +2288,9 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       // Portrait stacks SOS over LEAVE with REPORT alongside (#133). Landscape
       // stacks all three vertically so the controls do not form a wide barrier
       // across the map (#533).
+      final mobSubtree = mobButton == null || actionTargetHeight == null
+          ? mobButton
+          : SizedBox(height: actionTargetHeight, child: mobButton);
       final sosSubtree = sosButton == null || actionTargetHeight == null
           ? sosButton
           : SizedBox(height: actionTargetHeight, child: sosButton);
@@ -2104,6 +2305,10 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                ?mobSubtree,
+                if (mobSubtree != null &&
+                    (sosSubtree != null || leaveSubtree != null))
+                  const SizedBox(height: 8),
                 ?sosSubtree,
                 if (sosSubtree != null && leaveSubtree != null)
                   const SizedBox(height: 8),
@@ -2121,6 +2326,10 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      ?mobSubtree,
+                      if (mobSubtree != null &&
+                          (sosSubtree != null || leaveSubtree != null))
+                        const SizedBox(height: 8),
                       ?sosSubtree,
                       if (sosSubtree != null && leaveSubtree != null)
                         const SizedBox(height: 8),
@@ -2165,6 +2374,20 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
               label: const Text('Follow me'),
             )
           : null;
+      final zoomControls = markerOverviewActive
+          ? null
+          : _ChartZoomControls(
+              darkMap: _basemap.dark,
+              onZoomIn: () => unawaited(_changeChartZoom(1)),
+              onZoomOut: () => unawaited(_changeChartZoom(-1)),
+            );
+      final zoomControlsTop =
+          safeTop +
+          math.max(
+            76.0,
+            (MediaQuery.sizeOf(context).height - safeTop - safeBottom - 104) /
+                2,
+          );
 
       if (landscape) {
         final actionLeft =
@@ -2193,6 +2416,12 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                 right: safeRight + 10,
                 top: safeTop + 10,
                 child: speedCluster,
+              ),
+            if (zoomControls != null)
+              Positioned(
+                right: safeRight + 10,
+                top: zoomControlsTop,
+                child: zoomControls,
               ),
             // The clock (#452), landscape only, drawn by the app rather than by
             // Apple's widget. Top-centre because that is the one part of this
@@ -2229,6 +2458,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                       status: _basemapStatus,
                       onTap: () => _showMessage(_basemapStatus.explanation),
                     ),
+                  ?aisStatus,
+                  ?mobRecovery,
                   for (final alert in urgent)
                     Align(
                       alignment: Alignment.centerRight,
@@ -2342,6 +2573,12 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
               top: safeTop + 12,
               child: miniMap,
             ),
+          if (zoomControls != null)
+            Positioned(
+              right: safeRight + 12,
+              top: zoomControlsTop,
+              child: zoomControls,
+            ),
           if (widget.voyageStarted)
             Positioned(
               left: safeLeft,
@@ -2380,6 +2617,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                       alignment: Alignment.centerLeft,
                       child: _BasemapStatusBadge(status: _basemapStatus),
                     ),
+                  ?aisStatus,
+                  ?mobRecovery,
                   ...urgent,
                   ?sweeperGap,
                   // The turn banner is the last thing above the targets, so
@@ -2616,6 +2855,43 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                 )
                 .toList(growable: false),
           ),
+        if (_mobPoint case final mobPoint?)
+          MarkerLayer(
+            key: const Key('mob-marker-layer'),
+            markers: [
+              Marker(
+                point: _latLng(mobPoint),
+                width: 54,
+                height: 54,
+                child: const Tooltip(
+                  message: 'Man overboard marked position',
+                  child: _MobChartMarker(),
+                ),
+              ),
+            ],
+          ),
+        if (_visibleAisTargets.isNotEmpty)
+          MarkerLayer(
+            key: const Key('ais-target-layer'),
+            rotate: true,
+            markers: [
+              for (final datum in _visibleAisTargets)
+                Marker(
+                  key: ValueKey('ais-target-${datum.value.mmsi}'),
+                  point: LatLng(datum.value.latitude, datum.value.longitude),
+                  width: 44,
+                  height: 44,
+                  child: Tooltip(
+                    message: datum.value.name ?? 'MMSI ${datum.value.mmsi}',
+                    child: _AisChartMarker(
+                      target: datum.value,
+                      stale: _aisTargetIsStale(datum),
+                      onTap: () => _showAisTarget(datum),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         if (_effectivePosition case final currentPosition?)
           MarkerLayer(
             rotate: true,
@@ -2807,6 +3083,12 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   GeoPoint? get _effectivePosition =>
       _navigationFix?.point ?? widget.currentPosition?.value;
 
+  GeoPoint? get _mobPoint {
+    final fix = widget.mobState.activeIncident?.fix;
+    if (fix == null || !fix.hasPosition) return null;
+    return GeoPoint(latitude: fix.latitude!, longitude: fix.longitude!);
+  }
+
   bool get _isMoving => _navigationFix?.isMoving ?? false;
 
   /// Speed used to decide whether the reported course can be trusted. A fix
@@ -2875,16 +3157,6 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     _sailorSpeed.value = null;
   }
 
-  /// The rotation deadband tightens inside this distance so the map bearing
-  /// cannot lag at the junction the sailor is being told about.
-  static const _maneuverDeadbandTightenMeters = 150.0;
-
-  bool get _maneuverImminent {
-    final guidance = _navigationGuidance.value.guidance;
-    return guidance != null &&
-        guidance.distanceMeters <= _maneuverDeadbandTightenMeters;
-  }
-
   /// Height of the map viewport as laid out, falling back to the screen height
   /// before the first frame.
   double get _mapViewportHeightPixels {
@@ -2900,23 +3172,6 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     return width != null && width > 0
         ? width
         : MediaQuery.sizeOf(context).width;
-  }
-
-  /// The route engine states traffic side per manoeuvre. Taking the majority
-  /// makes one malformed step unable to mirror the whole voyage; an unannotated
-  /// route keeps the product's UK left-traffic default.
-  bool get _routeUsesLeftHandTraffic {
-    var left = 0;
-    var right = 0;
-    for (final maneuver in _route?.maneuvers ?? const <RouteManeuver>[]) {
-      switch (maneuver.drivingSide?.trim().toLowerCase()) {
-        case 'left':
-          left += 1;
-        case 'right':
-          right += 1;
-      }
-    }
-    return left >= right;
   }
 
   /// How much of the bottom of the screen an interrupting alert must leave
@@ -3013,7 +3268,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                     ? _landscapeGuidanceHeightPixels
                     : _bottomChromeHeightPixels) /
                 viewportHeight,
-      leftHandTraffic: _routeUsesLeftHandTraffic,
+      leftHandTraffic: true,
     );
     // MapLibre is tilted, so the bias is the perspective look-ahead the plan
     // solved. FlutterMap is flat, so it is a straight ground offset at that
@@ -3227,7 +3482,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       headingDegrees: observedHeading,
       speedMetersPerSecond: _bearingSpeedMetersPerSecond,
       at: navigationFix?.recordedAt ?? DateTime.now(),
-      maneuverImminent: _maneuverImminent,
+      maneuverImminent: false,
     );
     if (smoothedBearing != null) _cameraBearingDegrees = smoothedBearing;
 
@@ -3257,11 +3512,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         position != null && !_navigationCanvasActive;
     if (refreshProgress) {
       _progressGeometry = _routeProgressTracker.update(_route, position);
-      _rejoinProgressGeometry = _rejoinProgressTracker.update(
-        _rejoinRoute,
-        position,
-      );
-      _updateNavigationGuidance(position);
+      _updatePassageGuidance(position);
     }
     // MapLibre receives sources directly. Keep its platform view mounted while
     // the simulation is running; only FlutterMap needs a widget rebuild for
@@ -3340,46 +3591,13 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     widget.onPassageGuidanceChanged?.call(next);
   }
 
-  void _updateNavigationGuidance(GeoPoint? position) {
-    _updatePassageGuidance(position);
-    final navigationRoute = _rejoinRoute ?? _route;
-    final next = _navigationGuidancePlanner.assess(
-      route: navigationRoute,
-      position: position,
-      progressMeters: _navigationProgressGeometry.progressMeters,
-    );
-    final current = _navigationGuidance.value;
-    final visibilityChanged = current.isVisible != next.isVisible;
-    final stateChanged = current.state != next.state;
-    final unchanged =
-        current.guidance?.maneuver == next.guidance?.maneuver &&
-        current.guidance != null &&
-        next.guidance != null &&
-        (current.guidance!.distanceMeters - next.guidance!.distanceMeters)
-                .abs() <
-            5;
-    if (!unchanged) {
-      _navigationGuidance.value = next;
-      widget.onNavigationGuidanceChanged?.call(next.guidance);
-      if (stateChanged && kDebugMode) {
-        debugPrint('Navigation guidance: ${next.state.name} — ${next.message}');
-      }
-      if ((visibilityChanged || stateChanged) && mounted) setState(() {});
-    }
-  }
-
   void _onRejoinNavigationRouteChanged() {
     if (_externalRejoinRoute != null && _routeStartConnector != null) {
       setState(() {
         _setRouteStartConnector(null);
-        _rejoinProgressTracker.reset();
       });
     }
-    _rejoinProgressGeometry = _rejoinProgressTracker.update(
-      _rejoinRoute,
-      _effectivePosition,
-    );
-    _updateNavigationGuidance(_effectivePosition);
+    _updatePassageGuidance(_effectivePosition);
     _scheduleMapLibreSync(progress: true, overlays: true);
   }
 
@@ -3488,6 +3706,53 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   void _suppressFollowForMapGesture() {
     if (_navigationMode) {
       _stopFollowing(suppressAutomatic: _isMoving);
+    }
+  }
+
+  /// Applies an explicit user zoom and hands the camera to them until they tap
+  /// Follow me. Pinch and pan already use the same ownership rule; the buttons
+  /// make it available with wet or gloved hands as well.
+  Future<void> _changeChartZoom(double delta) async {
+    if (!delta.isFinite || delta == 0) return;
+    if (_navigationMode) {
+      _stopFollowing(suppressAutomatic: true);
+    }
+    final maximumZoom = _basemap.maximumNativeZoom.toDouble();
+    if (_basemap.usesMapLibre) {
+      final controller = _mapLibreController;
+      final camera = controller?.cameraPosition;
+      if (controller == null || camera == null) return;
+      final zoom = (camera.zoom + delta).clamp(3.0, maximumZoom).toDouble();
+      await controller.easeCamera(
+        ml.CameraUpdate.newCameraPosition(
+          ml.CameraPosition(
+            target: camera.target,
+            zoom: zoom,
+            tilt: camera.tilt,
+            bearing: camera.bearing,
+          ),
+        ),
+        duration: const Duration(milliseconds: 220),
+      );
+      _scheduleCameraFramingRefresh();
+      return;
+    }
+    try {
+      final camera = _mapController.camera;
+      final zoom = (camera.zoom + delta).clamp(3.0, maximumZoom).toDouble();
+      _mapController.moveAndRotateAnimatedRaw(
+        camera.center,
+        zoom,
+        camera.rotation,
+        offset: Offset.zero,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        hasGesture: true,
+        source: MapEventSource.mapController,
+      );
+      _scheduleCameraFramingRefresh();
+    } on StateError {
+      // The first frame can expose the controls before FlutterMap attaches.
     }
   }
 
@@ -3619,6 +3884,160 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       if (!mounted) return;
       setState(() => _acknowledgingQuickMessageId = null);
       _showMessage('Could not acknowledge ${message.label}: $error');
+    }
+  }
+
+  MobFix _mobFixAtActivation() {
+    final now = DateTime.now().toUtc();
+    final navigationFix = _navigationFix;
+    if (navigationFix != null) {
+      return MobFix(
+        latitude: navigationFix.point.latitude,
+        longitude: navigationFix.point.longitude,
+        recordedAt: navigationFix.recordedAt,
+        accuracyMeters: navigationFix.accuracyMeters,
+        source: 'gnss',
+        stale:
+            now.difference(navigationFix.recordedAt.toUtc()) >
+            const Duration(seconds: 30),
+      );
+    }
+    final position = _effectivePosition;
+    return MobFix(
+      latitude: position?.latitude,
+      longitude: position?.longitude,
+      recordedAt: position?.recordedAt,
+      source: position == null ? 'none' : 'last-known',
+      stale: true,
+    );
+  }
+
+  Future<void> _confirmMobActivation() async {
+    final activate = widget.onActivateMob;
+    if (activate == null || _mobActionBusy || widget.mobState.active) return;
+    final fix = _mobFixAtActivation();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mark man overboard?'),
+        content: Text(
+          '${fix.hasPosition ? 'The current position will be fixed on the chart.' : 'No position is available; the incident will still be recorded.'}\n\n'
+          '${fix.stale ? 'The available position may be old or inaccurate.\n\n' : ''}'
+          'This does not send a distress alert or contact emergency services.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const Key('confirm-mob-activation'),
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFB7193F),
+            ),
+            child: const Text('Mark MOB'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _mobActionBusy = true);
+    try {
+      final saved = await activate(fix);
+      if (!mounted) return;
+      setState(() => _mobActionBusy = false);
+      if (!saved) _showMessage('The MOB position could not be saved.');
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _mobActionBusy = false);
+      _showMessage('The MOB position could not be saved: $error');
+    }
+  }
+
+  Future<void> _confirmMobResolution() async {
+    final resolve = widget.onResolveMob;
+    if (resolve == null || _mobActionBusy || !widget.mobState.active) return;
+    final resolution = await showDialog<MobResolution>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Resolve MOB incident?'),
+        content: const Text(
+          'Only clear the recovery display when the person is recovered or this was a false alarm. The incident remains in the voyage log.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            key: const Key('resolve-mob-false-alarm'),
+            onPressed: () =>
+                Navigator.of(context).pop(MobResolution.falseAlarm),
+            child: const Text('False alarm'),
+          ),
+          FilledButton(
+            key: const Key('resolve-mob-recovered'),
+            onPressed: () => Navigator.of(context).pop(MobResolution.recovered),
+            child: const Text('Person recovered'),
+          ),
+        ],
+      ),
+    );
+    if (resolution == null || !mounted) return;
+    setState(() => _mobActionBusy = true);
+    try {
+      final saved = await resolve(resolution);
+      if (!mounted) return;
+      setState(() => _mobActionBusy = false);
+      if (!saved) _showMessage('The MOB incident could not be resolved.');
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _mobActionBusy = false);
+      _showMessage('The MOB incident could not be resolved: $error');
+    }
+  }
+
+  Future<void> _showMobOverview() async {
+    final mobPoint = _mobPoint;
+    if (mobPoint == null) {
+      _showMessage('This MOB incident has no saved position to show.');
+      return;
+    }
+    _stopFollowing(suppressAutomatic: _isMoving);
+    final current = _effectivePosition;
+    final points = <GeoPoint>[mobPoint, ?current];
+    if (current == null || !_pointsDiffer(mobPoint, current)) {
+      points.add(_pointAhead(mobPoint, 0, 240));
+      points.add(_pointAhead(mobPoint, 180, 240));
+    }
+    if (_basemap.usesMapLibre) {
+      final controller = _mapLibreController;
+      if (controller == null) return;
+      final bounds = _mapLibreBounds(points);
+      if (!_boundsAreUsable(bounds)) return;
+      await controller.animateCamera(
+        ml.CameraUpdate.newLatLngBounds(
+          bounds,
+          left: 56,
+          top: 56,
+          right: 56,
+          bottom: 180,
+        ),
+        duration: const Duration(milliseconds: 700),
+      );
+      return;
+    }
+    try {
+      _mapController.fitCamera(
+        CameraFit.bounds(
+          bounds: LatLngBounds.fromPoints(points.map(_latLng).toList()),
+          padding: const EdgeInsets.fromLTRB(56, 56, 56, 180),
+          maxZoom: 15,
+        ),
+      );
+    } on StateError {
+      // The incident can arrive before FlutterMap finishes attaching.
     }
   }
 
@@ -3848,8 +4267,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     }
     _lastCameraUpdateAt = now;
     _cameraUpdateInFlight = true;
-    // The sailor is anchored low in the frame so most of the screen is road
-    // ahead. The anchor is a documented fraction of the measured viewport
+    // The vessel has a small stable forward bias, leaving water ahead visible.
+    // The anchor is a documented fraction of the measured viewport
     // height, pulled back far enough to keep the marker clear of the bottom
     // chrome band, so a look-ahead can never push the sailor's own marker off
     // screen or under an overlay the way a fixed distance up the route once
@@ -3873,7 +4292,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         sailorViewportFraction: cameraPlan.sailorViewportFraction,
         sailorHorizontalViewportFraction:
             cameraPlan.sailorHorizontalViewportFraction,
-        leftHandTraffic: _routeUsesLeftHandTraffic,
+        leftHandTraffic: true,
         mapStyleUrl: _basemap.styleUrl,
         mapStyleJson: widget.mapStyleString,
       ),
@@ -3898,9 +4317,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         final controller = _mapLibreController;
         if (controller == null) return;
         // maplibre_gl exposes no camera padding, so the anchor is applied by
-        // aiming at the ground point that renders where the sailor should not
-        // be. The distance comes from the tilt and viewport geometry, so the
-        // sailor still lands at the planned viewport fraction.
+        // aiming at the flat ground point that leaves the vessel at the planned
+        // viewport fraction.
         await controller.easeCamera(
           ml.CameraUpdate.newCameraPosition(
             ml.CameraPosition(
@@ -4267,6 +4685,71 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         ),
         enableInteraction: false,
       );
+      await controller.addGeoJsonSource(_mobSource, _mobGeoJson());
+      await controller.addCircleLayer(
+        _mobSource,
+        'tide-and-seek-mob-marker',
+        const ml.CircleLayerProperties(
+          circleRadius: 18,
+          circleColor: '#D9304F',
+          circleStrokeWidth: 4,
+          circleStrokeColor: '#FFFFFF',
+        ),
+        enableInteraction: false,
+      );
+      await controller.addSymbolLayer(
+        _mobSource,
+        'tide-and-seek-mob-label',
+        const ml.SymbolLayerProperties(
+          textField: 'MOB',
+          textSize: 11,
+          textColor: '#FFFFFF',
+          textHaloColor: '#8C142B',
+          textHaloWidth: 1,
+          textAllowOverlap: true,
+          textIgnorePlacement: true,
+        ),
+        enableInteraction: false,
+      );
+      await controller.addGeoJsonSource(_aisMapSource, _aisGeoJson());
+      await controller.addCircleLayer(
+        _aisMapSource,
+        'tide-and-seek-ais-badges',
+        const ml.CircleLayerProperties(
+          circleRadius: 13,
+          circleColor: [
+            'case',
+            ['get', 'stale'],
+            '#69737F',
+            '#F59E0B',
+          ],
+          circleOpacity: [
+            'case',
+            ['get', 'stale'],
+            0.55,
+            0.95,
+          ],
+          circleStrokeWidth: 2,
+          circleStrokeColor: '#10151C',
+        ),
+        enableInteraction: false,
+      );
+      await controller.addSymbolLayer(
+        _aisMapSource,
+        'tide-and-seek-ais-symbols',
+        const ml.SymbolLayerProperties(
+          iconImage: _trailDirectionArrowImage,
+          iconColor: '#FFFFFF',
+          iconHaloColor: '#10151C',
+          iconHaloWidth: 1,
+          iconSize: 0.14,
+          iconRotate: ['get', 'bearing'],
+          iconRotationAlignment: 'map',
+          iconPitchAlignment: 'map',
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+        ),
+      );
       await controller.addGeoJsonSource(_overlaySource, _overlayGeoJson());
       // A colour alone was hard to pick out against some basemaps. A solid
       // badge behind a fixed-white glyph reads clearly regardless of what's
@@ -4385,6 +4868,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       );
       await controller.setGeoJsonSource(_waypointSource, _waypointGeoJson());
       await controller.setGeoJsonSource(_positionSource, _positionGeoJson());
+      await controller.setGeoJsonSource(_mobSource, _mobGeoJson());
+      await controller.setGeoJsonSource(_aisMapSource, _aisGeoJson());
       await controller.setGeoJsonSource(_overlaySource, _overlayGeoJson());
     } on Object catch (error) {
       if (kDebugMode) {
@@ -4446,6 +4931,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
           _sailorTrailGeoJson(),
         );
         await controller.setGeoJsonSource(_overlaySource, _overlayGeoJson());
+        await controller.setGeoJsonSource(_mobSource, _mobGeoJson());
+        await controller.setGeoJsonSource(_aisMapSource, _aisGeoJson());
       }
       if (progress || overlays) {
         await controller.setGeoJsonSource(
@@ -4634,6 +5121,41 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     );
   }
 
+  Map<String, dynamic> _mobGeoJson() {
+    final point = _mobPoint;
+    return MapGeoJson.points(
+      point == null
+          ? const <MapGeoJsonPoint>[]
+          : [
+              MapGeoJsonPoint(
+                id: 'mob-position',
+                point: point,
+                properties: const {'label': 'Man overboard marked position'},
+              ),
+            ],
+    );
+  }
+
+  Map<String, dynamic> _aisGeoJson() => MapGeoJson.points(
+    _visibleAisTargets.map(
+      (datum) => MapGeoJsonPoint(
+        id: 'ais-${datum.value.mmsi}',
+        point: GeoPoint(
+          latitude: datum.value.latitude,
+          longitude: datum.value.longitude,
+        ),
+        properties: {
+          'label': datum.value.name ?? 'MMSI ${datum.value.mmsi}',
+          'bearing':
+              datum.value.headingDegrees ??
+              datum.value.courseOverGroundDegrees ??
+              0,
+          'stale': _aisTargetIsStale(datum),
+        },
+      ),
+    ),
+  );
+
   /// Which overlay features the sailor badge layer draws.
   ///
   /// A single flag on the feature rather than a test on its icon name, so the
@@ -4706,6 +5228,13 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     String layerId,
     ml.Annotation? annotation,
   ) {
+    if (layerId == 'tide-and-seek-ais-symbols') {
+      final target = _visibleAisTargets
+          .where((datum) => 'ais-${datum.value.mmsi}' == id)
+          .firstOrNull;
+      if (target != null) unawaited(_showAisTarget(target));
+      return;
+    }
     if (layerId != 'tide-and-seek-overlay-icons' &&
         layerId != 'tide-and-seek-waypoint-circles') {
       return;
@@ -4831,13 +5360,11 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
           stopQueries: request.stopQueries,
           query: request.query,
           distanceUnit: widget.distanceUnit,
-          preferences: request.preferences,
         );
         final review = await _reviewRoute(
           planned.route,
           distanceMeters: planned.distanceMeters,
           duration: planned.duration,
-          twistinessScore: planned.twistinessScore,
           warnings: planned.warnings,
           canEditStops: true,
           previousRoute: previousCandidate,
@@ -4883,9 +5410,9 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   /// the same pipeline a GPX import uses (#155).
   ///
   /// The only difference between this and [_importGpx] is where the
-  /// [ImportedRoute] comes from. Everything after it - road matching, the
-  /// review screen, `RouteStore`, `RouteProgressTracker`, breadcrumbs,
-  /// manoeuvres - is the shared path, so a route from history and a route from
+  /// [ImportedRoute] comes from. Everything after it - passage re-planning, the
+  /// review screen, `RouteStore`, `RouteProgressTracker`, and breadcrumbs - is
+  /// the shared path, so a route from history and a route from
   /// a file are indistinguishable once selected.
   Future<void> _useStoredRoute() async {
     if (_importing) return;
@@ -4930,13 +5457,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         'Only the voyage skipper can replace the group route.',
       );
     }
-    // An imported passage is followed exactly as supplied. The inherited build
-    // offered to "generate a navigable route" here, which matched the line to
-    // the road network - on a GPX passage that is not a lesser answer, it is a
-    // track across land (#19). Turn-by-turn does not exist at sea; the guidance
-    // surfaces already say so when a route carries no manoeuvres.
     const ImportedRoute? comparisonRoute = null;
-    if (_isImportedTrackWithoutManeuvers(route)) {
+    if (_isImportedTrack(route)) {
       final savedRoutes =
           widget.recordedRouteStore ??
           await JsonFileRecordedRouteStore.openDefault();
@@ -4958,7 +5480,6 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     ImportedRoute route, {
     double? distanceMeters,
     Duration? duration,
-    double? twistinessScore,
     List<String> warnings = const [],
     bool canEditStops = false,
     ImportedRoute? previousRoute,
@@ -4994,13 +5515,12 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       basemapConfiguration: _basemap,
       distanceMeters: distanceMeters,
       duration: duration,
-      twistinessScore: twistinessScore,
       warnings: reviewWarnings,
       previousRoute: previousRoute ?? _route,
       comparisonRoute: comparisonRoute,
       canEditStops: canEditStops,
       onReshapeRoute: (candidate, shapingPoints) => RouteReshapePlanner(
-        routingService: _roadRoutingService,
+        passagePlanner: _passagePlanner,
       ).reshape(candidate, shapingPoints),
       onRouteChanged: (candidate) => reviewedRoute = candidate,
     );
@@ -5010,11 +5530,9 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     );
   }
 
-  /// An imported line with no manoeuvres, which is every GPX passage.
-  bool _isImportedTrackWithoutManeuvers(ImportedRoute route) {
+  bool _isImportedTrack(ImportedRoute route) {
     final drawablePaths = route.paths.where((path) => path.points.length >= 2);
-    return route.maneuvers.isEmpty &&
-        drawablePaths.isNotEmpty &&
+    return drawablePaths.isNotEmpty &&
         drawablePaths.every((path) => path.kind == RoutePathKind.track);
   }
 
@@ -5025,11 +5543,6 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     setState(() {
       _route = activeRoute;
       _setRouteStartConnector(null);
-      _rejoinProgressTracker.reset();
-      _rejoinProgressGeometry = _rejoinProgressTracker.update(
-        _externalRejoinRoute,
-        _effectivePosition,
-      );
       _progressGeometry = _routeProgressTracker.update(
         activeRoute,
         _effectivePosition,
@@ -5040,7 +5553,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         _navigationCanvasActive = true;
       }
     });
-    _updateNavigationGuidance(_effectivePosition);
+    _updatePassageGuidance(_effectivePosition);
     await _syncMapLibreSources();
     _fitRoute();
     if (_navigationMode) unawaited(_followNavigationCamera());
@@ -5137,10 +5650,10 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     if (position == null || start == null || _routingToStart) return;
     setState(() => _routingToStart = true);
     try {
-      final result = await _roadRoutingService.routeThrough([position, start]);
+      final result = await _passagePlanner.planThrough([position, start]);
       if (result.points.length < 2) {
         throw const FormatException(
-          'The routing service returned no usable route.',
+          'The passage planner returned no usable course.',
         );
       }
       final connector = ImportedRoute(
@@ -5156,19 +5669,13 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
           ),
         ],
         waypoints: const [],
-        maneuvers: result.maneuvers,
         plannedDuration: result.duration,
       );
       if (!mounted) return;
       setState(() {
         _setRouteStartConnector(connector);
-        _rejoinProgressTracker.reset();
-        _rejoinProgressGeometry = _rejoinProgressTracker.update(
-          connector,
-          _effectivePosition,
-        );
       });
-      _updateNavigationGuidance(_effectivePosition);
+      _updatePassageGuidance(_effectivePosition);
       _scheduleMapLibreSync(progress: true, overlays: true);
       _showMessage('Directions to the planned route start are ready.');
     } on Object catch (error) {
@@ -5188,8 +5695,6 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     }
     setState(() {
       _setRouteStartConnector(null);
-      _rejoinProgressTracker.reset();
-      _rejoinProgressGeometry = const RouteProgressGeometry.empty();
     });
     _scheduleMapLibreSync(progress: true, overlays: true);
     _showMessage('Planned route reached. Following the main route.');
@@ -5278,20 +5783,13 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
           setState(() {
             _route = null;
             _setRouteStartConnector(null);
-            _rejoinProgressTracker.reset();
-            _rejoinProgressGeometry = _rejoinProgressTracker.update(
-              _externalRejoinRoute,
-              _effectivePosition,
-            );
             _progressGeometry = const RouteProgressGeometry.empty();
             _navigationMode = false;
             _navigationCanvasActive = false;
             _initialCameraPositioned = false;
             _releaseNavigationViewport();
           });
-          _navigationGuidance.value =
-              const NavigationGuidanceAssessment.noRoute();
-          widget.onNavigationGuidanceChanged?.call(null);
+          _updatePassageGuidance(null);
           await _syncMapLibreSources();
           widget.onRouteChanged?.call(null);
           widget.onRouteCommitted?.call(null);
@@ -5304,11 +5802,64 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
         await _showNavigationInstruments();
       case _MapAction.weather:
         await _showWeather();
+      case _MapAction.tides:
+        await _showTides();
+      case _MapAction.ais:
+        await _handleAisAction();
       case _MapAction.clearOfflineTiles:
         await _mapLibreOfflineManager.clearAll();
         await widget.offlineTileCache.clearAll();
         _showMessage('Offline map data cleared.');
     }
+  }
+
+  Future<void> _handleAisAction() async {
+    if (widget.aisTargetSource != null) {
+      await _showAisSourceStatus();
+      return;
+    }
+    final replay = _aisReplaySource;
+    if (replay != null && identical(_activeAisTargetSource, replay)) {
+      await _detachAisSource(clearSnapshot: true);
+      await replay.dispose();
+      _aisReplaySource = null;
+      if (mounted) _showMessage('AIS replay stopped.');
+      return;
+    }
+    final source = ReplayAisTargetSource(
+      loadFixture: () =>
+          rootBundle.loadString('assets/replay/solent_ais.nmea', cache: false),
+    );
+    _aisReplaySource = source;
+    await _attachAisSource(source);
+    if (mounted && _aisError == null) {
+      _showMessage('Synthetic AIS replay started — not live vessel traffic.');
+    }
+  }
+
+  Future<void> _showAisSourceStatus() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => _AisSourceSheet(
+        snapshot: _aisSnapshot,
+        starting: _aisStarting,
+        error: _aisError,
+      ),
+    );
+  }
+
+  Future<void> _showAisTarget(MarineDatum<AisTarget> datum) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => _AisTargetSheet(
+        datum: datum,
+        sourceConnected: _aisSnapshot?.connected == true,
+      ),
+    );
   }
 
   /// Wind, pressure, visibility and sea state for where the sailor is.
@@ -5325,6 +5876,10 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     }
     MarineForecast? forecast;
     ForecastException? failure;
+    WindField? windField;
+    ForecastException? windFieldFailure;
+    var selectedWindHour = DateTime.now().toUtc();
+    var loadingWind = false;
     try {
       forecast = await OpenMeteoForecastService(
         client: _routingClient,
@@ -5332,22 +5887,143 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     } on ForecastException catch (error) {
       failure = error;
     }
+    try {
+      windField = await _windFieldService.fetch(
+        south: (position.latitude - 0.2).clamp(-90.0, 90.0),
+        west: (position.longitude - 0.25).clamp(-180.0, 180.0),
+        north: (position.latitude + 0.2).clamp(-90.0, 90.0),
+        east: (position.longitude + 0.25).clamp(-180.0, 180.0),
+        validAt: selectedWindHour,
+      );
+      selectedWindHour = windField.validAt ?? selectedWindHour;
+    } on ForecastException catch (error) {
+      windFieldFailure = error;
+    }
     if (!mounted) return;
     await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-          child: MarineForecastPanel(
-            forecast: forecast,
-            failure: failure,
-            now: DateTime.now().toUtc(),
-          ),
-        ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          Future<void> selectWindHour(DateTime requested) async {
+            setSheetState(() => loadingWind = true);
+            try {
+              final next = await _windFieldService.fetch(
+                south: (position.latitude - 0.2).clamp(-90.0, 90.0),
+                west: (position.longitude - 0.25).clamp(-180.0, 180.0),
+                north: (position.latitude + 0.2).clamp(-90.0, 90.0),
+                east: (position.longitude + 0.25).clamp(-180.0, 180.0),
+                validAt: requested,
+              );
+              if (!context.mounted) return;
+              setSheetState(() {
+                windField = next;
+                windFieldFailure = null;
+                selectedWindHour = next.validAt ?? requested;
+                loadingWind = false;
+              });
+            } on ForecastException catch (error) {
+              if (!context.mounted) return;
+              setSheetState(() {
+                windFieldFailure = error;
+                selectedWindHour = requested;
+                loadingWind = false;
+              });
+            }
+          }
+
+          return SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  WindFieldPanel(
+                    field: windField,
+                    failure: windFieldFailure,
+                    selectedAt: selectedWindHour,
+                    loading: loadingWind,
+                    onPrevious: () => unawaited(
+                      selectWindHour(
+                        selectedWindHour.subtract(const Duration(hours: 1)),
+                      ),
+                    ),
+                    onNext: () => unawaited(
+                      selectWindHour(
+                        selectedWindHour.add(const Duration(hours: 1)),
+                      ),
+                    ),
+                    onNow: () => unawaited(selectWindHour(DateTime.now())),
+                  ),
+                  const Divider(height: 28),
+                  MarineForecastPanel(
+                    forecast: forecast,
+                    failure: failure,
+                    now: DateTime.now().toUtc(),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
+  }
+
+  Future<void> _showTides() async {
+    final position = _effectivePosition;
+    if (position == null) {
+      _showMessage('No position yet, so there is no nearby tide station.');
+      return;
+    }
+    try {
+      final provider = await BundledHarmonicTideProvider.load();
+      final stations = await provider.stationsNear(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        limitKilometers: 150,
+      );
+      if (stations.isEmpty) {
+        _showMessage('No bundled tide station is within 150 km.');
+        return;
+      }
+      final now = DateTime.now().toUtc();
+      final station = stations.first;
+      final prediction = await provider.predict(
+        station: station,
+        start: now.subtract(const Duration(hours: 6)),
+        end: now.add(const Duration(hours: 18)),
+      );
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (context) => SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+            child: TidePredictionPanel(
+              prediction: prediction,
+              now: now,
+              distanceKilometers:
+                  _mapDistanceMeters(
+                    position,
+                    GeoPoint(
+                      latitude: station.latitude,
+                      longitude: station.longitude,
+                    ),
+                  ) /
+                  1000,
+            ),
+          ),
+        ),
+      );
+    } on Object catch (error) {
+      _showMessage('Offline tide data could not be read: $error');
+    }
   }
 
   /// The instrument panel: what the receiver measures and what follows from it.
@@ -5434,10 +6110,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
 
   /// Lists the alterations of course the passage asks for.
   ///
-  /// Was `ManeuverListScreen`, which read `route.maneuvers` and so was
-  /// permanently empty on a passage - two manoeuvre lists existed, and the one
-  /// reachable from here was the useless one (#31). Derived from the passage's
-  /// own marks, so it needs no network and no routing call.
+  /// Derived from the passage's own marks, so it needs no network or planning
+  /// call.
   Future<void> _showManeuverList() async {
     final route = _route;
     if (route == null) return;
@@ -5730,6 +6404,8 @@ enum _MapAction {
   passagePlan,
   instruments,
   weather,
+  tides,
+  ais,
   importGpx,
   loadDemo,
   personalVoyageHeatmap,
@@ -7777,7 +8453,488 @@ class _ActionLabel extends StatelessWidget {
   }
 }
 
-/// A stable, app-owned compass paired with the posted-speed sign.
+class _ChartZoomControls extends StatelessWidget {
+  const _ChartZoomControls({
+    required this.darkMap,
+    required this.onZoomIn,
+    required this.onZoomOut,
+  });
+
+  final bool darkMap;
+  final VoidCallback onZoomIn;
+  final VoidCallback onZoomOut;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    key: const Key('chart-zoom-controls'),
+    color: darkMap ? const Color(0xE6252E39) : const Color(0xF2FFFFFF),
+    elevation: 4,
+    borderRadius: BorderRadius.circular(12),
+    clipBehavior: Clip.antiAlias,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          key: const Key('chart-zoom-in'),
+          tooltip: 'Zoom chart in',
+          onPressed: onZoomIn,
+          icon: const Icon(Icons.add),
+        ),
+        const SizedBox(width: 36, child: Divider(height: 1)),
+        IconButton(
+          key: const Key('chart-zoom-out'),
+          tooltip: 'Zoom chart out',
+          onPressed: onZoomOut,
+          icon: const Icon(Icons.remove),
+        ),
+      ],
+    ),
+  );
+}
+
+class _MobChartMarker extends StatelessWidget {
+  const _MobChartMarker();
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: 'Man overboard marked position',
+    child: Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFFD9304F),
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: const [
+          BoxShadow(color: Color(0x99000000), blurRadius: 7, spreadRadius: 1),
+        ],
+      ),
+      child: const Center(
+        child: Icon(Icons.crisis_alert, color: Colors.white, size: 30),
+      ),
+    ),
+  );
+}
+
+class _MobRecoveryCard extends StatelessWidget {
+  const _MobRecoveryCard({
+    required this.incident,
+    required this.currentPosition,
+    required this.now,
+    required this.distanceUnit,
+    required this.busy,
+    required this.onShowBoth,
+    required this.onResolve,
+  });
+
+  final MobIncident incident;
+  final GeoPoint? currentPosition;
+  final DateTime now;
+  final DistanceUnit distanceUnit;
+  final bool busy;
+  final VoidCallback? onShowBoth;
+  final VoidCallback? onResolve;
+
+  @override
+  Widget build(BuildContext context) {
+    final fix = incident.fix;
+    final mobPoint = fix.hasPosition
+        ? GeoPoint(latitude: fix.latitude!, longitude: fix.longitude!)
+        : null;
+    final current = currentPosition;
+    String positionLabel;
+    if (mobPoint == null) {
+      positionLabel = 'No chart position was available when MOB was marked.';
+    } else if (current == null) {
+      positionLabel =
+          'Marked chart position saved; your live position is unavailable.';
+    } else {
+      final distance = _mapDistanceMeters(current, mobPoint);
+      final bearing = _bearingDegrees(current, mobPoint).round() % 360;
+      positionLabel =
+          '${MeasurementFormatter(distanceUnit).distance(distance)} · '
+          '${bearing.toString().padLeft(3, '0')}°T from your current position';
+    }
+    final recorded = fix.recordedAt;
+    final accuracy = fix.accuracyMeters;
+    return Card(
+      key: const Key('mob-recovery-card'),
+      color: const Color(0xF08C142B),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: DefaultTextStyle.merge(
+            style: const TextStyle(color: Colors.white),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.crisis_alert, color: Colors.white),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'MAN OVERBOARD',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _mobElapsedLabel(now.difference(incident.activatedAt)),
+                      key: const Key('mob-elapsed-time'),
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  positionLabel,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                if (recorded != null || accuracy != null || fix.stale) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    [
+                      if (recorded != null) 'Fix ${_mobUtcTimeLabel(recorded)}',
+                      if (accuracy != null) '±${accuracy.round()} m',
+                      if (fix.stale) 'STALE / LAST KNOWN',
+                    ].join(' · '),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                const Text(
+                  'This is a fixed marked point, not a live casualty position. No distress alert was sent.',
+                  style: TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (onShowBoth != null)
+                      OutlinedButton.icon(
+                        key: const Key('show-mob-and-vessel'),
+                        onPressed: busy ? null : onShowBoth,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.white70),
+                        ),
+                        icon: const Icon(Icons.fit_screen),
+                        label: const Text('Show both'),
+                      ),
+                    if (onResolve != null)
+                      FilledButton.icon(
+                        key: const Key('resolve-mob-button'),
+                        onPressed: busy ? null : onResolve,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF8C142B),
+                        ),
+                        icon: const Icon(Icons.check_circle),
+                        label: const Text('Resolve'),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _mobElapsedLabel(Duration elapsed) {
+  final seconds = math.max(0, elapsed.inSeconds);
+  final hours = seconds ~/ 3600;
+  final minutes = (seconds % 3600) ~/ 60;
+  final remainder = seconds % 60;
+  return '${hours.toString().padLeft(2, '0')}:'
+      '${minutes.toString().padLeft(2, '0')}:'
+      '${remainder.toString().padLeft(2, '0')}';
+}
+
+String _mobUtcTimeLabel(DateTime value) {
+  final utc = value.toUtc();
+  return '${utc.hour.toString().padLeft(2, '0')}:'
+      '${utc.minute.toString().padLeft(2, '0')}:'
+      '${utc.second.toString().padLeft(2, '0')} UTC';
+}
+
+class _AisChartMarker extends StatelessWidget {
+  const _AisChartMarker({
+    required this.target,
+    required this.stale,
+    required this.onTap,
+  });
+
+  final AisTarget target;
+  final bool stale;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bearing =
+        target.headingDegrees ?? target.courseOverGroundDegrees ?? 0;
+    final colour = stale ? const Color(0xFF69737F) : const Color(0xFFF59E0B);
+    return Semantics(
+      button: true,
+      label:
+          '${stale ? 'Stale ' : ''}received AIS target '
+          '${target.name ?? target.mmsi}',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Center(
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: colour.withValues(alpha: stale ? 0.62 : 0.96),
+              border: Border.all(color: const Color(0xFF10151C), width: 2),
+            ),
+            child: Transform.rotate(
+              angle: bearing * math.pi / 180,
+              child: const Icon(
+                Icons.navigation_rounded,
+                color: Colors.white,
+                size: 21,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AisStatusPill extends StatelessWidget {
+  const _AisStatusPill({
+    required this.snapshot,
+    required this.starting,
+    required this.error,
+    required this.onTap,
+  });
+
+  final AisTargetSnapshot? snapshot;
+  final bool starting;
+  final String? error;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = snapshot;
+    final count = value?.targets.length ?? 0;
+    final replay = value?.sourceKind == AisSourceKind.replay;
+    final connected = value?.connected == true;
+    final label = starting
+        ? 'AIS CONNECTING'
+        : error != null
+        ? 'AIS UNAVAILABLE'
+        : replay
+        ? 'AIS REPLAY · $count'
+        : connected
+        ? 'AIS RECEIVED · $count'
+        : 'AIS DISCONNECTED · $count STALE';
+    final colour = replay
+        ? const Color(0xFF7C3AED)
+        : connected
+        ? const Color(0xFFF59E0B)
+        : const Color(0xFFFF8A6B);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Material(
+        key: const Key('ais-status-pill'),
+        color: const Color(0xE6252E39),
+        shape: StadiumBorder(side: BorderSide(color: colour)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.radar, color: colour, size: 19),
+                const SizedBox(width: 7),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AisSourceSheet extends StatelessWidget {
+  const _AisSourceSheet({
+    required this.snapshot,
+    required this.starting,
+    required this.error,
+  });
+
+  final AisTargetSnapshot? snapshot;
+  final bool starting;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = snapshot;
+    final replay = value?.sourceKind == AisSourceKind.replay;
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              replay ? 'AIS replay demo' : 'Received AIS',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            if (starting) const LinearProgressIndicator(),
+            if (error != null)
+              Text(
+                'Source error: $error',
+                style: const TextStyle(color: Colors.red),
+              ),
+            Text(
+              value == null
+                  ? 'Waiting for an AIS source.'
+                  : '${value.source.displayName} · ${value.connectionState.name} · '
+                        '${value.targets.length} target${value.targets.length == 1 ? '' : 's'}',
+            ),
+            if (value != null) ...[
+              const SizedBox(height: 6),
+              Text('Last source update ${_mobUtcTimeLabel(value.receivedAt)}'),
+              Text(value.source.licence.attribution),
+            ],
+            const SizedBox(height: 14),
+            Text(
+              replay
+                  ? 'These are synthetic test vessels, not live traffic.'
+                  : 'Only AIS messages received from the configured on-board source are shown.',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'AIS is incomplete: vessels may not transmit, may be outside receiver range, or may be missed. This display does not calculate CPA/TCPA and is not a collision alarm.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AisTargetSheet extends StatelessWidget {
+  const _AisTargetSheet({required this.datum, required this.sourceConnected});
+
+  final MarineDatum<AisTarget> datum;
+  final bool sourceConnected;
+
+  @override
+  Widget build(BuildContext context) {
+    final target = datum.value;
+    final now = DateTime.now().toUtc();
+    final stale =
+        !sourceConnected ||
+        datum.freshnessAt(now) != MarineDataFreshness.current;
+    final age = now.difference(target.receivedAt.toUtc());
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.navigation_rounded,
+                  color: stale
+                      ? const Color(0xFF69737F)
+                      : const Color(0xFFF59E0B),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    target.name ?? 'MMSI ${target.mmsi}',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'MMSI ${target.mmsi}${target.callSign == null ? '' : ' · ${target.callSign}'}',
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '${stale ? 'STALE' : 'RECEIVED'} · age ${_aisAgeLabel(age)} · '
+              '${_mobUtcTimeLabel(target.receivedAt)}',
+              key: const Key('ais-target-freshness'),
+              style: TextStyle(
+                color: stale ? Colors.red : Colors.green.shade700,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              [
+                if (target.speedOverGroundKnots != null)
+                  'SOG ${target.speedOverGroundKnots!.toStringAsFixed(1)} kn',
+                if (target.courseOverGroundDegrees != null)
+                  'COG ${target.courseOverGroundDegrees!.round()}°T',
+                if (target.headingDegrees != null)
+                  'Heading ${target.headingDegrees!.round()}°T',
+              ].join(' · '),
+            ),
+            if (target.navigationStatus != null)
+              Text('Reported status: ${target.navigationStatus}'),
+            const SizedBox(height: 12),
+            Text('${datum.source.displayName} · ${datum.source.kind.label}'),
+            const SizedBox(height: 8),
+            const Text(
+              'Received AIS target only. This is not proof that the surrounding water is clear, and no CPA/TCPA or collision alarm is provided.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _aisAgeLabel(Duration value) {
+  final seconds = math.max(0, value.inSeconds);
+  if (seconds < 60) return '${seconds}s';
+  final minutes = seconds ~/ 60;
+  if (minutes < 60) return '${minutes}m';
+  return '${minutes ~/ 60}h ${minutes % 60}m';
+}
+
+/// A stable, app-owned compass paired with the chart instruments.
 ///
 /// MapLibre's native compass has a platform-fixed footprint, so it could be
 /// close to the sign or the same size, but not both on every phone. Drawing the
@@ -7942,280 +9099,20 @@ class _RouteStartBanner extends StatelessWidget {
   }
 }
 
-class _NavigationGuidanceBanner extends StatelessWidget {
-  const _NavigationGuidanceBanner({
-    required this.guidance,
-    required this.distanceUnit,
-    required this.compact,
-  });
+class _PassageGuidanceBanner extends StatelessWidget {
+  const _PassageGuidanceBanner({required this.passage, required this.compact});
 
-  final NavigationGuidance guidance;
-  final DistanceUnit distanceUnit;
+  final PassageGuidance passage;
   final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final formatter = MeasurementFormatter(distanceUnit);
-    final distance = formatter.distance(guidance.distanceMeters);
-    final instruction = guidance.instruction;
-    final following = guidance.followingInstruction;
-    final showLanes = maneuverLanesAreShowable(instruction.lanes);
-    final followingDistance = guidance.followingDistanceMeters == null
-        ? null
-        : formatter.distance(guidance.followingDistanceMeters!);
-    // Spoken rather than seen, so the wording names the junction the symbol
-    // shows: standaloneText, not the text drawn beside the symbol.
-    final semanticLabel = [
-      '${instruction.standaloneText} in $distance.',
-      if (showLanes) maneuverLaneSummary(instruction.lanes),
-      if (following != null)
-        'Then ${following.standaloneText}'
-            '${followingDistance == null ? '' : ' after $followingDistance'}.',
-      guidance.roadLabel,
-    ].join(' ');
-    return Semantics(
-      key: const Key('navigation-guidance-banner'),
-      container: true,
-      liveRegion: true,
-      label: semanticLabel,
-      excludeSemantics: true,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: compact ? 8 : 10,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: voyageMapPrimaryPanelFill,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFF445262)),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x55000000),
-                  blurRadius: 10,
-                  offset: Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                ManeuverSymbolView(
-                  instruction: instruction,
-                  size: compact ? 40 : 50,
-                  color: const Color(0xFF68A9FF),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Distance on its own line and dominant, the way Google
-                      // Maps and Waze set it, because it is the one value a
-                      // sailor glances at rather than reads: how long they have.
-                      // It used to share a 16pt line with the instruction, so
-                      // the whole banner had to be read to get either (#361).
-                      //
-                      // This costs height, and the portrait band the #105 camera
-                      // measures pays for it in forward bias. That is the right
-                      // way round: a banner too small to glance at is not worth
-                      // any framing.
-                      // Counted down rather than stepped (#449). Only the drawn
-                      // number is interpolated: `guidance.distanceMeters` — the
-                      // value the schedule, the camera detector and the spoken
-                      // prompts all use — is untouched, so a smooth display
-                      // cannot become a smoothly wrong decision.
-                      //
-                      // Keyed on the manoeuvre so a new junction starts its own
-                      // count instead of gliding down from the last one's.
-                      SmoothCountdown(
-                        key: ValueKey(instruction.maneuver.identity),
-                        meters: guidance.distanceMeters,
-                        builder: (context, meters) => Text(
-                          formatter.distance(meters),
-                          maxLines: 1,
-                          style: TextStyle(
-                            fontSize: compact ? 26 : 30,
-                            fontWeight: FontWeight.w900,
-                            // Tight leading: the number is one line and every
-                            // point of height here is paid for out of the band
-                            // the camera's forward bias has to clear.
-                            height: 1.0,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        instruction.text,
-                        maxLines: 2,
-                        softWrap: true,
-                        style: TextStyle(
-                          fontSize: compact ? 16 : 18,
-                          fontWeight: FontWeight.w800,
-                          height: 1.1,
-                        ),
-                      ),
-                      if (showLanes) ...[
-                        const SizedBox(height: 5),
-                        ManeuverLaneStrip(
-                          lanes: instruction.lanes,
-                          compact: compact,
-                        ),
-                      ],
-                      if (following != null) ...[
-                        const SizedBox(height: 5),
-                        Row(
-                          key: const Key('following-maneuver'),
-                          children: [
-                            ManeuverSymbolView(
-                              instruction: following,
-                              size: compact ? 20 : 22,
-                              color: const Color(0xFFFFC857),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Then'
-                                '${followingDistance == null ? '' : ' in $followingDistance'} · '
-                                '${following.text}',
-                                maxLines: 2,
-                                softWrap: true,
-                                style: TextStyle(
-                                  fontSize: compact ? 14 : 15,
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFFFFD77D),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      Text(
-                        guidance.roadLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: compact ? 13 : 14,
-                          color: const Color(0xFFB7C2CF),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavigationGuidanceStatusBanner extends StatelessWidget {
-  const _NavigationGuidanceStatusBanner({
-    required this.assessment,
-    required this.compact,
-    this.passage,
-  });
-
-  final NavigationGuidanceAssessment assessment;
-  final bool compact;
-
-  /// The passage read against the current fix (#63).
-  ///
-  /// Preferred over [assessment] whenever there is a passage to report, which
-  /// is the whole point: `assessment` can only ever say "following the passage
-  /// line", because it is fed by the road planner and a passage has no
-  /// manoeuvres for it to describe. This says which leg, which mark, how far,
-  /// and what the plan asks for there.
-  final PassageGuidance? passage;
-
-  @override
-  Widget build(BuildContext context) {
-    final live = passage;
-    if (live != null && live.hasPassage) return _passageBanner(context, live);
-    final (icon, color) = switch (assessment.state) {
-      NavigationGuidanceState.waitingForLocation => (
-        Icons.gps_not_fixed_rounded,
-        const Color(0xFFFFC857),
-      ),
-      NavigationGuidanceState.offRoute => (
-        Icons.alt_route_rounded,
-        const Color(0xFFFFC857),
-      ),
-      NavigationGuidanceState.complete => (
-        Icons.flag_rounded,
-        const Color(0xFF72D69C),
-      ),
-      // A mode, not a fault. Every passage is here, and the amber warning icon
-      // this used to draw read as something being wrong (#72).
-      NavigationGuidanceState.noManeuvers => (
-        Icons.timeline_rounded,
-        const Color(0xFF68A9FF),
-      ),
-      NavigationGuidanceState.noRoute || NavigationGuidanceState.active => (
-        Icons.navigation_rounded,
-        const Color(0xFF68A9FF),
-      ),
-    };
-    return Semantics(
-      key: const Key('navigation-guidance-status-banner'),
-      container: true,
-      liveRegion: true,
-      label: assessment.message,
-      excludeSemantics: true,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: compact ? 10 : 12,
-              vertical: compact ? 7 : 9,
-            ),
-            decoration: BoxDecoration(
-              color: voyageMapPrimaryPanelFill,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFF445262)),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x55000000),
-                  blurRadius: 10,
-                  offset: Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Icon(icon, size: compact ? 20 : 22, color: color),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    assessment.message,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: compact ? 12 : 13,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   /// Two lines: where the vessel is in the passage, and what is coming.
   ///
   /// The detail line is allowed to wrap to two, because "6 cables to run · then
   /// alter 26° to port onto 068°T" is the sentence a helm is steering by and
   /// truncating it to an ellipsis would lose the course.
-  Widget _passageBanner(BuildContext context, PassageGuidance live) {
+  @override
+  Widget build(BuildContext context) {
+    final live = passage;
     final (icon, color) = switch (live.phase) {
       PassagePhase.offTrack => (
         Icons.swap_horiz_rounded,

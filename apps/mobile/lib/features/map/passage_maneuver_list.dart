@@ -1,8 +1,7 @@
 /// The alterations of course a passage asks for, in order.
 ///
-/// Replaces the road manoeuvre list (#63). That one was built from OSRM steps —
-/// turn left, third exit, get in lane — and since #19 removed the engine behind
-/// them it could only ever say "no turn prompts for this route".
+/// Replaces the inherited driving-instruction list (#63). This one describes
+/// alterations at marks instead of junction directions.
 ///
 /// This reads `PassageManeuverPlan`, which is derived from the marks the sailor
 /// chose, so it needs no service, cannot be stale, and works offline.

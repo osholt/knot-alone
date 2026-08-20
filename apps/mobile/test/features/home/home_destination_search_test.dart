@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/domain/imported_route.dart' show GeoPoint;
 import 'package:tide_and_seek/domain/voyage_coordination_mode.dart';
 import 'package:tide_and_seek/features/home/home_destination_search.dart';
-import 'package:tide_and_seek/services/road_routing.dart';
+import 'package:tide_and_seek/services/destination_planning.dart';
 
 void main() {
   group('search for a destination, then arrange the voyage (#431)', () {

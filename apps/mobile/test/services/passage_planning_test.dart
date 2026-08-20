@@ -80,7 +80,7 @@ void main() {
     const planner = RhumbLinePassagePlanner();
 
     test('joins the waypoints given, keeping every one of them', () async {
-      final result = await planner.routeThrough([needles, cherbourg, nab]);
+      final result = await planner.planThrough([needles, cherbourg, nab]);
 
       expect(result.points.first, needles);
       expect(result.points.last, nab);
@@ -90,7 +90,7 @@ void main() {
     });
 
     test('distance is the sum of its legs, not the direct line', () async {
-      final result = await planner.routeThrough([needles, cherbourg, nab]);
+      final result = await planner.planThrough([needles, cherbourg, nab]);
       final legs =
           rhumbDistanceMeters(needles, cherbourg) +
           rhumbDistanceMeters(cherbourg, nab);
@@ -102,16 +102,8 @@ void main() {
       );
     });
 
-    // The property that matters most: no turn-by-turn at sea. The guidance
-    // surfaces already say "no turn prompts for this route" when this is empty,
-    // so an empty list is the honest answer rather than a gap.
-    test('emits no manoeuvres', () async {
-      final result = await planner.routeThrough([needles, cherbourg]);
-      expect(result.maneuvers, isEmpty);
-    });
-
     test('says it has not checked the course against anything', () async {
-      final result = await planner.routeThrough([needles, cherbourg]);
+      final result = await planner.planThrough([needles, cherbourg]);
       final warnings = result.warnings.join(' ').toLowerCase();
 
       expect(result.warnings, isNotEmpty);
@@ -121,7 +113,7 @@ void main() {
     });
 
     test('says its timing is an assumption, not an ETA', () async {
-      final result = await planner.routeThrough([needles, cherbourg]);
+      final result = await planner.planThrough([needles, cherbourg]);
       final warnings = result.warnings.join(' ').toLowerCase();
 
       expect(warnings, contains('assume'));
@@ -133,8 +125,8 @@ void main() {
       const slow = RhumbLinePassagePlanner(planningSpeedKnots: 5);
       const fast = RhumbLinePassagePlanner(planningSpeedKnots: 10);
 
-      final slowResult = await slow.routeThrough([needles, cherbourg]);
-      final fastResult = await fast.routeThrough([needles, cherbourg]);
+      final slowResult = await slow.planThrough([needles, cherbourg]);
+      final fastResult = await fast.planThrough([needles, cherbourg]);
 
       // 60 miles at 5 knots is about 12 hours.
       expect(slowResult.duration.inMinutes / 60, closeTo(12, 0.5));
@@ -146,7 +138,7 @@ void main() {
     });
 
     test('a repeated waypoint does not create a zero-length leg', () async {
-      final result = await planner.routeThrough([needles, needles, cherbourg]);
+      final result = await planner.planThrough([needles, needles, cherbourg]);
       expect(
         result.distanceMeters,
         closeTo(rhumbDistanceMeters(needles, cherbourg), 1),
@@ -155,25 +147,25 @@ void main() {
 
     test('refuses a passage that goes nowhere', () async {
       expect(
-        () => planner.routeThrough([needles]),
+        () => planner.planThrough([needles]),
         throwsA(isA<FormatException>()),
       );
       expect(
-        () => planner.routeThrough([needles, needles]),
+        () => planner.planThrough([needles, needles]),
         throwsA(isA<FormatException>()),
       );
-      expect(() => planner.routeThrough([]), throwsA(isA<FormatException>()));
+      expect(() => planner.planThrough([]), throwsA(isA<FormatException>()));
     });
 
     test('a very short leg is not sampled into noise', () async {
       const a = GeoPoint(latitude: 50.7000, longitude: -1.3000);
       const b = GeoPoint(latitude: 50.7010, longitude: -1.3000);
-      final result = await planner.routeThrough([a, b]);
+      final result = await planner.planThrough([a, b]);
       expect(result.points, [a, b]);
     });
 
     test('sampled points stay on the rhumb line', () async {
-      final result = await planner.routeThrough([needles, cherbourg]);
+      final result = await planner.planThrough([needles, cherbourg]);
       final bearing = rhumbBearingDegrees(needles, cherbourg);
       // Every sampled point should lie on the same constant course from the
       // start. A great-circle sampler would drift off it.
@@ -184,14 +176,6 @@ void main() {
           reason: '$point is off the steered course',
         );
       }
-    });
-
-    test('route preferences are passed through untouched', () async {
-      final result = await planner.routeThrough([
-        needles,
-        cherbourg,
-      ], preferences: RoutePreferences.defaults);
-      expect(result.preferences, RoutePreferences.defaults);
     });
   });
 }

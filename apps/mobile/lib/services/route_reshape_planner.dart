@@ -1,5 +1,5 @@
 import '../domain/imported_route.dart';
-import 'road_routing.dart';
+import 'passage_planning_service.dart';
 import 'route_primary_path.dart';
 
 class RouteReshapeResult {
@@ -7,13 +7,11 @@ class RouteReshapeResult {
     required this.route,
     required this.distanceMeters,
     required this.duration,
-    this.twistinessScore,
   });
 
   final ImportedRoute route;
   final double distanceMeters;
   final Duration duration;
-  final double? twistinessScore;
 }
 
 /// Recalculates a route through non-stopping shaping controls.
@@ -21,9 +19,9 @@ class RouteReshapeResult {
 /// The caller owns confirmation. This class only returns an immutable preview;
 /// it never writes the active route or publishes a group route event (#242).
 class RouteReshapePlanner {
-  const RouteReshapePlanner({required this.routingService});
+  const RouteReshapePlanner({required this.passagePlanner});
 
-  final RoadRoutingService routingService;
+  final PassagePlanningService passagePlanner;
 
   Future<RouteReshapeResult> reshape(
     ImportedRoute route,
@@ -35,10 +33,7 @@ class RouteReshapePlanner {
         'This route needs a start and destination before it can be reshaped.',
       );
     }
-    final result = await routingService.routeThrough(
-      controls,
-      preferences: route.preferences,
-    );
+    final result = await passagePlanner.planThrough(controls);
     final primary = routePrimaryPath(route);
     final primaryPath = route.paths
         .where((path) => identical(path.points, primary))
@@ -58,16 +53,13 @@ class RouteReshapePlanner {
       ],
       waypoints: route.waypoints,
       shapingPoints: List.unmodifiable(shapingPoints),
-      maneuvers: result.maneuvers,
       markerReview: route.markerReview,
-      preferences: route.preferences,
       plannedDuration: result.duration,
     );
     return RouteReshapeResult(
       route: reshaped,
       distanceMeters: result.distanceMeters,
       duration: result.duration,
-      twistinessScore: result.twistinessScore,
     );
   }
 }

@@ -353,8 +353,8 @@ class _StoredRouteOptionsSheetState extends State<StoredRouteOptionsSheet> {
               subtitle: Text(
                 _reversed
                     ? 'Runs from the original finish to the original start. '
-                          'Turn instructions from the original direction are '
-                          'dropped.'
+                          'Passage legs and bearings are recalculated from the '
+                          'reversed marks.'
                     : 'Runs in the direction it was ridden.',
               ),
             ),

@@ -68,8 +68,9 @@ adapter declares coverage, attribution, caching/redistribution limits, update
 metadata, failure mode, and whether data is measured, official, forecast, or
 community-authored.
 
-No production provider is selected. Road-map tiles and inherited road routing
-must not be relabelled as marine charts/navigation.
+No production provider is selected. General-purpose basemap tiles must not be
+relabelled as marine charts, and direct rhumb-line passage legs must state that
+they have not been checked against land, depth, hazards or traffic schemes.
 
 ## Discovery and pilotage packs
 

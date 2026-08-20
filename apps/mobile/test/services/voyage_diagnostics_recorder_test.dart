@@ -267,21 +267,18 @@ void main() {
   });
 
   group('the other three tickets get their numbers too', () {
-    test(
-      'a spoken prompt records how far from the junction it fired (#409)',
-      () {
-        final recorder = VoyageDiagnosticsRecorder(
-          clock: () => DateTime.utc(2026, 8, 10),
-        );
+    test('a spoken prompt records how far from the mark it fired (#409)', () {
+      final recorder = VoyageDiagnosticsRecorder(
+        clock: () => DateTime.utc(2026, 8, 10),
+      );
 
-        recorder.recordSpokenPrompt(
-          phrase: 'Take the 2nd exit',
-          distanceToManoeuvreMeters: 12.4,
-        );
+      recorder.recordSpokenPrompt(
+        phrase: 'Alter course to port',
+        distanceToMarkMeters: 12.4,
+      );
 
-        expect(recorder.render(), contains('12 m to the junction'));
-      },
-    );
+      expect(recorder.render(), contains('12 m to the mark'));
+    });
 
     test('an unknown distance says so rather than reading as zero', () {
       final recorder = VoyageDiagnosticsRecorder(
@@ -289,11 +286,11 @@ void main() {
       );
 
       recorder.recordSpokenPrompt(
-        phrase: 'Take the 2nd exit',
-        distanceToManoeuvreMeters: null,
+        phrase: 'Alter course to port',
+        distanceToMarkMeters: null,
       );
 
-      expect(recorder.render(), contains('distance to junction unknown'));
+      expect(recorder.render(), contains('distance to mark unknown'));
     });
 
     test('records whether natural speech or the OS fail-safe delivered it', () {

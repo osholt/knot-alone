@@ -37,7 +37,6 @@ void main() {
       'Finish',
     ]);
     expect(edited.shapingPoints.map((point) => point.legIndex), [0, 1, 2]);
-    expect(edited.maneuvers, isEmpty);
   });
 
   test('removes an intermediate waypoint and merges its route legs', () {
@@ -76,10 +75,7 @@ void main() {
         for (final mark in route.waypoints) mark.point,
       ]);
       expect(renamed.paths, route.paths);
-      // The distinguishing property. Insert and remove clear the manoeuvres
-      // because the geometry moved; a rename must not, or the courses and
-      // times already on screen would blank out for a typed word.
-      expect(renamed.maneuvers, route.maneuvers);
+      expect(renamed.plannedDuration, route.plannedDuration);
     });
 
     test('trims the name, and a blank one clears it', () {
@@ -207,12 +203,6 @@ ImportedRoute _route() => ImportedRoute(
     RouteWaypoint(
       name: 'Finish',
       point: GeoPoint(latitude: 51.02, longitude: -2.02),
-    ),
-  ],
-  maneuvers: const [
-    RouteManeuver(
-      position: GeoPoint(latitude: 51.005, longitude: -2.005),
-      type: 'turn',
     ),
   ],
 );

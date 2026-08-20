@@ -1,9 +1,5 @@
 import 'dart:convert';
 
-import 'route_preferences.dart';
-
-export 'route_preferences.dart';
-
 enum RoutePathKind { track, route }
 
 class GeoPoint {
@@ -124,7 +120,7 @@ class RouteWaypoint {
   }
 }
 
-/// A non-stopping control used to ask the road router for a particular road.
+/// A non-stopping control used to shape a passage leg.
 ///
 /// Named waypoints remain the start, destination and deliberate stops. Shaping
 /// points are stored separately so the app can render and drag them without
@@ -164,128 +160,6 @@ class RouteShapingPoint {
       legIndex: legIndex,
     );
   }
-}
-
-/// A routing or reviewed mapped instruction retained with the route geometry so
-/// navigation guidance remains available after restart and while offline.
-class RouteManeuver {
-  const RouteManeuver({
-    required this.position,
-    required this.type,
-    this.modifier,
-    this.name,
-    this.ref,
-    this.exitNumber,
-    this.drivingSide,
-    this.bearingBeforeDegrees,
-    this.bearingAfterDegrees,
-    this.lanes = const [],
-  });
-
-  final GeoPoint position;
-  final String type;
-  final String? modifier;
-  final String? name;
-  final String? ref;
-
-  /// Roundabout or rotary exit ordinal reported by the routing engine.
-  ///
-  /// The engine only counts exits for circular junctions, so this is never
-  /// invented for other manoeuvre types.
-  final int? exitNumber;
-
-  /// Route-engine traffic side (`left` or `right`) at this manoeuvre.
-  ///
-  /// This is deliberately stored with the route instead of inferred from the
-  /// phone locale: a sailor can load a route for a different country. It only
-  /// decides which way round a roundabout ring is drawn; it must never be used
-  /// to decide which way the sailor turns.
-  final String? drivingSide;
-
-  /// Heading in degrees clockwise from true north immediately before and after
-  /// the manoeuvre, as reported by the routing engine.
-  ///
-  /// These give the manoeuvre's own geometry, which is the only reliable way to
-  /// state the direction a roundabout is left: the entry modifier describes
-  /// joining the ring, not the exit taken.
-  final double? bearingBeforeDegrees;
-  final double? bearingAfterDegrees;
-  final List<RouteLane> lanes;
-
-  /// Stable identity for de-duplicating work about the same junction.
-  ///
-  /// Deliberately **not** `hashCode`. This class defines no value equality, so
-  /// `hashCode` is per object, and a route is re-derived constantly — a revision
-  /// arriving, a reload from JSON, a recompute after a fix. Every one of those
-  /// mints new objects for the same junctions, so anything keyed on `hashCode`
-  /// treats a junction it has already handled as new.
-  ///
-  /// That is why "Arrive at the destination" was announced repeatedly (#428):
-  /// spoken guidance de-duplicates on the key it is given, and the key changed
-  /// every time the route was rebuilt.
-  ///
-  /// Five decimal places is about a metre, which is finer than any two distinct
-  /// junctions on a route and coarser than the last bits of a double that a
-  /// re-fetch can legitimately move.
-  String get identity =>
-      '$type|${position.latitude.toStringAsFixed(5)},'
-      '${position.longitude.toStringAsFixed(5)}'
-      '|${modifier ?? ''}|${exitNumber ?? ''}';
-
-  Map<String, Object?> toJson() => {
-    'latitude': position.latitude,
-    'longitude': position.longitude,
-    'type': type,
-    if (modifier != null) 'modifier': modifier,
-    if (name != null) 'name': name,
-    if (ref != null) 'ref': ref,
-    if (exitNumber != null) 'exitNumber': exitNumber,
-    if (drivingSide != null) 'drivingSide': drivingSide,
-    if (bearingBeforeDegrees != null)
-      'bearingBeforeDegrees': bearingBeforeDegrees,
-    if (bearingAfterDegrees != null) 'bearingAfterDegrees': bearingAfterDegrees,
-    if (lanes.isNotEmpty)
-      'lanes': lanes.map((lane) => lane.toJson()).toList(growable: false),
-  };
-
-  factory RouteManeuver.fromJson(Map<String, Object?> json) => RouteManeuver(
-    position: GeoPoint(
-      latitude: _number(json, 'latitude'),
-      longitude: _number(json, 'longitude'),
-    ),
-    type: _requiredString(json, 'type'),
-    modifier: _optionalString(json['modifier']),
-    name: _optionalString(json['name']),
-    ref: _optionalString(json['ref']),
-    exitNumber: (json['exitNumber'] as num?)?.toInt(),
-    drivingSide: _optionalString(json['drivingSide']),
-    bearingBeforeDegrees: _optionalBearing(json['bearingBeforeDegrees']),
-    bearingAfterDegrees: _optionalBearing(json['bearingAfterDegrees']),
-    lanes:
-        (json['lanes'] as List?)
-            ?.whereType<Map>()
-            .map((lane) => RouteLane.fromJson(Map<String, Object?>.from(lane)))
-            .toList(growable: false) ??
-        const [],
-  );
-}
-
-class RouteLane {
-  const RouteLane({required this.indications, required this.valid});
-
-  final List<String> indications;
-  final bool valid;
-
-  Map<String, Object?> toJson() => {'indications': indications, 'valid': valid};
-
-  factory RouteLane.fromJson(Map<String, Object?> json) => RouteLane(
-    indications:
-        (json['indications'] as List?)?.whereType<String>().toList(
-          growable: false,
-        ) ??
-        const [],
-    valid: json['valid'] == true,
-  );
 }
 
 /// One reviewed marking position: a suggestion a person rejected, or a junction
@@ -415,10 +289,8 @@ class ImportedRoute {
     required this.paths,
     required this.waypoints,
     this.shapingPoints = const [],
-    this.maneuvers = const [],
     this.markerReview = MarkerPlanReview.empty,
     this.description,
-    this.preferences,
     this.plannedDuration,
   });
 
@@ -432,7 +304,6 @@ class ImportedRoute {
   final List<RoutePath> paths;
   final List<RouteWaypoint> waypoints;
   final List<RouteShapingPoint> shapingPoints;
-  final List<RouteManeuver> maneuvers;
 
   /// The routing engine's expected duration for the complete planned route.
   ///
@@ -453,21 +324,9 @@ class ImportedRoute {
     paths: paths,
     waypoints: waypoints,
     shapingPoints: shapingPoints,
-    maneuvers: maneuvers,
     markerReview: review,
-    preferences: preferences,
     plannedDuration: plannedDuration,
   );
-
-  /// The route character this route was planned for, when it was planned rather
-  /// than recorded or imported from a tool that records none.
-  ///
-  /// It lives on the route and not on the device so that sharing a route into a
-  /// voyage carries what it was planned for. Null means "not stated", which is
-  /// honest for a recorded track and for every route saved before this field
-  /// existed; it is not the same as a route deliberately planned with the
-  /// defaults.
-  final RoutePreferences? preferences;
 
   Iterable<GeoPoint> get allPoints sync* {
     for (final path in paths) {
@@ -491,9 +350,7 @@ class ImportedRoute {
         paths: paths,
         waypoints: waypoints,
         shapingPoints: List.unmodifiable(points),
-        maneuvers: maneuvers,
         markerReview: markerReview,
-        preferences: preferences,
         plannedDuration: plannedDuration,
       );
 
@@ -508,11 +365,7 @@ class ImportedRoute {
     'waypoints': waypoints.map((waypoint) => waypoint.toJson()).toList(),
     if (shapingPoints.isNotEmpty)
       'shapingPoints': shapingPoints.map((point) => point.toJson()).toList(),
-    if (maneuvers.isNotEmpty)
-      'maneuvers': maneuvers.map((maneuver) => maneuver.toJson()).toList(),
     if (markerReview.isNotEmpty) 'markerReview': markerReview.toJson(),
-    if (preferences case final routePreferences?)
-      'preferences': routePreferences.toJson(),
     if (plannedDuration case final duration?)
       'plannedDurationSeconds': duration.inSeconds,
   };
@@ -528,13 +381,11 @@ class ImportedRoute {
     final rawPaths = json['paths'];
     final rawWaypoints = json['waypoints'];
     final rawShapingPoints = json['shapingPoints'] ?? const [];
-    final rawManeuvers = json['maneuvers'] ?? const [];
     if (rawPaths is! List ||
         rawWaypoints is! List ||
-        rawShapingPoints is! List ||
-        rawManeuvers is! List) {
+        rawShapingPoints is! List) {
       throw const FormatException(
-        'Route paths, waypoints, shaping points and maneuvers must be lists.',
+        'Route paths, waypoints and shaping points must be lists.',
       );
     }
     final paths = rawPaths
@@ -563,14 +414,6 @@ class ImportedRoute {
           return RouteShapingPoint.fromJson(Map<String, Object?>.from(point));
         })
         .toList(growable: false);
-    final maneuvers = rawManeuvers
-        .map((maneuver) {
-          if (maneuver is! Map) {
-            throw const FormatException('Route maneuver must be an object.');
-          }
-          return RouteManeuver.fromJson(Map<String, Object?>.from(maneuver));
-        })
-        .toList(growable: false);
     if (paths.isEmpty && waypoints.isEmpty) {
       throw const FormatException('A route must contain geometry.');
     }
@@ -584,7 +427,6 @@ class ImportedRoute {
       ),
     };
 
-    final rawPreferences = json['preferences'];
     final sourceFileName = _requiredString(json, 'sourceFileName');
     final description = _optionalString(json['description']);
     return ImportedRoute(
@@ -596,14 +438,10 @@ class ImportedRoute {
       paths: paths,
       waypoints: waypoints,
       shapingPoints: shapingPoints,
-      maneuvers: maneuvers,
       markerReview: markerReview,
-      preferences: rawPreferences is Map
-          ? RoutePreferences.fromJson(Map<String, Object?>.from(rawPreferences))
-          : null,
       plannedDuration:
           _optionalDuration(json['plannedDurationSeconds']) ??
-          _legacySweeperDuration(
+          _legacyPlannedDuration(
             sourceFileName: sourceFileName,
             description: description,
           ),
@@ -630,16 +468,16 @@ Duration? _optionalDuration(Object? value) {
 }
 
 /// Build 60 and earlier persisted app-planned routes without their structured
-/// duration, but did retain the router's duration in this fixed description.
-/// Restrict the migration to TEC destination-route filenames and copy so an
+/// duration, but did retain the planner's duration in this fixed description.
+/// Restrict the migration to Tide and Seek destination filenames and copy so an
 /// arbitrary imported GPX description can never be mistaken for route timing.
-Duration? _legacySweeperDuration({
+Duration? _legacyPlannedDuration({
   required String sourceFileName,
   required String? description,
 }) {
   if (!sourceFileName.startsWith('tide-and-seek-destination-') ||
       description == null ||
-      !description.startsWith('Road route generated by Tide and Seek.')) {
+      !description.startsWith('Passage generated by Tide and Seek.')) {
     return null;
   }
   final match = RegExp(
@@ -678,14 +516,6 @@ String? _optionalString(Object? value) {
   }
   final trimmed = value.trim();
   return trimmed.isEmpty ? null : trimmed;
-}
-
-double? _optionalBearing(Object? value) {
-  if (value == null) return null;
-  if (value is! num || !value.isFinite) {
-    throw const FormatException('Expected a finite bearing in degrees.');
-  }
-  return (value.toDouble() % 360 + 360) % 360;
 }
 
 DateTime? _optionalDateTime(Object? value) {

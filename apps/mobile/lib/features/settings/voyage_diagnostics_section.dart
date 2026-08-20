@@ -81,8 +81,8 @@ class _VoyageDiagnosticsSectionState extends State<VoyageDiagnosticsSection> {
             },
             title: const Text('Record voyage diagnostics'),
             subtitle: const Text(
-              'Writes down each turn instruction, when it was spoken, every alert, '
-              'and this phone’s own route, so a wrong instruction can be explained '
+              'Writes down each passage prompt, when it was spoken, every alert, '
+              'and this phone’s own route, so a wrong prompt can be explained '
               'afterwards. No other sailor’s position is recorded. Nothing is sent '
               'anywhere until you choose a recipient when you share it.',
             ),

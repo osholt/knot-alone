@@ -396,15 +396,6 @@ final _route = ImportedRoute(
     ),
   ],
   waypoints: const [],
-  maneuvers: const [
-    RouteManeuver(
-      position: GeoPoint(latitude: 53, longitude: -1.005),
-      type: 'turn',
-      modifier: 'right',
-      name: 'Station Road',
-      drivingSide: 'left',
-    ),
-  ],
 );
 
 class _NoFileSource implements GpxImportSource {

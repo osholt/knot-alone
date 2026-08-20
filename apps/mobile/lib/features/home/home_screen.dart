@@ -17,7 +17,7 @@ import '../../controllers/shared_route_controller.dart';
 import '../../controllers/voyage_diagnostics_controller.dart';
 import '../../controllers/spoken_guidance_controller.dart';
 import '../../domain/imported_route.dart' show GeoPoint;
-import '../../services/road_routing.dart';
+import '../../services/destination_planning.dart';
 import 'home_destination_search.dart';
 import 'home_map_backdrop.dart';
 import 'home_voyage_actions.dart';
@@ -170,14 +170,13 @@ class _HomeScreenState extends State<HomeScreen> {
   final _routingClient = http.Client();
 
   late final DestinationRoutePlanner _destinationPlanner = () {
-    final configuration = RoutingConfiguration.fromEnvironment();
+    final configuration = DestinationSearchConfiguration.fromEnvironment();
     return DestinationRoutePlanner(
       searchService: NominatimDestinationSearchService(
         client: _routingClient,
         baseUrl: configuration.geocodingBaseUrl,
       ),
-      // Not a road router (#19): legs are direct courses on the water.
-      routingService: const RhumbLinePassagePlanner(),
+      passagePlanner: const RhumbLinePassagePlanner(),
     );
   }();
 

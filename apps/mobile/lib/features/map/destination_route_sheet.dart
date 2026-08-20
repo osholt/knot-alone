@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../domain/route_preferences.dart';
 import '../../services/navigation_export.dart';
 
 class DestinationPlanRequest {
@@ -9,7 +8,6 @@ class DestinationPlanRequest {
     this.startQuery,
     this.stopQueries = const [],
     this.handoffTarget,
-    this.preferences = RoutePreferences.defaults,
   });
 
   final String query;
@@ -21,10 +19,6 @@ class DestinationPlanRequest {
   final String? startQuery;
   final List<String> stopQueries;
   final NavigationTarget? handoffTarget;
-
-  /// The route character asked for, using the same preferences as the web
-  /// planner so the two agree about what a route with them means.
-  final RoutePreferences preferences;
 }
 
 class DestinationRouteSheet extends StatefulWidget {
@@ -51,7 +45,6 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
   late final TextEditingController _destinationController;
   final List<TextEditingController> _stopControllers = [];
   late _DestinationHandoff _handoff;
-  late RoutePreferences _preferences;
   String? _error;
 
   @override
@@ -65,7 +58,6 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
           const <TextEditingController>[],
     );
     _handoff = _handoffFromTarget(initial?.handoffTarget);
-    _preferences = initial?.preferences ?? RoutePreferences.defaults;
   }
 
   @override
@@ -186,18 +178,6 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
                 prefixIcon: const Icon(Icons.place_outlined),
               ),
             ),
-            // The road-routing preferences panel used to sit here: a routing
-            // style offering "Twisty (up to 50% longer)", and switches for
-            // motorways, major roads, tolls, ferries and unsurfaced byways.
-            // Every one was inert - `RhumbLinePassagePlanner` accepts
-            // `preferences` and passes them through untouched (#19) - and
-            // "Avoid ferries" on a sailing app told a sailor, correctly, that
-            // the app did not know what it was.
-            //
-            // Removed rather than reworded: there is no marine equivalent to
-            // reword them into. A passage is shaped by placing marks, which is
-            // what the chart is for. `RoutePreferences` itself survives until
-            // #31, because it is serialised into saved routes and GPX.
             const SizedBox(height: 14),
             DropdownButtonFormField<_DestinationHandoff>(
               key: const Key('destination-handoff-field'),
@@ -252,7 +232,6 @@ class _DestinationRouteSheetState extends State<DestinationRouteSheet> {
             .where((value) => value.isNotEmpty)
             .toList(growable: false),
         handoffTarget: _handoff.target,
-        preferences: _preferences,
       ),
     );
   }

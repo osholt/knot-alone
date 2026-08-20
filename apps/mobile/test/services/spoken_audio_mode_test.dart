@@ -53,33 +53,6 @@ void main() {
     });
   });
 
-  group('going off route quietens navigation, not warnings', () {
-    test('a sailor off route drops to alerts only', () {
-      // Turn-by-turn for a route the sailor is not on names junctions that are
-      // not coming.
-      expect(
-        spokenAudioModeOffRoute(SpokenAudioMode.everything),
-        SpokenAudioMode.alertsOnly,
-      );
-    });
-
-    test('a sailor who chose silence stays silent', () {
-      // An explicit choice outranks an automatic one — the same rule the mapped
-      // speed limit follows for a sailor who turned it off.
-      expect(
-        spokenAudioModeOffRoute(SpokenAudioMode.silent),
-        SpokenAudioMode.silent,
-      );
-    });
-
-    test('alerts only is already there and stays', () {
-      expect(
-        spokenAudioModeOffRoute(SpokenAudioMode.alertsOnly),
-        SpokenAudioMode.alertsOnly,
-      );
-    });
-  });
-
   group('the control on the map says what it is', () {
     test('every mode is named in words', () {
       // #306: no feature reachable only through an unlabelled icon, and a sailor

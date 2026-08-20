@@ -14,7 +14,7 @@ class GpxExporter {
         'version': '1.1',
         'creator': 'Tide and Seek',
         'xmlns': 'http://www.topografix.com/GPX/1/1',
-        if (route.preferences != null || route.markerReview.isNotEmpty)
+        if (route.markerReview.isNotEmpty)
           'xmlns:sweeper': 'https://tideandseek.invalid/gpx/1',
       },
       nest: () {
@@ -29,43 +29,25 @@ class GpxExporter {
               'time',
               nest: route.importedAt.toUtc().toIso8601String(),
             );
-            // Preferences belong to the route, so they travel with the file a
-            // sailor shares rather than staying on the device that planned it.
-            // Any other GPX reader ignores an unknown extension element.
-            if (route.preferences != null || route.markerReview.isNotEmpty) {
+            if (route.markerReview.isNotEmpty) {
               builder.element(
                 'extensions',
                 nest: () {
-                  if (route.preferences case final preferences?) {
-                    builder.element(
-                      'sweeper:route-preferences',
-                      attributes: {
-                        'style': preferences.style.apiValue,
-                        'avoid-motorways': '${preferences.avoidMotorways}',
-                        'avoid-major-roads': '${preferences.avoidMajorRoads}',
-                        'avoid-tolls': '${preferences.avoidTolls}',
-                        'avoid-ferries': '${preferences.avoidFerries}',
-                        'byway-surface': preferences.bywaySurface.apiValue,
-                      },
-                    );
-                  }
-                  if (route.markerReview.isNotEmpty) {
-                    builder.element(
-                      'sweeper:marker-review',
-                      nest: () {
-                        _writeReviewPoints(
-                          builder,
-                          'sweeper:rejected',
-                          route.markerReview.rejected,
-                        );
-                        _writeReviewPoints(
-                          builder,
-                          'sweeper:added',
-                          route.markerReview.added,
-                        );
-                      },
-                    );
-                  }
+                  builder.element(
+                    'sweeper:marker-review',
+                    nest: () {
+                      _writeReviewPoints(
+                        builder,
+                        'sweeper:rejected',
+                        route.markerReview.rejected,
+                      );
+                      _writeReviewPoints(
+                        builder,
+                        'sweeper:added',
+                        route.markerReview.added,
+                      );
+                    },
+                  );
                 },
               );
             }

@@ -61,8 +61,8 @@ rather than renaming them. Removed so far:
   `discovery_*` tables, and `0008_road_ratings` migration. They are the
   submission/moderation/rate-limit plumbing the pilotage layer will need, so
   they are left for backlog #10 to adopt or replace rather than deleted here.
-  `tools/discovery/generate_speed_cameras.py` and `generate_mini_roundabouts.py`
-  remain until their own surfaces are removed.
+  The remaining speed-camera and mini-roundabout generators were removed with
+  their final unreachable surfaces in #31.
 - **Speed limits, enforcement alerts, road hazards, traffic feeds and junction
   markers** — removed as one unit, because `SituationalAwarenessController`,
   `EnforcementAlertDetector` and the marker planner were mutually dependent and

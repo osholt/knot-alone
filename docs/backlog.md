@@ -21,3 +21,12 @@ not a claim that every P0 item is small.
 
 Each implementation issue must add automated acceptance tests and update the
 product claim in `README.md` only after its evidence gate passes.
+
+## Current implementation note
+
+The zero-cost development slice for chart camera, offline Solent tide heights,
+area wind forecasts, manual MOB, and local/replay AIS now exists with automated
+tests. These backlog items are not release-complete: physical-device, field,
+trusted-reference, and representative-receiver evidence remains outstanding.
+Network AIS, tidal streams, official charts/depth, and paid or account-based
+providers remain deferred.

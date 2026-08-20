@@ -70,11 +70,7 @@ ImportedRoute _withWaypoints(
   paths: route.paths,
   waypoints: List.unmodifiable(waypoints),
   shapingPoints: List.unmodifiable(shapingPoints),
-  // These describe the old route. The live recalculation replaces them before
-  // the candidate can be confirmed.
-  maneuvers: const [],
   markerReview: route.markerReview,
-  preferences: route.preferences,
 );
 
 List<RouteWaypoint> _editableWaypoints(ImportedRoute route) {
@@ -127,10 +123,9 @@ double routeProgressForPoint(ImportedRoute route, GeoPoint point) {
 /// Renames a mark, leaving the passage itself untouched.
 ///
 /// Deliberately does **not** go through [_withWaypoints]. Insert and remove
-/// change the geometry, so they clear the manoeuvres and the planned duration
-/// and force a re-plan. A name change does none of that: the courses, the
-/// distances and the times are all exactly what they were. Routing it through
-/// the re-planner would throw away a correct plan and make the sailor watch a
+/// change the geometry and force a re-plan. A name change does none of that:
+/// the courses, distances and times are all exactly what they were. Sending it
+/// through the re-planner would throw away a correct plan and make the sailor watch a
 /// progress bar for typing a word.
 ///
 /// A blank name clears it rather than storing an empty string, so a cleared
@@ -162,9 +157,7 @@ ImportedRoute renameRouteWaypoint(
     paths: route.paths,
     waypoints: List.unmodifiable(waypoints),
     shapingPoints: route.shapingPoints,
-    maneuvers: route.maneuvers,
     markerReview: route.markerReview,
-    preferences: route.preferences,
     plannedDuration: route.plannedDuration,
   );
 }

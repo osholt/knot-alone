@@ -25,11 +25,6 @@ void main() {
     expect(plan.legs.first.courseDegreesTrue, closeTo(96, 5));
   });
 
-  test('it carries no manoeuvres, because a passage has none', () async {
-    final route = await const BundledDemoRouteLoader().load();
-    expect(route.maneuvers, isEmpty);
-  });
-
   test('its geometry follows the legs it declares', () async {
     final route = await const BundledDemoRouteLoader().load();
     final points = route.paths.single.points;

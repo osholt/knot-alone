@@ -234,6 +234,14 @@ void main() {
   });
 
   group('tester update destinations', () {
+    test('tester notes point at the current repository', () {
+      expect(
+        BuildIdentity.defaultTesterNotesUrl,
+        'https://github.com/osholt/knot-alone/blob/main/'
+        'docs/tester-release-notes.md',
+      );
+    });
+
     test('an Android internal build points at the Play listing', () {
       final uri = BuildIdentity.defaultUpdateUriFor(
         TargetPlatform.android,

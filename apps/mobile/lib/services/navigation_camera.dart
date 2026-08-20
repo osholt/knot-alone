@@ -6,31 +6,27 @@ import 'dart:math' as math;
 /// aimed at. The forward-bias geometry below depends on that relationship.
 const double _cameraFieldOfViewRadians = 0.6435011087932844;
 
-/// MapLibre Native clamps the camera pitch to 60 degrees on both Android and
-/// iOS. Planning up to 58 degrees keeps a small margin so the plan is never
-/// silently clamped, which would otherwise make the eased transition end
-/// somewhere other than where it was asked to.
-const double navigationCameraMaximumTiltDegrees = 58;
+/// Sailing uses a chart-like plan view. Keeping the pitch at zero avoids hiding
+/// nearby water behind a perspective horizon and makes scale consistent in
+/// every direction.
+const double navigationCameraMaximumTiltDegrees = 0;
 
-/// Above this speed the framing stops opening up. More speed does not keep
-/// pushing the horizon away; it only makes the near field unreadable.
+/// Retained as a compatibility boundary for projected displays and tests. The
+/// sailing plan view no longer changes scale or pitch with speed.
 const double navigationCameraFramingTopSpeedMetersPerSecond = 30;
 
 /// Vertical position of the sailor in the map viewport, as a fraction of the
-/// viewport height measured from the top edge. 0.5 is dead centre, which is
-/// what a plain map does; a navigation view puts the sailor low so most of the
-/// screen shows the road ahead.
-const double navigationCameraRestSailorFractionPortrait = 0.62;
-const double navigationCameraFastSailorFractionPortrait = 0.70;
-const double navigationCameraRestSailorFractionLandscape = 0.64;
-const double navigationCameraFastSailorFractionLandscape = 0.72;
+/// viewport height measured from the top edge. A small, stable forward bias
+/// leaves room for water ahead without making the framing jump with speed.
+const double navigationCameraRestSailorFractionPortrait = 0.58;
+const double navigationCameraFastSailorFractionPortrait = 0.58;
+const double navigationCameraRestSailorFractionLandscape = 0.58;
+const double navigationCameraFastSailorFractionLandscape = 0.58;
 
-/// Landscape puts the sailor away from the screen centre so the road ahead has
-/// an unobstructed wide area. Left-hand traffic uses the right third, clear of
-/// the guidance/action rail shown in the supplied UK reference; right-hand
-/// traffic mirrors it. Portrait remains centred horizontally.
-const double navigationCameraLandscapeSailorFractionLeftTraffic = 2 / 3;
-const double navigationCameraLandscapeSailorFractionRightTraffic = 1 / 3;
+/// Legacy names retained for projected-display compatibility. A chart has no
+/// traffic side, so both orientations keep the vessel centred horizontally.
+const double navigationCameraLandscapeSailorFractionLeftTraffic = 0.5;
+const double navigationCameraLandscapeSailorFractionRightTraffic = 0.5;
 
 /// Space kept between the sailor's marker and the top of the bottom chrome
 /// band, as a fraction of the viewport height. The marker is 38 logical
@@ -147,8 +143,7 @@ class NavigationCameraPlan {
   /// fraction of its height from the top edge. Always at or below the centre.
   final double sailorViewportFraction;
 
-  /// Horizontal position of the sailor from the left edge. Portrait is centred;
-  /// landscape uses the traffic-side third of the viewport.
+  /// Horizontal position of the sailor from the left edge.
   final double sailorHorizontalViewportFraction;
 
   /// Logical pixels between the viewport centre and the sailor's marker.
@@ -175,19 +170,11 @@ class NavigationCameraPlan {
   final double lookAheadMeters;
 }
 
-/// Converts a smoothed road speed into a forward-looking navigation camera.
+/// Plans a stable, top-down sailing chart camera.
 ///
-/// The framing is driven by one normalised speed curve so zoom, tilt and
-/// forward bias move together. The curve is a smoothstep, so its value *and*
-/// its gradient are continuous at both ends: nothing snaps when the sailor
-/// crosses a speed threshold, and the framing simply stops changing above
-/// [navigationCameraFramingTopSpeedMetersPerSecond].
-///
-/// Tilt is deliberately steep. At 51-58 degrees the ground plane compresses
-/// towards a visible horizon in the upper part of the frame, which is what
-/// makes the view read as looking along the road rather than down at a map.
-/// Landscape starts steeper because its viewport is short, so the same tilt
-/// shows less distance.
+/// Speed is accepted for API compatibility but deliberately does not change the
+/// view. A sailor can zoom and reposition the chart during a voyage; follow mode
+/// returns to this predictable wider framing rather than a speed-dependent one.
 abstract final class NavigationCameraPlanner {
   static NavigationCameraPlan plan({
     required double? speedMetersPerSecond,
@@ -198,21 +185,8 @@ abstract final class NavigationCameraPlanner {
     double bottomChromeFraction = 0,
     bool leftHandTraffic = true,
   }) {
-    final speed = (speedMetersPerSecond ?? 0).isFinite
-        ? (speedMetersPerSecond ?? 0).clamp(
-            0.0,
-            navigationCameraFramingTopSpeedMetersPerSecond,
-          )
-        : 0.0;
-    final normalised = speed / navigationCameraFramingTopSpeedMetersPerSecond;
-    // Smoothstep: zero gradient at rest and at the top of the curve.
-    final speedFactor = normalised * normalised * (3 - 2 * normalised);
-    final baseZoom = landscape ? 14.15 : 14.65;
-    final baseTilt = landscape ? 53.0 : 51.0;
-    final zoom = baseZoom - 0.8 * speedFactor;
-    final tilt =
-        baseTilt +
-        (navigationCameraMaximumTiltDegrees - baseTilt) * speedFactor;
+    final zoom = landscape ? 12.2 : 12.6;
+    const tilt = navigationCameraMaximumTiltDegrees;
     final height = viewportHeightPixels.isFinite && viewportHeightPixels > 0
         ? viewportHeightPixels
         : 800.0;
@@ -221,15 +195,10 @@ abstract final class NavigationCameraPlanner {
         : 400.0;
     final sailorFraction = _sailorViewportFraction(
       landscape: landscape,
-      speedFactor: speedFactor,
       bottomChromeFraction: bottomChromeFraction,
     );
     final forwardBiasPixels = (sailorFraction - 0.5) * height;
-    final horizontalFraction = landscape
-        ? (leftHandTraffic
-              ? navigationCameraLandscapeSailorFractionLeftTraffic
-              : navigationCameraLandscapeSailorFractionRightTraffic)
-        : 0.5;
+    const horizontalFraction = 0.5;
     final lateralBiasPixels = (horizontalFraction - 0.5) * width;
     return NavigationCameraPlan(
       zoom: zoom,
@@ -257,16 +226,12 @@ abstract final class NavigationCameraPlanner {
   /// side rails that the centred marker never reaches, so callers pass zero.
   static double _sailorViewportFraction({
     required bool landscape,
-    required double speedFactor,
     required double bottomChromeFraction,
   }) {
     final rest = landscape
         ? navigationCameraRestSailorFractionLandscape
         : navigationCameraRestSailorFractionPortrait;
-    final fast = landscape
-        ? navigationCameraFastSailorFractionLandscape
-        : navigationCameraFastSailorFractionPortrait;
-    final preferred = rest + (fast - rest) * speedFactor;
+    final preferred = rest;
     final chrome = bottomChromeFraction.isFinite
         ? bottomChromeFraction.clamp(0.0, 1.0)
         : 0.0;
@@ -371,8 +336,8 @@ abstract final class NavigationCameraPlanner {
   /// framing this app commanded has arrived at that framing.
   ///
   /// The question "Follow me" asks is whether the camera *is* the navigation
-  /// viewport - following the sailor icon, at the planned zoom, showing the road
-  /// ahead - not whether the sailor happens to be somewhere in frame. #125 asked
+  /// viewport - following the sailor icon at the planned scale - not whether the
+  /// sailor happens to be somewhere in frame. #125 asked
   /// instead whether a pan had interrupted an active follow, and follow mode
   /// needs movement, so a phone on a desk was never following and the button
   /// never appeared (#133). #133 asked whether the sailor was roughly in frame,

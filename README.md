@@ -38,7 +38,14 @@ surface are migration work, not marine features.
   simulator for route, tide, weather, and connectivity scenarios.
 
 See [PLAN.md](PLAN.md), [docs/architecture.md](docs/architecture.md), and
-[docs/backlog.md](docs/backlog.md).
+[docs/backlog.md](docs/backlog.md). Development setup for an existing boat-local
+AIS receiver is documented in
+[docs/ais-local-receiver.md](docs/ais-local-receiver.md); it requires no
+network-AIS account or provider key.
+
+Tester distribution is documented in
+[docs/android-internal-testing.md](docs/android-internal-testing.md) and
+[docs/tester-update-guide.md](docs/tester-update-guide.md).
 
 ## Repository layout
 
@@ -71,8 +78,8 @@ uv run ruff check .
 uv run pytest
 ```
 
-All copied network and associated-domain defaults use `*.invalid`. A real
-domain, chart/weather/tide providers, and app-store identifiers are separate
+All copied network and associated-domain defaults use `*.invalid`. Real network
+domains, chart/network data providers, and app-store identifiers are separate
 release decisions.
 
 ## Licence and attribution

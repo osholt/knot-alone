@@ -33,7 +33,6 @@ class RouteReviewScreen extends StatefulWidget {
     required this.basemapConfiguration,
     this.distanceMeters,
     this.duration,
-    this.twistinessScore,
     this.warnings = const [],
     this.previousRoute,
     this.comparisonRoute,
@@ -47,11 +46,6 @@ class RouteReviewScreen extends StatefulWidget {
   final BasemapConfiguration basemapConfiguration;
   final double? distanceMeters;
   final Duration? duration;
-
-  /// The provider-scored twistiness of this route, when it was planned online.
-  /// Falls back to scoring the stored geometry, which is what a route loaded
-  /// from a share code or a file has.
-  final double? twistinessScore;
   final List<String> warnings;
   final ImportedRoute? previousRoute;
 
@@ -71,7 +65,6 @@ class RouteReviewScreen extends StatefulWidget {
     required BasemapConfiguration basemapConfiguration,
     double? distanceMeters,
     Duration? duration,
-    double? twistinessScore,
     List<String> warnings = const [],
     ImportedRoute? previousRoute,
     ImportedRoute? comparisonRoute,
@@ -88,7 +81,6 @@ class RouteReviewScreen extends StatefulWidget {
             basemapConfiguration: basemapConfiguration,
             distanceMeters: distanceMeters,
             duration: duration,
-            twistinessScore: twistinessScore,
             warnings: warnings,
             previousRoute: previousRoute,
             comparisonRoute: comparisonRoute,
@@ -117,7 +109,6 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
   late ImportedRoute _lastSuccessfulRoute = widget.route;
   late double? _distanceMeters = widget.distanceMeters;
   late Duration? _duration = widget.duration;
-  late double? _twistinessScore = widget.twistinessScore;
   final List<List<RouteShapingPoint>> _reshapeHistory = [];
 
   /// Whether a tap on the chart adds a mark (#32). Mutually exclusive with
@@ -137,7 +128,6 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
   BasemapConfiguration get basemapConfiguration => widget.basemapConfiguration;
   double? get distanceMeters => _distanceMeters;
   Duration? get duration => _duration;
-  double? get twistinessScore => _twistinessScore;
   List<String> get warnings => widget.warnings;
   ImportedRoute? get previousRoute => widget.previousRoute;
   ImportedRoute? get comparisonRoute => widget.comparisonRoute;
@@ -283,7 +273,6 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
             _lastSuccessfulRoute = _route;
             _distanceMeters = result.distanceMeters;
             _duration = result.duration;
-            _twistinessScore = result.twistinessScore;
           });
           widget.onRouteChanged?.call(_route);
         } on Object catch (error) {
@@ -372,7 +361,6 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
         _lastSuccessfulRoute = _route;
         _distanceMeters = result.distanceMeters;
         _duration = result.duration;
-        _twistinessScore = result.twistinessScore;
       });
       widget.onRouteChanged?.call(_route);
     } on Object catch (error) {
@@ -664,10 +652,6 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                               '${maneuverPlan.maneuvers.length} '
                               'alteration${maneuverPlan.maneuvers.length == 1 ? '' : 's'}',
                         ),
-                      // No twistiness score (#35). It scored how enjoyable a
-                      // road was to ride; on a passage between two marks it
-                      // described the shape of a straight line and read as
-                      // "5°/km · Gentle" across the Solent.
                     ],
                   ),
                   // "Planned with: motorways excluded, unsurfaced byways
@@ -899,9 +883,7 @@ class _RouteReviewScreenState extends State<RouteReviewScreen> {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  // Was "All turns (n)", counted from OSRM steps and therefore
-                  // always zero since #19. Now the alterations of course the
-                  // passage asks for, derived from its own marks (#63).
+                  // Alterations of course derived from the passage's own marks.
                   if (maneuverPlan.hasManeuvers) ...[
                     OutlinedButton.icon(
                       key: const Key('review-maneuver-list'),
