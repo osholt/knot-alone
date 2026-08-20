@@ -62,7 +62,6 @@ import '../../services/stored_route_library.dart';
 import '../../services/trail_direction_arrows.dart';
 import 'destination_route_sheet.dart';
 import 'map_camera_guard.dart';
-import 'maneuver_list_screen.dart';
 import 'maneuver_symbol.dart';
 import 'group_mini_map_framing.dart';
 import 'vessel_icon.dart';
@@ -78,6 +77,7 @@ import '../../services/passage_guidance.dart';
 import '../../services/passage_legs.dart';
 import '../../services/passage_maneuvers.dart';
 import 'passage_leg_table.dart';
+import 'passage_maneuver_list.dart';
 import '../../services/navigation_instruments.dart';
 import 'navigation_instrument_panel.dart';
 import '../../services/marine_forecast.dart';
@@ -1541,13 +1541,16 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
                         ],
                       ),
                     ),
-                    // Route-derived: both read manoeuvres off the plan.
-                    if (_route?.maneuvers.isNotEmpty ?? false) ...[
+                    // Gated on the passage's own alterations, not on
+                    // `route.maneuvers` (#31). That field holds road manoeuvres
+                    // and is empty on every passage, so this item never appeared
+                    // at all - the list it opens was unreachable from here for
+                    // as long as the app has been a sailing app.
+                    if (_passageAlterationCount > 0)
                       const PopupMenuItem(
                         value: _MapAction.maneuverList,
-                        child: Text('All turns for this route'),
+                        child: Text('All alterations on this passage'),
                       ),
-                    ],
                     if (!kIsWeb &&
                         defaultTargetPlatform == TargetPlatform.android)
                       const PopupMenuItem(
@@ -5422,20 +5425,26 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     );
   }
 
-  /// Lists every manoeuvre for the loaded route.
+  /// How many alterations the loaded passage asks for, for the menu's gate.
+  int get _passageAlterationCount {
+    final route = _route;
+    if (route == null) return 0;
+    return PassageManeuverPlan.of(PassagePlan.of(route)).maneuvers.length;
+  }
+
+  /// Lists the alterations of course the passage asks for.
   ///
-  /// Distances come from the persisted route and the map's own progress tracker,
-  /// so the list works with no network and no fresh routing call.
+  /// Was `ManeuverListScreen`, which read `route.maneuvers` and so was
+  /// permanently empty on a passage - two manoeuvre lists existed, and the one
+  /// reachable from here was the useless one (#31). Derived from the passage's
+  /// own marks, so it needs no network and no routing call.
   Future<void> _showManeuverList() async {
     final route = _route;
     if (route == null) return;
-    await ManeuverListScreen.show(
+    await PassageManeuverList.show(
       context,
-      route: route,
+      plan: PassageManeuverPlan.of(PassagePlan.of(route)),
       distanceUnit: widget.distanceUnit,
-      progressMeters: _effectivePosition == null
-          ? null
-          : _progressGeometry.progressMeters,
     );
   }
 

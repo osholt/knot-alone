@@ -927,52 +927,48 @@ void main() {
     expect(arrows.markers, isNotEmpty);
   });
 
-  testWidgets('the map menu lists every turn for the loaded route', (
-    tester,
-  ) async {
+  // #31. This used to open `ManeuverListScreen` on a Bristol roundabout and
+  // assert "2nd exit, straight on". Two manoeuvre lists existed, and the one
+  // the map menu opened was the road one - permanently empty on a passage.
+  testWidgets('the map menu opens the passage alterations', (tester) async {
     final directory = Directory.systemTemp.createTempSync(
-      'map-maneuver-list-test',
+      'map-alteration-list-test',
     );
     addTearDown(() => directory.deleteSync(recursive: true));
+    // Three legs that alter hard at each mark, so both marks earn an
+    // instruction: east, then north, then east again.
     final route = ImportedRoute(
       id: 'listed',
-      name: 'Listed route',
-      importedAt: DateTime.utc(2026, 7, 25),
+      name: 'Solent passage',
+      importedAt: DateTime.utc(2026, 8, 20),
       sourceFileName: 'listed.gpx',
       paths: const [
         RoutePath(
-          kind: RoutePathKind.track,
+          kind: RoutePathKind.route,
           points: [
-            GeoPoint(latitude: 51.45, longitude: -2.59),
-            GeoPoint(latitude: 51.46, longitude: -2.59),
-            GeoPoint(latitude: 51.47, longitude: -2.59),
+            GeoPoint(latitude: 50.70, longitude: -1.50),
+            GeoPoint(latitude: 50.70, longitude: -1.40),
+            GeoPoint(latitude: 50.78, longitude: -1.40),
+            GeoPoint(latitude: 50.78, longitude: -1.30),
           ],
         ),
       ],
-      waypoints: const [],
-      maneuvers: const [
-        RouteManeuver(
-          position: GeoPoint(latitude: 51.46, longitude: -2.59),
-          type: 'roundabout',
-          modifier: 'slight left',
-          name: 'Wells Road',
-          exitNumber: 2,
-          drivingSide: 'left',
-          bearingBeforeDegrees: 0,
-          bearingAfterDegrees: 300,
+      waypoints: const [
+        RouteWaypoint(
+          name: 'Lymington',
+          point: GeoPoint(latitude: 50.70, longitude: -1.50),
         ),
-        RouteManeuver(
-          position: GeoPoint(latitude: 51.4602, longitude: -2.59),
-          type: 'exit roundabout',
-          modifier: 'slight left',
-          name: 'Wells Road',
-          drivingSide: 'left',
-          bearingBeforeDegrees: 40,
-          bearingAfterDegrees: 2,
+        RouteWaypoint(
+          name: 'Needles Fairway',
+          point: GeoPoint(latitude: 50.70, longitude: -1.40),
         ),
-        RouteManeuver(
-          position: GeoPoint(latitude: 51.47, longitude: -2.59),
-          type: 'arrive',
+        RouteWaypoint(
+          name: 'Nab Tower',
+          point: GeoPoint(latitude: 50.78, longitude: -1.40),
+        ),
+        RouteWaypoint(
+          name: 'Cowes',
+          point: GeoPoint(latitude: 50.78, longitude: -1.30),
         ),
       ],
     );
@@ -996,12 +992,15 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('All turns for this route'));
+    await tester.tap(find.text('All alterations on this passage'));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('maneuver-list')), findsOneWidget);
-    expect(find.text('2nd exit, straight on'), findsOneWidget);
-    expect(find.text('Arrive at the destination'), findsOneWidget);
+    expect(find.byKey(const Key('passage-maneuver-list')), findsOneWidget);
+    expect(find.textContaining('to port onto 000°T'), findsOneWidget);
+    expect(find.text('at Needles Fairway'), findsOneWidget);
+    // The road list is gone, along with the vocabulary it carried.
+    expect(find.byKey(const Key('maneuver-list')), findsNothing);
+    expect(find.textContaining('exit'), findsNothing);
   });
 
   testWidgets('turn guidance reduces the TEC gap to a single-line chip', (

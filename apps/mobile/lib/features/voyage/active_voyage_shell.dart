@@ -62,7 +62,10 @@ import '../../services/native_push_token_source.dart';
 import '../../services/position_report_policy.dart';
 import '../../services/received_quick_message.dart';
 import '../../services/navigation_guidance.dart';
+import '../map/passage_maneuver_list.dart';
 import '../../services/passage_guidance.dart';
+import '../../services/passage_legs.dart';
+import '../../services/passage_maneuvers.dart';
 import '../../services/voyage_completion_detector.dart';
 import '../../services/route_progress.dart';
 import '../../services/voyage_membership.dart';
@@ -78,7 +81,6 @@ import '../../services/voyage_connectivity_summary.dart';
 import '../../services/sweeper_gap_trend.dart';
 import '../../services/trail_display_simplifier.dart';
 import '../map/maneuver_diagnostics.dart';
-import '../map/maneuver_list_screen.dart';
 import '../map/vessel_icon.dart';
 import '../map/marine_glyphs.dart';
 import '../map/voyage_layout.dart';
@@ -4120,15 +4122,19 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     }
   }
 
-  /// Opens the route's manoeuvre list while the map is in navigation mode and
-  /// its own menu is hidden. It reads persisted route data only.
+  /// Opens the passage's alterations while the map is in navigation mode and its
+  /// own menu is hidden. Reads persisted passage data only.
+  ///
+  /// Was `ManeuverListScreen`, whose road manoeuvres are always absent on a
+  /// passage (#31).
   void _openManeuverList() {
+    final route = _activeRoute;
+    if (route == null) return;
     unawaited(
-      ManeuverListScreen.show(
+      PassageManeuverList.show(
         context,
-        route: _activeRoute,
+        plan: PassageManeuverPlan.of(PassagePlan.of(route)),
         distanceUnit: widget.distanceUnits.value,
-        sailorPosition: _mapPosition.value,
       ),
     );
   }
