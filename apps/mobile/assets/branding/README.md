@@ -8,6 +8,12 @@ checked into their platform asset folders.
 for the Google Play store listing. Regenerate it from the master rather than
 editing it independently.
 
+`tide-and-seek-google-play-feature-graphic.png` is the 1024×500 Google Play
+feature graphic. The four 1080×1920 files in `play-store/` are field-test
+screenshots covering onboarding, the chart home, a simulated live voyage, and
+the MOB recovery view. The voyage screenshot uses simulator data rather than
+claiming a live network AIS feed.
+
 ## The mark
 
 A masthead sloop low and left, a flybridge motor cruiser high and right, and
@@ -97,3 +103,9 @@ PY
 ```
 
 Requires `imagemagick`.
+
+The feature graphic was generated from the checked-in Play icon as its visual
+reference, then centre-cropped and downscaled to exactly 1024×500. Its prompt
+requested the same emerald, cream, mint, and gold palette; a foreground sailing
+yacht; a companion motor vessel; subtle chart contours and route line; and no
+text, device frame, or third-party mark.

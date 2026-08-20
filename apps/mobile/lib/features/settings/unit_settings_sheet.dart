@@ -787,10 +787,13 @@ class _AboutBuildTile extends StatelessWidget {
 }
 
 Future<void> _openLegalPage(BuildContext context, String page) async {
-  final opened = await launchUrl(
-    Uri.https('tideandseek.invalid', '/$page'),
-    mode: LaunchMode.externalApplication,
-  );
+  final uri = switch (page) {
+    'privacy.html' => Uri.parse(
+      'https://github.com/osholt/knot-alone/blob/main/PRIVACY.md',
+    ),
+    _ => Uri.https('tideandseek.invalid', '/$page'),
+  };
+  final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (!opened && context.mounted) {
     ScaffoldMessenger.of(
       context,
