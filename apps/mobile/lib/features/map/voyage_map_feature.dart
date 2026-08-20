@@ -204,6 +204,7 @@ class VoyageMapFeature extends StatefulWidget {
     this.onRouteChanged,
     this.onRouteCommitted,
     this.onNavigationGuidanceChanged,
+    this.onPassageGuidanceChanged,
     this.onNavigationViewportChanged,
     this.onMapStyleResolved,
     this.changeRouteRequestToken,
@@ -266,6 +267,7 @@ class VoyageMapFeature extends StatefulWidget {
     ValueChanged<ImportedRoute?>? onRouteChanged,
     ValueChanged<ImportedRoute?>? onRouteCommitted,
     ValueChanged<NavigationGuidance?>? onNavigationGuidanceChanged,
+    ValueChanged<PassageGuidance?>? onPassageGuidanceChanged,
     ValueChanged<NavigationCameraViewport>? onNavigationViewportChanged,
     ValueChanged<String>? onMapStyleResolved,
     Object? changeRouteRequestToken,
@@ -322,6 +324,7 @@ class VoyageMapFeature extends StatefulWidget {
     onRouteChanged: onRouteChanged,
     onRouteCommitted: onRouteCommitted,
     onNavigationGuidanceChanged: onNavigationGuidanceChanged,
+    onPassageGuidanceChanged: onPassageGuidanceChanged,
     onNavigationViewportChanged: onNavigationViewportChanged,
     onMapStyleResolved: onMapStyleResolved,
     changeRouteRequestToken: changeRouteRequestToken,
@@ -415,6 +418,13 @@ class VoyageMapFeature extends StatefulWidget {
   final ValueChanged<ImportedRoute?>? onRouteChanged;
   final ValueChanged<ImportedRoute?>? onRouteCommitted;
   final ValueChanged<NavigationGuidance?>? onNavigationGuidanceChanged;
+
+  /// The passage read against the current fix, for the voice (#73).
+  ///
+  /// Separate from `onNavigationGuidanceChanged` rather than replacing it,
+  /// because they carry different things: that one carries a road manoeuvre,
+  /// which a passage never has, and this one carries prompts.
+  final ValueChanged<PassageGuidance?>? onPassageGuidanceChanged;
   final ValueChanged<NavigationCameraViewport>? onNavigationViewportChanged;
   final ValueChanged<String>? onMapStyleResolved;
   final Object? changeRouteRequestToken;
@@ -593,6 +603,7 @@ class _VoyageMapFeatureState extends State<VoyageMapFeature> {
         onRouteChanged: widget.onRouteChanged,
         onRouteCommitted: widget.onRouteCommitted,
         onNavigationGuidanceChanged: widget.onNavigationGuidanceChanged,
+        onPassageGuidanceChanged: widget.onPassageGuidanceChanged,
         onNavigationViewportChanged: widget.onNavigationViewportChanged,
         changeRouteRequestToken: widget.changeRouteRequestToken,
         onChangeRouteRequestHandled: widget.onChangeRouteRequestHandled,
@@ -678,6 +689,7 @@ class VoyageMapScreen extends StatefulWidget {
     this.onRouteChanged,
     this.onRouteCommitted,
     this.onNavigationGuidanceChanged,
+    this.onPassageGuidanceChanged,
     this.onNavigationViewportChanged,
     this.changeRouteRequestToken,
     this.onChangeRouteRequestHandled,
@@ -780,6 +792,13 @@ class VoyageMapScreen extends StatefulWidget {
   final ValueChanged<ImportedRoute?>? onRouteChanged;
   final ValueChanged<ImportedRoute?>? onRouteCommitted;
   final ValueChanged<NavigationGuidance?>? onNavigationGuidanceChanged;
+
+  /// The passage read against the current fix, for the voice (#73).
+  ///
+  /// Separate from `onNavigationGuidanceChanged` rather than replacing it,
+  /// because they carry different things: that one carries a road manoeuvre,
+  /// which a passage never has, and this one carries prompts.
+  final ValueChanged<PassageGuidance?>? onPassageGuidanceChanged;
   final ValueChanged<NavigationCameraViewport>? onNavigationViewportChanged;
   final Object? changeRouteRequestToken;
   final VoidCallback? onChangeRouteRequestHandled;
@@ -3299,11 +3318,12 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     final fix = _instrumentFix(position);
     if (route == null || fix == null) {
       _passageGuidance.value = null;
+      widget.onPassageGuidanceChanged?.call(null);
       return;
     }
     final now = DateTime.now();
     final plan = PassagePlan.of(route);
-    _passageGuidance.value = PassageGuidance.of(
+    final next = PassageGuidance.of(
       plan: plan,
       maneuvers: PassageManeuverPlan.of(plan),
       instruments: NavigationInstruments.compute(
@@ -3313,6 +3333,8 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
       ),
       distanceUnit: widget.distanceUnit,
     );
+    _passageGuidance.value = next;
+    widget.onPassageGuidanceChanged?.call(next);
   }
 
   void _updateNavigationGuidance(GeoPoint? position) {

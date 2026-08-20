@@ -62,6 +62,7 @@ import '../../services/native_push_token_source.dart';
 import '../../services/position_report_policy.dart';
 import '../../services/received_quick_message.dart';
 import '../../services/navigation_guidance.dart';
+import '../../services/passage_guidance.dart';
 import '../../services/voyage_completion_detector.dart';
 import '../../services/route_progress.dart';
 import '../../services/voyage_membership.dart';
@@ -3062,6 +3063,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
       onLeaveVoyage: _confirmLeaveVoyageFromMap,
       onRouteCommitted: _onRouteChanged,
       onNavigationGuidanceChanged: _onNavigationGuidanceChanged,
+      onPassageGuidanceChanged: _speakPassage,
       changeRouteRequestToken: _changeRouteRequestToken,
       onChangeRouteRequestHandled: _clearChangeRouteRequest,
       pendingSharedGpxFile: _pendingSharedGpxFile,
@@ -3168,6 +3170,54 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
   /// already exists: it is what surfaces with no symbol beside them use, which is
   /// exactly what audio is. A roundabout says so out loud, where the banner can
   /// leave it to the drawn glyph.
+  /// Says what the passage asks for (#73).
+  ///
+  /// The voice has been mute on every passage since #19: `_speakGuidance` takes
+  /// a `NavigationGuidance`, which is built from a manoeuvre list, and a passage
+  /// has none. Everything else about speaking — the engine, the voice ranking,
+  /// the audio classes, the spoken-key set — was already here and had nothing to
+  /// say.
+  ///
+  /// `PassageGuidance.prompts` is state rather than a stream of events, so this
+  /// filters against the same `_spokenGuidanceKeys` the road path uses. A prompt
+  /// present on twenty consecutive fixes is said once.
+  void _speakPassage(PassageGuidance? passage) {
+    final speaker = _spokenGuidance;
+    if (speaker == null || passage == null) return;
+    final controller = widget.voyageController;
+
+    for (final prompt in passage.prompts) {
+      if (_spokenGuidanceKeys.contains(prompt.key)) continue;
+      // Added before the await, so a slow engine cannot let the same prompt
+      // fire again on the next fix.
+      _spokenGuidanceKeys.add(prompt.key);
+      _diagnostics?.recordSpokenPrompt(
+        phrase: prompt.spoken,
+        distanceToManoeuvreMeters: passage.instruments.distanceToMark.value,
+      );
+      unawaited(
+        speaker.speakManoeuvre(
+          key: prompt.key,
+          phrase: prompt.spoken,
+          // A stale fix is a warning about the instruments rather than a
+          // direction, so it is `safety` and survives an alerts-only mode. The
+          // rest is navigation and is silenced with it, which is what a sailor
+          // choosing alerts-only asked for.
+          enabled: spokenAudioAllows(
+            _spokenAudioMode,
+            prompt.kind == PassagePromptKind.staleFix
+                ? SpokenAudioClass.safety
+                : SpokenAudioClass.navigation,
+          ),
+          voyageActive:
+              controller.voyageStarted &&
+              !controller.voyageEnded &&
+              !controller.voyagePaused,
+        ),
+      );
+    }
+  }
+
   void _speakGuidance(NavigationGuidance? guidance) {
     if (guidance == null) return;
     final controller = widget.voyageController;

@@ -413,11 +413,11 @@ all exist and none of them speak to each other. This phase joins them, and it is
 what turns a chart-table aid into something usable under way.
 
 - [x] Stop reporting a correct passage as broken — #72
-- [ ] `PassageGuidance`: one service reading the plan, the alterations and the
+- [x] `PassageGuidance`: one service reading the plan, the alterations and the
       live fix, and answering "what leg am I on, what is next, how far, and what
       does the plan ask for there" — #63
-- [ ] The under-way banner reads it, replacing the road guidance planner
-- [ ] Spoken prompts read it: a mark at 1 NM and 2 cables, cross-track beyond a
+- [x] The under-way banner reads it, replacing the road guidance planner
+- [x] Spoken prompts read it: a mark at 1 NM and 2 cables, cross-track beyond a
       threshold, a stale fix — #73
 - [ ] Retire what that leaves dead: `OsrmRoadRoutingService`, the roundabout and
       lane machinery, `roundabout_exit_bucket.dart`,
