@@ -150,7 +150,7 @@ class BuildIdentity {
   static const testFlightUrl = 'https://testflight.apple.com/';
 
   static const defaultTesterNotesUrl =
-      'https://github.com/osholt/tailendcharlie/blob/main/docs/tester-release-notes.md';
+      'https://github.com/osholt/knot-alone/blob/main/docs/tester-release-notes.md';
 
   final String appVersion;
   final String appBuild;

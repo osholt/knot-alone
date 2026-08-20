@@ -1,9 +1,9 @@
 # Tide and Seek — Product Requirements and Delivery Plan
 
-Status: **inherited app renamed and de-roaded; marine capability barely started**
+Status: **marine development MVP in code; chart, safety, and field gates open**
 
-Last reviewed: 18 August 2026. See "Where this actually is" for the honest state,
-which is some way behind what the requirements below describe.
+Last reviewed: 20 August 2026. See "Where this actually is" for the honest state,
+which remains behind what the requirements below describe.
 
 Name: **Tide and Seek**
 
@@ -31,15 +31,23 @@ chart, navigation instruments that degrade with fix age, Open-Meteo wind and sea
 state, a Solent demo passage, and the chart sitting beside the detail on a tablet
 in landscape.
 
+Implemented in the current development tree: a flat wider user-controlled chart
+camera; bundled non-official astronomical tide predictions for three Solent
+stations; a time-selectable area wind forecast; a manual MOB event, marker and
+recovery view; and received-AIS display from local NMEA TCP with a synthetic
+replay. These have automated evidence, not physical or at-sea approval.
+
 **Build 22 (1.0.1) is on TestFlight**, internal testing only. That is the first
 time any of this has been on a device that is not a simulator, and it immediately
 found user-visible road vocabulary the earlier passes missed (#49).
 
-### Not started
+### Still not started or not release-ready
 
-**Tides. Weather. Depth. Real charts. Anchor watch. MOB. AIS. NMEA.** No code
-exists for any of them. Every occurrence of the word "tide" in the source is the
-app's own name.
+**Real licensed nautical charts, depth, tidal streams, anchor watch, general
+NMEA instruments, and network AIS** are not implemented. Tide heights, area
+wind, manual MOB, and local/replay AIS now exist as development slices, but
+their physical-device, trusted-reference, receiver, battery/background, and
+at-sea evidence gates remain open.
 
 ### Known to be wrong or missing
 
@@ -48,26 +56,29 @@ app's own name.
 | Charts | A road basemap with an OpenSeaMap seamark overlay painted on. No depth, no soundings, no contours. | #17, #6 |
 | Depth shading | Blocked on whether UKHO's "not for use in the creation of navigational products" clause governs its free data | #29 |
 | Passage planning | Rhumb-line legs with a leg table; marks can be placed, named and removed on the chart. No land avoidance, no tidal gates, no drag-to-move, no leg reordering | #8, #32 |
-| Tides | Nothing | #11 |
+| Tides | Bundled calculated astronomical heights and curves for three Solent stations. Non-official; no tidal streams; trusted-reference/field checks still open. | #11, #80 |
 | Weather | Open-Meteo wind, gusts, pressure, visibility and open-water wave, labelled a forecast rather than an observation. No GRIB, no routing | #12 |
+| AIS | Local NMEA TCP receive/display and clearly labelled synthetic replay. No network provider, CPA/TCPA, collision alarm, or receiver field validation. | #16, #79 |
+| MOB | Offline critical event, fixed last-known marker, elapsed time, distance/bearing and explicit resolution. Background/battery/wet-glove/device evidence remains open. | #15, #82 |
 | Instruments | COG, SOG, XTE, bearing and distance to the active mark, all dimming together once the fix is stale. Never verified against a real GNSS fix | #34 |
 | Onboarding | Sells crew coordination first on a solo-first app, and its crew-facing name field cannot be skipped | #49 |
 | Safety gates | No at-sea testing has happened at all | #10 |
-| Road leftovers | Valhalla, the engine dispatcher, the track matcher and the motorcycle cafe catalogue are gone — 5,500 lines. OSRM survives only as the manoeuvre parser the turn-guidance tests need | #31, #63 |
-| Turn-by-turn guidance | 2,350 lines that can never fire: a passage emits no manoeuvres. Needs a decision, not a deletion — a mark approach may still want "in 2 cables, alter to 072" | #63 |
+| Road leftovers | All inherited routing engines, route preferences, and the dead junction-guidance stack are gone | #31 |
+| Passage guidance | Mark approaches, alterations and cross-track state come from the passage plan and live fix; the banner and optional voice share that result | #63, #73 |
 | Crew roles | `Marker` is the road role where a rider holds a junction; #3 removed junction markers and the role outlived them | #57 |
 
 ### The honest summary
 
 This is a **crew-coordination app that speaks marine**, and it has started to
 grow a boating app inside it. The coordination half is real and tested. The
-sailing half is now a passage you can plan, tabulate and steer to, with wind and
-sea state beside it - on top of a road basemap with a seamark overlay, and with
-no tide, no depth and no chart.
+sailing half is now a passage you can plan, tabulate and steer to, with wind,
+sea state, calculated Solent tide heights, manual MOB, and optional local AIS
+beside it - on top of a road basemap with a seamark overlay, and still with no
+depth, tidal streams, or licensed nautical chart.
 
-Tide is the gap that matters most for UK coastal sailing, and it is the one
-gated on a licence question nobody has answered (#29). Until then a passage this
-app plans is a passage in still water.
+The open-harmonic slice fills part of the tide-height gap without claiming UKHO
+authority. Tidal streams and route calculations remain blocked on suitable
+licensed data, so a passage this app plans is still a passage in still water.
 
 Nothing here should be relied on at sea. #10 exists because none of it has been
 near water, and being on TestFlight does not change that.
@@ -369,8 +380,9 @@ whether the passage works at all, and the data is more tractable.
 - [ ] Waypoint editing on the chart, with a leg table: course, distance, ETA — #32
       *(leg table, mark placing, naming and removal done; drag-to-move, leg
       reordering and tap-a-leg-to-centre remain)*
-- [ ] Tidal heights and curves from the UKHO Tidal API, with provenance — #11
-      *(parked: the licence question, #29)*
+- [x] Development tide-height slice: bundled TICON-4/Neaps astronomical
+      predictions and curves for three Solent stations, with provenance — #11,
+      #80 *(non-official; trusted-reference and field evidence still open)*
 - [ ] Tidal windows and gates, built on the heights — #33 *(parked behind #11)*
 
 ### Phase 4 — Trustworthy offline
@@ -419,7 +431,7 @@ what turns a chart-table aid into something usable under way.
 - [x] The under-way banner reads it, replacing the road guidance planner
 - [x] Spoken prompts read it: a mark at 1 NM and 2 cables, cross-track beyond a
       threshold, a stale fix — #73
-- [ ] Retire what that leaves dead: `OsrmRoadRoutingService`, the roundabout and
+- [x] Retire what that leaves dead: the final driving-route service, roundabout and
       lane machinery, `roundabout_exit_bucket.dart`,
       `assets/mini_roundabouts.geojson`, `tools/discovery` — the rest of #31
 
@@ -432,11 +444,14 @@ was still feeding.
 - [ ] Security and privacy review, log redaction, retention — #10
 - [ ] Battery, background and notification behaviour on real devices
 - [ ] At-sea field-test matrix — the gate nothing else substitutes for — #10
-- [ ] Anchor watch and manual MOB, only after the above — #15
+- [ ] Manual MOB code and automated workflow evidence — #15, #82 *(implemented;
+      physical/background/battery evidence still required)*
 
 ### Later
 
-Paid charts (#6), NMEA and AIS (#16), GRIB and weather routing, flotillas.
+Paid charts (#6), general NMEA instruments and network AIS (#16), GRIB and
+weather routing, flotillas. Local NMEA TCP AIS is present but remains behind its
+representative-receiver and device evidence gate.
 
 ## Sequencing note
 

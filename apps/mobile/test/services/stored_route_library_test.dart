@@ -178,13 +178,6 @@ void main() {
           name: 'Finish',
         ),
       ],
-      maneuvers: const [
-        RouteManeuver(
-          position: GeoPoint(latitude: 51.46, longitude: -2.58),
-          type: 'turn',
-          modifier: 'left',
-        ),
-      ],
     );
     await voyages.save(
       _completedVoyage(
@@ -208,8 +201,6 @@ void main() {
       'Finish',
       'Start',
     ]);
-    // A left turn read backwards is not a left turn.
-    expect(prepared.route.maneuvers, isEmpty);
     expect(prepared.route.name, 'Sunday run (reversed)');
     expect(prepared.notes.last, contains('Reversed'));
   });

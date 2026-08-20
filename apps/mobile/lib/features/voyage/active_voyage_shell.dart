@@ -48,20 +48,16 @@ import '../../relay/live_presence.dart';
 import '../../relay/native_nearby_transport.dart';
 import '../../relay/relay_engine.dart';
 import '../../relay/sqlite_relay_queue.dart';
-import '../../services/geo_calculations.dart';
 import '../../services/spoken_audio_mode.dart';
-import '../../services/spoken_guidance_schedule.dart';
 import '../../services/spoken_guidance.dart';
 import '../../services/test_control_registry.dart';
 import '../../services/demo_route_loader.dart';
 import '../../services/device_location_source.dart';
 import '../../services/gpx_import_source.dart';
 import '../../services/skipper_voyage_status.dart';
-import '../../services/measurement_formatter.dart';
 import '../../services/native_push_token_source.dart';
 import '../../services/position_report_policy.dart';
 import '../../services/received_quick_message.dart';
-import '../../services/navigation_guidance.dart';
 import '../map/passage_maneuver_list.dart';
 import '../../services/passage_guidance.dart';
 import '../../services/passage_legs.dart';
@@ -76,11 +72,9 @@ import '../../services/voyage_diagnostics_recorder.dart';
 import '../../services/voyage_diagnostics_transition.dart';
 import '../../services/voyage_summary_exporter.dart';
 import '../../services/sailor_contact_share.dart';
-import '../../services/road_routing.dart';
 import '../../services/voyage_connectivity_summary.dart';
 import '../../services/sweeper_gap_trend.dart';
 import '../../services/trail_display_simplifier.dart';
-import '../map/maneuver_diagnostics.dart';
 import '../map/vessel_icon.dart';
 import '../map/marine_glyphs.dart';
 import '../map/voyage_layout.dart';
@@ -96,40 +90,6 @@ import 'ended_voyage_screen.dart';
 import 'observer_access_sheet.dart';
 import 'voyage_dashboard.dart';
 import 'voyage_roster_sheet.dart';
-
-/// Whether a newly calculated route should wait before replacing the current
-/// junction instruction.
-///
-/// Voyage 392725 produced a reroute 47 m before a roundabout. Applying it changed
-/// the exit while the sailor was already committed, then announced a second
-/// instruction at 0 m. A route can be calculated there, but it must not take
-/// over until the sailor is clear.
-@visibleForTesting
-bool shouldDeferRejoinNavigation({
-  required bool hasRoutedPlan,
-  required double? distanceToCurrentManeuverMeters,
-  required double? metersSincePreviousManeuver,
-}) {
-  if (!hasRoutedPlan) return false;
-  final current = distanceToCurrentManeuverMeters;
-  if (current != null && current <= guidanceJunctionClearanceMeters) {
-    return true;
-  }
-  final since = metersSincePreviousManeuver;
-  return since != null && since < guidanceJunctionClearanceMeters;
-}
-
-/// Junctions the virtual second bike may mark during Voyage Lab.
-///
-/// Navigation keeps a roundabout's paired exit step so it can derive the road
-/// taken and draw the correct symbol. A marker belongs at the entry only, so
-/// the simulation's junction list deliberately keeps decision steps alone.
-@visibleForTesting
-List<RoadRouteManeuver> simulationMarkerManeuvers(
-  List<RoadRouteManeuver> maneuvers,
-) => maneuvers
-    .where((maneuver) => maneuver.requiresSecondBikeDrop)
-    .toList(growable: false);
 
 /// The only thing an observer link publishes.
 ///
@@ -552,7 +512,7 @@ class _VoyageActionsPanel extends StatelessWidget {
             leading: const Icon(Icons.warning_amber_outlined),
             title: const Text('Alerts and reports'),
             subtitle: const Text(
-              'Road alerts, off-route sailors and traffic alternatives',
+              'Safety alerts, off-course sailors and passage alternatives',
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: onAlertsAndReports,
@@ -569,10 +529,10 @@ class _VoyageActionsPanel extends StatelessWidget {
             ListTile(
               key: const Key('voyage-menu-maneuvers'),
               leading: const Icon(Icons.list_alt),
-              title: const Text('All turns'),
+              title: const Text('Passage alterations'),
               subtitle: Text(
-                '$maneuverCount instruction${maneuverCount == 1 ? '' : 's'} '
-                'for this route',
+                '$maneuverCount course alteration'
+                '${maneuverCount == 1 ? '' : 's'} for this passage',
               ),
               onTap: onShowManeuvers,
             ),
@@ -586,7 +546,7 @@ class _VoyageActionsPanel extends StatelessWidget {
           if (canChangeRoute)
             ListTile(
               key: const Key('voyage-menu-change-route'),
-              leading: const Icon(Icons.edit_road_outlined),
+              leading: const Icon(Icons.route_outlined),
               title: const Text('Change route'),
               subtitle: const Text(
                 'Plan a destination, import a GPX file, or load the demo route',
@@ -1087,31 +1047,17 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
   // accepted again (#282). These live here because this shell outlives the tabs.
   route_domain.ImportedRoute? _routeStartConnector;
 
-  /// The voice for turn prompts.
+  /// The voice for passage prompts.
   ///
-  /// This was declared and never assigned, so it was null for the whole life of
-  /// every voyage and `_speakGuidance` returned at its first guard: a sailor who
-  /// turned spoken guidance on got silence, with the setting saved and read and
-  /// nothing behind it (#361).
-  ///
-  /// Built eagerly now, and safely: `SpokenGuidanceSpeaker` does not touch the
+  /// Built eagerly and safely: `SpokenGuidanceSpeaker` does not touch the
   /// engine until something is actually spoken, and it checks `enabled` first,
   /// so a sailor who leaves the option off still never has a speech engine
   /// initialised behind their back.
   SpokenGuidanceSpeaker? _spokenGuidance;
 
-  /// Every staged prompt already spoken, so a stage is not repeated on each fix
-  /// and the early one does not suppress the ones after it (#410).
+  /// Every passage prompt already spoken, so a prompt is not repeated on each
+  /// fix.
   final _spokenGuidanceKeys = <String>{};
-
-  /// The manoeuvre the sailor was last being guided towards, and where it was.
-  ///
-  /// Kept so "am I clear of the junction I just went through" can be answered
-  /// without new progress plumbing: it is the straight-line distance from here to
-  /// there, which is what #429's clearance rule needs.
-  String? _guidanceManeuverIdentity;
-  route_domain.GeoPoint? _passedManeuverPosition;
-  route_domain.GeoPoint? _lastGuidanceManeuverPosition;
 
   /// Null unless an instrumented build has recording switched on (#419).
   ///
@@ -3062,9 +3008,11 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
       voyagePaused: widget.voyageController.voyagePaused,
       voyageHasNoSkipper: widget.voyageController.voyageHasNoSkipper,
       voyageStarted: widget.voyageController.voyageStarted,
+      mobState: widget.voyageController.mobState,
+      onActivateMob: widget.voyageController.activateMob,
+      onResolveMob: widget.voyageController.resolveMob,
       onLeaveVoyage: _confirmLeaveVoyageFromMap,
       onRouteCommitted: _onRouteChanged,
-      onNavigationGuidanceChanged: _onNavigationGuidanceChanged,
       onPassageGuidanceChanged: _speakPassage,
       changeRouteRequestToken: _changeRouteRequestToken,
       onChangeRouteRequestHandled: _clearChangeRouteRequest,
@@ -3093,17 +3041,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     );
   }
 
-  void _onNavigationGuidanceChanged(NavigationGuidance? guidance) {
-    _recordManoeuvreDiagnostics(guidance);
-    _speakGuidance(guidance);
-    _updateMapOverlays(updateDerivedState: false);
-  }
-
-  /// The audio mode in force: what the sailor chose, quietened while off route.
-  ///
-  /// Off route, turn-by-turn names junctions that are not coming, so it drops to
-  /// alerts only — but a sailor who chose silence stays silent, because an
-  /// explicit choice outranks an automatic one (#415).
+  /// The audio mode in force: the sailor's explicit choice (#415).
   SpokenAudioMode get _spokenAudioMode {
     final chosen = widget.spokenGuidance?.mode ?? SpokenAudioMode.silent;
     return chosen;
@@ -3143,45 +3081,10 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     _diagnostics?.recordSpeechDelivery(phrase: phrase, output: output);
   }
 
-  void _recordManoeuvreDiagnostics(NavigationGuidance? guidance) {
-    final diagnostics = _diagnostics;
-    if (diagnostics == null || guidance == null) return;
-    final instruction = guidance.instruction;
-    diagnostics.recordManoeuvre(
-      // The manoeuvre's identity, matching the key `_speakGuidance` uses, so
-      // re-deriving the same turn on every fix does not write it down again.
-      key: instruction.maneuver.identity,
-      position: awareness_geo.GeoPoint(
-        latitude: instruction.maneuver.position.latitude,
-        longitude: instruction.maneuver.position.longitude,
-      ),
-      shownAs: instruction.direction.label,
-      diagnostics: maneuverDiagnosticsReport(instruction),
-    );
-  }
-
-  /// Speaks the instruction the phone banner and the car rows are already showing
-  /// (#286).
-  ///
-  /// Deliberately driven from here rather than from its own timer or a second
-  /// derivation of the route. This is the one place the current instruction
-  /// changes, so audio cannot disagree with the screen - and a sailor who hears
-  /// one thing and sees another will trust neither.
-  ///
-  /// [ManeuverInstruction.standaloneText] is the wording, for the reason it
-  /// already exists: it is what surfaces with no symbol beside them use, which is
-  /// exactly what audio is. A roundabout says so out loud, where the banner can
-  /// leave it to the drawn glyph.
   /// Says what the passage asks for (#73).
   ///
-  /// The voice has been mute on every passage since #19: `_speakGuidance` takes
-  /// a `NavigationGuidance`, which is built from a manoeuvre list, and a passage
-  /// has none. Everything else about speaking — the engine, the voice ranking,
-  /// the audio classes, the spoken-key set — was already here and had nothing to
-  /// say.
-  ///
   /// `PassageGuidance.prompts` is state rather than a stream of events, so this
-  /// filters against the same `_spokenGuidanceKeys` the road path uses. A prompt
+  /// filters against `_spokenGuidanceKeys`. A prompt
   /// present on twenty consecutive fixes is said once.
   void _speakPassage(PassageGuidance? passage) {
     final speaker = _spokenGuidance;
@@ -3195,7 +3098,7 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
       _spokenGuidanceKeys.add(prompt.key);
       _diagnostics?.recordSpokenPrompt(
         phrase: prompt.spoken,
-        distanceToManoeuvreMeters: passage.instruments.distanceToMark.value,
+        distanceToMarkMeters: passage.instruments.distanceToMark.value,
       );
       unawaited(
         speaker.speakManoeuvre(
@@ -3218,87 +3121,6 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
         ),
       );
     }
-  }
-
-  void _speakGuidance(NavigationGuidance? guidance) {
-    if (guidance == null) return;
-    final controller = widget.voyageController;
-    final identity = guidance.instruction.maneuver.identity;
-
-    // The instruction has moved on, so the one before it is now behind the sailor
-    // and its position is what the clearance rule measures against (#429).
-    if (identity != _guidanceManeuverIdentity) {
-      if (_guidanceManeuverIdentity != null) {
-        _passedManeuverPosition = _lastGuidanceManeuverPosition;
-      }
-      _guidanceManeuverIdentity = identity;
-    }
-    _lastGuidanceManeuverPosition = guidance.instruction.maneuver.position;
-
-    final speaker = _spokenGuidance;
-    if (speaker == null) return;
-
-    final navigation = _mapNavigationPosition.value;
-    final passed = _passedManeuverPosition;
-    final sailor = navigation?.point;
-    final metersSincePrevious = passed == null || sailor == null
-        ? null
-        : GeoCalculations.distanceMeters(
-            awareness_geo.GeoPoint(
-              latitude: sailor.latitude,
-              longitude: sailor.longitude,
-            ),
-            awareness_geo.GeoPoint(
-              latitude: passed.latitude,
-              longitude: passed.longitude,
-            ),
-          );
-
-    // What to say and when, decided apart from the saying so the timing can be
-    // driven by a synthetic approach in a test (#409, #410, #429).
-    final announcement = nextGuidanceAnnouncement(
-      maneuverIdentity: identity,
-      instructionText: guidance.instruction.standaloneText,
-      distanceToManeuverMeters: guidance.distanceMeters,
-      speedMetersPerSecond: navigation?.speedMetersPerSecond,
-      alreadySpokenKeys: _spokenGuidanceKeys,
-      metersSincePreviousManeuver: metersSincePrevious,
-      distanceFormatter: MeasurementFormatter(
-        widget.distanceUnits.value,
-      ).distance,
-      // The pair the banner is already showing (#163). Speech was given this and
-      // ignored it, which is why a junction close behind another was only ever
-      // announced at the junction itself (#460).
-      followingInstructionText: guidance.followingInstruction?.standaloneText,
-    );
-    if (announcement == null) return;
-
-    // Marked spoken before the await, so a slow speech engine cannot let the
-    // same stage fire again on the next fix.
-    _spokenGuidanceKeys.add(announcement.key);
-    // #409 is about *when* this is said, so the distance to the junction at the
-    // moment it left the speaker is the measurement.
-    _diagnostics?.recordSpokenPrompt(
-      phrase: announcement.phrase,
-      distanceToManoeuvreMeters: guidance.distanceMeters,
-    );
-    unawaited(
-      speaker.speakManoeuvre(
-        // Per stage, not per manoeuvre: keyed on the manoeuvre alone, the early
-        // prompt would suppress the two after it.
-        key: announcement.key,
-        phrase: announcement.phrase,
-        // Navigation, so alerts-only silences this and keeps the warnings.
-        enabled: spokenAudioAllows(
-          _spokenAudioMode,
-          SpokenAudioClass.navigation,
-        ),
-        voyageActive:
-            controller.voyageStarted &&
-            !controller.voyageEnded &&
-            !controller.voyagePaused,
-      ),
-    );
   }
 
   /// Records the one durable start transition and contains
@@ -3807,9 +3629,11 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
     onOpenRoster: _openRoster,
     onShareRoster: _shareRoster,
     onChangeRoute: _requestRouteChange,
-    maneuverCount: const NavigationGuidancePlanner()
-        .instructions(_activeRoute)
-        .length,
+    maneuverCount: _activeRoute == null
+        ? 0
+        : PassageManeuverPlan.of(
+            PassagePlan.of(_activeRoute!),
+          ).maneuvers.length,
     onShowManeuvers: _openManeuverList,
     onEmergencyInfo: () =>
         EmergencyInfoSheet.show(context, widget.sailorProfile),
@@ -4125,8 +3949,6 @@ class _ActiveVoyageShellState extends State<ActiveVoyageShell>
   /// Opens the passage's alterations while the map is in navigation mode and its
   /// own menu is hidden. Reads persisted passage data only.
   ///
-  /// Was `ManeuverListScreen`, whose road manoeuvres are always absent on a
-  /// passage (#31).
   void _openManeuverList() {
     final route = _activeRoute;
     if (route == null) return;

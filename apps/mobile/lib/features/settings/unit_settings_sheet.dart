@@ -249,7 +249,7 @@ class UnitSettingsSheet extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Restrained uses the quieter road-first daytime palette. Original '
+            'Restrained uses the quieter daytime map palette. Original '
             'keeps the OpenFreeMap Liberty colours. This applies whenever the '
             'map is in light or sun-based daytime mode.',
             style: TextStyle(color: Color(0xFF98A3B1)),
@@ -302,11 +302,11 @@ class UnitSettingsSheet extends StatelessWidget {
                     contentPadding: EdgeInsets.zero,
                     value: spoken.enabled,
                     onChanged: spoken.setEnabled,
-                    title: const Text('Speak turn instructions'),
+                    title: const Text('Speak passage guidance'),
                     subtitle: const Text(
-                      'Reads the next turn aloud so you do not have to look '
-                      'down. Mixes with music or an intercom rather than '
-                      'stopping it.',
+                      'Reads approaching marks, course alterations and stale '
+                      'position warnings aloud. Mixes with music or an '
+                      'intercom rather than stopping it.',
                     ),
                   ),
                 ),

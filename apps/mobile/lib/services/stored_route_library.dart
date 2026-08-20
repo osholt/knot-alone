@@ -219,13 +219,6 @@ class StoredRouteLibrary {
       ];
     }
     var waypoints = candidate.geometry.waypoints;
-    // Manoeuvres describe turns taken in one direction; read backwards they
-    // are wrong. Dropping them leaves a reversed route in exactly the state a
-    // GPX track import is in, and the review step's road matching regenerates
-    // them when there is a connection.
-    var maneuvers = selection.reversed
-        ? const <RouteManeuver>[]
-        : candidate.geometry.maneuvers;
     if (selection.reversed) {
       paths = [
         for (final path in paths.reversed)
@@ -251,7 +244,6 @@ class StoredRouteLibrary {
         sourceFileName: _sourceLabel(candidate),
         paths: List.unmodifiable(paths),
         waypoints: waypoints,
-        maneuvers: maneuvers,
       ),
       notes: _notes(candidate, tidied: tidying, reversed: selection.reversed),
     );
@@ -301,7 +293,7 @@ class StoredRouteLibrary {
         'This is the route that voyage was planned with, not a recording of it.',
       _ when tidied =>
         'This is a tidied recording, not a planned route. Stops and GPS '
-            'wander were removed. Every road the bike actually took is kept, '
+            'wander were removed. Every part of the recorded track is kept, '
             'including any wrong turns and car park loops.',
       _ =>
         'This is the raw recorded track: every fix as it was recorded, '
@@ -309,6 +301,6 @@ class StoredRouteLibrary {
     },
     if (reversed)
       'Reversed: it runs from the original finish to the original start. '
-          'Turn instructions recorded in the original direction were dropped.',
+          'Passage legs and bearings are recalculated from the reversed marks.',
   ];
 }

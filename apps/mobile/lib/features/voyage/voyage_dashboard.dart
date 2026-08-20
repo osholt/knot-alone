@@ -599,6 +599,8 @@ class _EventRow extends StatelessWidget {
       // Says what happened rather than what it undid: the journal keeps both
       // events, and a sailor reading the log should see the sequence.
       VoyageEventType.voyageReopened => 'Voyage reopened by the skipper',
+      VoyageEventType.mobActivated => 'Man overboard position marked',
+      VoyageEventType.mobResolved => 'Man overboard incident resolved',
       VoyageEventType.iceInfoShared => 'Emergency contact shared',
       VoyageEventType.iceInfoViewed => 'Emergency contact viewed',
       VoyageEventType.sweeperRoleRequested => 'Sweeper requested',

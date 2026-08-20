@@ -68,6 +68,8 @@ class VoyageLifecycleReducer {
         case VoyageEventType.voyageResumed:
         case VoyageEventType.voyageEnded:
         case VoyageEventType.voyageReopened:
+        case VoyageEventType.mobActivated:
+        case VoyageEventType.mobResolved:
         case VoyageEventType.iceInfoShared:
         case VoyageEventType.iceInfoViewed:
         case VoyageEventType.sweeperRoleRequested:

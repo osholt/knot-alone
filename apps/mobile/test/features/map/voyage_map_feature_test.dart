@@ -27,9 +27,10 @@ import 'package:tide_and_seek/services/skipper_voyage_status.dart';
 import 'package:tide_and_seek/services/map_style_repository.dart';
 import 'package:tide_and_seek/services/navigation_camera.dart';
 import 'package:tide_and_seek/services/offline_tile_cache.dart';
+import 'package:tide_and_seek/services/destination_planning.dart';
+import 'package:tide_and_seek/services/passage_planning_service.dart';
 import 'package:tide_and_seek/services/received_quick_message.dart';
 import 'package:tide_and_seek/services/route_importer.dart';
-import 'package:tide_and_seek/services/road_routing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -49,8 +50,8 @@ void main() {
         safeRight: 59,
         leftHandTraffic: true,
       ),
-      closeTo(276.3, 0.1),
-      reason: 'a landscape notch keeps a wide but bounded guidance card',
+      closeTo(320, 0.1),
+      reason: 'a landscape notch keeps a readable bounded guidance card',
     );
     expect(
       landscapeGuidancePanelWidth(
@@ -58,7 +59,7 @@ void main() {
         safeRight: 44,
         leftHandTraffic: true,
       ),
-      closeTo(232.3, 0.1),
+      closeTo(320, 0.1),
       reason: 'compact landscape keeps a readable but bounded guidance card',
     );
   });
@@ -147,6 +148,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(find.byKey(const Key('chart-zoom-controls')), findsOneWidget);
+      expect(find.byKey(const Key('chart-zoom-in')), findsOneWidget);
+      expect(find.byKey(const Key('chart-zoom-out')), findsOneWidget);
       expect(
         find.byKey(const Key('personal-voyages-heatmap-layer')),
         findsOneWidget,
@@ -281,97 +285,6 @@ void main() {
     expect(groupMiniMapGridColor(Brightness.dark), const Color(0xFF263443));
   });
 
-  testWidgets('a routed rejoin takes over the live turn guidance', (
-    tester,
-  ) async {
-    _useCompactPhoneViewport(tester);
-    final directory = Directory.systemTemp.createTempSync(
-      'rejoin-navigation-guidance',
-    );
-    addTearDown(() => directory.deleteSync(recursive: true));
-    final originalRoute = ImportedRoute(
-      id: 'original-route',
-      name: 'Original route',
-      importedAt: DateTime.utc(2026, 7, 29, 10),
-      sourceFileName: 'original.gpx',
-      paths: const [
-        RoutePath(
-          kind: RoutePathKind.track,
-          points: [
-            GeoPoint(latitude: 51, longitude: -2),
-            GeoPoint(latitude: 51, longitude: -1.98),
-          ],
-        ),
-      ],
-      waypoints: const [],
-    );
-    final rejoinRoute = ImportedRoute(
-      id: 'rejoin-route',
-      name: 'Advisory rejoin route',
-      importedAt: DateTime.utc(2026, 7, 29, 10, 5),
-      sourceFileName: 'rejoin.gpx',
-      paths: const [
-        RoutePath(
-          kind: RoutePathKind.track,
-          points: [
-            GeoPoint(latitude: 51.01, longitude: -2),
-            GeoPoint(latitude: 51.01, longitude: -1.99),
-            GeoPoint(latitude: 51, longitude: -1.98),
-          ],
-        ),
-      ],
-      waypoints: const [],
-      maneuvers: const [
-        RouteManeuver(
-          position: GeoPoint(latitude: 51.01, longitude: -1.995),
-          type: 'turn',
-          modifier: 'right',
-          name: 'Rejoin Road',
-        ),
-      ],
-    );
-    final rejoin = ValueNotifier<ImportedRoute?>(rejoinRoute);
-    final navigation = ValueNotifier<MapNavigationPosition?>(
-      MapNavigationPosition(
-        point: const GeoPoint(latitude: 51.01, longitude: -1.999),
-        recordedAt: DateTime.utc(2026, 7, 29, 10, 5),
-        speedMetersPerSecond: 8,
-        headingDegrees: 90,
-        accuracyMeters: 5,
-      ),
-    );
-    addTearDown(rejoin.dispose);
-    addTearDown(navigation.dispose);
-    final cache = OfflineTileCache(
-      rootDirectory: directory,
-      configuration: const BasemapConfiguration(),
-      httpClient: MockClient((_) async => http.Response('', 404)),
-    );
-    addTearDown(cache.dispose);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData.dark(useMaterial3: true),
-        home: VoyageMapScreen(
-          routeStore: InMemoryRouteStore(originalRoute),
-          routeImporter: RouteImporter(source: const _NoFileSource()),
-          offlineTileCache: cache,
-          navigationPosition: navigation,
-          rejoinNavigationRoute: rejoin,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('navigation-guidance-banner')), findsOneWidget);
-    expect(find.text('Rejoin Road'), findsOneWidget);
-
-    rejoin.value = null;
-    await tester.pump();
-
-    expect(find.byKey(const Key('navigation-guidance-banner')), findsNothing);
-  });
-
   testWidgets('pre-start map keeps riding controls and guidance hidden', (
     tester,
   ) async {
@@ -393,13 +306,14 @@ void main() {
           ],
         ),
       ],
-      waypoints: const [],
-      maneuvers: const [
-        RouteManeuver(
-          position: GeoPoint(latitude: 51, longitude: -1.99),
-          type: 'turn',
-          modifier: 'right',
-          name: 'Test Road',
+      waypoints: const [
+        RouteWaypoint(
+          name: 'Start',
+          point: GeoPoint(latitude: 51, longitude: -2),
+        ),
+        RouteWaypoint(
+          name: 'Finish',
+          point: GeoPoint(latitude: 51, longitude: -1.98),
         ),
       ],
     );
@@ -436,8 +350,7 @@ void main() {
     await tester.pumpAndSettle();
 
     for (final key in const [
-      'navigation-guidance-banner',
-      'navigation-guidance-status-banner',
+      'passage-guidance-banner',
       'route-start-guidance-banner',
       'emergency-alert-button',
       'leave-voyage-button',
@@ -486,7 +399,7 @@ void main() {
       ),
     );
     addTearDown(navigation.dispose);
-    final routing = _RouteStartRoutingService();
+    final routing = _RouteStartPassagePlanner();
     final cache = OfflineTileCache(
       rootDirectory: directory,
       configuration: const BasemapConfiguration(),
@@ -501,7 +414,7 @@ void main() {
           routeImporter: RouteImporter(source: const _NoFileSource()),
           offlineTileCache: cache,
           navigationPosition: navigation,
-          roadRoutingService: routing,
+          passagePlanner: routing,
           distanceUnit: DistanceUnit.miles,
         ),
       ),
@@ -514,11 +427,6 @@ void main() {
     );
     expect(find.textContaining('Planned route starts'), findsOneWidget);
     expect(find.text('To start'), findsOneWidget);
-    expect(
-      find.byKey(const Key('navigation-guidance-status-banner')),
-      findsNothing,
-    );
-
     await tester.tap(find.byKey(const Key('navigate-to-route-start')));
     await tester.pumpAndSettle();
 
@@ -526,8 +434,7 @@ void main() {
     expect(routing.calls.single.first, navigation.value!.point);
     expect(routing.calls.single.last, route.paths.first.points.first);
     expect(find.byKey(const Key('route-start-guidance-banner')), findsNothing);
-    expect(find.byKey(const Key('navigation-guidance-banner')), findsOneWidget);
-    expect(find.text('Road to start'), findsOneWidget);
+    expect(find.byKey(const Key('passage-guidance-banner')), findsNothing);
   });
 
   testWidgets('group mini-map appears before a route is loaded', (
@@ -1003,86 +910,6 @@ void main() {
     expect(find.textContaining('exit'), findsNothing);
   });
 
-  testWidgets('turn guidance reduces the TEC gap to a single-line chip', (
-    tester,
-  ) async {
-    final directory = Directory.systemTemp.createTempSync(
-      'map-compact-sweeper-test',
-    );
-    addTearDown(() => directory.deleteSync(recursive: true));
-    final route = ImportedRoute(
-      id: 'guided',
-      name: 'Guided route',
-      importedAt: DateTime.utc(2026, 7, 24),
-      sourceFileName: 'guided.gpx',
-      paths: const [
-        RoutePath(
-          kind: RoutePathKind.track,
-          points: [
-            GeoPoint(latitude: 51.45, longitude: -2.59),
-            GeoPoint(latitude: 51.451, longitude: -2.58),
-          ],
-        ),
-      ],
-      waypoints: const [],
-      maneuvers: const [
-        RouteManeuver(
-          position: GeoPoint(latitude: 51.451, longitude: -2.58),
-          type: 'turn',
-          modifier: 'right',
-        ),
-      ],
-    );
-    final navigation = ValueNotifier(
-      MapNavigationPosition(
-        point: const GeoPoint(latitude: 51.45, longitude: -2.59),
-        recordedAt: DateTime.utc(2026, 7, 24, 12),
-        speedMetersPerSecond: 10,
-        headingDegrees: 90,
-      ),
-    );
-    final skipperStatus = ValueNotifier<SkipperVoyageStatus?>(
-      const SkipperVoyageStatus(
-        sweeperName: 'Charlie',
-        distanceToSweeperMeters: 3200,
-        estimatedTimeToSweeper: Duration(minutes: 4),
-        offCourseAlerts: [],
-      ),
-    );
-    addTearDown(navigation.dispose);
-    addTearDown(skipperStatus.dispose);
-
-    final cache = OfflineTileCache(
-      rootDirectory: directory,
-      configuration: const BasemapConfiguration(),
-      httpClient: MockClient((_) async => http.Response('', 404)),
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData.dark(useMaterial3: true),
-        home: VoyageMapScreen(
-          routeStore: InMemoryRouteStore(route),
-          routeImporter: RouteImporter(source: const _NoFileSource()),
-          offlineTileCache: cache,
-          navigationPosition: navigation,
-          skipperStatus: skipperStatus,
-          distanceUnit: DistanceUnit.miles,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final chip = find.byKey(const Key('skipper-sweeper-gap'));
-    expect(chip, findsOneWidget);
-    expect(find.text('SWEEPER GAP'), findsNothing);
-    expect(find.text('SWEEPER'), findsOneWidget);
-    expect(find.textContaining('2.0 mi · ~4 min'), findsOneWidget);
-    expect(find.textContaining('Charlie ·'), findsNothing);
-    expect(tester.getSize(chip).height, lessThanOrEqualTo(44));
-    expect(tester.getSize(chip).width, lessThanOrEqualTo(360));
-  });
-
   testWidgets('a registered TEC without a position yet still says so', (
     tester,
   ) async {
@@ -1105,12 +932,14 @@ void main() {
           ],
         ),
       ],
-      waypoints: const [],
-      maneuvers: const [
-        RouteManeuver(
-          position: GeoPoint(latitude: 51.451, longitude: -2.58),
-          type: 'turn',
-          modifier: 'right',
+      waypoints: const [
+        RouteWaypoint(
+          name: 'Start',
+          point: GeoPoint(latitude: 51.45, longitude: -2.59),
+        ),
+        RouteWaypoint(
+          name: 'Finish',
+          point: GeoPoint(latitude: 51.451, longitude: -2.58),
         ),
       ],
     );
@@ -1149,7 +978,7 @@ void main() {
     final chip = find.byKey(const Key('skipper-sweeper-gap'));
     expect(chip, findsOneWidget);
     expect(find.textContaining('Waiting for location'), findsOneWidget);
-    expect(find.byKey(const Key('navigation-guidance-banner')), findsNothing);
+    expect(find.byKey(const Key('passage-guidance-banner')), findsNothing);
     // The status band now lives in the lower part of the screen so the road
     // ahead stays visible at the top.
     final screenHeight =
@@ -1459,16 +1288,7 @@ void main() {
     final directory = Directory.systemTemp.createTempSync('map-cancel-test');
     addTearDown(() => directory.deleteSync(recursive: true));
     final original = _testRoute(id: 'original', name: 'Original route');
-    final candidate = _testRoute(
-      id: 'candidate',
-      name: 'Candidate route',
-      maneuvers: const [
-        RouteManeuver(
-          position: GeoPoint(latitude: 51.455, longitude: -2.585),
-          type: 'turn',
-        ),
-      ],
-    );
+    final candidate = _testRoute(id: 'candidate', name: 'Candidate route');
     final store = _RecordingRouteStore(original);
     final published = <ImportedRoute?>[];
     final cache = OfflineTileCache(
@@ -1486,6 +1306,7 @@ void main() {
           offlineTileCache: cache,
           changeRouteRequestToken: Object(),
           demoRouteLoader: () async => candidate,
+          recordedRouteStore: InMemoryRecordedRouteStore(),
           onRouteChanged: published.add,
         ),
       ),
@@ -1630,7 +1451,7 @@ void main() {
     addTearDown(() => directory.deleteSync(recursive: true));
     final store = _RecordingRouteStore();
     final search = _RecordingDestinationSearch();
-    final routing = _StraightRoadRoutingService();
+    final routing = _StraightPassagePlanner();
     final cache = OfflineTileCache(
       rootDirectory: directory,
       configuration: const BasemapConfiguration(),
@@ -1648,7 +1469,7 @@ void main() {
               const GeoPoint(latitude: 51.45, longitude: -2.59),
           destinationRoutePlanner: DestinationRoutePlanner(
             searchService: search,
-            routingService: routing,
+            passagePlanner: routing,
           ),
           voyageStarted: false,
         ),
@@ -2044,32 +1865,14 @@ void main() {
             ],
           ),
         ],
-        waypoints: const [],
-        maneuvers: const [
-          // The engine reports joining the ring and leaving it separately, and
-          // the entry modifier describes the entry rather than the exit taken.
-          RouteManeuver(
-            position: GeoPoint(latitude: 53, longitude: -1.005),
-            type: 'roundabout',
-            modifier: 'slight left',
-            name: 'Station Road',
-            exitNumber: 3,
-            drivingSide: 'left',
-            bearingBeforeDegrees: 90,
-            bearingAfterDegrees: 20,
-            lanes: [
-              RouteLane(indications: ['left'], valid: false),
-              RouteLane(indications: ['straight', 'right'], valid: true),
-            ],
+        waypoints: const [
+          RouteWaypoint(
+            name: 'Start',
+            point: GeoPoint(latitude: 53, longitude: -1.02),
           ),
-          RouteManeuver(
-            position: GeoPoint(latitude: 53, longitude: -1.0048),
-            type: 'exit roundabout',
-            modifier: 'slight right',
-            name: 'Station Road',
-            drivingSide: 'left',
-            bearingBeforeDegrees: 150,
-            bearingAfterDegrees: 180,
+          RouteWaypoint(
+            name: 'Finish',
+            point: GeoPoint(latitude: 53, longitude: -1),
           ),
         ],
       );
@@ -2117,12 +1920,9 @@ void main() {
       expect(find.byKey(const Key('mini-map-you-legend')), findsOneWidget);
       expect(find.byKey(const Key('mini-map-north-indicator')), findsOneWidget);
       expect(find.byKey(const Key('mini-map-scale')), findsOneWidget);
-      expect(
-        find.byKey(const Key('navigation-guidance-banner')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const Key('passage-guidance-banner')), findsOneWidget);
       final landscapeGuidance = tester.getRect(
-        find.byKey(const Key('navigation-guidance-banner')),
+        find.byKey(const Key('passage-guidance-banner')),
       );
       expect(landscapeGuidance.right, closeTo(844 - 10, 1));
       expect(landscapeGuidance.bottom, closeTo(390 - 10, 1));
@@ -2130,28 +1930,8 @@ void main() {
       expect(
         landscapeGuidance.top,
         greaterThan(390 * navigationCameraRestSailorFractionLandscape + 20),
-        reason: 'the wider card must remain below the sailor and road ahead',
+        reason: 'the wider card must remain below the sailor and course ahead',
       );
-      expect(find.textContaining('3rd exit, right'), findsOneWidget);
-      // The symbol beside it is a drawn roundabout, so the visible wording does
-      // not repeat the word, while the label a screen reader is given - which
-      // has no symbol to read - still names the junction.
-      expect(find.textContaining('Roundabout, 3rd'), findsNothing);
-      final semantics = tester.ensureSemantics();
-      expect(
-        tester
-            .getSemantics(find.byKey(const Key('navigation-guidance-banner')))
-            .label,
-        contains('Roundabout, 3rd exit, right'),
-      );
-      semantics.dispose();
-      // One instruction for one junction: the exit step is not announced again.
-      expect(find.byKey(const Key('following-maneuver')), findsNothing);
-      // The ring is drawn, not borrowed from a glyph that means the opposite.
-      expect(find.byIcon(Icons.roundabout_left), findsNothing);
-      expect(find.byIcon(Icons.roundabout_right), findsNothing);
-      expect(find.byKey(const Key('lane-guidance')), findsOneWidget);
-      expect(find.text('Station Road'), findsOneWidget);
       final arrowLayer = tester.widget<MarkerLayer>(
         find.byKey(const Key('trail-direction-arrow-layer')),
       );
@@ -2590,19 +2370,14 @@ void main() {
           ],
         ),
       ],
-      waypoints: const [],
-      maneuvers: const [
-        RouteManeuver(
-          position: GeoPoint(latitude: 53, longitude: -1.005),
-          type: 'roundabout',
-          modifier: 'right',
-          name: 'Station Road',
-          exitNumber: 3,
-          drivingSide: 'left',
-          lanes: [
-            RouteLane(indications: ['left'], valid: false),
-            RouteLane(indications: ['straight', 'right'], valid: true),
-          ],
+      waypoints: const [
+        RouteWaypoint(
+          name: 'Start',
+          point: GeoPoint(latitude: 53, longitude: -1.02),
+        ),
+        RouteWaypoint(
+          name: 'Finish',
+          point: GeoPoint(latitude: 53, longitude: -1),
         ),
       ],
     );
@@ -2653,7 +2428,7 @@ void main() {
 
     final overlayKeys = <String>[
       'route-progress-panel-position',
-      'navigation-guidance-banner',
+      'passage-guidance-banner',
       'skipper-off-course-alert',
       'skipper-sweeper-gap',
       'group-mini-map',
@@ -2720,9 +2495,9 @@ void main() {
       }
 
       if (landscape) {
-        // Landscape divides the screen around the traffic-side sailor anchor:
+        // Landscape divides the screen around the sailor anchor:
         // status and actions are left, guidance is bottom-right, and nothing
-        // crosses the sailor or the road immediately ahead of it (#533).
+        // crosses the sailor or the course immediately ahead of it (#533).
         final sailorX =
             size.width * navigationCameraLandscapeSailorFractionLeftTraffic;
         for (final key in const [
@@ -2762,9 +2537,9 @@ void main() {
         expect(compass.top, closeTo(10, 1));
         expect(compass.width, closeTo(58, 0.1));
 
-        // The turn banner owns a wider bottom-right corner below the sailor; the
+        // Passage guidance owns a wider bottom-right corner below the sailor; the
         // safety actions use a vertical stack beside the mini-map.
-        final guidance = rects['navigation-guidance-banner']!;
+        final guidance = rects['passage-guidance-banner']!;
         expect(guidance.right, closeTo(size.width - 10, 1));
         expect(guidance.bottom, closeTo(size.height - 10, 1));
         expect(guidance.width, greaterThanOrEqualTo(270));
@@ -2826,14 +2601,14 @@ void main() {
           );
         }
 
-        // The turn banner is the last surface above the targets (#133), so all
+        // Passage guidance is the last surface above the targets (#133), so all
         // the map above it is map. Nothing status-like may come between them.
-        final guidance = rects['navigation-guidance-banner']!;
+        final guidance = rects['passage-guidance-banner']!;
         expect(
           guidance.bottom,
           lessThanOrEqualTo(sos.top),
           reason:
-              'the turn banner must sit directly above the targets in $size',
+              'passage guidance must sit directly above the targets in $size',
         );
         const targetKeys = {
           'emergency-alert-button',
@@ -2845,14 +2620,14 @@ void main() {
               entry.key == 'group-mini-map' ||
               entry.key == 'route-progress-panel-position' ||
               targetKeys.contains(entry.key) ||
-              entry.key == 'navigation-guidance-banner') {
+              entry.key == 'passage-guidance-banner') {
             continue;
           }
           expect(
             entry.value.bottom,
             lessThanOrEqualTo(guidance.top),
             reason:
-                '${entry.key} sits between the turn banner and the targets '
+                '${entry.key} sits between passage guidance and the targets '
                 'in $size',
           );
         }
@@ -3083,19 +2858,14 @@ void main() {
           ],
         ),
       ],
-      waypoints: const [],
-      maneuvers: const [
-        RouteManeuver(
-          position: GeoPoint(latitude: 53, longitude: -1.005),
-          type: 'roundabout',
-          modifier: 'right',
-          name: 'Station Road',
-          exitNumber: 3,
-          drivingSide: 'left',
-          lanes: [
-            RouteLane(indications: ['left'], valid: false),
-            RouteLane(indications: ['straight', 'right'], valid: true),
-          ],
+      waypoints: const [
+        RouteWaypoint(
+          name: 'Start',
+          point: GeoPoint(latitude: 53, longitude: -1.02),
+        ),
+        RouteWaypoint(
+          name: 'Finish',
+          point: GeoPoint(latitude: 53, longitude: -1),
         ),
       ],
     );
@@ -3189,19 +2959,14 @@ void main() {
           ],
         ),
       ],
-      waypoints: const [],
-      maneuvers: const [
-        RouteManeuver(
-          position: GeoPoint(latitude: 53, longitude: -1.005),
-          type: 'roundabout',
-          modifier: 'right',
-          name: 'Station Road',
-          exitNumber: 3,
-          drivingSide: 'left',
-          lanes: [
-            RouteLane(indications: ['left'], valid: false),
-            RouteLane(indications: ['straight', 'right'], valid: true),
-          ],
+      waypoints: const [
+        RouteWaypoint(
+          name: 'Start',
+          point: GeoPoint(latitude: 53, longitude: -1.02),
+        ),
+        RouteWaypoint(
+          name: 'Finish',
+          point: GeoPoint(latitude: 53, longitude: -1),
         ),
       ],
     );
@@ -3245,7 +3010,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final size = tester.view.physicalSize / tester.view.devicePixelRatio;
-    expect(find.byKey(const Key('navigation-guidance-banner')), findsOneWidget);
+    expect(find.byKey(const Key('passage-guidance-banner')), findsOneWidget);
     final bottomChromeFraction = _bottomChromeFraction(tester, size);
     expect(bottomChromeFraction, lessThan(0.38));
 
@@ -3376,7 +3141,7 @@ void main() {
     expect(find.byKey(const Key('leave-voyage-button')), findsOneWidget);
     expect(find.byKey(const Key('voyage-menu-button')), findsOneWidget);
     expect(find.text('GROUP VOYAGE PAUSED'), findsOneWidget);
-    expect(find.byKey(const Key('navigation-guidance-banner')), findsNothing);
+    expect(find.byKey(const Key('passage-guidance-banner')), findsNothing);
     // Not a nag: a route-less voyage is a mode, not a state to prompt about.
     expect(find.text('Plan a passage'), findsNothing);
     // Follow mode has taken the camera but is still easing it into the viewport,
@@ -4328,14 +4093,14 @@ void main() {
           ],
         ),
       ],
-      waypoints: const [],
-      maneuvers: const [
-        RouteManeuver(
-          position: GeoPoint(latitude: 53, longitude: -1.005),
-          type: 'turn',
-          modifier: 'right',
-          name: 'Station Road',
-          drivingSide: 'left',
+      waypoints: const [
+        RouteWaypoint(
+          name: 'Start',
+          point: GeoPoint(latitude: 53, longitude: -1.02),
+        ),
+        RouteWaypoint(
+          name: 'Finish',
+          point: GeoPoint(latitude: 53, longitude: -1),
         ),
       ],
     );
@@ -4414,7 +4179,7 @@ void main() {
       for (final key in const [
         'skipper-off-course-alert',
         'skipper-sweeper-gap',
-        'navigation-guidance-banner',
+        'passage-guidance-banner',
         ...actionKeys,
       ]) {
         expect(
@@ -4550,70 +4315,56 @@ class _RecordingDestinationSearch implements DestinationSearchService {
   }
 }
 
-class _StraightRoadRoutingService implements RoadRoutingService {
+class _StraightPassagePlanner implements PassagePlanningService {
   @override
-  Future<RoadRouteResult> routeThrough(
-    List<GeoPoint> waypoints, {
-    RoutePreferences? preferences,
-    double? originBearingDegrees,
-  }) async => RoadRouteResult(
-    points: waypoints,
-    distanceMeters: 12000,
-    duration: const Duration(minutes: 22),
-  );
+  Future<PassagePlanResult> planThrough(List<GeoPoint> waypoints) async =>
+      PassagePlanResult(
+        points: waypoints,
+        distanceMeters: 12000,
+        duration: const Duration(minutes: 22),
+      );
 }
 
-class _RouteStartRoutingService implements RoadRoutingService {
+class _RouteStartPassagePlanner implements PassagePlanningService {
   final calls = <List<GeoPoint>>[];
 
   @override
-  Future<RoadRouteResult> routeThrough(
-    List<GeoPoint> waypoints, {
-    RoutePreferences? preferences,
-    double? originBearingDegrees,
-  }) async {
+  Future<PassagePlanResult> planThrough(List<GeoPoint> waypoints) async {
     calls.add(List<GeoPoint>.of(waypoints));
-    return RoadRouteResult(
+    return PassagePlanResult(
       points: waypoints,
       distanceMeters: 11000,
       duration: const Duration(minutes: 15),
-      maneuvers: [
-        RoadRouteManeuver(
-          position: GeoPoint(
-            latitude: (waypoints.first.latitude + waypoints.last.latitude) / 2,
-            longitude:
-                (waypoints.first.longitude + waypoints.last.longitude) / 2,
-          ),
-          type: 'turn',
-          modifier: 'left',
-          name: 'Road to start',
-        ),
-      ],
     );
   }
 }
 
-ImportedRoute _testRoute({
-  required String id,
-  required String name,
-  List<RouteManeuver> maneuvers = const [],
-}) => ImportedRoute(
-  id: id,
-  name: name,
-  importedAt: DateTime.utc(2026, 7, 23),
-  sourceFileName: '$id.gpx',
-  paths: const [
-    RoutePath(
-      kind: RoutePathKind.track,
-      points: [
-        GeoPoint(latitude: 51.45, longitude: -2.59),
-        GeoPoint(latitude: 51.46, longitude: -2.58),
+ImportedRoute _testRoute({required String id, required String name}) =>
+    ImportedRoute(
+      id: id,
+      name: name,
+      importedAt: DateTime.utc(2026, 7, 23),
+      sourceFileName: '$id.gpx',
+      paths: const [
+        RoutePath(
+          kind: RoutePathKind.track,
+          points: [
+            GeoPoint(latitude: 51.45, longitude: -2.59),
+            GeoPoint(latitude: 51.46, longitude: -2.58),
+          ],
+        ),
       ],
-    ),
-  ],
-  waypoints: const [],
-  maneuvers: maneuvers,
-);
+      waypoints: const [
+        RouteWaypoint(
+          name: 'Start',
+          point: GeoPoint(latitude: 51.45, longitude: -2.59),
+        ),
+        RouteWaypoint(
+          name: 'Finish',
+          point: GeoPoint(latitude: 51.46, longitude: -2.58),
+        ),
+      ],
+    );
 
 /// Pins the surface to a phone in landscape.
 ///

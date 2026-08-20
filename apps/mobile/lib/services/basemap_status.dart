@@ -56,11 +56,11 @@ enum BasemapStatus {
       'This build has no map background configured. Your route, position and '
           'trail are drawn from the phone and work offline.',
     BasemapStatus.styleUnavailable =>
-      'The map background could not be downloaded, so roads and place names '
+      'The map background could not be downloaded, so map detail and place names '
           'are missing. Your position and trail are still being recorded.',
     BasemapStatus.tilesUnavailable =>
       'The map background loaded but its map data could not be reached, so '
-          'roads and place names are missing. Your position and trail are '
+          'map detail and place names are missing. Your position and trail are '
           'still being recorded.',
     BasemapStatus.viewNeverLoaded =>
       'The map view did not finish loading. Your position and trail are still '

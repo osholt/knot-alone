@@ -7,7 +7,7 @@ import '../services/neural_spoken_guidance.dart';
 import '../services/spoken_audio_mode.dart';
 import '../services/spoken_guidance.dart';
 
-/// Whether turn instructions are spoken aloud.
+/// Whether passage prompts are spoken aloud.
 ///
 /// **Off by default, and that is not timidity.** Most sailors already have an
 /// intercom carrying music or another navigation app's prompts, and a second
@@ -70,7 +70,7 @@ class SpokenGuidanceController extends ChangeNotifier
   static const voiceChoiceMadePreferenceKey =
       'spoken_guidance_voice_choice_made';
   static const voicePreviewPhrase =
-      'In 2 miles, at the roundabout, turn right.';
+      'One mile to Hamstead, then alter twenty six degrees to port onto zero six eight degrees true.';
   static const preferredDefaultVoice = SpokenGuidanceVoice(
     name: 'Daniel',
     locale: 'en-GB',

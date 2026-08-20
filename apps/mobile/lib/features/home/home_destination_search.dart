@@ -32,7 +32,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/imported_route.dart' show GeoPoint;
 import '../../domain/voyage_coordination_mode.dart';
-import '../../services/road_routing.dart';
+import '../../services/destination_planning.dart';
 
 /// What a sailor picked out of the search.
 class DestinationChoice {

@@ -351,6 +351,8 @@ class SituationalAwarenessController extends ChangeNotifier {
       case VoyageEventType.voyageResumed:
       case VoyageEventType.voyageEnded:
       case VoyageEventType.voyageReopened:
+      case VoyageEventType.mobActivated:
+      case VoyageEventType.mobResolved:
       case VoyageEventType.iceInfoShared:
       case VoyageEventType.iceInfoViewed:
       // Skipper-issued TEC requests and relayed rejoin routes (#128) are

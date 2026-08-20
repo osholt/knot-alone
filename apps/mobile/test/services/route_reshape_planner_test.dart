@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tide_and_seek/domain/imported_route.dart';
-import 'package:tide_and_seek/services/road_routing.dart';
+import 'package:tide_and_seek/services/passage_planning_service.dart';
 import 'package:tide_and_seek/services/route_reshape_planner.dart';
 
 void main() {
@@ -46,9 +46,9 @@ void main() {
   );
 
   test(
-    'recalculation is an immutable preview using route preferences',
+    'recalculation is an immutable preview through the shaping controls',
     () async {
-      final routing = _RecordingRoutingService();
+      final planner = _RecordingPassagePlanner();
       final original = _route();
       const shapes = [
         RouteShapingPoint(
@@ -59,16 +59,14 @@ void main() {
       ];
 
       final result = await RouteReshapePlanner(
-        routingService: routing,
+        passagePlanner: planner,
       ).reshape(original, shapes);
 
-      expect(routing.preferences, original.preferences);
-      expect(routing.controls, routeShapingControls(original, shapes));
+      expect(planner.controls, routeShapingControls(original, shapes));
       expect(result.route.waypoints, same(original.waypoints));
       expect(result.route.shapingPoints, shapes);
-      expect(result.route.paths.single.points, routing.result.points);
-      expect(result.route.maneuvers, routing.result.maneuvers);
-      expect(result.route.plannedDuration, routing.result.duration);
+      expect(result.route.paths.single.points, planner.result.points);
+      expect(result.route.plannedDuration, planner.result.duration);
       expect(original.shapingPoints, isEmpty);
     },
   );
@@ -118,14 +116,12 @@ ImportedRoute _route() => ImportedRoute(
       point: GeoPoint(latitude: 51.02, longitude: -2.02),
     ),
   ],
-  preferences: RoutePreferences(style: RouteStyle.twisty, avoidMotorways: true),
 );
 
-class _RecordingRoutingService implements RoadRoutingService {
+class _RecordingPassagePlanner implements PassagePlanningService {
   List<GeoPoint> controls = const [];
-  RoutePreferences? preferences;
 
-  final result = const RoadRouteResult(
+  final result = const PassagePlanResult(
     points: [
       GeoPoint(latitude: 51, longitude: -2),
       GeoPoint(latitude: 51.006, longitude: -2.002),
@@ -133,23 +129,11 @@ class _RecordingRoutingService implements RoadRoutingService {
     ],
     distanceMeters: 3200,
     duration: Duration(minutes: 8),
-    maneuvers: [
-      RoadRouteManeuver(
-        position: GeoPoint(latitude: 51.006, longitude: -2.002),
-        type: 'turn',
-        modifier: 'right',
-      ),
-    ],
   );
 
   @override
-  Future<RoadRouteResult> routeThrough(
-    List<GeoPoint> waypoints, {
-    RoutePreferences? preferences,
-    double? originBearingDegrees,
-  }) async {
+  Future<PassagePlanResult> planThrough(List<GeoPoint> waypoints) async {
     controls = List.unmodifiable(waypoints);
-    this.preferences = preferences;
     return result;
   }
 }

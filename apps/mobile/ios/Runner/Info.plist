@@ -72,7 +72,7 @@
 		<string>_90AAE9C4995F._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Tide and Seek uses nearby devices and local networks to keep your voyage group coordinated.</string>
+	<string>Tide and Seek uses nearby devices and local networks to keep your voyage group coordinated and, when you configure one, receive AIS messages from your on-board equipment.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Tide and Seek uses your location during an active voyage to share your position with your group, provide navigation, and warn about route deviations. You can pause or stop location sharing at any time.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

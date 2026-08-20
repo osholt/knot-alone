@@ -13,6 +13,7 @@ import '../domain/ice_share.dart';
 import '../domain/imported_route.dart';
 import '../domain/completed_voyage_store.dart';
 import '../domain/join_invite.dart';
+import '../domain/mob_state.dart';
 import '../domain/quick_message.dart';
 import '../domain/voyage_coordination_mode.dart';
 import '../domain/voyage_event.dart';
@@ -165,6 +166,7 @@ class VoyageController extends ChangeNotifier {
   /// staring at a sentence about a relay handshake with nothing to press (#208).
   bool get errorIsRetryable => _errorMessage != null && _errorIsRetryable;
   bool get hasActiveVoyage => _session != null;
+  MobState get mobState => MobReducer.reduce(_events);
 
   /// The skipper persists this in the session and publishes it in `voyageCreated`.
   /// A joining phone starts from the backward-compatible drop-off default, then
@@ -1281,6 +1283,45 @@ class VoyageController extends ChangeNotifier {
   Future<void> pauseVoyage() => _setVoyagePaused(true);
 
   Future<void> resumeVoyage() => _setVoyagePaused(false);
+
+  Future<bool> activateMob(MobFix fix) async {
+    VoyageEvent? activation;
+    await _run(() async {
+      activation = await _record(
+        type: VoyageEventType.mobActivated,
+        priority: EventPriority.critical,
+        payload: {
+          if (fix.hasPosition) ...{
+            'latitude': fix.latitude,
+            'longitude': fix.longitude,
+          },
+          if (fix.recordedAt != null)
+            'positionRecordedAt': fix.recordedAt!.toUtc().toIso8601String(),
+          if (fix.accuracyMeters != null) 'accuracyMeters': fix.accuracyMeters,
+          'positionSource': fix.source,
+          'fixStale': fix.stale,
+        },
+      );
+    });
+    return activation != null;
+  }
+
+  Future<bool> resolveMob(MobResolution resolution) async {
+    final incident = mobState.activeIncident;
+    if (incident == null) return false;
+    VoyageEvent? resolved;
+    await _run(() async {
+      resolved = await _record(
+        type: VoyageEventType.mobResolved,
+        priority: EventPriority.critical,
+        payload: {
+          'activationEventId': incident.activationEventId,
+          'resolution': resolution.name,
+        },
+      );
+    });
+    return resolved != null;
+  }
 
   Future<void> startVoyage() async {
     if (voyageStarted || voyageEnded) return;

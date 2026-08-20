@@ -8,6 +8,7 @@ import 'package:tide_and_seek/domain/quick_message.dart';
 import 'package:tide_and_seek/domain/completed_voyage_store.dart';
 import 'package:tide_and_seek/domain/geo_point.dart';
 import 'package:tide_and_seek/domain/imported_route.dart' as route_domain;
+import 'package:tide_and_seek/domain/mob_state.dart';
 import 'package:tide_and_seek/domain/voyage_event.dart';
 import 'package:tide_and_seek/domain/voyage_coordination_mode.dart';
 import 'package:tide_and_seek/domain/voyage_role.dart';
@@ -66,6 +67,47 @@ void main() {
     final restored = await sessionStore.load();
     expect(restored?.voyageId, controller.session?.voyageId);
   });
+
+  test(
+    'MOB is saved offline and cleared only by an explicit resolution',
+    () async {
+      await controller.createVoyage('Oliver');
+
+      expect(
+        await controller.activateMob(
+          MobFix(
+            latitude: 50.8,
+            longitude: -1.1,
+            recordedAt: DateTime.utc(2026, 7, 16, 11, 59, 58),
+            accuracyMeters: 6,
+            source: 'gnss',
+            stale: false,
+          ),
+        ),
+        isTrue,
+      );
+
+      final activation = controller.events.last;
+      expect(activation.type, VoyageEventType.mobActivated);
+      expect(activation.priority, EventPriority.critical);
+      expect(activation.signature, hasLength(64));
+      expect(controller.mobState.activeIncident!.fix.latitude, 50.8);
+      expect(
+        (await eventStore.eventsForVoyage(
+          controller.session!.voyageId,
+        )).last.id,
+        activation.id,
+      );
+
+      expect(await controller.resolveMob(MobResolution.recovered), isTrue);
+      expect(controller.events.last.type, VoyageEventType.mobResolved);
+      expect(
+        controller.events.last.payload['activationEventId'],
+        activation.id,
+      );
+      expect(controller.mobState.active, isFalse);
+    },
+  );
 
   test('voyage coordination mode is persisted and published', () async {
     await controller.createVoyage(

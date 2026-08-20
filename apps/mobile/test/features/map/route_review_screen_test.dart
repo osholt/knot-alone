@@ -503,24 +503,6 @@ void main() {
         ),
       ],
       waypoints: const [],
-      // Both manoeuvres sit on the first, longer path: the one the group voyages.
-      // They were on one path each until #179 stopped scoring manoeuvres that
-      // lie off the ridden line - a road nobody on this voyage will use cannot be
-      // missed, so it earns no marking position. That rule is asserted directly
-      // in test/services/route_marker_plan_test.dart; this test is about the two
-      // paths staying visually separate, which they still are.
-      maneuvers: const [
-        RouteManeuver(
-          position: GeoPoint(latitude: 51.005, longitude: -2.005),
-          type: 'turn',
-          modifier: 'left',
-        ),
-        RouteManeuver(
-          position: GeoPoint(latitude: 51.0075, longitude: -2.0075),
-          type: 'off ramp',
-          modifier: 'left',
-        ),
-      ],
     );
 
     await tester.pumpWidget(

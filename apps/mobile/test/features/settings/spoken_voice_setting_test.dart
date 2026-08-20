@@ -56,7 +56,7 @@ void main() {
 
     expect(spoken.voice, voice);
     expect(engine.configured, isTrue);
-    expect(engine.spoken, ['In 2 miles, at the roundabout, turn right.']);
+    expect(engine.spoken, [SpokenGuidanceController.voicePreviewPhrase]);
   });
 
   testWidgets('Daniel is selected and novelty voices stay behind Show all', (
@@ -225,7 +225,7 @@ void main() {
     expect(naturalPack.enabled, isTrue);
     expect(find.byKey(const Key('natural-voice-toggle')), findsOneWidget);
     expect(preview.configured, isTrue);
-    expect(preview.spoken, ['In 2 miles, at the roundabout, turn right.']);
+    expect(preview.spoken, [SpokenGuidanceController.voicePreviewPhrase]);
   });
 }
 

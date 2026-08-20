@@ -1,0 +1,62 @@
+name: Play track status
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: android-internal
+    env:
+      PACKAGE_NAME: dev.osholt.tideandseek
+    steps:
+      - name: Validate Play service account secret
+        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: test -n "$SERVICE_ACCOUNT_JSON"
+      - name: Install Google API client
+        run: pip install --quiet google-auth google-auth-httplib2 google-api-python-client
+      - name: Report every track
+        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/play.json"
+          python - <<'PY'
+          import os
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+
+          package = os.environ["PACKAGE_NAME"]
+          credentials = service_account.Credentials.from_service_account_file(
+              os.path.join(os.environ["RUNNER_TEMP"], "play.json"),
+              scopes=["https://www.googleapis.com/auth/androidpublisher"],
+          )
+          service = build("androidpublisher", "v3", credentials=credentials)
+          edits = service.edits()
+          edit_id = edits.insert(packageName=package, body={}).execute()["id"]
+          try:
+              tracks = edits.tracks().list(
+                  packageName=package, editId=edit_id
+              ).execute().get("tracks", [])
+          finally:
+              edits.delete(packageName=package, editId=edit_id).execute()
+
+          if not tracks:
+              raise SystemExit("No Play tracks were returned for " + package)
+          lines = ["| Track | Status | Version codes |", "| --- | --- | --- |"]
+          for track in sorted(tracks, key=lambda item: item["track"]):
+              releases = track.get("releases") or [{}]
+              for release in releases:
+                  codes = ", ".join(release.get("versionCodes") or []) or "—"
+                  status = release.get("status") or "—"
+                  lines.append(f"| {track['track']} | {status} | {codes} |")
+          print("\n".join(lines))
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
+              out.write("\n".join(lines) + "\n")
+          PY

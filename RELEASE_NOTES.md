@@ -1,35 +1,37 @@
-Build 25. You can now sail the passage, not just plan it — and a fitness review found three places where the app was quietly telling you the wrong thing.
+Build 26 is the first marine-context tester build.
 
-The one worth knowing about first. Importing a passage as a GPX with a <rte> element — how every plotter exports one — used to say: "Directions could not be built for this route. Re-import it to try again." That was false, and re-importing would have produced the same message forever. The passage was fine; it simply has no turn-by-turn, by design. Fixed.
+The underway chart now starts flat and farther out. Pan, pinch, rotate, plus and
+minus put the view under your control; Follow vessel brings it back in one
+action.
 
-Under way, the banner now reads the passage instead of saying nothing useful:
+New context on the chart:
 
-  Leg 1 of 3 to Hamstead
-  3.4 NM to run · then alter 26° to port onto 068°T
+- calculated astronomical tide heights and curves for Lymington, Portsmouth
+  and Southampton, bundled for offline use and labelled non-official;
+- a time-selectable Open-Meteo area wind forecast with arrows, speed, gust,
+  valid time and attribution; and
+- received AIS targets from an existing boat-local NMEA TCP receiver. With no
+  receiver configured, the chart menu offers an unmistakably synthetic replay.
 
-  Approaching Hamstead
-  6 cables to run · then alter 26° to port onto 068°T
+The new MOB control records the best position available, fixes the marker on the
+chart and shows elapsed time, bearing and distance. Ending it requires an
+explicit recovered or false-alarm choice. It does not transmit a distress alert
+and the marked position does not move with a person in the water.
 
-  Arriving at Cowes
-  5 cables to run · last mark of the passage
+The last inherited road-routing, roundabout and lane-guidance stack has also
+been removed. Passage guidance now comes only from the passage marks and legs.
 
-And it speaks. At a mile off a mark, and again at two cables: "6 cables to Hamstead, then alter 26 degrees to port onto zero six eight." The speech stack has been complete since before the rename and had never had a phrase to say, because it was fed from a road manoeuvre list that is always empty on a passage.
+Please try:
 
-Courses are spoken digit by digit — "zero six eight", never "sixty eight", which through wind noise could be 068 or a careless 268. Distances are cables inside a mile, never with a decimal.
+- pan and zoom while sailing, then use Follow vessel;
+- compare the three tide stations with a source you already trust;
+- step the wind forecast backward and forward;
+- exercise MOB somewhere safe, including with no useful fix; and
+- if you already own a compatible AIS receiver, follow
+  docs/ais-local-receiver.md and report the receiver model and reconnect
+  behaviour.
 
-Three things it deliberately will not do:
-- Off track, it tells you which side and gives the leg's own course. It will not compute a course to steer back — that would be the app choosing a course with no chart, no depth and no tide under it.
-- A stale fix outranks an approaching mark. Two cables off on a three-minute-old position, the mark is not the thing to say.
-- No prompt says turn, steer, or head for. "Alter 26 degrees to port" reports the plan you made, at the moment it matters.
-
-Also: there were two manoeuvre lists, and the one the map menu opened was the empty road one — gated on road manoeuvres, so the menu item never appeared at all. One list now, and it is reachable.
-
-Worth trying on this build:
-- Load the demo passage, start the voyage, and watch the banner as you move. It changes at a mile and again at two cables.
-- Turn the voice on. It should say the mark and the alteration once, not once per fix.
-- The ⋮ menu on the map now offers "All alterations on this passage".
-- Try importing a passage from your own plotter, if you have one. That is the path that was broken and I have no real file to test against.
-
-Still deliberately absent: tides, tidal streams, charted depth, wrecks. The UKHO licence question is unanswered, so a passage this plans is still a passage in still water. Not a substitute for an official chart.
-
-Two things I could not verify and would value your eyes on: the under-way banner on a real device with a real fix — the simulator has no GNSS and I could not get a voyage started there — and the iPad landscape layout, which is pinned by tests but has never been seen on an iPad.
+Important: this is still not a licensed nautical chart and has no soundings,
+depth contours or tidal streams. AIS is incomplete and is not a collision
+alarm. MOB, tides and local AIS still need physical-device and on-water
+validation. Do not rely on this build for navigation or casualty recovery.

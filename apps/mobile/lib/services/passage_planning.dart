@@ -1,17 +1,6 @@
 /// Passage legs between waypoints, on the water.
 ///
-/// ## What this replaces, and why it had to go
-///
-/// Destination planning called OSRM's **car driving profile**, and the map's
-/// planner additionally fell through to a Valhalla **motorcycle** service. Both
-/// are inherited from Tail End Charlie and neither has any concept of water.
-/// Asked to plan from Cowes to Cherbourg they do not fail — they confidently
-/// return a road route around the coast, through Dover, and present it with
-/// turn-by-turn manoeuvres. That is the single most dangerous behaviour a
-/// navigation app can have: not missing information, but confident wrong
-/// information dressed as a plan (#19).
-///
-/// ## What this does instead
+/// ## What this does
 ///
 /// Joins the waypoints the sailor chose with rhumb lines: the constant-bearing
 /// track that is actually steered on a passage. Great-circle is shorter on long
@@ -22,13 +11,11 @@
 ///
 /// It does not avoid land, shallows, traffic separation schemes, firing ranges or
 /// anything else. It draws the line the sailor asked for and states that plainly
-/// through [RoadRouteResult.warnings]. A planner that quietly routed *around* an
+/// through [PassagePlanResult.warnings]. A planner that quietly routed *around* an
 /// island would be worse than one that does not pretend to: the sailor would stop
 /// checking. Land avoidance needs chart data this build does not have — see
 /// `docs/chart-providers.md`.
 ///
-/// It emits **no manoeuvres**. There is no turn-by-turn on a passage, and the
-/// guidance surfaces already handle an empty manoeuvre list by saying so.
 library;
 
 import 'dart:math' as math;
@@ -38,8 +25,7 @@ import 'dart:math' as math;
 // (#21); picking the wrong one here fails to compile rather than silently
 // converting, which is the only good thing about the duplication.
 import '../domain/imported_route.dart' show GeoPoint;
-import '../domain/route_preferences.dart';
-import 'road_routing.dart' show RoadRouteResult, RoadRoutingService;
+import 'passage_planning_service.dart';
 
 /// Metres in a nautical mile.
 const _metresPerNauticalMile = 1852.0;
@@ -48,7 +34,7 @@ const _metresPerNauticalMile = 1852.0;
 /// app rather than differing in the third decimal depending on who measured.
 const _earthRadiusMeters = 6371008.8;
 
-class RhumbLinePassagePlanner implements RoadRoutingService {
+class RhumbLinePassagePlanner implements PassagePlanningService {
   const RhumbLinePassagePlanner({
     this.planningSpeedKnots = defaultPlanningSpeedKnots,
     this.sampleIntervalMeters = _metresPerNauticalMile,
@@ -75,13 +61,7 @@ class RhumbLinePassagePlanner implements RoadRoutingService {
   final double sampleIntervalMeters;
 
   @override
-  Future<RoadRouteResult> routeThrough(
-    List<GeoPoint> waypoints, {
-    RoutePreferences? preferences,
-    // Irrelevant on the water: a rhumb line leaves the first waypoint on the
-    // course to the second whichever way the boat happens to be lying.
-    double? originBearingDegrees,
-  }) async {
+  Future<PassagePlanResult> planThrough(List<GeoPoint> waypoints) async {
     final distinct = _withoutConsecutiveDuplicates(waypoints);
     if (distinct.length < 2) {
       throw const FormatException(
@@ -102,13 +82,10 @@ class RhumbLinePassagePlanner implements RoadRoutingService {
     }
 
     final hours = totalMeters / _metresPerNauticalMile / planningSpeedKnots;
-    return RoadRouteResult(
+    return PassagePlanResult(
       points: points,
       distanceMeters: totalMeters,
       duration: Duration(seconds: (hours * 3600).round()),
-      // No turn-by-turn on a passage. Intentionally empty.
-      maneuvers: const [],
-      preferences: preferences,
       warnings: warningsFor(planningSpeedKnots),
     );
   }

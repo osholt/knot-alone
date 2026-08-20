@@ -1,0 +1,57 @@
+name: Promote Android tester release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: Existing internal-track Play version code
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-testing-promotion
+  cancel-in-progress: false
+
+env:
+  FASTLANE_VERSION: 2.228.0
+  PACKAGE_NAME: dev.osholt.tideandseek
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: android-internal
+    steps:
+      - name: Install Fastlane
+        run: |
+          gem install fastlane --version "$FASTLANE_VERSION" --no-document --user-install
+          echo "$(ruby -e 'puts Gem.user_dir')/bin" >> "$GITHUB_PATH"
+      - name: Promote internal release to closed alpha
+        id: promote
+        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          VERSION_CODE: ${{ inputs.version_code }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVICE_ACCOUNT_JSON"
+          printf '%s' "$VERSION_CODE" | grep -Eq '^[1-9][0-9]*$'
+          json_key_path="$RUNNER_TEMP/play-service-account.json"
+          umask 077
+          printf '%s' "$SERVICE_ACCOUNT_JSON" > "$json_key_path"
+          promote_args=(
+            "--json_key" "$json_key_path"
+            "--package_name" "$PACKAGE_NAME"
+            "--track" "internal"
+            "--track_promote_to" "alpha"
+            "--track_promote_release_status" "completed"
+            "--deactivate_on_promote" "false"
+            "--version_code" "$VERSION_CODE"
+          )
+          fastlane supply "${promote_args[@]}"
+      - name: Summarise
+        if: always()
+        run: |
+          printf '# Promotion of Android version code %s\n\nResult: **%s**\n' "${{ inputs.version_code }}" "${{ steps.promote.outcome }}" >> "$GITHUB_STEP_SUMMARY"

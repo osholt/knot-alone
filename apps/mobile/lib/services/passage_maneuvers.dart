@@ -2,10 +2,9 @@
 ///
 /// ## Why this is not the manoeuvre list it replaces
 ///
-/// The inherited list came from OSRM road steps: turn left, third exit, get in
-/// lane. None of that has a marine equivalent, and #19 removed the engine that
-/// produced it, so that list could only ever say "no turn prompts for this
-/// route" (#63).
+/// The inherited list came from driving directions: turn left, third exit, get
+/// in lane. None of that has a marine equivalent, so it was replaced rather
+/// than renamed (#63).
 ///
 /// A nautical manoeuvre differs from a road one in nearly every part. You do not
 /// turn, you **alter course**, and by a stated number of degrees. You alter onto

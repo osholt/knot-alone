@@ -9,10 +9,10 @@ enum VoyageCoordinationMode {
 
   /// Recorded by builds that offered the junction drop-off system.
   ///
-  /// The road surfaces it selected are gone, so nothing offers it now and it
+  /// The marker surfaces it selected are gone, so nothing offers it now and it
   /// behaves exactly as [crew]. Kept so a voyage stored by an earlier build
   /// still decodes instead of failing to load.
-  @Deprecated('Junction drop-offs were removed with the road surfaces.')
+  @Deprecated('Junction drop-offs were removed with the marker surfaces.')
   secondBikeDropOff;
 
   bool get isGroup => this != VoyageCoordinationMode.solo;

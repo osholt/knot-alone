@@ -138,14 +138,14 @@ class VoyageDiagnosticsRecorder {
   /// A spoken prompt actually left the speaker.
   ///
   /// The distance is the point of it (#409): the defect is that a prompt arrives
-  /// after the junction, and "after" is a number, not an impression.
+  /// after the mark, and "after" is a number, not an impression.
   void recordSpokenPrompt({
     required String phrase,
-    required double? distanceToManoeuvreMeters,
+    required double? distanceToMarkMeters,
   }) {
     _add(
       'SPOKEN     "$phrase"  '
-      '${distanceToManoeuvreMeters == null ? 'distance to junction unknown' : '${distanceToManoeuvreMeters.round()} m to the junction'}',
+      '${distanceToMarkMeters == null ? 'distance to mark unknown' : '${distanceToMarkMeters.round()} m to the mark'}',
     );
   }
 
@@ -190,7 +190,7 @@ class VoyageDiagnosticsRecorder {
   /// This is the line #412 needs and the reason the recorder holds a position
   /// buffer at all: the app's own heading change against the one the bike made.
   /// A disagreement here says the app reasoned from the wrong bearings; agreement
-  /// with a wrong instruction says the bucketing is at fault. Those have different
+  /// with a wrong alteration says the bucketing is at fault. Those have different
   /// fixes, which is why guessing between them was refused.
   void _resolvePassedManoeuvres() {
     if (_pending.isEmpty) return;

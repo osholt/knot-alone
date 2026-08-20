@@ -57,6 +57,13 @@ enum VoyageEventType {
   /// The later of the two decides whether the voyage has ended, exactly as
   /// [voyagePaused] and [voyageResumed] already decide whether it is paused.
   voyageReopened,
+
+  /// A sailor manually marks a man-overboard last-known position. This is a
+  /// local recovery aid, not a distress transmission or live casualty tracker.
+  mobActivated,
+
+  /// Explicitly ends one [mobActivated] recovery incident.
+  mobResolved,
 }
 
 enum EventPriority { routine, important, critical }

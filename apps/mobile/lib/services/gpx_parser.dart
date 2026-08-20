@@ -80,7 +80,7 @@ class GpxParser {
     final paths = <RoutePath>[];
     for (final track in _children(root, 'trk')) {
       final trackName = _childText(track, 'name');
-      final isCalculatedRoadRoute = _children(track, 'extensions')
+      final isGeneratedRoute = _children(track, 'extensions')
           .expand((extensions) => extensions.childElements)
           .any(
             (element) =>
@@ -99,9 +99,7 @@ class GpxParser {
             : trackName;
         paths.add(
           RoutePath(
-            kind: isCalculatedRoadRoute
-                ? RoutePathKind.route
-                : RoutePathKind.track,
+            kind: isGeneratedRoute ? RoutePathKind.route : RoutePathKind.track,
             name: segmentName,
             points: points,
           ),
@@ -198,36 +196,11 @@ class GpxParser {
       sourceFileName: sourceFileName,
       paths: selectedPaths,
       waypoints: List.unmodifiable(waypoints),
-      preferences: metadata == null ? null : _routePreferences(metadata),
       markerReview: metadata == null
           ? MarkerPlanReview.empty
           : _markerReview(metadata),
     );
   }
-}
-
-/// Reads the preferences a Tide and Seek route was planned with.
-///
-/// Absent for a file from any other tool, which is the honest answer: nothing
-/// is assumed about a route whose planner never recorded one.
-RoutePreferences? _routePreferences(XmlElement metadata) {
-  final element = _children(metadata, 'extensions')
-      .expand((extensions) => extensions.childElements)
-      .where((child) => child.name.local.toLowerCase() == 'route-preferences')
-      .firstOrNull;
-  if (element == null) return null;
-  String? attribute(String name) => element.attributes
-      .where((item) => item.name.local.toLowerCase() == name)
-      .map((item) => item.value.trim())
-      .firstOrNull;
-  return RoutePreferences.fromJson({
-    'style': attribute('style'),
-    'avoidMotorways': attribute('avoid-motorways') == 'true',
-    'avoidMajorRoads': attribute('avoid-major-roads') == 'true',
-    'avoidTolls': attribute('avoid-tolls') == 'true',
-    'avoidFerries': attribute('avoid-ferries') == 'true',
-    'bywaySurface': attribute('byway-surface'),
-  });
 }
 
 MarkerPlanReview _markerReview(XmlElement metadata) {
