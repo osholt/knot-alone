@@ -74,7 +74,9 @@ import 'smooth_countdown.dart';
 import 'stored_route_picker.dart';
 import 'marine_glyphs.dart';
 import '../../services/passage_planning.dart';
+import '../../services/passage_guidance.dart';
 import '../../services/passage_legs.dart';
+import '../../services/passage_maneuvers.dart';
 import 'passage_leg_table.dart';
 import '../../services/navigation_instruments.dart';
 import 'navigation_instrument_panel.dart';
@@ -202,6 +204,7 @@ class VoyageMapFeature extends StatefulWidget {
     this.onRouteChanged,
     this.onRouteCommitted,
     this.onNavigationGuidanceChanged,
+    this.onPassageGuidanceChanged,
     this.onNavigationViewportChanged,
     this.onMapStyleResolved,
     this.changeRouteRequestToken,
@@ -264,6 +267,7 @@ class VoyageMapFeature extends StatefulWidget {
     ValueChanged<ImportedRoute?>? onRouteChanged,
     ValueChanged<ImportedRoute?>? onRouteCommitted,
     ValueChanged<NavigationGuidance?>? onNavigationGuidanceChanged,
+    ValueChanged<PassageGuidance?>? onPassageGuidanceChanged,
     ValueChanged<NavigationCameraViewport>? onNavigationViewportChanged,
     ValueChanged<String>? onMapStyleResolved,
     Object? changeRouteRequestToken,
@@ -320,6 +324,7 @@ class VoyageMapFeature extends StatefulWidget {
     onRouteChanged: onRouteChanged,
     onRouteCommitted: onRouteCommitted,
     onNavigationGuidanceChanged: onNavigationGuidanceChanged,
+    onPassageGuidanceChanged: onPassageGuidanceChanged,
     onNavigationViewportChanged: onNavigationViewportChanged,
     onMapStyleResolved: onMapStyleResolved,
     changeRouteRequestToken: changeRouteRequestToken,
@@ -413,6 +418,13 @@ class VoyageMapFeature extends StatefulWidget {
   final ValueChanged<ImportedRoute?>? onRouteChanged;
   final ValueChanged<ImportedRoute?>? onRouteCommitted;
   final ValueChanged<NavigationGuidance?>? onNavigationGuidanceChanged;
+
+  /// The passage read against the current fix, for the voice (#73).
+  ///
+  /// Separate from `onNavigationGuidanceChanged` rather than replacing it,
+  /// because they carry different things: that one carries a road manoeuvre,
+  /// which a passage never has, and this one carries prompts.
+  final ValueChanged<PassageGuidance?>? onPassageGuidanceChanged;
   final ValueChanged<NavigationCameraViewport>? onNavigationViewportChanged;
   final ValueChanged<String>? onMapStyleResolved;
   final Object? changeRouteRequestToken;
@@ -591,6 +603,7 @@ class _VoyageMapFeatureState extends State<VoyageMapFeature> {
         onRouteChanged: widget.onRouteChanged,
         onRouteCommitted: widget.onRouteCommitted,
         onNavigationGuidanceChanged: widget.onNavigationGuidanceChanged,
+        onPassageGuidanceChanged: widget.onPassageGuidanceChanged,
         onNavigationViewportChanged: widget.onNavigationViewportChanged,
         changeRouteRequestToken: widget.changeRouteRequestToken,
         onChangeRouteRequestHandled: widget.onChangeRouteRequestHandled,
@@ -676,6 +689,7 @@ class VoyageMapScreen extends StatefulWidget {
     this.onRouteChanged,
     this.onRouteCommitted,
     this.onNavigationGuidanceChanged,
+    this.onPassageGuidanceChanged,
     this.onNavigationViewportChanged,
     this.changeRouteRequestToken,
     this.onChangeRouteRequestHandled,
@@ -778,6 +792,13 @@ class VoyageMapScreen extends StatefulWidget {
   final ValueChanged<ImportedRoute?>? onRouteChanged;
   final ValueChanged<ImportedRoute?>? onRouteCommitted;
   final ValueChanged<NavigationGuidance?>? onNavigationGuidanceChanged;
+
+  /// The passage read against the current fix, for the voice (#73).
+  ///
+  /// Separate from `onNavigationGuidanceChanged` rather than replacing it,
+  /// because they carry different things: that one carries a road manoeuvre,
+  /// which a passage never has, and this one carries prompts.
+  final ValueChanged<PassageGuidance?>? onPassageGuidanceChanged;
   final ValueChanged<NavigationCameraViewport>? onNavigationViewportChanged;
   final Object? changeRouteRequestToken;
   final VoidCallback? onChangeRouteRequestHandled;
@@ -845,6 +866,15 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
   final RouteJourneyProgressTracker _routeJourneyProgressTracker =
       RouteJourneyProgressTracker();
   final RouteProgressTracker _rejoinProgressTracker = RouteProgressTracker();
+
+  /// The passage read against the current fix (#63).
+  ///
+  /// Beside `_navigationGuidance` rather than replacing it, for one release:
+  /// the road assessment still drives the manoeuvre banner, which cannot fire
+  /// on a passage but is what an imported route carrying manoeuvres would use.
+  /// When #31 finishes taking the road stack out, this is what remains.
+  final ValueNotifier<PassageGuidance?> _passageGuidance = ValueNotifier(null);
+
   final ValueNotifier<NavigationGuidanceAssessment> _navigationGuidance =
       ValueNotifier(const NavigationGuidanceAssessment.noRoute());
   final Map<int, Offset> _mapPointerOrigins = {};
@@ -1220,6 +1250,7 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     _mapLibreController?.onFeatureTapped.remove(_onMapLibreFeatureTapped);
     _mapLibreController?.removeListener(_scheduleCameraFramingRefresh);
     _mapController.dispose();
+    _passageGuidance.dispose();
     _navigationGuidance.dispose();
     _sailorSpeedStalenessTimer?.cancel();
     _sailorSpeedStalenessTimer = null;
@@ -1823,9 +1854,14 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
               builder: (context, assessment, _) {
                 final guidance = assessment.guidance;
                 return guidance == null
-                    ? _NavigationGuidanceStatusBanner(
-                        assessment: assessment,
-                        compact: cramped,
+                    ? ValueListenableBuilder<PassageGuidance?>(
+                        valueListenable: _passageGuidance,
+                        builder: (context, passage, _) =>
+                            _NavigationGuidanceStatusBanner(
+                              assessment: assessment,
+                              compact: cramped,
+                              passage: passage,
+                            ),
                       )
                     : _NavigationGuidanceBanner(
                         guidance: guidance,
@@ -3259,7 +3295,50 @@ class _VoyageMapScreenState extends State<VoyageMapScreen> {
     unawaited(_publishGroupPipSnapshot());
   }
 
+  /// The current fix as the instruments want it, or null with no position.
+  ///
+  /// The instrument sheet builds this too; extracted so the banner and the sheet
+  /// cannot disagree about what the receiver said.
+  NavigationFix? _instrumentFix(GeoPoint? position) {
+    final fix = _navigationFix;
+    final point = position ?? fix?.point ?? _effectivePosition;
+    if (point == null) return null;
+    return NavigationFix(
+      point: point,
+      recordedAt: fix?.recordedAt ?? DateTime.now(),
+      courseOverGroundDegrees: fix?.headingDegrees,
+      speedOverGroundMetersPerSecond: fix?.speedMetersPerSecond,
+      accuracyMeters: fix?.accuracyMeters,
+    );
+  }
+
+  /// Reads the passage against the fix, for the banner and (next) the voice.
+  void _updatePassageGuidance(GeoPoint? position) {
+    final route = _route;
+    final fix = _instrumentFix(position);
+    if (route == null || fix == null) {
+      _passageGuidance.value = null;
+      widget.onPassageGuidanceChanged?.call(null);
+      return;
+    }
+    final now = DateTime.now();
+    final plan = PassagePlan.of(route);
+    final next = PassageGuidance.of(
+      plan: plan,
+      maneuvers: PassageManeuverPlan.of(plan),
+      instruments: NavigationInstruments.compute(
+        fix: fix,
+        plan: plan,
+        now: now,
+      ),
+      distanceUnit: widget.distanceUnit,
+    );
+    _passageGuidance.value = next;
+    widget.onPassageGuidanceChanged?.call(next);
+  }
+
   void _updateNavigationGuidance(GeoPoint? position) {
+    _updatePassageGuidance(position);
     final navigationRoute = _rejoinRoute ?? _route;
     final next = _navigationGuidancePlanner.assess(
       route: navigationRoute,
@@ -8029,13 +8108,25 @@ class _NavigationGuidanceStatusBanner extends StatelessWidget {
   const _NavigationGuidanceStatusBanner({
     required this.assessment,
     required this.compact,
+    this.passage,
   });
 
   final NavigationGuidanceAssessment assessment;
   final bool compact;
 
+  /// The passage read against the current fix (#63).
+  ///
+  /// Preferred over [assessment] whenever there is a passage to report, which
+  /// is the whole point: `assessment` can only ever say "following the passage
+  /// line", because it is fed by the road planner and a passage has no
+  /// manoeuvres for it to describe. This says which leg, which mark, how far,
+  /// and what the plan asks for there.
+  final PassageGuidance? passage;
+
   @override
   Widget build(BuildContext context) {
+    final live = passage;
+    if (live != null && live.hasPassage) return _passageBanner(context, live);
     final (icon, color) = switch (assessment.state) {
       NavigationGuidanceState.waitingForLocation => (
         Icons.gps_not_fixed_rounded,
@@ -8049,15 +8140,11 @@ class _NavigationGuidanceStatusBanner extends StatelessWidget {
         Icons.flag_rounded,
         const Color(0xFF72D69C),
       ),
+      // A mode, not a fault. Every passage is here, and the amber warning icon
+      // this used to draw read as something being wrong (#72).
       NavigationGuidanceState.noManeuvers => (
-        Icons.directions_off_rounded,
-        const Color(0xFFFFC857),
-      ),
-      // Read as a fault rather than a mode: this route was meant to have
-      // directions and does not, which is something the sailor can act on.
-      NavigationGuidanceState.routingUnfinished => (
-        Icons.wrong_location_rounded,
-        const Color(0xFFFF8A65),
+        Icons.timeline_rounded,
+        const Color(0xFF68A9FF),
       ),
       NavigationGuidanceState.noRoute || NavigationGuidanceState.active => (
         Icons.navigation_rounded,
@@ -8104,6 +8191,107 @@ class _NavigationGuidanceStatusBanner extends StatelessWidget {
                       fontSize: compact ? 12 : 13,
                       fontWeight: FontWeight.w800,
                     ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Two lines: where the vessel is in the passage, and what is coming.
+  ///
+  /// The detail line is allowed to wrap to two, because "6 cables to run · then
+  /// alter 26° to port onto 068°T" is the sentence a helm is steering by and
+  /// truncating it to an ellipsis would lose the course.
+  Widget _passageBanner(BuildContext context, PassageGuidance live) {
+    final (icon, color) = switch (live.phase) {
+      PassagePhase.offTrack => (
+        Icons.swap_horiz_rounded,
+        const Color(0xFFFFC857),
+      ),
+      PassagePhase.waitingForFix => (
+        Icons.gps_not_fixed_rounded,
+        const Color(0xFFFFC857),
+      ),
+      PassagePhase.arriving => (Icons.flag_rounded, const Color(0xFF72D69C)),
+      PassagePhase.approachingMark => (
+        Icons.turn_sharp_right_rounded,
+        const Color(0xFF72D69C),
+      ),
+      PassagePhase.underWay || PassagePhase.noPassage => (
+        Icons.timeline_rounded,
+        const Color(0xFF68A9FF),
+      ),
+    };
+
+    return Semantics(
+      key: const Key('passage-guidance-banner'),
+      container: true,
+      liveRegion: true,
+      label: [live.headline, ?live.detail].join('. '),
+      excludeSemantics: true,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 10 : 12,
+              vertical: compact ? 7 : 9,
+            ),
+            decoration: BoxDecoration(
+              color: voyageMapPrimaryPanelFill,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: live.needsAttention ? color : const Color(0xFF445262),
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x55000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Icon(icon, size: compact ? 20 : 22, color: color),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        live.headline,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: compact ? 12 : 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (live.detail case final detail?) ...[
+                        const SizedBox(height: 1),
+                        Text(
+                          detail,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: compact ? 11 : 12,
+                            color: const Color(0xFFB9C4D0),
+                            height: 1.25,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
