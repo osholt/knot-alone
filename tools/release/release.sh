@@ -55,6 +55,25 @@ marketing_version="${marketing_version%%+*}"
 printf 'Releasing %s (%s) of %s to "%s"\n' \
   "$marketing_version" "$build_number" "$BUNDLE_ID" "$GROUP"
 
+step "Working tree"
+# Two of the first three releases had their version bump travel inside an
+# unrelated feature PR, because the release was cut from whatever branch
+# happened to be checked out and a later branch inherited the commit. The end
+# state was right both times and the history was not, so the tree is checked
+# rather than trusted.
+#
+# A release branch is fine - `chore/build-N` is how these are made - but it must
+# not be carrying anything other than the bump and the notes.
+branch="$(git -C "$repo_root" rev-parse --abbrev-ref HEAD)"
+dirty="$(git -C "$repo_root" status --porcelain \
+  -- ':!RELEASE_NOTES.md' ':!apps/mobile/pubspec.yaml')"
+if [[ -n "$dirty" ]]; then
+  printf 'release: uncommitted changes outside the bump and the notes:\n%s\n' \
+    "$dirty" >&2
+  die "commit or stash them, so the build matches something reviewable"
+fi
+printf 'On %s, tree clean apart from the bump and the notes.\n' "$branch"
+
 step "Tests and analysis"
 ( cd "$mobile" && flutter analyze && flutter test )
 
