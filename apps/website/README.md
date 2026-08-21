@@ -19,9 +19,10 @@ motorcycle preferences or cafe discovery.
   throughout its North Atlantic and European coverage, a coarser GEBCO 2026
   fallback elsewhere in the world, and EMODnet's generalised 50 m-and-deeper
   European overlay;
-- a map-wide current wind field with downwind arrows, speed labels, valid time,
-  gust detail and explicit model—not observation—wording;
-- a locally entered passage start time and a zoom-adaptive model-current field:
+- a zoom-adaptive wind field with downwind arrows, speed/time labels, gust detail,
+  a purple passage-time halo near the route and explicit model—not observation—wording;
+- a locally entered passage start time, 15-minute time-of-day slider, hour/day
+  step controls and a zoom-adaptive model-current field filtered to basemap water:
   teal arrows use current time away from the route, then blend through blue to
   purple at the expected nearest-route time within 8 NM;
 - current samples about every 2.5 NM for a current-adjusted passage estimate,
@@ -31,6 +32,9 @@ motorcycle preferences or cafe discovery.
   reconciled: the Solent uses the bundled TICON-4 MSL/LAT offsets with the
   Open-Meteo model sea level, while unsupported datum combinations remain
   visibly unadjusted;
+- a map tide table derived from smoothed Open-Meteo sea-level extrema, plus a
+  destination daylight chart showing sunrise, sunset, departure, ETA and an
+  after-sunset/before-sunrise warning;
 - an obvious persistent Light/Dark selector that also chooses the matching
   OpenFreeMap basemap style;
 - alternative GEBCO 2026 global terrain context and NOAA's current US-only

@@ -9,7 +9,7 @@ import {
   parseEmodnetGrid,
   parseGebcoGrid,
 } from "./emodnet-contours.mjs";
-import { windFieldGeoJson, windGrid, windRequestUrl } from "./wind-field.mjs";
+import { sampleWindAt, windFieldGeoJson, windGrid, windRequestUrl } from "./wind-field.mjs";
 import {
   currentEffect,
   currentFieldGeoJson,
@@ -22,7 +22,10 @@ import {
   routeCurrentGeoJson,
   routeSamplePlan,
   sampleMarineAt,
+  tideEventsFromResponse,
+  tideRequestUrl,
 } from "./tide-current.mjs";
+import { sunChartRows, sunRequestUrl } from "./sun-times.mjs";
 
 test("builds a bounded EMODnet request across England", () => {
   const request = createContourRequest(
@@ -114,21 +117,64 @@ test("builds a map-wide wind field with downwind arrows and labels", () => {
   const bounds = { west: -2, south: 50, east: 0, north: 52 };
   const points = windGrid(bounds, 2, 1);
   assert.equal(points.length, 2);
-  assert.match(windRequestUrl(points), /wind_speed_10m/);
+  const at = new Date("2026-08-21T14:30:00Z");
+  assert.match(windRequestUrl(points, at, at), /wind_speed_10m/);
   const response = points.map(() => ({
-    current: {
-      time: "2026-08-21T14:15",
-      wind_speed_10m: 12.4,
-      wind_direction_10m: 0,
-      wind_gusts_10m: 19.2,
+    hourly: {
+      time: ["2026-08-21T14:00", "2026-08-21T15:00"],
+      wind_speed_10m: [12.4, 12.4],
+      wind_direction_10m: [0, 0],
+      wind_gusts_10m: [19.2, 19.2],
     },
   }));
-  const field = windFieldGeoJson(points, response, bounds, 2, 1);
+  assert.equal(sampleWindAt(response[0], at).directionFrom, 0);
+  const field = windFieldGeoJson(points, response, bounds, at, 2, 1);
   assert.equal(field.geojson.features.length, 4);
   assert.equal(field.geojson.features[0].geometry.type, "MultiLineString");
-  assert.equal(field.geojson.features[1].properties.speedLabel, "12 kn");
+  assert.equal(field.geojson.features[1].properties.speedLabel, "12 kn · now");
   const [start, end] = field.geojson.features[0].geometry.coordinates[0];
   assert.ok(end[1] < start[1], "a north wind should point downwind to the south");
+});
+
+test("shrinks map arrows as the geographic viewport narrows", () => {
+  const at = new Date("2026-08-21T14:30:00Z");
+  const response = {
+    hourly: {
+      time: ["2026-08-21T14:00", "2026-08-21T15:00"],
+      wind_speed_10m: [12, 12],
+      wind_direction_10m: [90, 90],
+      wind_gusts_10m: [18, 18],
+    },
+  };
+  const wideBounds = { west: -2, south: 50, east: 0, north: 52 };
+  const closeBounds = { west: -1.41, south: 50.74, east: -1.39, north: 50.76 };
+  const wide = windFieldGeoJson(
+    [{ longitude: -1, latitude: 51 }], response, wideBounds, at, 6, 4,
+  );
+  const close = windFieldGeoJson(
+    [{ longitude: -1.4, latitude: 50.75 }], response, closeBounds, at, 10, 7,
+  );
+  const length = (field) => {
+    const [start, end] = field.geojson.features[0].geometry.coordinates[0];
+    return Math.hypot(end[0] - start[0], end[1] - start[1]);
+  };
+  assert.ok(length(close) < length(wide) / 20);
+
+  const marineResponse = {
+    hourly: {
+      time: ["2026-08-21T14:00", "2026-08-21T15:00"],
+      ocean_current_velocity: [1, 1],
+      ocean_current_direction: [90, 90],
+      sea_level_height_msl: [0, 0],
+    },
+  };
+  const wideCurrent = currentFieldGeoJson(
+    [{ longitude: -1, latitude: 51 }], marineResponse, wideBounds, at, 5, 3,
+  );
+  const closeCurrent = currentFieldGeoJson(
+    [{ longitude: -1.4, latitude: 50.75 }], marineResponse, closeBounds, at, 10, 7,
+  );
+  assert.ok(length(closeCurrent) < length(wideCurrent) / 20);
 });
 
 test("interpolates a map-wide current field at the selected passage start", () => {
@@ -155,6 +201,36 @@ test("interpolates a map-wide current field at the selected passage start", () =
   const field = currentFieldGeoJson(points, response, bounds, start, 2, 1);
   assert.equal(field.geojson.features.length, 4);
   assert.equal(field.geojson.features[0].properties.kind, "current-arrow");
+});
+
+test("renders deduplicated currents at the model's selected sea cells", () => {
+  const bounds = { west: -1.6, south: 50.7, east: -1.0, north: 50.9 };
+  const points = marineGrid(bounds, 2, 1);
+  const response = points.map(() => ({
+    latitude: 50.7917,
+    longitude: -1.375,
+    hourly: {
+      time: ["2026-08-21T14:00", "2026-08-21T15:00"],
+      ocean_current_velocity: [1, 1],
+      ocean_current_direction: [90, 90],
+      sea_level_height_msl: [0, 0],
+    },
+  }));
+  const field = currentFieldGeoJson(
+    points,
+    response,
+    bounds,
+    [
+      { sampleTime: new Date("2026-08-21T14:30:00Z"), forecastWeight: 0 },
+      { sampleTime: new Date("2026-08-21T14:30:00Z"), forecastWeight: 1 },
+    ],
+    2,
+    1,
+  );
+  assert.equal(field.samples.length, 1);
+  assert.equal(field.samples[0].forecastWeight, 1);
+  assert.equal(field.geojson.features.length, 2);
+  assert.deepEqual(field.geojson.features[1].geometry.coordinates, [-1.375, 50.7917]);
 });
 
 test("adapts current grid density to the map zoom", () => {
@@ -207,6 +283,45 @@ test("uses compatible datums for tide-adjusted depths", () => {
     }),
     null,
   );
+});
+
+test("derives model high and low water events for the tide table", () => {
+  const start = new Date("2026-08-21T00:00:00Z");
+  const end = new Date("2026-08-21T08:00:00Z");
+  assert.match(tideRequestUrl({ latitude: 50.75, longitude: -1.4 }, start, end), /sea_level_height_msl/);
+  const response = {
+    hourly: {
+      time: Array.from({ length: 9 }, (_, index) => `2026-08-21T${String(index).padStart(2, "0")}:00`),
+      sea_level_height_msl: [0, 1, 2, 1, 0, -1, -2, -1, 0],
+    },
+  };
+  const events = tideEventsFromResponse(response, start, end);
+  assert.deepEqual(events.map((event) => event.kind), ["high", "low"]);
+  assert.equal(events[0].time, "2026-08-21T02:00:00.000Z");
+  assert.equal(events[1].heightMsl, -2);
+});
+
+test("builds a daylight chart and flags arrival after sunset", () => {
+  assert.match(sunRequestUrl({ latitude: 50.75, longitude: -1.4 }), /daily=sunrise%2Csunset/);
+  const epoch = (value) => Date.parse(value) / 1000;
+  const chart = sunChartRows(
+    {
+      timezone: "Europe/London",
+      timezone_abbreviation: "BST",
+      utc_offset_seconds: 0,
+      daily: {
+        time: [epoch("2026-08-21T00:00:00Z"), epoch("2026-08-22T00:00:00Z")],
+        sunrise: [epoch("2026-08-21T06:00:00Z"), epoch("2026-08-22T06:01:00Z")],
+        sunset: [epoch("2026-08-21T18:00:00Z"), epoch("2026-08-22T17:58:00Z")],
+      },
+    },
+    new Date("2026-08-21T08:00:00Z"),
+    new Date("2026-08-21T19:00:00Z"),
+  );
+  assert.equal(chart.rows.length, 1);
+  assert.equal(chart.rows[0].sunriseLabel, "07:00");
+  assert.equal(chart.rows[0].arrivalAfterSunset, true);
+  assert.ok(Math.abs(chart.rows[0].startPercent - 100 / 3) < 1e-9);
 });
 
 test("adjusts each leg estimate using the current expected at its midpoint", () => {
