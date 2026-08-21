@@ -23,9 +23,12 @@ import {
   routeSamplePlan,
   sampleMarineAt,
   tideEventsFromResponse,
+  tideLevelAt,
   tideRequestUrl,
+  tideSeriesFromResponse,
 } from "./tide-current.mjs";
 import { sunChartRows, sunRequestUrl } from "./sun-times.mjs";
+import { clearForecastCache, fetchForecastJson } from "./forecast-cache.mjs";
 
 test("builds a bounded EMODnet request across England", () => {
   const request = createContourRequest(
@@ -296,9 +299,68 @@ test("derives model high and low water events for the tide table", () => {
     },
   };
   const events = tideEventsFromResponse(response, start, end);
+  const series = tideSeriesFromResponse(response, start, end);
   assert.deepEqual(events.map((event) => event.kind), ["high", "low"]);
   assert.equal(events[0].time, "2026-08-21T02:00:00.000Z");
   assert.equal(events[1].heightMsl, -2);
+  assert.equal(series.length, 9);
+  assert.equal(tideLevelAt(series, new Date("2026-08-21T01:30:00Z")), 1.5);
+});
+
+test("deduplicates and reuses forecast requests", async () => {
+  clearForecastCache();
+  let requests = 0;
+  const fetcher = async () => {
+    requests += 1;
+    await Promise.resolve();
+    return { ok: true, status: 200, json: async () => ({ value: 42 }) };
+  };
+  const options = { fetcher, now: () => 1_000, ttlMs: 60_000 };
+  const [first, second] = await Promise.all([
+    fetchForecastJson("https://example.test/forecast", options),
+    fetchForecastJson("https://example.test/forecast", options),
+  ]);
+  const cached = await fetchForecastJson("https://example.test/forecast", options);
+  assert.equal(requests, 1);
+  assert.deepEqual(first.data, { value: 42 });
+  assert.deepEqual(second.data, first.data);
+  assert.equal(cached.cacheStatus, "fresh-cache");
+});
+
+test("uses stale forecast data during a 429 cooldown", async () => {
+  clearForecastCache();
+  let currentTime = 1_000;
+  const url = "https://example.test/rate-limited";
+  await fetchForecastJson(url, {
+    now: () => currentTime,
+    fetcher: async () => ({ ok: true, status: 200, json: async () => ({ height: 1.2 }) }),
+    ttlMs: 10,
+  });
+  currentTime = 2_000;
+  let rateLimitedRequests = 0;
+  const options = {
+    now: () => currentTime,
+    ttlMs: 10,
+    staleIfErrorMs: 60_000,
+    fetcher: async () => {
+      rateLimitedRequests += 1;
+      return {
+        ok: false,
+        status: 429,
+        headers: { get: () => "90" },
+        json: async () => ({}),
+      };
+    },
+  };
+  const fallback = await fetchForecastJson(url, options);
+  const cooldownFallback = await fetchForecastJson(url, options);
+  await assert.rejects(
+    fetchForecastJson("https://example.test/another-forecast", options),
+    /forecast service rate limited/,
+  );
+  assert.equal(fallback.cacheStatus, "stale-cache");
+  assert.equal(cooldownFallback.cacheStatus, "stale-cache");
+  assert.equal(rateLimitedRequests, 1);
 });
 
 test("builds a daylight chart and flags arrival after sunset", () => {
@@ -358,7 +420,7 @@ test("adjusts each leg estimate using the current expected at its midpoint", () 
   assert.equal(estimate.legs[0].samples.length, 4);
 });
 
-test("plots repeated course-to-steer arrows and an uncorrected drift track", () => {
+test("plots repeated course-to-steer arrows without an ambiguous drift track", () => {
   const summary = {
     legs: [{
       index: 1,
@@ -385,7 +447,6 @@ test("plots repeated course-to-steer arrows and an uncorrected drift track", () 
     samplePlan,
   );
   assert.ok(estimate.legs[0].samples.every((sample) => sample.headingDegrees > 101));
-  assert.ok(estimate.driftCoordinates.at(-1)[1] > summary.legs[0].to.latitude);
   const geojson = routeCurrentGeoJson(estimate);
   assert.equal(
     geojson.features.filter((feature) => feature.properties.kind === "course-to-steer-arrow").length,
@@ -393,6 +454,6 @@ test("plots repeated course-to-steer arrows and an uncorrected drift track", () 
   );
   assert.equal(
     geojson.features.filter((feature) => feature.properties.kind === "drift-line").length,
-    1,
+    0,
   );
 });
