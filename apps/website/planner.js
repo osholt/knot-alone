@@ -33,7 +33,10 @@ import {
   routeSamplePlan,
   routeCurrentGeoJson,
   sampleMarineAt,
+  tideEventsFromResponse,
+  tideRequestUrl,
 } from "./tide-current.mjs";
+import { sunChartRows, sunRequestUrl } from "./sun-times.mjs";
 
 const MAP_STYLE_URLS = {
   light: "https://tiles.openfreemap.org/styles/liberty",
@@ -91,6 +94,7 @@ const elements = {
   legTable: document.querySelector("#leg-table"),
   legTableWrap: document.querySelector("#leg-table-wrap"),
   mapCallout: document.querySelector("#map-callout"),
+  mapEnvironmentTime: document.querySelector("#map-environment-time"),
   noaaVisible: document.querySelector("#noaa-visible"),
   offshoreContoursVisible: document.querySelector("#offshore-contours-visible"),
   passageName: document.querySelector("#passage-name"),
@@ -104,13 +108,20 @@ const elements = {
   shallowContourStatus: document.querySelector("#shallow-contour-status"),
   shallowContoursVisible: document.querySelector("#shallow-contours-visible"),
   speedKnots: document.querySelector("#speed-knots"),
+  startTimeNow: document.querySelector("#start-time-now"),
   startTime: document.querySelector("#start-time"),
   stillWaterDuration: document.querySelector("#still-water-duration"),
   tideDepthStatus: document.querySelector("#tide-depth-status"),
+  tideTable: document.querySelector("#tide-table"),
+  tideTableStatus: document.querySelector("#tide-table-status"),
+  timeSlider: document.querySelector("#time-slider"),
+  timeSliderLabel: document.querySelector("#time-slider-label"),
   duration: document.querySelector("#passage-duration"),
   waypointList: document.querySelector("#waypoint-list"),
   windStatus: document.querySelector("#wind-status"),
   windVisible: document.querySelector("#wind-visible"),
+  sunChart: document.querySelector("#sun-chart"),
+  sunChartStatus: document.querySelector("#sun-chart-status"),
 };
 
 let stops = [];
@@ -135,8 +146,14 @@ let currentDepthAdjustment = null;
 let marineDepthContext = null;
 let marineRefreshTimer = null;
 let marineRefreshPending = { field: false, route: false };
+let tideTableAbortController = null;
+let tideTableRequestSequence = 0;
+let sunAbortController = null;
+let sunRequestSequence = 0;
+let environmentRefreshTimer = null;
 
 restoreDraft();
+syncTimeSliderFromStart();
 elements.depthPalette.disabled = !elements.bathymetryVisible.checked;
 
 const map = new maplibregl.Map({
@@ -295,6 +312,26 @@ map.on("style.load", async () => {
 
   map.addSource("wind-field", { type: "geojson", data: EMPTY_FEATURE_COLLECTION });
   map.addLayer({
+    id: "wind-field-time-halo",
+    type: "line",
+    source: "wind-field",
+    filter: ["==", ["get", "kind"], "arrow"],
+    minzoom: 3,
+    layout: {
+      visibility: elements.windVisible.checked ? "visible" : "none",
+      "line-cap": "round",
+      "line-join": "round",
+    },
+    paint: {
+      "line-color": "#8a4faf",
+      "line-width": ["interpolate", ["linear"], ["get", "speedKnots"], 0, 5, 35, 7.5],
+      "line-opacity": [
+        "interpolate", ["linear"], ["coalesce", ["get", "forecastWeight"], 0],
+        0, 0, 0.15, 0.38, 1, 0.82,
+      ],
+    },
+  });
+  map.addLayer({
     id: "wind-field-arrows",
     type: "line",
     source: "wind-field",
@@ -323,7 +360,7 @@ map.on("style.load", async () => {
     layout: {
       visibility: elements.windVisible.checked ? "visible" : "none",
       "text-field": ["get", "speedLabel"],
-      "text-size": 10,
+      "text-size": 11.5,
       "text-offset": [0, 1.35],
       "text-allow-overlap": false,
     },
@@ -356,11 +393,7 @@ map.on("style.load", async () => {
         "interpolate", ["linear"], ["coalesce", ["get", "forecastWeight"], 0],
         0, "#078c9b", 0.5, "#486fc0", 1, "#8a4faf",
       ],
-      "line-width": [
-        "interpolate", ["linear"], ["zoom"],
-        3, ["interpolate", ["linear"], ["get", "speedKnots"], 0, 2.2, 4, 4.6],
-        14, ["interpolate", ["linear"], ["get", "speedKnots"], 0, 3.2, 4, 6.2],
-      ],
+      "line-width": ["interpolate", ["linear"], ["get", "speedKnots"], 0, 2.2, 4, 4.8],
       "line-opacity": 0.92,
     },
   });
@@ -373,7 +406,7 @@ map.on("style.load", async () => {
     layout: {
       visibility: elements.currentVisible.checked ? "visible" : "none",
       "text-field": ["get", "speedLabel"],
-      "text-size": ["interpolate", ["linear"], ["zoom"], 4, 11.5, 10, 13, 14, 14.5],
+      "text-size": 13,
       "text-offset": [0, -1.35],
       "text-allow-overlap": false,
     },
@@ -472,6 +505,24 @@ map.on("style.load", async () => {
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": "#e15f3b", "line-width": 4, "line-dasharray": [2.2, 1.2] },
   });
+  map.addLayer({
+    id: "passage-route-label",
+    type: "symbol",
+    source: "passage-route",
+    minzoom: 7,
+    layout: {
+      "symbol-placement": "line",
+      "symbol-spacing": 450,
+      "text-field": ["get", "label"],
+      "text-size": 10,
+      "text-letter-spacing": 0.08,
+    },
+    paint: {
+      "text-color": currentTheme() === "dark" ? "#ffc8b7" : "#8c321b",
+      "text-halo-color": currentTheme() === "dark" ? "#0b1c22" : "#fffdf7",
+      "text-halo-width": 1.6,
+    },
+  });
 
   map.addSource("route-current", { type: "geojson", data: routeCurrentGeoJson(routeCurrentEstimate) });
   map.addLayer({
@@ -486,10 +537,28 @@ map.on("style.load", async () => {
       "line-join": "round",
     },
     paint: {
-      "line-color": "#c54e8f",
-      "line-width": ["interpolate", ["linear"], ["zoom"], 4, 2, 13, 3.5],
+      "line-color": "#a82082",
+      "line-width": 2.8,
       "line-dasharray": [1.5, 1.5],
       "line-opacity": 0.9,
+    },
+  });
+  map.addLayer({
+    id: "route-drift-label",
+    type: "symbol",
+    source: "route-current",
+    filter: ["==", ["get", "kind"], "drift-label"],
+    minzoom: 5,
+    layout: {
+      visibility: elements.currentVisible.checked ? "visible" : "none",
+      "text-field": ["get", "label"],
+      "text-size": 10,
+      "text-offset": [0, -1],
+    },
+    paint: {
+      "text-color": currentTheme() === "dark" ? "#ffb6e4" : "#7d145f",
+      "text-halo-color": currentTheme() === "dark" ? "#0b1c22" : "#fffdf7",
+      "text-halo-width": 1.7,
     },
   });
   map.addLayer({
@@ -505,7 +574,7 @@ map.on("style.load", async () => {
     },
     paint: {
       "line-color": "#f09a35",
-      "line-width": ["interpolate", ["linear"], ["zoom"], 4, 3.4, 13, 5],
+      "line-width": 3.8,
       "line-opacity": 0.98,
     },
   });
@@ -518,7 +587,7 @@ map.on("style.load", async () => {
     layout: {
       visibility: elements.currentVisible.checked ? "visible" : "none",
       "text-field": ["get", "speedLabel"],
-      "text-size": ["interpolate", ["linear"], ["zoom"], 5, 11.5, 12, 13.5],
+      "text-size": 12.5,
       "text-offset": [0, 1.5],
       "text-allow-overlap": false,
     },
@@ -539,6 +608,7 @@ map.on("style.load", async () => {
     updateCurrentField();
     updateRouteCurrentEstimate();
   }
+  scheduleEnvironmentRefresh(0);
   if (!catalogueRequested) {
     catalogueRequested = true;
     await loadPoiCatalogue();
@@ -556,6 +626,7 @@ map.on("moveend", () => {
   updateShallowContours();
   if (elements.windVisible.checked) updateWindField();
   if (elements.currentVisible.checked) updateCurrentField();
+  scheduleEnvironmentRefresh();
 });
 
 map.on("click", async (event) => {
@@ -614,11 +685,13 @@ map.on("click", async (event) => {
 for (const layerId of [
   "marine-poi-clusters",
   "marine-poi-points",
+  "wind-field-time-halo",
   "wind-field-arrows",
   "wind-field-labels",
   "current-field-arrows",
   "current-field-labels",
   "route-drift-line",
+  "route-drift-label",
   "route-current-arrows",
   "route-current-labels",
 ]) {
@@ -631,15 +704,23 @@ elements.speedKnots.addEventListener("input", () => {
   invalidateRouteCurrentEstimate();
   renderSummary();
   scheduleMarineRefresh({ field: true, route: true });
+  scheduleEnvironmentRefresh();
   scheduleDraftSave();
 });
 elements.startTime.addEventListener("change", () => {
-  invalidateRouteCurrentEstimate();
-  currentDepthAdjustment = null;
-  renderSummary();
-  syncAdjustedContourData();
-  scheduleMarineRefresh({ field: true, route: true }, 0);
-  scheduleDraftSave();
+  passageStartChanged(0);
+});
+for (const button of document.querySelectorAll("[data-shift-hours]")) {
+  button.addEventListener("click", () => shiftPassageStart(Number(button.dataset.shiftHours)));
+}
+elements.startTimeNow.addEventListener("click", () => {
+  setPassageStart(new Date(Math.ceil(Date.now() / 900_000) * 900_000));
+});
+elements.timeSlider.addEventListener("input", () => {
+  const start = selectedStartTime() || new Date();
+  const minutes = Number(elements.timeSlider.value);
+  start.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  setPassageStart(start, 450);
 });
 elements.poiSearch.addEventListener("input", renderPoiResults);
 elements.poiFilters.addEventListener("change", () => {
@@ -679,12 +760,13 @@ elements.noaaVisible.addEventListener("change", () => {
 elements.poisVisible.addEventListener("change", updatePoiLayer);
 elements.windVisible.addEventListener("change", () => {
   setLayerVisibility("wind-field-arrows", elements.windVisible.checked);
+  setLayerVisibility("wind-field-time-halo", elements.windVisible.checked);
   setLayerVisibility("wind-field-labels", elements.windVisible.checked);
   if (elements.windVisible.checked) {
     updateWindField();
   } else {
     windAbortController?.abort();
-    elements.windStatus.textContent = "Wind field hidden. Turn it on to load current model wind.";
+    elements.windStatus.textContent = "Wind field hidden. Turn it on to load model wind.";
   }
   scheduleDraftSave();
 });
@@ -719,6 +801,7 @@ function syncChartContextLayers() {
   setLayerVisibility("current-field-arrows", elements.currentVisible.checked);
   setLayerVisibility("current-field-labels", elements.currentVisible.checked);
   setLayerVisibility("route-drift-line", elements.currentVisible.checked);
+  setLayerVisibility("route-drift-label", elements.currentVisible.checked);
   setLayerVisibility("route-current-arrows", elements.currentVisible.checked);
   setLayerVisibility("route-current-labels", elements.currentVisible.checked);
 }
@@ -747,14 +830,17 @@ elements.clearLocal.addEventListener("click", () => {
   elements.windVisible.checked = false;
   elements.currentVisible.checked = true;
   elements.startTime.value = defaultStartTimeValue();
+  syncTimeSliderFromStart();
   invalidateRouteCurrentEstimate();
   currentDepthAdjustment = null;
   syncChartContextLayers();
   setLayerVisibility("seamarks-layer", true);
   setLayerVisibility("wind-field-arrows", false);
+  setLayerVisibility("wind-field-time-halo", false);
   setLayerVisibility("wind-field-labels", false);
   renderPassage();
   scheduleMarineRefresh({ field: true, route: true }, 0);
+  scheduleEnvironmentRefresh(0);
   clearTimeout(draftSaveTimer);
   localStorage.removeItem(PLANNER_DRAFT_KEY);
   elements.draftStatus.textContent = "Saved planner data cleared from this device.";
@@ -789,6 +875,7 @@ function renderPassage() {
   elements.download.disabled = stops.length < 2;
   elements.publish.disabled = stops.length < 2;
   scheduleMarineRefresh({ field: true, route: true });
+  scheduleEnvironmentRefresh();
   scheduleDraftSave();
 }
 
@@ -908,7 +995,7 @@ function routeGeoJson() {
   }
   return {
     type: "Feature",
-    properties: {},
+    properties: { label: "DESIRED GROUND TRACK" },
     geometry: {
       type: "LineString",
       coordinates: stops.map((stop) => [stop.longitude, stop.latitude]),
@@ -1149,20 +1236,34 @@ async function updateWindField() {
   windAbortController = new AbortController();
   const requestSequence = ++windRequestSequence;
   const bounds = visibleMapBounds();
-  const points = windGrid(bounds);
-  elements.windStatus.textContent = "Loading current model wind across this map…";
+  const canvas = map.getCanvas();
+  const dimensions = currentGridDimensions(canvas.clientWidth, canvas.clientHeight, map.getZoom());
+  const points = windGrid(bounds, dimensions.columns, dimensions.rows);
+  const timings = currentSampleTimings(points, new Date(), routeCurrentEstimate);
+  const requestedTimes = timings.map((timing) => new Date(timing.sampleTime));
+  const rangeStart = new Date(Math.min(...requestedTimes.map((date) => date.getTime())) - 3_600_000);
+  const rangeEnd = new Date(Math.max(...requestedTimes.map((date) => date.getTime())) + 3_600_000);
+  elements.windStatus.textContent = "Loading zoom-adaptive wind at current and expected passage times…";
   try {
-    const response = await fetch(windRequestUrl(points), {
+    const response = await fetch(windRequestUrl(points, rangeStart, rangeEnd), {
       headers: { Accept: "application/json" },
       signal: windAbortController.signal,
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (requestSequence !== windRequestSequence) return;
-    const field = windFieldGeoJson(points, data, bounds);
+    const field = windFieldGeoJson(
+      points,
+      data,
+      bounds,
+      timings,
+      dimensions.columns,
+      dimensions.rows,
+    );
     if (field.geojson.features.length === 0) throw new Error("unreadable forecast values");
     map.getSource("wind-field")?.setData(field.geojson);
-    elements.windStatus.textContent = `${points.length} model samples · valid ${field.validTime} UTC · arrows point downwind; labels show knots. Tap an arrow for direction and gusts.`;
+    const routeTimed = timings.filter((timing) => timing.forecastWeight > 0.01).length;
+    elements.windStatus.textContent = `${points.length} samples on a ${dimensions.columns}×${dimensions.rows} zoom-adaptive grid · ${routeTimed} near-route samples blend to their expected passage time and carry a purple halo. Labels show knots and UTC sample time; arrows point downwind.`;
   } catch (error) {
     if (error.name === "AbortError") return;
     elements.windStatus.textContent = `Wind forecast unavailable (${error.message}).`;
@@ -1178,7 +1279,7 @@ function showWindPopup(position, properties) {
   const heading = document.createElement("h3");
   heading.textContent = `${speed} kn from ${String(direction).padStart(3, "0")}°T`;
   const detail = document.createElement("p");
-  detail.textContent = `Gusting ${gust} kn · valid ${properties.validTime} UTC`;
+  detail.textContent = `Gusting ${gust} kn · ${properties.timing === "current" ? "current-time" : "route-time"} model valid ${formatPassageTime(new Date(properties.validTime))}`;
   const warning = document.createElement("p");
   warning.textContent = "Open-Meteo model forecast, not an observation.";
   container.append(heading, detail, warning);
@@ -1201,7 +1302,13 @@ async function updateCurrentField() {
   const bounds = visibleMapBounds();
   const canvas = map.getCanvas();
   const dimensions = currentGridDimensions(canvas.clientWidth, canvas.clientHeight, map.getZoom());
-  const points = marineGrid(bounds, dimensions.columns, dimensions.rows);
+  const candidates = marineGrid(bounds, dimensions.columns, dimensions.rows);
+  const points = waterOnlyModelPoints(candidates);
+  if (points.length === 0) {
+    map.getSource("current-field")?.setData(EMPTY_FEATURE_COLLECTION);
+    elements.currentStatus.textContent = "No basemap water cells are visible for the current field.";
+    return;
+  }
   const timings = currentSampleTimings(points, new Date(), routeCurrentEstimate);
   const requestedTimes = [start, ...timings.map((timing) => new Date(timing.sampleTime))];
   const rangeStart = new Date(Math.min(...requestedTimes.map((date) => date.getTime())) - 3_600_000);
@@ -1226,8 +1333,10 @@ async function updateCurrentField() {
       dimensions.columns,
       dimensions.rows,
     );
-    if (field.geojson.features.length === 0) throw new Error("unreadable model values");
-    map.getSource("current-field")?.setData(field.geojson);
+    const waterSamples = field.samples.filter((sample) => basemapShowsWater(sample.point));
+    const visibleField = currentFeaturesOverWater(field.geojson);
+    if (visibleField.features.length === 0) throw new Error("no visible model sea cells");
+    map.getSource("current-field")?.setData(visibleField);
     const centre = {
       longitude: (bounds.west + bounds.east) / 2,
       latitude: (bounds.south + bounds.north) / 2,
@@ -1238,11 +1347,12 @@ async function updateCurrentField() {
     }, { index: 0, distance: Infinity }).index;
     const centreSample = sampleMarineAt(Array.isArray(data) ? data[centreIndex] : data, start);
     marineDepthContext = Number.isFinite(centreSample?.seaLevelMsl)
-      ? { point: centre, seaLevelMsl: centreSample.seaLevelMsl, validTime: centreSample.validTime }
+      ? { point: points[centreIndex], seaLevelMsl: centreSample.seaLevelMsl, validTime: centreSample.validTime }
       : null;
     refreshDepthAdjustment();
-    const routeTimed = field.samples.filter((sample) => sample.forecastWeight > 0.01).length;
-    elements.currentStatus.textContent = `${field.samples.length} model samples on a ${dimensions.columns}×${dimensions.rows} zoom-adaptive grid · teal is current time; ${routeTimed} samples blend through blue to purple at the nearest expected route time within 8 NM. Arrows point with the flow; labels show knots.`;
+    const routeTimed = waterSamples.filter((sample) => sample.forecastWeight > 0.01).length;
+    const omitted = candidates.length - points.length;
+    elements.currentStatus.textContent = `${waterSamples.length} distinct model sea cells on a ${dimensions.columns}×${dimensions.rows} zoom-adaptive grid; ${omitted} land grid positions omitted · teal is current time; ${routeTimed} cells blend through blue to purple at the nearest expected route time within 8 NM. Arrows point with the flow; labels show knots.`;
   } catch (error) {
     if (error.name === "AbortError") return;
     map.getSource("current-field")?.setData(EMPTY_FEATURE_COLLECTION);
@@ -1299,11 +1409,13 @@ async function updateRouteCurrentEstimate() {
       boatSpeed,
       samplePlan,
     );
-    map.getSource("route-current")?.setData(
+    map.getSource("route-current")?.setData(currentFeaturesOverWater(
       routeCurrentGeoJson(routeCurrentEstimate, currentRouteArrowLength()),
-    );
+    ));
     renderSummary();
     updateCurrentField();
+    if (elements.windVisible.checked) updateWindField();
+    scheduleEnvironmentRefresh();
     if (!routeCurrentEstimate?.complete) {
       elements.stillWaterDuration.textContent = "Some leg currents were unavailable; showing still-water passage time.";
     }
@@ -1360,6 +1472,175 @@ function scheduleMarineRefresh({ field = false, route = false } = {}, delay = 35
   }, delay);
 }
 
+function scheduleEnvironmentRefresh(delay = 350) {
+  clearTimeout(environmentRefreshTimer);
+  environmentRefreshTimer = setTimeout(() => {
+    updateTideTable();
+    updateSunChart();
+  }, delay);
+}
+
+async function updateTideTable() {
+  if (!mapReady) return;
+  const start = selectedStartTime();
+  if (!start) return;
+  const point = environmentPoint("departure");
+  tideTableAbortController?.abort();
+  tideTableAbortController = new AbortController();
+  const requestSequence = ++tideTableRequestSequence;
+  elements.tideTableStatus.textContent = stops.length > 0 ? "near waypoint 1" : "at map centre";
+  try {
+    const rangeStart = new Date(start.getTime() - 12 * 60 * 60 * 1000);
+    const rangeEnd = new Date(start.getTime() + 36 * 60 * 60 * 1000);
+    const response = await fetch(tideRequestUrl(point, rangeStart, rangeEnd), {
+      headers: { Accept: "application/json" },
+      signal: tideTableAbortController.signal,
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (requestSequence !== tideTableRequestSequence) return;
+    const events = tideEventsFromResponse(data, rangeStart, rangeEnd);
+    const datum = depthAdjustmentFor({ provider: "emodnet", point, seaLevelMsl: 0 });
+    renderTideTable(events, start, datum);
+    elements.tideTableStatus.textContent = datum
+      ? `${datum.chartDatum} via ${datum.stationName} · device time`
+      : "MSL · device time";
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    elements.tideTable.replaceChildren(environmentEmpty("Model tide table unavailable."));
+    elements.tideTableStatus.textContent = error.message;
+  }
+}
+
+function renderTideTable(events, start, datum) {
+  elements.tideTable.replaceChildren();
+  if (events.length === 0) {
+    elements.tideTable.append(environmentEmpty("No high or low water extrema were resolved in this model window."));
+    return;
+  }
+  const nextIndex = events.findIndex((event) => new Date(event.time) >= start);
+  events.slice(0, 8).forEach((event, index) => {
+    const date = new Date(event.time);
+    const card = document.createElement("div");
+    card.className = `tide-event${index === nextIndex ? " next" : ""}`;
+    const kind = document.createElement("b");
+    kind.textContent = event.kind === "high" ? "High" : "Low";
+    const time = document.createElement("time");
+    time.dateTime = event.time;
+    time.textContent = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    const detail = document.createElement("span");
+    const height = event.heightMsl + (datum?.heightM || 0);
+    detail.textContent = `${date.toLocaleDateString("en-GB", { weekday: "short" })} · ${height.toFixed(2)} m ${datum?.chartDatum || "MSL"}`;
+    card.append(kind, time, detail);
+    elements.tideTable.append(card);
+  });
+}
+
+async function updateSunChart() {
+  if (!mapReady) return;
+  const start = selectedStartTime();
+  if (!start) return;
+  const point = environmentPoint("destination");
+  const summary = passageSummary(stops, Number(elements.speedKnots.value));
+  const duration = routeCurrentEstimate?.complete
+    ? routeCurrentEstimate.durationSeconds
+    : summary.durationSeconds;
+  const arrival = stops.length > 1 && Number.isFinite(duration)
+    ? new Date(start.getTime() + duration * 1000)
+    : null;
+  sunAbortController?.abort();
+  sunAbortController = new AbortController();
+  const requestSequence = ++sunRequestSequence;
+  elements.mapEnvironmentTime.textContent = formatPassageTime(start);
+  elements.sunChartStatus.textContent = stops.length > 1 ? "at final waypoint" : "at map centre";
+  try {
+    const response = await fetch(sunRequestUrl(point), {
+      headers: { Accept: "application/json" },
+      signal: sunAbortController.signal,
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (requestSequence !== sunRequestSequence) return;
+    const chart = sunChartRows(data, start, arrival);
+    renderSunChart(chart);
+    elements.sunChartStatus.textContent = `${stops.length > 1 ? "final waypoint" : "map centre"} · ${chart.timezoneAbbreviation}`;
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    elements.sunChart.replaceChildren(environmentEmpty("Sunrise and sunset unavailable."));
+    elements.sunChartStatus.textContent = error.message;
+  }
+}
+
+function renderSunChart(chart) {
+  elements.sunChart.replaceChildren();
+  if (chart.rows.length === 0) {
+    elements.sunChart.append(environmentEmpty("Selected time is outside the 16-day daylight window."));
+    return;
+  }
+  chart.rows.forEach((row) => {
+    const container = document.createElement("div");
+    const nightArrival = row.arrivalAfterSunset || row.arrivalBeforeSunrise;
+    container.className = `sun-row${nightArrival ? " night-arrival" : ""}`;
+    const heading = document.createElement("div");
+    heading.className = "sun-row-heading";
+    const date = document.createElement("strong");
+    date.textContent = new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      timeZone: "UTC",
+    }).format(new Date(`${row.date}T12:00:00Z`));
+    const sunTimes = document.createElement("span");
+    sunTimes.textContent = `☀ ${row.sunriseLabel}–${row.sunsetLabel}`;
+    heading.append(date, sunTimes);
+    const track = document.createElement("div");
+    track.className = "sun-track";
+    track.setAttribute("aria-label", `Sunrise ${row.sunriseLabel}; sunset ${row.sunsetLabel}`);
+    const daylight = document.createElement("span");
+    daylight.className = "sun-daylight";
+    daylight.style.left = `${row.daylightStartPercent}%`;
+    daylight.style.width = `${row.daylightWidthPercent}%`;
+    track.append(daylight);
+    if (row.startPercent !== null) track.append(sunMarker("start", row.startPercent, `Start ${row.startLabel}`));
+    if (row.arrivalPercent !== null) track.append(sunMarker("arrival", row.arrivalPercent, `ETA ${row.arrivalLabel}`));
+    const note = document.createElement("div");
+    note.className = "sun-row-note";
+    const parts = [];
+    if (row.startLabel) parts.push(`Coral: start ${row.startLabel}`);
+    if (row.arrivalLabel) parts.push(`Blue: ETA ${row.arrivalLabel}`);
+    note.textContent = parts.join(" · ");
+    if (nightArrival) {
+      const warning = document.createElement("strong");
+      warning.textContent = row.arrivalAfterSunset ? " · ETA after sunset" : " · ETA before sunrise";
+      note.append(warning);
+    }
+    container.append(heading, track, note);
+    elements.sunChart.append(container);
+  });
+}
+
+function sunMarker(kind, position, label) {
+  const marker = document.createElement("span");
+  marker.className = `sun-marker ${kind}`;
+  marker.style.left = `${position}%`;
+  marker.title = label;
+  return marker;
+}
+
+function environmentPoint(kind) {
+  const stop = kind === "destination" ? stops.at(-1) : stops[0];
+  if (stop) return { longitude: stop.longitude, latitude: stop.latitude };
+  const centre = map.getCenter();
+  return { longitude: centre.lng, latitude: centre.lat };
+}
+
+function environmentEmpty(message) {
+  const empty = document.createElement("p");
+  empty.className = "environment-empty";
+  empty.textContent = message;
+  return empty;
+}
+
 function invalidateRouteCurrentEstimate() {
   routeCurrentAbortController?.abort();
   routeCurrentRequestSequence += 1;
@@ -1372,11 +1653,11 @@ function currentRouteArrowLength() {
   const canvas = map.getCanvas();
   const dimensions = currentGridDimensions(canvas.clientWidth, canvas.clientHeight, map.getZoom());
   return Math.max(
-    0.00008,
+    0.00002,
     Math.min(
       (bounds.north - bounds.south) / dimensions.rows,
       (bounds.east - bounds.west) / dimensions.columns,
-    ) * 0.34,
+    ) * 0.26,
   );
 }
 
@@ -1499,6 +1780,35 @@ function visibleMapBounds() {
   };
 }
 
+function waterOnlyModelPoints(points) {
+  if (!mapReady || !map.getLayer("water")) return points;
+  return points.filter(basemapShowsWater);
+}
+
+function currentFeaturesOverWater(geojson) {
+  if (!mapReady || !map.getLayer("water")) return geojson;
+  return {
+    ...geojson,
+    features: geojson.features.filter((feature) => {
+      const longitude = Number(feature.properties?.anchorLongitude);
+      const latitude = Number(feature.properties?.anchorLatitude);
+      return !Number.isFinite(longitude) || !Number.isFinite(latitude) ||
+        basemapShowsWater({ longitude, latitude });
+    }),
+  };
+}
+
+function basemapShowsWater(point) {
+  try {
+    return map.queryRenderedFeatures(
+      map.project([point.longitude, point.latitude]),
+      { layers: ["water"] },
+    ).length > 0;
+  } catch {
+    return true;
+  }
+}
+
 function fitPassage() {
   if (!mapReady || stops.length === 0) return;
   if (stops.length === 1) {
@@ -1591,6 +1901,41 @@ function currentTheme() {
 function selectedStartTime() {
   const date = new Date(elements.startTime.value);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function setPassageStart(date, refreshDelay = 0) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return;
+  elements.startTime.value = localDateTimeValue(date);
+  passageStartChanged(refreshDelay);
+}
+
+function shiftPassageStart(hours) {
+  const start = selectedStartTime() || new Date();
+  start.setTime(start.getTime() + hours * 60 * 60 * 1000);
+  setPassageStart(start);
+}
+
+function passageStartChanged(refreshDelay = 0) {
+  syncTimeSliderFromStart();
+  invalidateRouteCurrentEstimate();
+  currentDepthAdjustment = null;
+  renderSummary();
+  syncAdjustedContourData();
+  scheduleMarineRefresh({ field: true, route: true }, refreshDelay);
+  if (elements.windVisible.checked) updateWindField();
+  scheduleEnvironmentRefresh(refreshDelay);
+  scheduleDraftSave();
+}
+
+function syncTimeSliderFromStart() {
+  const start = selectedStartTime();
+  if (!start) {
+    elements.timeSliderLabel.textContent = "Choose a valid time";
+    return;
+  }
+  elements.timeSlider.value = String(start.getHours() * 60 + start.getMinutes());
+  elements.timeSliderLabel.textContent = formatPassageTime(start);
+  elements.mapEnvironmentTime.textContent = formatPassageTime(start);
 }
 
 function defaultStartTimeValue(now = new Date()) {

@@ -75,6 +75,79 @@ export function marineRequestUrl(points, start, end) {
   return `${MARINE_API_URL}?${parameters}`;
 }
 
+export function tideRequestUrl(point, start, end) {
+  if (!point) throw new Error("A tide-model position is required.");
+  const startDate = validDate(start);
+  const endDate = validDate(end);
+  if (endDate < startDate) throw new Error("The tide-model time range is invalid.");
+  const parameters = new URLSearchParams({
+    latitude: Number(point.latitude).toFixed(4),
+    longitude: Number(point.longitude).toFixed(4),
+    hourly: "sea_level_height_msl",
+    start_hour: formatUtcHour(new Date(Math.floor(startDate.getTime() / 3_600_000) * 3_600_000)),
+    end_hour: formatUtcHour(new Date(Math.ceil(endDate.getTime() / 3_600_000) * 3_600_000)),
+    timezone: "UTC",
+    cell_selection: "sea",
+  });
+  return `${MARINE_API_URL}?${parameters}`;
+}
+
+export function tideEventsFromResponse(response, start, end) {
+  const rangeStart = validDate(start).getTime();
+  const rangeEnd = validDate(end).getTime();
+  const hourly = response?.hourly;
+  const times = Array.isArray(hourly?.time)
+    ? hourly.time.map((value) => Date.parse(`${value}Z`))
+    : [];
+  const levels = Array.isArray(hourly?.sea_level_height_msl)
+    ? hourly.sea_level_height_msl.map(Number)
+    : [];
+  const weights = [1, 2, 3, 2, 1];
+  const smoothed = levels.map((_, index) => {
+    let total = 0;
+    let weight = 0;
+    weights.forEach((value, offset) => {
+      const sample = levels[index + offset - 2];
+      if (!Number.isFinite(sample)) return;
+      total += sample * value;
+      weight += value;
+    });
+    return weight > 0 ? total / weight : Number.NaN;
+  });
+  const events = [];
+  const usedIndices = new Set();
+  for (let index = 2; index < Math.min(times.length, levels.length) - 2; index += 1) {
+    const previous = smoothed[index - 1];
+    const level = smoothed[index];
+    const next = smoothed[index + 1];
+    if (![times[index], previous, level, next].every(Number.isFinite)) continue;
+    const high = level > previous && level >= next;
+    const low = level < previous && level <= next;
+    if (!high && !low) continue;
+    const nearby = Array.from({ length: 5 }, (_, offset) => index + offset - 2)
+      .filter((candidate) => Number.isFinite(levels[candidate]))
+      .sort((first, second) => {
+        const levelOrder = high
+          ? levels[second] - levels[first]
+          : levels[first] - levels[second];
+        return Math.abs(levelOrder) > 1e-9
+          ? levelOrder
+          : Math.abs(first - index) - Math.abs(second - index);
+      });
+    const eventIndex = nearby[0];
+    if (usedIndices.has(eventIndex)) continue;
+    usedIndices.add(eventIndex);
+    const eventTime = times[eventIndex];
+    if (eventTime < rangeStart || eventTime > rangeEnd) continue;
+    events.push({
+      kind: high ? "high" : "low",
+      time: new Date(eventTime).toISOString(),
+      heightMsl: levels[eventIndex],
+    });
+  }
+  return events;
+}
+
 export function sampleMarineAt(response, at) {
   const target = validDate(at).getTime();
   const hourly = response?.hourly;
@@ -114,19 +187,36 @@ export function currentFieldGeoJson(
 ) {
   const values = Array.isArray(response) ? response : [response];
   const arrowLength = Math.max(
-    0.00008,
-    Math.min((bounds.north - bounds.south) / rows, (bounds.east - bounds.west) / columns) * 0.32,
+    0.00002,
+    Math.min((bounds.north - bounds.south) / rows, (bounds.east - bounds.west) / columns) * 0.24,
   );
   const features = [];
   const samples = [];
+  const renderedModelCells = new Map();
   values.slice(0, points.length).forEach((value, index) => {
     const requestedTiming = Array.isArray(atOrTimings)
       ? atOrTimings[index]
       : { sampleTime: atOrTimings, forecastWeight: 0, timing: "passage-start" };
     const sample = sampleMarineAt(value, requestedTiming?.sampleTime);
     if (!sample) return;
+    const modelPoint = [value?.longitude, value?.latitude].every(Number.isFinite)
+      ? { longitude: Number(value.longitude), latitude: Number(value.latitude) }
+      : points[index];
+    const modelCell = `${modelPoint.longitude.toFixed(4)},${modelPoint.latitude.toFixed(4)}`;
     const forecastWeight = Math.max(0, Math.min(1, Number(requestedTiming.forecastWeight) || 0));
-    samples.push({ ...sample, point: points[index], index, ...requestedTiming, forecastWeight });
+    const existingIndex = renderedModelCells.get(modelCell);
+    if (
+      Number.isInteger(existingIndex) &&
+      samples[existingIndex].forecastWeight >= forecastWeight
+    ) return;
+    const sampleEntry = {
+      ...sample,
+      point: modelPoint,
+      requestedPoint: points[index],
+      index,
+      ...requestedTiming,
+      forecastWeight,
+    };
     const properties = {
       kind: "current-arrow",
       speedKnots: sample.speedKnots,
@@ -138,13 +228,24 @@ export function currentFieldGeoJson(
       forecastWeight,
       routeDistanceNm: requestedTiming?.routeDistanceNm ?? null,
       routeTime: requestedTiming?.routeTime ?? null,
+      anchorLongitude: modelPoint.longitude,
+      anchorLatitude: modelPoint.latitude,
     };
-    features.push(arrowFeature(points[index], sample.directionTowards, arrowLength, properties));
-    features.push({
+    const arrow = arrowFeature(modelPoint, sample.directionTowards, arrowLength, properties);
+    const label = {
       type: "Feature",
       properties: { ...properties, kind: "current-label" },
-      geometry: { type: "Point", coordinates: [points[index].longitude, points[index].latitude] },
-    });
+      geometry: { type: "Point", coordinates: [modelPoint.longitude, modelPoint.latitude] },
+    };
+    if (Number.isInteger(existingIndex)) {
+      samples[existingIndex] = sampleEntry;
+      features[existingIndex * 2] = arrow;
+      features[existingIndex * 2 + 1] = label;
+    } else {
+      renderedModelCells.set(modelCell, samples.length);
+      samples.push(sampleEntry);
+      features.push(arrow, label);
+    }
   });
   return { geojson: { type: "FeatureCollection", features }, samples };
 }
@@ -365,6 +466,18 @@ export function routeCurrentGeoJson(estimate, arrowLength = 0.012) {
       },
       geometry: { type: "LineString", coordinates: estimate.driftCoordinates },
     });
+    features.push({
+      type: "Feature",
+      properties: {
+        kind: "drift-label",
+        label: "UNCORRECTED DRIFT",
+        timing: "expected-route",
+      },
+      geometry: {
+        type: "Point",
+        coordinates: estimate.driftCoordinates[Math.floor(estimate.driftCoordinates.length / 2)],
+      },
+    });
   }
   estimate.legs.forEach((leg) => {
     leg.samples?.forEach((sample) => {
@@ -383,6 +496,8 @@ export function routeCurrentGeoJson(estimate, arrowLength = 0.012) {
         alongKnots: sample.alongKnots,
         crossKnots: sample.crossKnots,
         seaLevelMsl: sample.seaLevelMsl,
+        anchorLongitude: sample.point.longitude,
+        anchorLatitude: sample.point.latitude,
       };
       features.push(arrowFeature(sample.point, sample.headingDegrees, arrowLength, properties));
       features.push({

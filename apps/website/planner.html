@@ -10,15 +10,15 @@
     <meta name="theme-color" content="#092f3d" />
     <meta name="tide-and-seek-api" content="https://relay.tailendcharlie.app" />
     <title>Passage planner | Tide and Seek</title>
-    <link rel="stylesheet" href="/styles.css?v=20260821-5" />
+    <link rel="stylesheet" href="/styles.css?v=20260821-6" />
     <link
       rel="stylesheet"
       href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css"
       integrity="sha384-uTttxo/aOKbdE5RlD/SPzSDoDmNvGlUYPjONi2MN/b7c9HPSvW07OIuyP7uL6jxK"
       crossorigin="anonymous"
     />
-    <link rel="stylesheet" href="/planner.css?v=20260821-5" />
-    <script src="/theme.js?v=20260821-5" defer></script>
+    <link rel="stylesheet" href="/planner.css?v=20260821-6" />
+    <script src="/theme.js?v=20260821-6" defer></script>
   </head>
   <body class="planner-page">
     <header class="planner-header">
@@ -73,6 +73,19 @@
             <input id="start-time" type="datetime-local" step="900" />
             <small>Entered in this device’s local time zone.</small>
           </label>
+          <div class="passage-time-controls">
+            <div class="time-step-buttons" role="group" aria-label="Move passage start time">
+              <button type="button" data-shift-hours="-24">−1 day</button>
+              <button type="button" data-shift-hours="-1">−1 h</button>
+              <button type="button" id="start-time-now">Now</button>
+              <button type="button" data-shift-hours="1">+1 h</button>
+              <button type="button" data-shift-hours="24">+1 day</button>
+            </div>
+            <label class="time-slider-field" for="time-slider">
+              <span>Time of day <output id="time-slider-label" for="time-slider">—</output></span>
+              <input id="time-slider" type="range" min="0" max="1425" step="15" />
+            </label>
+          </div>
           <p class="local-note" id="draft-status">Saved on this device only.</p>
         </section>
 
@@ -144,14 +157,15 @@
           <div class="conditions-card">
             <label class="layer-toggle condition-toggle">
               <input id="wind-visible" type="checkbox" />
-              <span><strong>Current wind field</strong><small>Show map-wide arrows and speeds from the best available Open-Meteo model.</small></span>
+              <span><strong>Time-aware wind field</strong><small>Show map-wide arrows and speeds. Near the route, samples use the expected passage time.</small></span>
             </label>
-            <p id="wind-status">Wind field hidden. Turn it on to load current model wind.</p>
+            <p id="wind-status">Wind field hidden. Turn it on to load model wind.</p>
             <div class="wind-key" aria-label="Wind arrow colour key">
               <span><i class="wind-calm"></i>&lt;10 kn</span>
               <span><i class="wind-fresh"></i>10–17 kn</span>
               <span><i class="wind-strong"></i>18–27 kn</span>
               <span><i class="wind-gale"></i>28+ kn</span>
+              <span><i class="wind-future"></i>Purple halo: expected route time</span>
             </div>
           </div>
           <div class="conditions-card current-card">
@@ -166,7 +180,8 @@
               <span><i class="current-blend"></i>Blended time</span>
               <span><i class="current-route"></i>Expected route time</span>
               <span><i class="current-cts"></i>Course to steer</span>
-              <span><i class="current-drift"></i>Uncorrected drift</span>
+              <span><i class="current-drift"></i>Uncorrected drift if CTS is ignored</span>
+              <span><i class="ground-track"></i>Desired ground track</span>
               <span>Arrows point with the flow</span>
             </div>
           </div>
@@ -213,7 +228,7 @@
 
         <section class="passage-summary" aria-label="Passage summary">
           <div><span>Distance</span><strong id="passage-distance">—</strong></div>
-          <div><span>Model-adjusted time</span><strong id="passage-duration">—</strong><small id="still-water-duration"></small></div>
+          <div><span>Current-adjusted time</span><strong id="passage-duration">—</strong><small id="still-water-duration"></small></div>
           <div><span>Expected arrival</span><strong id="passage-arrival">—</strong></div>
           <div><span>Legs</span><strong id="passage-leg-count">0</strong></div>
         </section>
@@ -223,7 +238,7 @@
             <thead><tr><th>Leg</th><th>Course</th><th>Distance</th><th>Model current</th><th>ETA</th></tr></thead>
             <tbody id="leg-table"></tbody>
           </table>
-          <p>Courses are rhumb-line degrees true. Model-adjusted times and amber course-to-steer arrows use current samples about every 2.5 NM. The magenta dashed line shows modelled drift if the planned ground-track bearings are held without correction. These are planning estimates, not helm instructions.</p>
+          <p>The coral dashed line is the desired ground track. Amber arrows show the modelled course to steer to stay on it. The labelled magenta dashed line is the drift track if that correction is ignored. Current samples are taken about every 2.5 NM. These are planning estimates, not helm instructions.</p>
         </div>
 
         <section class="planner-actions" aria-label="Passage actions">
@@ -244,6 +259,24 @@
           <strong>Tap water to add a waypoint</strong>
           <span>Drag waypoint markers to refine the passage.</span>
         </div>
+        <details class="map-environment-panel" open>
+          <summary><span>Tide &amp; daylight</span><strong id="map-environment-time">Passage time</strong></summary>
+          <section aria-labelledby="tide-table-title">
+            <div class="environment-heading">
+              <strong id="tide-table-title">Model tide near departure</strong>
+              <small id="tide-table-status">Loading…</small>
+            </div>
+            <div class="tide-table" id="tide-table" aria-live="polite"></div>
+          </section>
+          <section aria-labelledby="sun-chart-title">
+            <div class="environment-heading">
+              <strong id="sun-chart-title">Sun at destination</strong>
+              <small id="sun-chart-status">Loading…</small>
+            </div>
+            <div class="sun-chart" id="sun-chart" aria-live="polite"></div>
+          </section>
+          <p>Model guidance only. Tide heights are not official predictions; check a nautical almanac and local sources.</p>
+        </details>
         <div class="map-provenance">
           <span>Modelled depth shading and contours + general basemap + crowd-sourced seamarks</span>
           <strong>Not a nautical chart</strong>
@@ -257,6 +290,6 @@
       integrity="sha384-5+cfbwT0iiub6VsQAdn6yz16nr6sDiQoHx6tm4O8OVYXHYOxcffFmCJBL0dgdvGp"
       crossorigin="anonymous"
     ></script>
-    <script type="module" src="/planner.js?v=20260821-5"></script>
+    <script type="module" src="/planner.js?v=20260821-6"></script>
   </body>
 </html>
