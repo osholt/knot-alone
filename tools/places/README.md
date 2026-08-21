@@ -63,7 +63,9 @@ and derives 2, 5, 10, 20 and 30 m linework with marching squares. The web
 planner now performs the same bounded derivation on demand for its current map
 view across EMODnet's coverage, so it is not limited to a committed Solent
 file. Outside that coverage it derives the same levels from a bounded GEBCO
-2026 OPeNDAP subset as a coarser worldwide fallback. Generated linework is model
+2026 OPeNDAP subset as a coarser worldwide fallback. The browser keeps coastal
+cells connected during derivation, then clips the displayed line segments to
+the currently rendered basemap water polygons. Generated linework is model
 context, not surveyed marina depth, a charted sounding or an under-keel-clearance
 source.
 

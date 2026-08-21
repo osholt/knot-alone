@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 
 import {
   boundsContain,
+  clipContoursToWater,
   createContourRequest,
   createGebcoContourRequest,
   deriveShallowContours,
+  geometryContainsCoordinate,
   parseEmodnetGrid,
   parseGebcoGrid,
 } from "./emodnet-contours.mjs";
@@ -37,8 +39,9 @@ test("builds a bounded EMODnet request across England", () => {
   );
   assert.ok(request.url.includes("coverageId=emodnet__mean"));
   assert.ok(request.url.includes("scaleSize=i%28"));
-  assert.ok(request.gridWidth <= 320);
-  assert.ok(request.gridHeight <= 240);
+  assert.ok(request.gridWidth > 320);
+  assert.ok(request.gridWidth <= 512);
+  assert.ok(request.gridHeight <= 384);
   assert.equal(createContourRequest({ west: 120, south: -40, east: 130, north: -30 }, 9), null);
   assert.ok(boundsContain(request.bounds, { west: -5, south: 50, east: 1, north: 55 }));
 });
@@ -64,7 +67,24 @@ Band 0:
   assert.ok(contours.features[0].geometry.coordinates.every(([longitude]) => longitude < -1.47));
 });
 
-test("omits contour interpolation through cells containing positive land", () => {
+test("normalises scaled EMODnet grids whose row numbering does not begin at zero", () => {
+  const text = `Grid range: GridEnvelope2D[0..1, 1..2]
+Grid to world: PARAM_MT["Affine",
+  PARAMETER["elt_0_0", 0.02],
+  PARAMETER["elt_0_2", -5.1],
+  PARAMETER["elt_1_1", -0.02],
+  PARAMETER["elt_1_2", 50.2]]
+Contents:
+Band 0:
+-1 -2
+-3 -4`;
+  const parsed = parseEmodnetGrid(text);
+  assert.deepEqual(parsed.rows, [[-1, -2], [-3, -4]]);
+  assert.equal(parsed.transform.longitudeOrigin, -5.1);
+  assert.equal(parsed.transform.latitudeOrigin, 50.18);
+});
+
+test("keeps coastal contour cells connected until the display water mask is applied", () => {
   const text = `Grid range: GridEnvelope2D[0..3, 0..3]
 Grid to world: PARAM_MT["Affine",
   PARAMETER["elt_0_0", 0.01],
@@ -78,7 +98,51 @@ Band 0:
 3 -10 -10 3
 3 3 3 3`;
   const contours = deriveShallowContours(parseEmodnetGrid(text), [5]);
-  assert.equal(contours.features.length, 0);
+  assert.equal(contours.features.length, 1);
+  assert.equal(contours.features[0].geometry.coordinates.length, 9);
+  const clipped = clipContoursToWater(
+    contours,
+    () => false,
+    { west: -5.1, south: 50.1, east: -5, north: 50.2 },
+  );
+  assert.equal(clipped.features.length, 0);
+});
+
+test("clips only the on-land pieces of a connected contour", () => {
+  const contours = {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      id: "5m",
+      properties: { depthM: 5 },
+      geometry: {
+        type: "LineString",
+        coordinates: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]],
+      },
+    }],
+  };
+  const clipped = clipContoursToWater(
+    contours,
+    ([longitude]) => longitude < 1.5 || longitude > 2.5,
+    { west: 0, south: -1, east: 4, north: 1 },
+  );
+  assert.deepEqual(
+    clipped.features.map((feature) => feature.geometry.coordinates),
+    [[[0, 0], [1, 0]], [[3, 0], [4, 0]]],
+  );
+});
+
+test("recognises rendered water polygons while respecting islands", () => {
+  const water = {
+    type: "Polygon",
+    coordinates: [
+      [[0, 0], [5, 0], [5, 5], [0, 5], [0, 0]],
+      [[2, 2], [3, 2], [3, 3], [2, 3], [2, 2]],
+    ],
+  };
+  assert.equal(geometryContainsCoordinate(water, [1, 1]), true);
+  assert.equal(geometryContainsCoordinate(water, [2.5, 2.5]), false);
+  assert.equal(geometryContainsCoordinate(water, [6, 1]), false);
 });
 
 test("builds and parses a bounded GEBCO global fallback request", () => {
@@ -87,8 +151,8 @@ test("builds and parses a bounded GEBCO global fallback request", () => {
     10,
   );
   assert.match(request.url, /GEBCO_2026\.nc\.ascii\?elevation\[/);
-  assert.ok(request.gridWidth <= 320);
-  assert.ok(request.gridHeight <= 240);
+  assert.ok(request.gridWidth <= 512);
+  assert.ok(request.gridHeight <= 384);
   assert.equal(
     createGebcoContourRequest({ west: 179, south: -20, east: 181, north: -19 }, 9),
     null,
