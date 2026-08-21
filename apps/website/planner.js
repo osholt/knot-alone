@@ -14,10 +14,12 @@ import {
 } from "./planner-storage.mjs";
 import {
   boundsContain,
+  clipContoursToWater,
   createContourRequest,
   createGebcoContourRequest,
   deriveShallowContours,
   EMODNET_COVERAGE,
+  geometryContainsCoordinate,
   parseEmodnetGrid,
   parseGebcoGrid,
 } from "./emodnet-contours.mjs";
@@ -1712,11 +1714,15 @@ function refreshDepthAdjustment() {
 }
 
 function syncAdjustedContourData() {
-  if (!mapReady) return;
+  if (!mapReady) return shallowContourData;
+  const waterPredicate = renderedWaterPredicate();
+  const waterClippedData = waterPredicate
+    ? clipContoursToWater(shallowContourData, waterPredicate, visibleMapBounds())
+    : shallowContourData;
   const data = currentDepthAdjustment
     ? {
-        ...shallowContourData,
-        features: shallowContourData.features.map((feature) => {
+        ...waterClippedData,
+        features: waterClippedData.features.map((feature) => {
           const adjustedDepth = Number(feature.properties?.depthM) + currentDepthAdjustment.heightM;
           return {
             ...feature,
@@ -1730,8 +1736,9 @@ function syncAdjustedContourData() {
           };
         }),
       }
-    : shallowContourData;
+    : waterClippedData;
   map.getSource("shallow-contours")?.setData(data);
+  return data;
 }
 
 async function updateShallowContours(force = false) {
@@ -1757,6 +1764,7 @@ async function updateShallowContours(force = false) {
     shallowContourProvider === provider &&
     boundsContain(shallowContourBounds, visibleBounds)
   ) {
+    syncAdjustedContourData();
     return;
   }
 
@@ -1793,10 +1801,12 @@ async function updateShallowContours(force = false) {
     shallowContourProvider = provider;
     refreshDepthAdjustment();
     const resolution = request.resolutionLimited
-      ? "regional preview resolution; zoom closer for more detail"
-      : "native model resolution";
+      ? "high-detail view sampling; zoom closer for the native grid"
+      : provider === "emodnet"
+        ? "native 115 m model grid"
+        : "native 15 arc-second model grid";
     const source = provider === "emodnet" ? "EMODnet" : "GEBCO global fallback";
-    elements.shallowContourStatus.textContent = `${shallowContourData.features.length.toLocaleString("en-GB")} ${source} lines for this area · ${resolution} · coastal land/sea transition cells omitted.`;
+    elements.shallowContourStatus.textContent = `${shallowContourData.features.length.toLocaleString("en-GB")} connected ${source} lines for this area · ${resolution} · clipped to visible basemap water.`;
   } catch (error) {
     if (error.name === "AbortError") return;
     elements.shallowContourStatus.textContent = `Contours unavailable for this area (${error.message}).`;
@@ -1840,6 +1850,25 @@ function basemapShowsWater(point) {
   } catch {
     return true;
   }
+}
+
+function renderedWaterPredicate() {
+  if (!mapReady || !map.getLayer("water")) return null;
+  let geometries;
+  try {
+    const canvas = map.getCanvas();
+    geometries = map.queryRenderedFeatures(
+      [[0, 0], [canvas.clientWidth, canvas.clientHeight]],
+      { layers: ["water"] },
+    )
+      .map((feature) => feature.geometry)
+      .filter(Boolean);
+  } catch {
+    return null;
+  }
+  if (!geometries.length) return null;
+  return (coordinate) => geometries.some((geometry) =>
+    geometryContainsCoordinate(geometry, coordinate));
 }
 
 function fitPassage() {

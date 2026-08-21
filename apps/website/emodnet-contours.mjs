@@ -11,6 +11,8 @@ const GEBCO_DAP_URL =
   "https://dap.ceda.ac.uk/thredds/dodsC/bodc/gebco/global/gebco_2026/ice_surface_elevation/netcdf/GEBCO_2026.nc";
 const NATIVE_STEP_DEGREES = 1 / 960;
 const GEBCO_CELLS_PER_DEGREE = 240;
+const MAX_GRID_WIDTH = 512;
+const MAX_GRID_HEIGHT = 384;
 const NUMBER_PATTERN = /[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][-+]?\d+)?/g;
 
 export function createContourRequest(bounds, zoom) {
@@ -27,7 +29,7 @@ export function createContourRequest(bounds, zoom) {
 
   const nativeWidth = Math.max(2, Math.ceil((requested.east - requested.west) / NATIVE_STEP_DEGREES));
   const nativeHeight = Math.max(2, Math.ceil((requested.north - requested.south) / NATIVE_STEP_DEGREES));
-  const scale = Math.min(1, 320 / nativeWidth, 240 / nativeHeight);
+  const scale = Math.min(1, MAX_GRID_WIDTH / nativeWidth, MAX_GRID_HEIGHT / nativeHeight);
   const gridWidth = Math.max(2, Math.floor(nativeWidth * scale));
   const gridHeight = Math.max(2, Math.floor(nativeHeight * scale));
   const parameters = new URLSearchParams({
@@ -87,7 +89,11 @@ export function createGebcoContourRequest(bounds, zoom) {
   );
   const longitudeCount = longitudeEnd - longitudeStart + 1;
   const latitudeCount = latitudeEnd - latitudeStart + 1;
-  const stride = Math.max(1, Math.ceil(longitudeCount / 320), Math.ceil(latitudeCount / 240));
+  const stride = Math.max(
+    1,
+    Math.ceil(longitudeCount / MAX_GRID_WIDTH),
+    Math.ceil(latitudeCount / MAX_GRID_HEIGHT),
+  );
   const longitudeSamples = Math.floor((longitudeEnd - longitudeStart) / stride) + 1;
   const latitudeSamples = Math.floor((latitudeEnd - latitudeStart) / stride) + 1;
   const query =
@@ -114,7 +120,9 @@ export function boundsContain(outer, inner) {
 }
 
 export function parseEmodnetGrid(text) {
-  const range = text.match(/Grid range: GridEnvelope2D\[0\.\.(\d+), 0\.\.(\d+)\]/);
+  const range = text.match(
+    /Grid range: GridEnvelope2D\[(-?\d+)\.\.(-?\d+), (-?\d+)\.\.(-?\d+)\]/,
+  );
   const transform = Object.fromEntries(
     [...text.matchAll(/PARAMETER\["elt_(0_0|0_2|1_1|1_2)",\s*([-+0-9.eE]+)\]/g)].map(
       (match) => [match[1], Number(match[2])],
@@ -125,8 +133,12 @@ export function parseEmodnetGrid(text) {
   if (!range || Object.keys(transform).length !== 4 || markerIndex < 0) {
     throw new Error("The depth service returned an unrecognised grid.");
   }
-  const width = Number(range[1]) + 1;
-  const height = Number(range[2]) + 1;
+  const columnStart = Number(range[1]);
+  const columnEnd = Number(range[2]);
+  const rowStart = Number(range[3]);
+  const rowEnd = Number(range[4]);
+  const width = columnEnd - columnStart + 1;
+  const height = rowEnd - rowStart + 1;
   const values = (text.slice(markerIndex + marker.length).match(NUMBER_PATTERN) || []).map(Number);
   if (values.length !== width * height || values.some((value) => !Number.isFinite(value))) {
     throw new Error("The depth service returned an incomplete grid.");
@@ -138,9 +150,9 @@ export function parseEmodnetGrid(text) {
     rows,
     transform: {
       longitudeStep: transform["0_0"],
-      longitudeOrigin: transform["0_2"],
+      longitudeOrigin: transform["0_2"] + columnStart * transform["0_0"],
       latitudeStep: transform["1_1"],
-      latitudeOrigin: transform["1_2"],
+      latitudeOrigin: transform["1_2"] + rowStart * transform["1_1"],
     },
   };
 }
@@ -199,7 +211,7 @@ function edgePoint(row, column, edge, corners, level) {
   return [row + interpolate(topLeft, bottomLeft, level), column];
 }
 
-function contourSegments(grid, level, wetGrid = null) {
+function contourSegments(grid, level) {
   const cases = {
     1: [[3, 0]],
     2: [[0, 1]],
@@ -217,14 +229,6 @@ function contourSegments(grid, level, wetGrid = null) {
   const segments = [];
   for (let row = 0; row < grid.length - 1; row += 1) {
     for (let column = 0; column < grid[0].length - 1; column += 1) {
-      if (wetGrid && ![
-        wetGrid[row][column],
-        wetGrid[row][column + 1],
-        wetGrid[row + 1][column + 1],
-        wetGrid[row + 1][column],
-      ].every(Boolean)) {
-        continue;
-      }
       const corners = [
         grid[row][column],
         grid[row][column + 1],
@@ -313,10 +317,9 @@ export function deriveShallowContours(
   } = {},
 ) {
   const depthGrid = parsed.rows.map((row) => row.map((elevation) => -elevation));
-  const wetGrid = parsed.rows.map((row) => row.map((elevation) => elevation < 0));
   const features = [];
   for (const level of levels) {
-    const lines = stitchSegments(contourSegments(depthGrid, level, wetGrid));
+    const lines = stitchSegments(contourSegments(depthGrid, level));
     lines.forEach((line, index) => {
       if (line.length < 3) return;
       const coordinates = line.map(([row, column]) => [
@@ -339,4 +342,107 @@ export function deriveShallowContours(
     });
   }
   return { type: "FeatureCollection", features };
+}
+
+function coordinateInsideBounds([longitude, latitude], bounds) {
+  return Boolean(
+    bounds &&
+      longitude >= bounds.west &&
+      longitude <= bounds.east &&
+      latitude >= bounds.south &&
+      latitude <= bounds.north,
+  );
+}
+
+function sameCoordinate(first, second) {
+  return first[0] === second[0] && first[1] === second[1];
+}
+
+function pointOnSegment([longitude, latitude], first, second) {
+  const cross = (latitude - first[1]) * (second[0] - first[0]) -
+    (longitude - first[0]) * (second[1] - first[1]);
+  if (Math.abs(cross) > 1e-10) return false;
+  return longitude >= Math.min(first[0], second[0]) &&
+    longitude <= Math.max(first[0], second[0]) &&
+    latitude >= Math.min(first[1], second[1]) &&
+    latitude <= Math.max(first[1], second[1]);
+}
+
+function ringContainsCoordinate(ring, coordinate) {
+  let inside = false;
+  for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {
+    const first = ring[previous];
+    const second = ring[index];
+    if (pointOnSegment(coordinate, first, second)) return true;
+    const crossesLatitude = (first[1] > coordinate[1]) !== (second[1] > coordinate[1]);
+    if (
+      crossesLatitude &&
+      coordinate[0] <
+        ((second[0] - first[0]) * (coordinate[1] - first[1])) /
+          (second[1] - first[1]) + first[0]
+    ) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function polygonContainsCoordinate(rings, coordinate) {
+  return Boolean(
+    rings?.length &&
+      ringContainsCoordinate(rings[0], coordinate) &&
+      !rings.slice(1).some((ring) => ringContainsCoordinate(ring, coordinate)),
+  );
+}
+
+export function geometryContainsCoordinate(geometry, coordinate) {
+  if (geometry?.type === "Polygon") {
+    return polygonContainsCoordinate(geometry.coordinates, coordinate);
+  }
+  if (geometry?.type === "MultiPolygon") {
+    return geometry.coordinates.some((polygon) =>
+      polygonContainsCoordinate(polygon, coordinate));
+  }
+  return false;
+}
+
+export function clipContoursToWater(contours, isWater, bounds = null) {
+  if (!contours || typeof isWater !== "function") return contours;
+  const waterAt = (coordinate) =>
+    !bounds || !coordinateInsideBounds(coordinate, bounds) || isWater(coordinate);
+  const features = [];
+
+  for (const feature of contours.features || []) {
+    if (feature.geometry?.type !== "LineString") {
+      features.push(feature);
+      continue;
+    }
+    const coordinates = feature.geometry.coordinates;
+    const parts = [];
+    let part = [];
+    const flush = () => {
+      if (part.length >= 2) parts.push(part);
+      part = [];
+    };
+    for (let index = 1; index < coordinates.length; index += 1) {
+      const first = coordinates[index - 1];
+      const second = coordinates[index];
+      const midpoint = [(first[0] + second[0]) / 2, (first[1] + second[1]) / 2];
+      if (waterAt(first) && waterAt(midpoint) && waterAt(second)) {
+        if (!part.length) part.push(first);
+        if (!sameCoordinate(part.at(-1), second)) part.push(second);
+      } else {
+        flush();
+      }
+    }
+    flush();
+    parts.forEach((coordinatesPart, index) => {
+      features.push({
+        ...feature,
+        id: `${feature.id || "contour"}-water-${index}`,
+        geometry: { ...feature.geometry, coordinates: coordinatesPart },
+      });
+    });
+  }
+  return { ...contours, features };
 }
