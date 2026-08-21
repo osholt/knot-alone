@@ -12,7 +12,7 @@
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Permissions-Policy "geolocation=(), camera=(), microphone=()"
-		Content-Security-Policy "default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https://tiles.openfreemap.org https://tiles.openseamap.org https://tiles.emodnet-bathymetry.eu https://ows.emodnet-bathymetry.eu https://wms.gebco.net https://gis.charttools.noaa.gov; connect-src 'self' https://relay.tailendcharlie.app https://tiles.openfreemap.org https://tiles.openseamap.org https://tiles.emodnet-bathymetry.eu https://ows.emodnet-bathymetry.eu https://wms.gebco.net https://gis.charttools.noaa.gov https://api.open-meteo.com; worker-src blob:; child-src blob:; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https://tiles.openfreemap.org https://tiles.openseamap.org https://tiles.emodnet-bathymetry.eu https://ows.emodnet-bathymetry.eu https://wms.gebco.net https://gis.charttools.noaa.gov; connect-src 'self' https://relay.tailendcharlie.app https://tiles.openfreemap.org https://tiles.openseamap.org https://tiles.emodnet-bathymetry.eu https://ows.emodnet-bathymetry.eu https://wms.gebco.net https://gis.charttools.noaa.gov https://api.open-meteo.com; worker-src 'self' blob:; child-src blob:; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
 	}
 
 	@planner path /planner.html

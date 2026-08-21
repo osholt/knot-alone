@@ -16,6 +16,7 @@ import {
   parseGebcoGrid,
 } from "./emodnet-contours.mjs";
 import { sampleWindAt, windFieldGeoJson, windGrid, windRequestUrl } from "./wind-field.mjs";
+import { buildShadingContours } from "./contour-worker.mjs";
 import {
   currentEffect,
   currentFieldGeoJson,
@@ -60,14 +61,14 @@ test("builds a screen-resolution request for the EMODnet depth shading colours",
   assert.match(request.url, /layers=emodnet%3Amean/i);
   assert.match(request.url, /styles=multicolour/i);
   assert.match(request.legendUrl, /GetLegendGraphic/i);
-  assert.equal(request.gridWidth, 1024);
-  assert.equal(request.gridHeight, 768);
+  assert.equal(request.gridWidth, 896);
+  assert.equal(request.gridHeight, 672);
   assert.ok(boundsContain(request.bounds, { west: -5.2, south: 50.05, east: -4.95, north: 50.25 }));
 });
 
 test("refreshes a cached colour trace as the map zooms in", () => {
-  assert.equal(contourSampleSupportsZoom(10, 10.3), true);
-  assert.equal(contourSampleSupportsZoom(10, 10.5), false);
+  assert.equal(contourSampleSupportsZoom(10, 10.7), true);
+  assert.equal(contourSampleSupportsZoom(10, 10.8), false);
   assert.equal(contourSampleSupportsZoom(10, 9), true);
   assert.equal(contourSampleSupportsZoom(null, 10), false);
 });
@@ -123,8 +124,33 @@ test("recovers shallow depths from the official shading colour ramp", () => {
   const contours = deriveShallowContours(parsed, [5], {
     sourceName: "EMODnet multicolour depth shading",
   });
+  const simplified = deriveShallowContours(parsed, [5], {
+    simplifyTolerance: 0.04,
+    sourceName: "EMODnet multicolour depth shading",
+  });
   assert.equal(contours.features.length, 1);
   assert.equal(contours.features[0].properties.label, "5 m");
+  assert.ok(
+    simplified.features[0].geometry.coordinates.length <
+      contours.features[0].geometry.coordinates.length,
+  );
+
+  const workerContours = buildShadingContours({
+    bounds: { west: -5.2, south: 50.05, east: -4.95, north: 50.25 },
+    colourScale,
+    height: 4,
+    options: { sourceName: "EMODnet multicolour depth shading" },
+    pixels: pixels.buffer.slice(0),
+    width: 4,
+  });
+  const workerFiveMetreContours = workerContours.features.filter(
+    (feature) => feature.properties.depthM === 5,
+  );
+  assert.equal(workerFiveMetreContours.length, 1);
+  assert.ok(
+    workerFiveMetreContours[0].geometry.coordinates.length <
+      contours.features[0].geometry.coordinates.length,
+  );
 });
 
 test("parses negative seabed elevations into shallow contours", () => {

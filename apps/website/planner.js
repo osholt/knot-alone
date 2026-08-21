@@ -22,7 +22,6 @@ import {
   EMODNET_COVERAGE,
   geometryContainsCoordinate,
   parseEmodnetColourScale,
-  parseEmodnetShadingGrid,
   parseGebcoGrid,
 } from "./emodnet-contours.mjs";
 import { windFieldGeoJson, windGrid, windRequestUrl } from "./wind-field.mjs";
@@ -144,6 +143,7 @@ let shallowContourBounds = null;
 let shallowContourProvider = null;
 let shallowContourSampleZoom = null;
 let shallowContourAbortController = null;
+let shallowContourWorkerJob = null;
 let emodnetColourScalePromise = null;
 let windRequestSequence = 0;
 let currentFieldRequestSequence = 0;
@@ -1787,6 +1787,45 @@ function loadEmodnetColourScale(url) {
   return emodnetColourScalePromise;
 }
 
+function cancelShadingContourWorker() {
+  if (!shallowContourWorkerJob) return;
+  const { reject, worker } = shallowContourWorkerJob;
+  shallowContourWorkerJob = null;
+  worker.terminate();
+  reject(new DOMException("Contour generation superseded.", "AbortError"));
+}
+
+function deriveShadingContoursInWorker(imageData, colourScale, bounds, options) {
+  cancelShadingContourWorker();
+  return new Promise((resolve, reject) => {
+    const worker = new Worker("/contour-worker.mjs", { type: "module" });
+    shallowContourWorkerJob = { reject, worker };
+    const finish = (callback, value) => {
+      if (shallowContourWorkerJob?.worker === worker) shallowContourWorkerJob = null;
+      worker.terminate();
+      callback(value);
+    };
+    worker.addEventListener("message", (event) => {
+      if (event.data?.error) {
+        finish(reject, new Error(event.data.error));
+      } else {
+        finish(resolve, event.data.contours);
+      }
+    });
+    worker.addEventListener("error", () => {
+      finish(reject, new Error("The browser contour worker failed."));
+    });
+    worker.postMessage({
+      bounds,
+      colourScale,
+      height: imageData.height,
+      options,
+      pixels: imageData.data.buffer,
+      width: imageData.width,
+    }, [imageData.data.buffer]);
+  });
+}
+
 async function updateShallowContours(force = false) {
   if (!mapReady || !elements.shallowContoursVisible.checked) return;
   const visibleBounds = visibleMapBounds();
@@ -1822,6 +1861,7 @@ async function updateShallowContours(force = false) {
   }
 
   shallowContourAbortController?.abort();
+  cancelShadingContourWorker();
   shallowContourAbortController = new AbortController();
   const controller = shallowContourAbortController;
   elements.shallowContourStatus.textContent = provider === "emodnet"
@@ -1833,34 +1873,37 @@ async function updateShallowContours(force = false) {
       signal: controller.signal,
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    let parsed;
+    let contours;
     if (provider === "emodnet") {
       const [imageData, colourScale] = await Promise.all([
         responseImageData(response),
         loadEmodnetColourScale(request.legendUrl),
       ]);
-      parsed = parseEmodnetShadingGrid(imageData, colourScale, request.bounds);
+      contours = await deriveShadingContoursInWorker(
+        imageData,
+        colourScale,
+        request.bounds,
+        {
+          featurePrefix: "emodnet-shading",
+          sourceName: "EMODnet DTM 2024 multicolour depth shading",
+          warning:
+            "Dynamically traced from modelled depth-shading colours; not a charted sounding or safe clearance.",
+        },
+      );
     } else {
-      parsed = parseGebcoGrid(await response.text());
+      contours = deriveShallowContours(
+        parseGebcoGrid(await response.text()),
+        undefined,
+        {
+          featurePrefix: "gebco-live",
+          sourceName: "GEBCO 2026 Grid",
+          warning:
+            "Coarse global model-derived contour; not a charted sounding or safe clearance.",
+        },
+      );
     }
     if (controller !== shallowContourAbortController) return;
-    shallowContourData = deriveShallowContours(
-      parsed,
-      undefined,
-      provider === "emodnet"
-        ? {
-            featurePrefix: "emodnet-shading",
-            sourceName: "EMODnet DTM 2024 multicolour depth shading",
-            warning:
-              "Dynamically traced from modelled depth-shading colours; not a charted sounding or safe clearance.",
-          }
-        : {
-            featurePrefix: "gebco-live",
-            sourceName: "GEBCO 2026 Grid",
-            warning:
-              "Coarse global model-derived contour; not a charted sounding or safe clearance.",
-          },
-    );
+    shallowContourData = contours;
     shallowContourBounds = request.bounds;
     shallowContourProvider = provider;
     shallowContourSampleZoom = zoom;
