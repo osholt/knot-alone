@@ -1,0 +1,268 @@
+:root {
+  color-scheme: light;
+  --ink: #12303a;
+  --muted: #5d7177;
+  --paper: #f4f0e7;
+  --panel: #fffdf7;
+  --sea: #0c5f78;
+  --sea-dark: #092f3d;
+  --foam: #d9f0ec;
+  --coral: #e97451;
+  --line: #cdd8d6;
+  --shadow: 0 22px 55px rgba(6, 42, 53, 0.15);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { color: var(--ink); background: var(--paper); }
+a { color: inherit; }
+button, input, select, textarea { font: inherit; }
+button, .button { cursor: pointer; }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.theme-switch {
+  padding: 3px;
+  border: 1px solid rgba(18, 48, 58, 0.25);
+  border-radius: 999px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: rgba(255, 253, 247, 0.58);
+}
+.theme-switch button {
+  min-height: 29px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--sea-dark);
+  background: transparent;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+.theme-switch button:hover { color: var(--sea); }
+.theme-switch button.selected {
+  color: #fff;
+  background: var(--sea-dark);
+  box-shadow: 0 2px 7px rgba(9, 47, 61, 0.22);
+}
+
+.site-header {
+  min-height: 72px;
+  padding: 12px clamp(18px, 4vw, 54px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid rgba(18, 48, 58, 0.13);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  text-decoration: none;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.brand-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px 14px 18px 18px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--sea-dark);
+  font-size: 0.78rem;
+  letter-spacing: -0.04em;
+  box-shadow: 0 7px 18px rgba(9, 47, 61, 0.22);
+}
+
+.header-link {
+  color: var(--sea-dark);
+  font-size: 0.9rem;
+  font-weight: 750;
+  text-underline-offset: 4px;
+}
+
+.home-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 80% 14%, rgba(95, 184, 176, 0.24), transparent 32%),
+    linear-gradient(135deg, #f8f5ed 0%, #eaf2ee 100%);
+}
+
+.home-main {
+  width: min(1180px, calc(100% - 36px));
+  min-height: calc(100vh - 72px);
+  margin: 0 auto;
+  padding: clamp(64px, 10vw, 132px) 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  align-items: center;
+  gap: clamp(44px, 8vw, 110px);
+}
+
+.eyebrow, .card-kicker {
+  margin: 0 0 16px;
+  color: var(--sea);
+  font-size: 0.76rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  margin: 0;
+  max-width: 780px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.1rem, 7vw, 6.9rem);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.058em;
+}
+
+.hero-copy {
+  max-width: 630px;
+  margin: 30px 0 0;
+  color: var(--muted);
+  font-size: clamp(1.05rem, 2vw, 1.28rem);
+  line-height: 1.65;
+}
+
+.hero-actions {
+  margin-top: 34px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.button {
+  min-height: 45px;
+  padding: 0 20px;
+  border: 1px solid var(--sea-dark);
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.button-primary {
+  color: #fff;
+  background: var(--sea-dark);
+  box-shadow: 0 10px 24px rgba(9, 47, 61, 0.2);
+}
+
+.home-card {
+  padding: clamp(28px, 4vw, 46px);
+  border: 1px solid rgba(18, 48, 58, 0.13);
+  border-radius: 26px;
+  background: rgba(255, 253, 247, 0.86);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+}
+
+.home-card h2 {
+  margin: 0 0 20px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.home-card ul { margin: 0; padding: 0; list-style: none; }
+.home-card li {
+  position: relative;
+  padding: 13px 0 13px 27px;
+  border-top: 1px solid var(--line);
+  line-height: 1.45;
+}
+.home-card li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 20px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--coral);
+}
+
+.safety-note {
+  margin: 24px 0 0;
+  padding: 16px;
+  border-radius: 12px;
+  color: #435a60;
+  background: #f0ede4;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e8f2f1;
+  --muted: #9cb1b5;
+  --paper: #0d181c;
+  --panel: #132329;
+  --sea: #65c1d7;
+  --foam: #cce9e4;
+  --coral: #ff8a67;
+  --line: #30464c;
+  --shadow: 0 22px 55px rgba(0, 0, 0, 0.34);
+}
+
+:root[data-theme="dark"] .site-header {
+  border-bottom-color: rgba(214, 239, 238, 0.13);
+}
+:root[data-theme="dark"] .home-page {
+  background:
+    radial-gradient(circle at 80% 14%, rgba(34, 120, 133, 0.24), transparent 32%),
+    linear-gradient(135deg, #0d181c 0%, #102429 100%);
+}
+:root[data-theme="dark"] .home-card {
+  border-color: rgba(194, 224, 223, 0.15);
+  background: rgba(19, 35, 41, 0.9);
+}
+:root[data-theme="dark"] .safety-note {
+  color: #b8c9ca;
+  background: #1c2b2f;
+}
+:root[data-theme="dark"] .brand-mark,
+:root[data-theme="dark"] .button-primary {
+  color: #071b23;
+  background: #9ddde7;
+}
+:root[data-theme="dark"] .header-link { color: #cbeaf0; }
+:root[data-theme="dark"] .theme-switch {
+  border-color: rgba(204, 235, 236, 0.27);
+  background: rgba(12, 33, 39, 0.65);
+}
+:root[data-theme="dark"] .theme-switch button { color: #c6e4e8; }
+:root[data-theme="dark"] .theme-switch button.selected {
+  color: #071b23;
+  background: #9ddde7;
+}
+
+@media (max-width: 820px) {
+  .home-main { grid-template-columns: 1fr; padding-top: 64px; }
+  .hero h1 { font-size: clamp(3rem, 15vw, 5rem); }
+  .home-card { max-width: 620px; }
+}
+
+@media (max-width: 520px) {
+  .site-header { padding-inline: 14px; }
+  .header-link { font-size: 0.8rem; }
+  .header-actions { gap: 8px; }
+  .theme-switch button { min-height: 27px; padding-inline: 8px; font-size: 0.68rem; }
+  .hero-actions { align-items: flex-start; flex-direction: column; }
+}

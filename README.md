@@ -52,7 +52,7 @@ Tester distribution is documented in
 ```text
 apps/mobile/                 Flutter client plus Swift/Kotlin platform bridges
 apps/server/                 FastAPI/PostgreSQL optional crew relay
-apps/website/                Safe placeholder for the future public site
+apps/website/                Static public site and browser passage planner
 deploy/                      Deployment templates; no production credentials
 docs/                        Product, architecture, source, and backlog notes
 .github/workflows/           Mobile and server CI only
@@ -78,9 +78,16 @@ uv run ruff check .
 uv run pytest
 ```
 
-All copied network and associated-domain defaults use `*.invalid`. Real network
-domains, chart/network data providers, and app-store identifiers are separate
-release decisions.
+```bash
+node --check apps/website/planner.js
+node --test apps/website/planner-core.test.mjs
+python3 -m unittest tools/places/test_generate_sailing_pois.py
+```
+
+App/API and associated-domain defaults still use `*.invalid`. The static web
+planner is the deliberate exception: its selected Pages and custom hostnames
+are documented in [docs/cloudflare-pages.md](docs/cloudflare-pages.md). Other
+network providers and app-store identifiers remain separate release decisions.
 
 ## Licence and attribution
 

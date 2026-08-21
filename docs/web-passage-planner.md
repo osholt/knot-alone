@@ -1,0 +1,148 @@
+# Web passage planner and sailing atlas
+
+Status: first private-hosted slice implemented; a public domain, licensed
+charts and complete tide/wind timelines remain gated.
+
+Epic: [#86](https://github.com/osholt/knot-alone/issues/86)
+
+## Problem statement
+
+Passage planning is easier on a laptop or tablet than on a phone, but Tide and
+Seek has no web surface for preparing a route, browsing sailing places or
+handing a plan to the mobile app. Sailors otherwise have to combine unrelated
+maps, weather, tide and GPX tools and then reconstruct the same passage aboard.
+
+## Goals
+
+- Let a first-time sailor create and export a two-or-more-waypoint passage in
+  under five minutes without an account.
+- Preserve the TEC planner strengths: static delivery, local drafts, explicit
+  network requests, GPX fallback and short-lived plan-code handoff.
+- Make harbours, marinas, anchorages, moorings and small-craft facilities
+  searchable with source, licence, freshness and limitations.
+- Keep general basemaps, crowd-sourced seamarks, environmental context and any
+  future licensed chart source visibly distinct.
+- Use the same transport-neutral passage and provider boundaries as mobile.
+
+## Non-goals
+
+- **Automatic safe routing.** The first version joins user-selected waypoints by
+  rhumb-line legs and does not infer a safe course around land, shoals or
+  hazards.
+- **An official nautical chart.** OpenStreetMap/OpenSeaMap is useful context but
+  has no hydrographic edition or Notices to Mariners.
+- **A social sailing network.** Public profiles, permanent accounts and voyage
+  discovery are outside the solo-first product boundary.
+- **Scraped pilot books or vessel-tracking sites.** Data must have an explicit
+  reusable source and licence.
+- **Production deployment by implication.** A real domain, provider keys and
+  hosting remain explicit release decisions.
+
+## User stories
+
+- As a skipper preparing ashore, I want to place and reorder waypoints so that I
+  can express the passage I intend to assess.
+- As a skipper, I want course, distance and time per leg so that I can prepare a
+  written plan using explicit assumptions.
+- As a sailor, I want to search harbours, anchorages and facilities so that I
+  can add useful preparation points without copying coordinates manually.
+- As a mobile-app user, I want GPX and a short plan code so that I can carry the
+  plan aboard without creating an account.
+- As a cautious sailor, I want every layer to state its source and limitations
+  so that community context cannot be mistaken for an official chart or
+  pilotage advice.
+
+## Requirements
+
+### P0 — useful planning loop
+
+- Place, drag, rename, annotate, reorder and remove up to 50 waypoints.
+- Calculate rhumb-line degrees true, nautical-mile distance and duration from a
+  user-visible speed assumption.
+- Persist a bounded draft in first-party browser storage and provide a clear
+  local-data action.
+- Import and export GPX 1.1 without accepting document type declarations or
+  unbounded geometry.
+- Publish GPX to the existing encrypted-at-rest plan directory when configured;
+  retain GPX as the no-server fallback.
+- Render route and marks above general map and seamark context.
+- State prominently that route legs are not land, depth or hazard checked.
+
+### P1 — sailing atlas and conditions
+
+- Ingest reproducible OpenStreetMap extracts for harbours, marinas, anchorages,
+  moorings, slipways, rescue stations, small-craft services, locks and bridges.
+- Preserve source feature identifiers, URLs, licence, extract time and warnings.
+- Add departure-time tide and wind views with valid time, datum/height units,
+  forecast run, freshness and missing-data states.
+- Add moderated, source-backed corrections and pilotage sections for
+  preparation, approach, arrival, facilities and departure.
+- Produce bounded offline passage packs with explicit coverage.
+
+### P2 — licensed chart and advanced planning
+
+- Add a provider-neutral official-chart adapter only after web display,
+  caching, update and redistribution terms are confirmed.
+- Explore GRIB import, tidal-gate calculations and current-aware ETA without
+  issuing helm commands.
+- Add club/flotilla shared plans only after solo planning and account-free
+  handoff are proven.
+
+## Data and provenance
+
+| Layer | Initial source | Claim allowed |
+|---|---|---|
+| General map | OpenFreeMap / OpenStreetMap | General geographic context |
+| Seamarks | OpenSeaMap / OpenStreetMap | Crowd-sourced seamark context; not a chart |
+| Depth shading | EMODnet Bathymetry DTM 2024 | Modelled ~115 m grid; not charted soundings or safe clearance |
+| Sailing POIs | Bounded OSM extract, ODbL | Community-maintained place information |
+| Tide stations | TICON-4 via Neaps, CC BY 4.0 | Astronomical prediction reference; not observed |
+| Wind | Open-Meteo, CC BY 4.0 | Model forecast with valid time; not observation |
+| Official chart | Unselected | No claim or display until licensed |
+
+The committed Solent catalogue is generated by
+`tools/places/generate_sailing_pois.py`; the browser must not continuously query
+public Overpass instances.
+
+## Success metrics
+
+Leading targets for private testing:
+
+- 80% of testers create and export or publish a passage on their first attempt.
+- Median time from opening the planner to a two-leg GPX is under five minutes.
+- 100% of displayed environmental and chart-context panels expose source and
+  valid/update time where the provider supplies it.
+- Fewer than 5% of attempted GPX handoffs fail after retry or fallback.
+
+Lagging targets:
+
+- 60% of sailors who create one passage return to plan another within 30 days.
+- At least 90% of testers correctly identify that the free map is not an
+  official nautical chart.
+
+## Delivery map
+
+- [#90](https://github.com/osholt/knot-alone/issues/90) — web passage planner MVP.
+- [#87](https://github.com/osholt/knot-alone/issues/87) — sailing POIs and marine discovery API.
+- [#92](https://github.com/osholt/knot-alone/issues/92) — time-aware tide and wind context.
+- [#91](https://github.com/osholt/knot-alone/issues/91) — chart-source adapters and provenance.
+- [#88](https://github.com/osholt/knot-alone/issues/88) — offline PWA and app-link handoff.
+- [#89](https://github.com/osholt/knot-alone/issues/89) — pilotage packs and corrections.
+
+## Open questions
+
+- **Data/licensing — blocking licensed charts:** which provider permits the
+  intended UK web display, mobile use, update-status display and offline cache?
+- **Engineering — non-blocking for local slice:** will the public site and relay
+  share an origin, or should the relay publish a narrowly scoped CORS policy for
+  plan creation and discovery reads?
+- **Product — non-blocking:** how much facility detail is useful before sailors
+  expect booking, availability or authoritative pilotage?
+
+## Timeline considerations
+
+The private MVP, starter catalogue and EMODnet depth-shading layer need no
+provider account. Tide and wind timelines can follow using existing provider
+contracts in the codebase. Licensed charts, a real app-link domain and public
+hosting are separate approval gates and must not be silently folded into the
+implementation.

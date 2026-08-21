@@ -52,6 +52,7 @@ from .observer import (
 from .push import PushDispatcher, register_push, registration_json, revoke_push
 from .rate_limit import SlidingWindowRateLimiter
 from .schemas import (
+    PUBLIC_DISCOVERY_CATEGORIES,
     CompatibilityResponse,
     CreateObserverGrantRequest,
     CreateObserverGrantResponse,
@@ -461,13 +462,7 @@ def create_app(
     ) -> JSONResponse:
         if west >= east or south >= north or east - west > 10 or north - south > 10:
             raise RelayServiceError(400, "A bounded discovery viewport is required")
-        allowed = {
-            "twisty_highlight",
-            "mountain_pass",
-            "good_biking_road",
-            "biker_stop",
-        }
-        selected = {item for item in categories.split(",") if item in allowed}
+        selected = {item for item in categories.split(",") if item in PUBLIC_DISCOVERY_CATEGORIES}
         if not selected:
             raise RelayServiceError(400, "At least one discovery category is required")
         return JSONResponse(

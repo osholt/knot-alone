@@ -938,16 +938,9 @@ class _VoyageFormState extends State<_VoyageForm> with WidgetsBindingObserver {
                   decoration: InputDecoration(
                     labelText: 'Planned route code (optional)',
                     hintText: 'e.g. 7F3K9QRT',
-                    // Was "From the web planner", which does not exist for this
-                    // app (#68). The relay does serve plans by code
-                    // (GET /api/v1/plans/{code}) and the POST that would create
-                    // one has no client here, so nothing in the app can produce
-                    // a code today - said plainly rather than pointing at a
-                    // website that is not there.
                     helperText:
-                        'For a code someone gave you. Nothing in this app '
-                        'creates one yet. The passage opens for review after '
-                        'the voyage is created.',
+                        'Create a code in the Tide and Seek web planner. The '
+                        'passage opens for review after the voyage is created.',
                     errorText: _planCodeError,
                     counterText: '',
                     suffixIcon: const Icon(Icons.qr_code),

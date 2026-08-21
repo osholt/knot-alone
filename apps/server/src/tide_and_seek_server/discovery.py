@@ -23,8 +23,9 @@ from .schemas import (
 from .service import RelayServiceError
 
 PUBLIC_WARNING = (
-    "Discovery highlights are descriptive and are not safety endorsements. "
-    "Check current access, closures, weather and road conditions."
+    "Community discovery content is descriptive, not official pilotage advice "
+    "or a safety endorsement. Check current access, facilities, restrictions, "
+    "hazards, weather and official publications."
 )
 
 
@@ -228,7 +229,7 @@ def _publish_approved_revision(
     feature_id = (
         suggestion.target_feature_id
         if suggestion.action in {"correct", "remove"}
-        else f"sweeper-community-{suggestion.id}"
+        else f"tide-and-seek-community-{suggestion.id}"
     )
     if feature_id is None:  # defended by schema, retained for service callers
         raise RelayServiceError(400, "Revision target required")
