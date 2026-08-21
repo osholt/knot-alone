@@ -15,12 +15,14 @@ import {
 import {
   boundsContain,
   clipContoursToWater,
-  createContourRequest,
+  contourSampleSupportsZoom,
   createGebcoContourRequest,
+  createShadingContourRequest,
   deriveShallowContours,
   EMODNET_COVERAGE,
   geometryContainsCoordinate,
-  parseEmodnetGrid,
+  parseEmodnetColourScale,
+  parseEmodnetShadingGrid,
   parseGebcoGrid,
 } from "./emodnet-contours.mjs";
 import { windFieldGeoJson, windGrid, windRequestUrl } from "./wind-field.mjs";
@@ -140,7 +142,9 @@ let catalogueRequested = false;
 let shallowContourData = EMPTY_FEATURE_COLLECTION;
 let shallowContourBounds = null;
 let shallowContourProvider = null;
+let shallowContourSampleZoom = null;
 let shallowContourAbortController = null;
+let emodnetColourScalePromise = null;
 let windRequestSequence = 0;
 let currentFieldRequestSequence = 0;
 let routeCurrentRequestSequence = 0;
@@ -1741,20 +1745,68 @@ function syncAdjustedContourData() {
   return data;
 }
 
+async function responseImageData(response) {
+  const blob = await response.blob();
+  let objectUrl = null;
+  const bitmap = typeof createImageBitmap === "function"
+    ? await createImageBitmap(blob)
+    : await new Promise((resolve, reject) => {
+        objectUrl = URL.createObjectURL(blob);
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("This browser could not decode the depth shading image."));
+        image.src = objectUrl;
+      });
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) throw new Error("This browser could not read the depth shading image.");
+    context.drawImage(bitmap, 0, 0);
+    return context.getImageData(0, 0, bitmap.width, bitmap.height);
+  } finally {
+    bitmap.close?.();
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function loadEmodnetColourScale(url) {
+  if (!emodnetColourScalePromise) {
+    emodnetColourScalePromise = fetch(url, { headers: { Accept: "application/json" } })
+      .then((response) => {
+        if (!response.ok) throw new Error(`colour scale HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(parseEmodnetColourScale)
+      .catch((error) => {
+        emodnetColourScalePromise = null;
+        throw error;
+      });
+  }
+  return emodnetColourScalePromise;
+}
+
 async function updateShallowContours(force = false) {
   if (!mapReady || !elements.shallowContoursVisible.checked) return;
   const visibleBounds = visibleMapBounds();
   const useEmodnet = boundsContain(EMODNET_COVERAGE, visibleBounds);
   const provider = useEmodnet ? "emodnet" : "gebco";
+  const canvas = map.getCanvas();
+  const zoom = map.getZoom();
   const request = useEmodnet
-    ? createContourRequest(visibleBounds, map.getZoom())
-    : createGebcoContourRequest(visibleBounds, map.getZoom());
+    ? createShadingContourRequest(visibleBounds, zoom, {
+        width: canvas.clientWidth,
+        height: canvas.clientHeight,
+      })
+    : createGebcoContourRequest(visibleBounds, zoom);
   if (!request) {
-    elements.shallowContourStatus.textContent = map.getZoom() < 8
+    elements.shallowContourStatus.textContent = zoom < 8
       ? "Zoom in to level 8 or closer to derive shallow contours for the visible coast."
       : "Global contours cannot be sampled while this view crosses the 180° meridian.";
     shallowContourBounds = null;
     shallowContourProvider = null;
+    shallowContourSampleZoom = null;
     shallowContourData = EMPTY_FEATURE_COLLECTION;
     refreshDepthAdjustment();
     return;
@@ -1762,7 +1814,8 @@ async function updateShallowContours(force = false) {
   if (
     !force &&
     shallowContourProvider === provider &&
-    boundsContain(shallowContourBounds, visibleBounds)
+    boundsContain(shallowContourBounds, visibleBounds) &&
+    contourSampleSupportsZoom(shallowContourSampleZoom, zoom)
   ) {
     syncAdjustedContourData();
     return;
@@ -1772,24 +1825,35 @@ async function updateShallowContours(force = false) {
   shallowContourAbortController = new AbortController();
   const controller = shallowContourAbortController;
   elements.shallowContourStatus.textContent = provider === "emodnet"
-    ? "Loading higher-resolution EMODnet depths for this map area…"
+    ? "Tracing shallow contours from the visible EMODnet depth colours…"
     : "Loading the global GEBCO grid and deriving contours for this map area…";
   try {
     const response = await fetch(request.url, {
-      headers: { Accept: "text/plain" },
+      headers: { Accept: provider === "emodnet" ? "image/png" : "text/plain" },
       signal: controller.signal,
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const responseText = await response.text();
-    const parsed = provider === "emodnet"
-      ? parseEmodnetGrid(responseText)
-      : parseGebcoGrid(responseText);
+    let parsed;
+    if (provider === "emodnet") {
+      const [imageData, colourScale] = await Promise.all([
+        responseImageData(response),
+        loadEmodnetColourScale(request.legendUrl),
+      ]);
+      parsed = parseEmodnetShadingGrid(imageData, colourScale, request.bounds);
+    } else {
+      parsed = parseGebcoGrid(await response.text());
+    }
     if (controller !== shallowContourAbortController) return;
     shallowContourData = deriveShallowContours(
       parsed,
       undefined,
       provider === "emodnet"
-        ? {}
+        ? {
+            featurePrefix: "emodnet-shading",
+            sourceName: "EMODnet DTM 2024 multicolour depth shading",
+            warning:
+              "Dynamically traced from modelled depth-shading colours; not a charted sounding or safe clearance.",
+          }
         : {
             featurePrefix: "gebco-live",
             sourceName: "GEBCO 2026 Grid",
@@ -1799,14 +1863,16 @@ async function updateShallowContours(force = false) {
     );
     shallowContourBounds = request.bounds;
     shallowContourProvider = provider;
+    shallowContourSampleZoom = zoom;
     refreshDepthAdjustment();
-    const resolution = request.resolutionLimited
-      ? "high-detail view sampling; zoom closer for the native grid"
-      : provider === "emodnet"
-        ? "native 115 m model grid"
+    if (provider === "emodnet") {
+      elements.shallowContourStatus.textContent = `${shallowContourData.features.length.toLocaleString("en-GB")} lines dynamically traced from the ${request.gridWidth}×${request.gridHeight} EMODnet colour surface · underlying model cells remain about 115 m · clipped to visible basemap water.`;
+    } else {
+      const resolution = request.resolutionLimited
+        ? "high-detail view sampling; zoom closer for the native grid"
         : "native 15 arc-second model grid";
-    const source = provider === "emodnet" ? "EMODnet" : "GEBCO global fallback";
-    elements.shallowContourStatus.textContent = `${shallowContourData.features.length.toLocaleString("en-GB")} connected ${source} lines for this area · ${resolution} · clipped to visible basemap water.`;
+      elements.shallowContourStatus.textContent = `${shallowContourData.features.length.toLocaleString("en-GB")} connected GEBCO global fallback lines for this area · ${resolution} · clipped to visible basemap water.`;
+    }
   } catch (error) {
     if (error.name === "AbortError") return;
     elements.shallowContourStatus.textContent = `Contours unavailable for this area (${error.message}).`;

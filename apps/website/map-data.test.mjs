@@ -4,11 +4,15 @@ import assert from "node:assert/strict";
 import {
   boundsContain,
   clipContoursToWater,
+  contourSampleSupportsZoom,
   createContourRequest,
   createGebcoContourRequest,
+  createShadingContourRequest,
   deriveShallowContours,
   geometryContainsCoordinate,
+  parseEmodnetColourScale,
   parseEmodnetGrid,
+  parseEmodnetShadingGrid,
   parseGebcoGrid,
 } from "./emodnet-contours.mjs";
 import { sampleWindAt, windFieldGeoJson, windGrid, windRequestUrl } from "./wind-field.mjs";
@@ -44,6 +48,83 @@ test("builds a bounded EMODnet request across England", () => {
   assert.ok(request.gridHeight <= 384);
   assert.equal(createContourRequest({ west: 120, south: -40, east: 130, north: -30 }, 9), null);
   assert.ok(boundsContain(request.bounds, { west: -5, south: 50, east: 1, north: 55 }));
+});
+
+test("builds a screen-resolution request for the EMODnet depth shading colours", () => {
+  const request = createShadingContourRequest(
+    { west: -5.2, south: 50.05, east: -4.95, north: 50.25 },
+    12,
+    { width: 900, height: 700 },
+  );
+  assert.match(request.url, /request=GetMap/i);
+  assert.match(request.url, /layers=emodnet%3Amean/i);
+  assert.match(request.url, /styles=multicolour/i);
+  assert.match(request.legendUrl, /GetLegendGraphic/i);
+  assert.equal(request.gridWidth, 1024);
+  assert.equal(request.gridHeight, 768);
+  assert.ok(boundsContain(request.bounds, { west: -5.2, south: 50.05, east: -4.95, north: 50.25 }));
+});
+
+test("refreshes a cached colour trace as the map zooms in", () => {
+  assert.equal(contourSampleSupportsZoom(10, 10.3), true);
+  assert.equal(contourSampleSupportsZoom(10, 10.5), false);
+  assert.equal(contourSampleSupportsZoom(10, 9), true);
+  assert.equal(contourSampleSupportsZoom(null, 10), false);
+});
+
+test("recovers shallow depths from the official shading colour ramp", () => {
+  const colourScale = parseEmodnetColourScale({
+    Legend: [{
+      rules: [{
+        symbolizers: [{
+          Raster: {
+            colormap: {
+              entries: [
+                { quantity: "-50", color: "#FFFF0D" },
+                { quantity: "-10", color: "#F90018" },
+                { quantity: "0", color: "#FF666A" },
+              ],
+            },
+          },
+        }],
+      }],
+    }],
+  });
+  const colours = {
+    land: [255, 102, 106, 255],
+    fiveMetres: [252, 51, 65, 255],
+    tenMetres: [249, 0, 24, 255],
+  };
+  const pixels = new Uint8ClampedArray([
+    ...colours.land, ...colours.land, ...colours.land, ...colours.land,
+    ...colours.land, ...colours.tenMetres, ...colours.tenMetres, ...colours.land,
+    ...colours.land, ...colours.tenMetres, ...colours.tenMetres, ...colours.land,
+    ...colours.land, ...colours.land, ...colours.land, ...colours.land,
+  ]);
+  const parsed = parseEmodnetShadingGrid(
+    { width: 4, height: 4, data: pixels },
+    colourScale,
+    { west: -5.2, south: 50.05, east: -4.95, north: 50.25 },
+  );
+  assert.ok(Math.abs(parsed.rows[0][0]) < 0.01);
+  assert.ok(Math.abs(parsed.rows[1][1] + 10) < 0.01);
+
+  const fiveMetrePixel = new Uint8ClampedArray([
+    ...colours.fiveMetres, ...colours.fiveMetres,
+    ...colours.fiveMetres, ...colours.fiveMetres,
+  ]);
+  const fiveMetreGrid = parseEmodnetShadingGrid(
+    { width: 2, height: 2, data: fiveMetrePixel },
+    colourScale,
+    { west: 0, south: 0, east: 1, north: 1 },
+  );
+  assert.ok(Math.abs(fiveMetreGrid.rows[0][0] + 5) < 0.2);
+
+  const contours = deriveShallowContours(parsed, [5], {
+    sourceName: "EMODnet multicolour depth shading",
+  });
+  assert.equal(contours.features.length, 1);
+  assert.equal(contours.features[0].properties.label, "5 m");
 });
 
 test("parses negative seabed elevations into shallow contours", () => {

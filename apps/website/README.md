@@ -15,10 +15,10 @@ motorcycle preferences or cafe discovery.
 - optional short plan-code publishing through `/api/v1/plans`;
 - OpenFreeMap general context and a toggleable OpenSeaMap seamark overlay;
 - toggleable EMODnet Bathymetry DTM 2024 depth shading with three transparent
-  water-only palettes, on-demand 2/5/10/20/30 m contours for the current view
-  throughout its North Atlantic and European coverage, a coarser GEBCO 2026
-  fallback elsewhere in the world, and EMODnet's generalised 50 m-and-deeper
-  European overlay;
+  water-only palettes, on-demand 2/5/10/20/30 m contours dynamically traced at
+  screen resolution from the same official multicolour shading surface throughout
+  its North Atlantic and European coverage, a coarser GEBCO 2026 fallback elsewhere
+  in the world, and EMODnet's generalised 50 m-and-deeper European overlay;
 - a zoom-adaptive wind field with downwind arrows, speed/time labels, gust detail,
   a purple passage-time halo near the route and explicit model—not observation—wording;
 - a locally entered passage start time, 15-minute time-of-day slider, hour/day
@@ -48,10 +48,11 @@ Straight route legs do not imply land, depth or hazard avoidance. OpenStreetMap,
 OpenSeaMap, EMODnet, tide and weather data remain visibly attributed and carry
 their source limitations.
 
-Derived depth contours omit any interpolation cell containing non-negative land
-or shoreline elevation. This avoids drawing a seabed contour through a mixed land/sea cell,
-but the source grid is still about 115 m in EMODnet coverage and its coastline
-can differ from the general-purpose basemap.
+The EMODnet shallow contours are decoded from its official styled-raster colour
+ramp and retraced when the map zooms in. They are clipped to water polygons from
+the visible basemap. The smoother screen-resolution trace does not add survey
+precision: the source grid is still about 115 m in EMODnet coverage and its
+coastline can differ from the general-purpose basemap.
 
 Run locally from the repository root:
 
