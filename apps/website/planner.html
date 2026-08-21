@@ -17,7 +17,7 @@
       integrity="sha384-uTttxo/aOKbdE5RlD/SPzSDoDmNvGlUYPjONi2MN/b7c9HPSvW07OIuyP7uL6jxK"
       crossorigin="anonymous"
     />
-    <link rel="stylesheet" href="/planner.css?v=20260821-6" />
+    <link rel="stylesheet" href="/planner.css?v=20260821-7" />
     <script src="/theme.js?v=20260821-6" defer></script>
   </head>
   <body class="planner-page">
@@ -180,7 +180,6 @@
               <span><i class="current-blend"></i>Blended time</span>
               <span><i class="current-route"></i>Expected route time</span>
               <span><i class="current-cts"></i>Course to steer</span>
-              <span><i class="current-drift"></i>Uncorrected drift if CTS is ignored</span>
               <span><i class="ground-track"></i>Desired ground track</span>
               <span>Arrows point with the flow</span>
             </div>
@@ -238,7 +237,7 @@
             <thead><tr><th>Leg</th><th>Course</th><th>Distance</th><th>Model current</th><th>ETA</th></tr></thead>
             <tbody id="leg-table"></tbody>
           </table>
-          <p>The coral dashed line is the desired ground track. Amber arrows show the modelled course to steer to stay on it. The labelled magenta dashed line is the drift track if that correction is ignored. Current samples are taken about every 2.5 NM. These are planning estimates, not helm instructions.</p>
+          <p>The coral dashed line is the desired ground track. Amber arrows show the modelled course to steer to stay on it. Current samples are taken about every 2.5 NM. These are planning estimates, not helm instructions.</p>
         </div>
 
         <section class="planner-actions" aria-label="Passage actions">
@@ -266,6 +265,7 @@
               <strong id="tide-table-title">Model tide near departure</strong>
               <small id="tide-table-status">Loading…</small>
             </div>
+            <div class="tide-height-chart" id="tide-height-chart" aria-live="polite"></div>
             <div class="tide-table" id="tide-table" aria-live="polite"></div>
           </section>
           <section aria-labelledby="sun-chart-title">
@@ -290,6 +290,6 @@
       integrity="sha384-5+cfbwT0iiub6VsQAdn6yz16nr6sDiQoHx6tm4O8OVYXHYOxcffFmCJBL0dgdvGp"
       crossorigin="anonymous"
     ></script>
-    <script type="module" src="/planner.js?v=20260821-6"></script>
+    <script type="module" src="/planner.js?v=20260821-7"></script>
   </body>
 </html>

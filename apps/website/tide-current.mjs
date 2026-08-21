@@ -92,16 +92,46 @@ export function tideRequestUrl(point, start, end) {
   return `${MARINE_API_URL}?${parameters}`;
 }
 
-export function tideEventsFromResponse(response, start, end) {
+export function tideSeriesFromResponse(response, start, end) {
   const rangeStart = validDate(start).getTime();
   const rangeEnd = validDate(end).getTime();
   const hourly = response?.hourly;
-  const times = Array.isArray(hourly?.time)
-    ? hourly.time.map((value) => Date.parse(`${value}Z`))
-    : [];
+  const times = Array.isArray(hourly?.time) ? hourly.time : [];
   const levels = Array.isArray(hourly?.sea_level_height_msl)
-    ? hourly.sea_level_height_msl.map(Number)
+    ? hourly.sea_level_height_msl
     : [];
+  return times.slice(0, levels.length).flatMap((value, index) => {
+    const time = Date.parse(`${value}Z`);
+    const heightMsl = Number(levels[index]);
+    return Number.isFinite(time) && Number.isFinite(heightMsl) &&
+      time >= rangeStart && time <= rangeEnd
+      ? [{ time: new Date(time).toISOString(), heightMsl }]
+      : [];
+  });
+}
+
+export function tideLevelAt(series, at) {
+  const target = validDate(at).getTime();
+  if (!Array.isArray(series) || series.length === 0) return null;
+  const samples = series
+    .map((sample) => ({ time: Date.parse(sample.time), heightMsl: Number(sample.heightMsl) }))
+    .filter((sample) => Number.isFinite(sample.time) && Number.isFinite(sample.heightMsl))
+    .sort((first, second) => first.time - second.time);
+  if (samples.length === 0 || target < samples[0].time || target > samples.at(-1).time) return null;
+  const upper = samples.findIndex((sample) => sample.time >= target);
+  if (upper <= 0) return samples[0].heightMsl;
+  const first = samples[upper - 1];
+  const second = samples[upper];
+  const fraction = (target - first.time) / Math.max(1, second.time - first.time);
+  return first.heightMsl + (second.heightMsl - first.heightMsl) * fraction;
+}
+
+export function tideEventsFromResponse(response, start, end) {
+  const series = tideSeriesFromResponse(response, start, end);
+  const rangeStart = validDate(start).getTime();
+  const rangeEnd = validDate(end).getTime();
+  const times = series.map((sample) => Date.parse(sample.time));
+  const levels = series.map((sample) => sample.heightMsl);
   const weights = [1, 2, 3, 2, 1];
   const smoothed = levels.map((_, index) => {
     let total = 0;
@@ -333,12 +363,6 @@ export function estimatePassageWithCurrents(
   const legs = [];
   let elapsedSeconds = 0;
   let complete = true;
-  let driftPosition = summary.legs[0]?.from
-    ? { longitude: summary.legs[0].from.longitude, latitude: summary.legs[0].from.latitude }
-    : null;
-  const driftCoordinates = driftPosition
-    ? [[driftPosition.longitude, driftPosition.latitude]]
-    : [];
 
   summary.legs.forEach((leg) => {
     const legStartSeconds = elapsedSeconds;
@@ -384,21 +408,6 @@ export function estimatePassageWithCurrents(
           weightedSeaLevel += sample.seaLevelMsl * usedDuration;
           seaLevelWeight += usedDuration;
         }
-      }
-      if (sample && driftPosition) {
-        const delta = ((sample.directionTowards - leg.bearingDegrees) * Math.PI) / 180;
-        const alongSpeed = speed + sample.speedKnots * Math.cos(delta);
-        const driftHours = planned.distanceMetres / METRES_PER_NAUTICAL_MILE /
-          Math.max(0.1, alongSpeed);
-        driftPosition = displaceByVelocity(
-          driftPosition,
-          speed,
-          leg.bearingDegrees,
-          sample.speedKnots,
-          sample.directionTowards,
-          driftHours,
-        );
-        driftCoordinates.push([driftPosition.longitude, driftPosition.latitude]);
       }
       samples.push({
         ...planned,
@@ -449,36 +458,12 @@ export function estimatePassageWithCurrents(
     arrivalTime: new Date(startDate.getTime() + elapsedSeconds * 1000).toISOString(),
     durationSeconds: complete ? elapsedSeconds : null,
     legs,
-    driftCoordinates,
   };
 }
 
 export function routeCurrentGeoJson(estimate, arrowLength = 0.012) {
   if (!estimate?.legs) return { type: "FeatureCollection", features: [] };
   const features = [];
-  if (estimate.driftCoordinates?.length > 1) {
-    features.push({
-      type: "Feature",
-      properties: {
-        kind: "drift-line",
-        timing: "expected-route",
-        warning: "Modelled track if each planned ground-track bearing is held without correcting for current.",
-      },
-      geometry: { type: "LineString", coordinates: estimate.driftCoordinates },
-    });
-    features.push({
-      type: "Feature",
-      properties: {
-        kind: "drift-label",
-        label: "UNCORRECTED DRIFT",
-        timing: "expected-route",
-      },
-      geometry: {
-        type: "Point",
-        coordinates: estimate.driftCoordinates[Math.floor(estimate.driftCoordinates.length / 2)],
-      },
-    });
-  }
   estimate.legs.forEach((leg) => {
     leg.samples?.forEach((sample) => {
       if (!Number.isFinite(sample.headingDegrees)) return;
@@ -646,29 +631,6 @@ function nearestPointOnLeg(point, leg) {
     : 0;
   const nearest = interpolateCoordinate(leg.from, leg.to, fraction);
   return { leg, fraction, distanceNm: distanceKilometres(point, nearest) / 1.852 };
-}
-
-function displaceByVelocity(
-  point,
-  boatSpeedKnots,
-  boatBearingDegrees,
-  currentSpeedKnots,
-  currentBearingDegrees,
-  durationHours,
-) {
-  const boatRadians = (boatBearingDegrees * Math.PI) / 180;
-  const currentRadians = (currentBearingDegrees * Math.PI) / 180;
-  const eastNm =
-    (boatSpeedKnots * Math.sin(boatRadians) + currentSpeedKnots * Math.sin(currentRadians)) *
-    durationHours;
-  const northNm =
-    (boatSpeedKnots * Math.cos(boatRadians) + currentSpeedKnots * Math.cos(currentRadians)) *
-    durationHours;
-  return {
-    longitude: Number(point.longitude) + eastNm /
-      (60 * Math.max(0.2, Math.cos((Number(point.latitude) * Math.PI) / 180))),
-    latitude: Number(point.latitude) + northNm / 60,
-  };
 }
 
 function interpolateNullable(first, second, fraction) {

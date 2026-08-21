@@ -200,11 +200,6 @@ input:focus, select:focus, textarea:focus { border-color: var(--sea); box-shadow
 .current-key .current-blend { background: #486fc0; }
 .current-key .current-route { height: 4px; background: #8a4faf; }
 .current-key .current-cts { height: 4px; background: #f09a35; }
-.current-key .current-drift {
-  height: 2px;
-  border-radius: 0;
-  background: repeating-linear-gradient(90deg, #c54e8f 0 5px, transparent 5px 8px);
-}
 .current-key .ground-track {
   height: 2px;
   border-radius: 0;
@@ -345,6 +340,27 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .environment-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .environment-heading > strong { font-size: 0.68rem; }
 .environment-heading > small { color: var(--muted); font-size: 0.56rem; text-align: right; }
+.tide-height-chart {
+  margin-top: 8px;
+  padding: 5px 6px 4px;
+  border: 1px solid #ccd9d7;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+.tide-height-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.tide-grid-line { stroke: #cad8d9; stroke-width: 1; }
+.tide-time-tick { stroke: var(--muted); stroke-width: 1; }
+.tide-axis-label { fill: var(--muted); font-size: 8px; }
+.tide-height-path {
+  fill: none;
+  stroke: var(--sea);
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tide-selected-line { stroke: var(--coral); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.tide-selected-point { fill: var(--coral); stroke: #fffdf7; stroke-width: 1.5; }
+.tide-chart-caption { margin: -2px 3px 2px; color: var(--muted); font-size: 0.58rem; text-align: center; }
 .tide-table { margin-top: 8px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
 .tide-event {
   padding: 7px 5px;
@@ -472,6 +488,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
 }
 :root[data-theme="dark"] .tide-event { border-color: #3a5359; background: rgba(16, 33, 38, 0.82); }
+:root[data-theme="dark"] .tide-height-chart { border-color: #3a5359; background: rgba(16, 33, 38, 0.82); }
+:root[data-theme="dark"] .tide-grid-line { stroke: #314950; }
+:root[data-theme="dark"] .tide-selected-point { stroke: #102126; }
 :root[data-theme="dark"] .sun-track { background: #17243d; }
 :root[data-theme="dark"] .map-provenance strong { color: #ff9b7d; }
 :root[data-theme="dark"] .maplibregl-popup-content,

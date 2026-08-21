@@ -34,9 +34,12 @@ import {
   routeCurrentGeoJson,
   sampleMarineAt,
   tideEventsFromResponse,
+  tideLevelAt,
   tideRequestUrl,
+  tideSeriesFromResponse,
 } from "./tide-current.mjs";
 import { sunChartRows, sunRequestUrl } from "./sun-times.mjs";
+import { fetchForecastJson } from "./forecast-cache.mjs";
 
 const MAP_STYLE_URLS = {
   light: "https://tiles.openfreemap.org/styles/liberty",
@@ -112,6 +115,7 @@ const elements = {
   startTime: document.querySelector("#start-time"),
   stillWaterDuration: document.querySelector("#still-water-duration"),
   tideDepthStatus: document.querySelector("#tide-depth-status"),
+  tideHeightChart: document.querySelector("#tide-height-chart"),
   tideTable: document.querySelector("#tide-table"),
   tideTableStatus: document.querySelector("#tide-table-status"),
   timeSlider: document.querySelector("#time-slider"),
@@ -135,20 +139,15 @@ let shallowContourData = EMPTY_FEATURE_COLLECTION;
 let shallowContourBounds = null;
 let shallowContourProvider = null;
 let shallowContourAbortController = null;
-let windAbortController = null;
 let windRequestSequence = 0;
-let currentFieldAbortController = null;
 let currentFieldRequestSequence = 0;
-let routeCurrentAbortController = null;
 let routeCurrentRequestSequence = 0;
 let routeCurrentEstimate = null;
 let currentDepthAdjustment = null;
 let marineDepthContext = null;
 let marineRefreshTimer = null;
 let marineRefreshPending = { field: false, route: false };
-let tideTableAbortController = null;
 let tideTableRequestSequence = 0;
-let sunAbortController = null;
 let sunRequestSequence = 0;
 let environmentRefreshTimer = null;
 
@@ -526,42 +525,6 @@ map.on("style.load", async () => {
 
   map.addSource("route-current", { type: "geojson", data: routeCurrentGeoJson(routeCurrentEstimate) });
   map.addLayer({
-    id: "route-drift-line",
-    type: "line",
-    source: "route-current",
-    filter: ["==", ["get", "kind"], "drift-line"],
-    minzoom: 4,
-    layout: {
-      visibility: elements.currentVisible.checked ? "visible" : "none",
-      "line-cap": "round",
-      "line-join": "round",
-    },
-    paint: {
-      "line-color": "#a82082",
-      "line-width": 2.8,
-      "line-dasharray": [1.5, 1.5],
-      "line-opacity": 0.9,
-    },
-  });
-  map.addLayer({
-    id: "route-drift-label",
-    type: "symbol",
-    source: "route-current",
-    filter: ["==", ["get", "kind"], "drift-label"],
-    minzoom: 5,
-    layout: {
-      visibility: elements.currentVisible.checked ? "visible" : "none",
-      "text-field": ["get", "label"],
-      "text-size": 10,
-      "text-offset": [0, -1],
-    },
-    paint: {
-      "text-color": currentTheme() === "dark" ? "#ffb6e4" : "#7d145f",
-      "text-halo-color": currentTheme() === "dark" ? "#0b1c22" : "#fffdf7",
-      "text-halo-width": 1.7,
-    },
-  });
-  map.addLayer({
     id: "route-current-arrows",
     type: "line",
     source: "route-current",
@@ -690,8 +653,6 @@ for (const layerId of [
   "wind-field-labels",
   "current-field-arrows",
   "current-field-labels",
-  "route-drift-line",
-  "route-drift-label",
   "route-current-arrows",
   "route-current-labels",
 ]) {
@@ -765,7 +726,7 @@ elements.windVisible.addEventListener("change", () => {
   if (elements.windVisible.checked) {
     updateWindField();
   } else {
-    windAbortController?.abort();
+    windRequestSequence += 1;
     elements.windStatus.textContent = "Wind field hidden. Turn it on to load model wind.";
   }
   scheduleDraftSave();
@@ -775,8 +736,8 @@ elements.currentVisible.addEventListener("change", () => {
   if (elements.currentVisible.checked) {
     scheduleMarineRefresh({ field: true, route: true }, 0);
   } else {
-    currentFieldAbortController?.abort();
-    routeCurrentAbortController?.abort();
+    currentFieldRequestSequence += 1;
+    routeCurrentRequestSequence += 1;
     elements.currentStatus.textContent = "Current field hidden.";
   }
   scheduleDraftSave();
@@ -800,8 +761,6 @@ function syncChartContextLayers() {
   setLayerVisibility("noaa-charts-layer", elements.noaaVisible.checked);
   setLayerVisibility("current-field-arrows", elements.currentVisible.checked);
   setLayerVisibility("current-field-labels", elements.currentVisible.checked);
-  setLayerVisibility("route-drift-line", elements.currentVisible.checked);
-  setLayerVisibility("route-drift-label", elements.currentVisible.checked);
   setLayerVisibility("route-current-arrows", elements.currentVisible.checked);
   setLayerVisibility("route-current-labels", elements.currentVisible.checked);
 }
@@ -1232,8 +1191,6 @@ async function importGpx() {
 
 async function updateWindField() {
   if (!mapReady || !elements.windVisible.checked) return;
-  windAbortController?.abort();
-  windAbortController = new AbortController();
   const requestSequence = ++windRequestSequence;
   const bounds = visibleMapBounds();
   const canvas = map.getCanvas();
@@ -1245,12 +1202,10 @@ async function updateWindField() {
   const rangeEnd = new Date(Math.max(...requestedTimes.map((date) => date.getTime())) + 3_600_000);
   elements.windStatus.textContent = "Loading zoom-adaptive wind at current and expected passage times…";
   try {
-    const response = await fetch(windRequestUrl(points, rangeStart, rangeEnd), {
-      headers: { Accept: "application/json" },
-      signal: windAbortController.signal,
+    const { data } = await fetchForecastJson(windRequestUrl(points, rangeStart, rangeEnd), {
+      ttlMs: 10 * 60 * 1000,
+      staleIfErrorMs: 60 * 60 * 1000,
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
     if (requestSequence !== windRequestSequence) return;
     const field = windFieldGeoJson(
       points,
@@ -1265,7 +1220,6 @@ async function updateWindField() {
     const routeTimed = timings.filter((timing) => timing.forecastWeight > 0.01).length;
     elements.windStatus.textContent = `${points.length} samples on a ${dimensions.columns}×${dimensions.rows} zoom-adaptive grid · ${routeTimed} near-route samples blend to their expected passage time and carry a purple halo. Labels show knots and UTC sample time; arrows point downwind.`;
   } catch (error) {
-    if (error.name === "AbortError") return;
     elements.windStatus.textContent = `Wind forecast unavailable (${error.message}).`;
   }
 }
@@ -1296,8 +1250,6 @@ async function updateCurrentField() {
     elements.currentStatus.textContent = "Choose a valid passage start time to load currents.";
     return;
   }
-  currentFieldAbortController?.abort();
-  currentFieldAbortController = new AbortController();
   const requestSequence = ++currentFieldRequestSequence;
   const bounds = visibleMapBounds();
   const canvas = map.getCanvas();
@@ -1315,15 +1267,10 @@ async function updateCurrentField() {
   const rangeEnd = new Date(Math.max(...requestedTimes.map((date) => date.getTime())) + 3_600_000);
   elements.currentStatus.textContent = "Loading the adaptive current field and route-time forecast…";
   try {
-    const response = await fetch(
-      marineRequestUrl(points, rangeStart, rangeEnd),
-      {
-        headers: { Accept: "application/json" },
-        signal: currentFieldAbortController.signal,
-      },
-    );
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
+    const { data } = await fetchForecastJson(marineRequestUrl(points, rangeStart, rangeEnd), {
+      ttlMs: 10 * 60 * 1000,
+      staleIfErrorMs: 60 * 60 * 1000,
+    });
     if (requestSequence !== currentFieldRequestSequence) return;
     const field = currentFieldGeoJson(
       points,
@@ -1354,7 +1301,6 @@ async function updateCurrentField() {
     const omitted = candidates.length - points.length;
     elements.currentStatus.textContent = `${waterSamples.length} distinct model sea cells on a ${dimensions.columns}×${dimensions.rows} zoom-adaptive grid; ${omitted} land grid positions omitted · teal is current time; ${routeTimed} cells blend through blue to purple at the nearest expected route time within 8 NM. Arrows point with the flow; labels show knots.`;
   } catch (error) {
-    if (error.name === "AbortError") return;
     map.getSource("current-field")?.setData(EMPTY_FEATURE_COLLECTION);
     marineDepthContext = null;
     currentDepthAdjustment = null;
@@ -1381,8 +1327,6 @@ async function updateRouteCurrentEstimate() {
     return;
   }
 
-  routeCurrentAbortController?.abort();
-  routeCurrentAbortController = new AbortController();
   const requestSequence = ++routeCurrentRequestSequence;
   const samplePlan = routeSamplePlan(summary);
   const points = samplePlan.map((sample) => sample.point);
@@ -1392,15 +1336,13 @@ async function updateRouteCurrentEstimate() {
   );
   elements.stillWaterDuration.textContent = "Loading currents expected along the passage…";
   try {
-    const response = await fetch(
+    const { data } = await fetchForecastJson(
       marineRequestUrl(points, start, new Date(start.getTime() + rangeSeconds * 1000)),
       {
-        headers: { Accept: "application/json" },
-        signal: routeCurrentAbortController.signal,
+        ttlMs: 10 * 60 * 1000,
+        staleIfErrorMs: 60 * 60 * 1000,
       },
     );
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
     if (requestSequence !== routeCurrentRequestSequence) return;
     routeCurrentEstimate = estimatePassageWithCurrents(
       summary,
@@ -1420,7 +1362,6 @@ async function updateRouteCurrentEstimate() {
       elements.stillWaterDuration.textContent = "Some leg currents were unavailable; showing still-water passage time.";
     }
   } catch (error) {
-    if (error.name === "AbortError") return;
     routeCurrentEstimate = null;
     map.getSource("route-current")?.setData(EMPTY_FEATURE_COLLECTION);
     renderSummary();
@@ -1485,31 +1426,106 @@ async function updateTideTable() {
   const start = selectedStartTime();
   if (!start) return;
   const point = environmentPoint("departure");
-  tideTableAbortController?.abort();
-  tideTableAbortController = new AbortController();
   const requestSequence = ++tideTableRequestSequence;
   elements.tideTableStatus.textContent = stops.length > 0 ? "near waypoint 1" : "at map centre";
   try {
-    const rangeStart = new Date(start.getTime() - 12 * 60 * 60 * 1000);
-    const rangeEnd = new Date(start.getTime() + 36 * 60 * 60 * 1000);
-    const response = await fetch(tideRequestUrl(point, rangeStart, rangeEnd), {
-      headers: { Accept: "application/json" },
-      signal: tideTableAbortController.signal,
+    const dayStart = new Date(Date.UTC(
+      start.getUTCFullYear(),
+      start.getUTCMonth(),
+      start.getUTCDate(),
+    ));
+    const rangeStart = new Date(dayStart.getTime() - 12 * 60 * 60 * 1000);
+    const rangeEnd = new Date(dayStart.getTime() + 60 * 60 * 60 * 1000);
+    const { data, cacheStatus } = await fetchForecastJson(tideRequestUrl(point, rangeStart, rangeEnd), {
+      ttlMs: 15 * 60 * 1000,
+      staleIfErrorMs: 24 * 60 * 60 * 1000,
+      persist: true,
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
     if (requestSequence !== tideTableRequestSequence) return;
     const events = tideEventsFromResponse(data, rangeStart, rangeEnd);
+    const chartStart = new Date(start.getTime() - 6 * 60 * 60 * 1000);
+    const chartEnd = new Date(start.getTime() + 30 * 60 * 60 * 1000);
+    const series = tideSeriesFromResponse(data, chartStart, chartEnd);
     const datum = depthAdjustmentFor({ provider: "emodnet", point, seaLevelMsl: 0 });
+    renderTideHeightChart(series, start, datum);
     renderTideTable(events, start, datum);
     elements.tideTableStatus.textContent = datum
-      ? `${datum.chartDatum} via ${datum.stationName} · device time`
-      : "MSL · device time";
+      ? `${datum.chartDatum} via ${datum.stationName} · device time${forecastCacheSuffix(cacheStatus)}`
+      : `MSL · device time${forecastCacheSuffix(cacheStatus)}`;
   } catch (error) {
-    if (error.name === "AbortError") return;
+    elements.tideHeightChart.replaceChildren(environmentEmpty("Model tide-height chart unavailable."));
     elements.tideTable.replaceChildren(environmentEmpty("Model tide table unavailable."));
     elements.tideTableStatus.textContent = error.message;
   }
+}
+
+function renderTideHeightChart(series, start, datum) {
+  elements.tideHeightChart.replaceChildren();
+  if (series.length < 2) {
+    elements.tideHeightChart.append(environmentEmpty("No tide-height series was resolved in this model window."));
+    return;
+  }
+  const offset = datum?.heightM || 0;
+  const samples = series.map((sample) => ({
+    time: Date.parse(sample.time),
+    height: sample.heightMsl + offset,
+  }));
+  const firstTime = samples[0].time;
+  const lastTime = samples.at(-1).time;
+  const heights = samples.map((sample) => sample.height);
+  const minimum = Math.min(...heights);
+  const maximum = Math.max(...heights);
+  const heightSpan = Math.max(0.2, maximum - minimum);
+  const chartMinimum = minimum - heightSpan * 0.08;
+  const chartMaximum = maximum + heightSpan * 0.08;
+  const width = 420;
+  const height = 126;
+  const plot = { left: 38, right: 10, top: 10, bottom: 25 };
+  const x = (time) => plot.left + ((time - firstTime) / (lastTime - firstTime)) *
+    (width - plot.left - plot.right);
+  const y = (value) => plot.top + ((chartMaximum - value) / (chartMaximum - chartMinimum)) *
+    (height - plot.top - plot.bottom);
+  const svg = svgNode("svg", {
+    class: "tide-height-svg",
+    viewBox: `0 0 ${width} ${height}`,
+    "aria-hidden": "true",
+  });
+
+  for (const value of [minimum, (minimum + maximum) / 2, maximum]) {
+    svg.append(
+      svgNode("line", { class: "tide-grid-line", x1: plot.left, x2: width - plot.right, y1: y(value), y2: y(value) }),
+      svgNode("text", { class: "tide-axis-label", x: plot.left - 5, y: y(value) + 3, "text-anchor": "end" }, value.toFixed(1)),
+    );
+  }
+  for (let index = 0; index < 4; index += 1) {
+    const time = firstTime + ((lastTime - firstTime) * index) / 3;
+    svg.append(
+      svgNode("line", { class: "tide-time-tick", x1: x(time), x2: x(time), y1: height - plot.bottom, y2: height - plot.bottom + 4 }),
+      svgNode("text", { class: "tide-axis-label", x: x(time), y: height - 7, "text-anchor": "middle" }, formatShortChartTime(new Date(time))),
+    );
+  }
+  const path = samples.map((sample, index) =>
+    `${index === 0 ? "M" : "L"}${x(sample.time).toFixed(1)},${y(sample.height).toFixed(1)}`
+  ).join(" ");
+  svg.append(svgNode("path", { class: "tide-height-path", d: path }));
+
+  const selectedHeightMsl = tideLevelAt(series, start);
+  if (selectedHeightMsl !== null && start.getTime() >= firstTime && start.getTime() <= lastTime) {
+    const selectedHeight = selectedHeightMsl + offset;
+    svg.append(
+      svgNode("line", { class: "tide-selected-line", x1: x(start), x2: x(start), y1: plot.top, y2: height - plot.bottom }),
+      svgNode("circle", { class: "tide-selected-point", cx: x(start), cy: y(selectedHeight), r: 4 }),
+    );
+  }
+
+  const caption = document.createElement("div");
+  caption.className = "tide-chart-caption";
+  const selectedHeight = tideLevelAt(series, start);
+  caption.textContent = selectedHeight === null
+    ? `Hourly model water height · m ${datum?.chartDatum || "MSL"}`
+    : `Passage start ${formatPassageTime(start)} · ${(selectedHeight + offset).toFixed(2)} m ${datum?.chartDatum || "MSL"}`;
+  elements.tideHeightChart.setAttribute("aria-label", caption.textContent);
+  elements.tideHeightChart.append(svg, caption);
 }
 
 function renderTideTable(events, start, datum) {
@@ -1519,10 +1535,11 @@ function renderTideTable(events, start, datum) {
     return;
   }
   const nextIndex = events.findIndex((event) => new Date(event.time) >= start);
-  events.slice(0, 8).forEach((event, index) => {
+  const firstVisibleIndex = Math.max(0, nextIndex - 2);
+  events.slice(firstVisibleIndex, firstVisibleIndex + 8).forEach((event, index) => {
     const date = new Date(event.time);
     const card = document.createElement("div");
-    card.className = `tide-event${index === nextIndex ? " next" : ""}`;
+    card.className = `tide-event${firstVisibleIndex + index === nextIndex ? " next" : ""}`;
     const kind = document.createElement("b");
     kind.textContent = event.kind === "high" ? "High" : "Low";
     const time = document.createElement("time");
@@ -1548,24 +1565,20 @@ async function updateSunChart() {
   const arrival = stops.length > 1 && Number.isFinite(duration)
     ? new Date(start.getTime() + duration * 1000)
     : null;
-  sunAbortController?.abort();
-  sunAbortController = new AbortController();
   const requestSequence = ++sunRequestSequence;
   elements.mapEnvironmentTime.textContent = formatPassageTime(start);
   elements.sunChartStatus.textContent = stops.length > 1 ? "at final waypoint" : "at map centre";
   try {
-    const response = await fetch(sunRequestUrl(point), {
-      headers: { Accept: "application/json" },
-      signal: sunAbortController.signal,
+    const { data, cacheStatus } = await fetchForecastJson(sunRequestUrl(point), {
+      ttlMs: 12 * 60 * 60 * 1000,
+      staleIfErrorMs: 7 * 24 * 60 * 60 * 1000,
+      persist: true,
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
     if (requestSequence !== sunRequestSequence) return;
     const chart = sunChartRows(data, start, arrival);
     renderSunChart(chart);
-    elements.sunChartStatus.textContent = `${stops.length > 1 ? "final waypoint" : "map centre"} · ${chart.timezoneAbbreviation}`;
+    elements.sunChartStatus.textContent = `${stops.length > 1 ? "final waypoint" : "map centre"} · ${chart.timezoneAbbreviation}${forecastCacheSuffix(cacheStatus)}`;
   } catch (error) {
-    if (error.name === "AbortError") return;
     elements.sunChart.replaceChildren(environmentEmpty("Sunrise and sunset unavailable."));
     elements.sunChartStatus.textContent = error.message;
   }
@@ -1634,6 +1647,27 @@ function environmentPoint(kind) {
   return { longitude: centre.lng, latitude: centre.lat };
 }
 
+function forecastCacheSuffix(cacheStatus) {
+  if (cacheStatus === "stale-cache") return " · cached fallback";
+  if (cacheStatus === "fresh-cache") return " · cached";
+  return "";
+}
+
+function formatShortChartTime(date) {
+  return date.toLocaleTimeString("en-GB", {
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function svgNode(name, attributes, textContent = null) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", name);
+  for (const [attribute, value] of Object.entries(attributes)) node.setAttribute(attribute, value);
+  if (textContent !== null) node.textContent = textContent;
+  return node;
+}
+
 function environmentEmpty(message) {
   const empty = document.createElement("p");
   empty.className = "environment-empty";
@@ -1642,7 +1676,6 @@ function environmentEmpty(message) {
 }
 
 function invalidateRouteCurrentEstimate() {
-  routeCurrentAbortController?.abort();
   routeCurrentRequestSequence += 1;
   routeCurrentEstimate = null;
   map.getSource("route-current")?.setData(EMPTY_FEATURE_COLLECTION);
