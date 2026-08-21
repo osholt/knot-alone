@@ -1,0 +1,38 @@
+name: Website CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/website/**'
+      - 'tools/build_website.sh'
+      - 'tools/contours/**'
+      - 'tools/places/**'
+      - '.github/workflows/website.yml'
+  pull_request:
+    paths:
+      - 'apps/website/**'
+      - 'tools/build_website.sh'
+      - 'tools/contours/**'
+      - 'tools/places/**'
+      - '.github/workflows/website.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Syntax, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: node --test apps/website/browser-syntax.test.mjs apps/website/planner-core.test.mjs apps/website/map-data.test.mjs
+      - run: python3 -m unittest tools/places/test_generate_sailing_pois.py
+      - run: python3 -m unittest tools/contours/test_generate_emodnet_shallow_contours.py
+      - run: ./tools/build_website.sh
+      - run: test -f build/website/planner.js
