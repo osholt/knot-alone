@@ -14,8 +14,8 @@ const NATIVE_STEP_DEGREES = 1 / 960;
 const GEBCO_CELLS_PER_DEGREE = 240;
 const MAX_GRID_WIDTH = 512;
 const MAX_GRID_HEIGHT = 384;
-const MAX_SHADING_WIDTH = 1024;
-const MAX_SHADING_HEIGHT = 768;
+const MAX_SHADING_WIDTH = 896;
+const MAX_SHADING_HEIGHT = 672;
 const NUMBER_PATTERN = /[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][-+]?\d+)?/g;
 
 function paddedEmodnetBounds(bounds) {
@@ -68,8 +68,8 @@ export function createShadingContourRequest(bounds, zoom, viewport = {}) {
 
   const viewportWidth = Math.max(256, Number(viewport.width) || 768);
   const viewportHeight = Math.max(192, Number(viewport.height) || 576);
-  const width = Math.min(MAX_SHADING_WIDTH, Math.round(viewportWidth * 1.32));
-  const height = Math.min(MAX_SHADING_HEIGHT, Math.round(viewportHeight * 1.32));
+  const width = Math.min(MAX_SHADING_WIDTH, Math.round(viewportWidth));
+  const height = Math.min(MAX_SHADING_HEIGHT, Math.round(viewportHeight));
   const parameters = new URLSearchParams({
     service: "WMS",
     version: "1.1.1",
@@ -174,7 +174,7 @@ export function contourSampleSupportsZoom(sampleZoom, visibleZoom) {
   return Boolean(
     Number.isFinite(sampleZoom) &&
       Number.isFinite(visibleZoom) &&
-      visibleZoom <= sampleZoom + 0.35,
+      visibleZoom <= sampleZoom + 0.75,
   );
 }
 
@@ -473,11 +473,60 @@ function lineLength(coordinates) {
   }, 0);
 }
 
+function squaredDistanceToSegment(point, first, second) {
+  const longitudeDelta = second[0] - first[0];
+  const latitudeDelta = second[1] - first[1];
+  const lengthSquared = longitudeDelta ** 2 + latitudeDelta ** 2;
+  if (lengthSquared === 0) {
+    return (point[0] - first[0]) ** 2 + (point[1] - first[1]) ** 2;
+  }
+  const ratio = Math.max(0, Math.min(1,
+    ((point[0] - first[0]) * longitudeDelta + (point[1] - first[1]) * latitudeDelta) /
+      lengthSquared));
+  const projected = [
+    first[0] + ratio * longitudeDelta,
+    first[1] + ratio * latitudeDelta,
+  ];
+  return (point[0] - projected[0]) ** 2 + (point[1] - projected[1]) ** 2;
+}
+
+function simplifyLine(coordinates, tolerance) {
+  if (coordinates.length <= 2 || !Number.isFinite(tolerance) || tolerance <= 0) {
+    return coordinates;
+  }
+  const keep = new Uint8Array(coordinates.length);
+  keep[0] = 1;
+  keep[coordinates.length - 1] = 1;
+  const toleranceSquared = tolerance ** 2;
+  const ranges = [[0, coordinates.length - 1]];
+  while (ranges.length) {
+    const [firstIndex, lastIndex] = ranges.pop();
+    let furthestIndex = -1;
+    let furthestDistance = toleranceSquared;
+    for (let index = firstIndex + 1; index < lastIndex; index += 1) {
+      const distance = squaredDistanceToSegment(
+        coordinates[index],
+        coordinates[firstIndex],
+        coordinates[lastIndex],
+      );
+      if (distance > furthestDistance) {
+        furthestDistance = distance;
+        furthestIndex = index;
+      }
+    }
+    if (furthestIndex < 0) continue;
+    keep[furthestIndex] = 1;
+    ranges.push([firstIndex, furthestIndex], [furthestIndex, lastIndex]);
+  }
+  return coordinates.filter((_, index) => keep[index]);
+}
+
 export function deriveShallowContours(
   parsed,
   levels = SHALLOW_CONTOUR_LEVELS,
   {
     featurePrefix = "emodnet-live",
+    simplifyTolerance = 0,
     sourceName = "EMODnet Bathymetry DTM 2024",
     warning = "Model-derived contour; not a charted sounding or safe clearance.",
   } = {},
@@ -488,10 +537,10 @@ export function deriveShallowContours(
     const lines = stitchSegments(contourSegments(depthGrid, level));
     lines.forEach((line, index) => {
       if (line.length < 3) return;
-      const coordinates = line.map(([row, column]) => [
+      const coordinates = simplifyLine(line.map(([row, column]) => [
         Number((parsed.transform.longitudeOrigin + column * parsed.transform.longitudeStep).toFixed(6)),
         Number((parsed.transform.latitudeOrigin + row * parsed.transform.latitudeStep).toFixed(6)),
-      ]);
+      ]), simplifyTolerance);
       if (lineLength(coordinates) < Math.abs(parsed.transform.longitudeStep) * 1.5) return;
       features.push({
         type: "Feature",

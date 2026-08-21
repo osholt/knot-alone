@@ -49,10 +49,12 @@ OpenSeaMap, EMODnet, tide and weather data remain visibly attributed and carry
 their source limitations.
 
 The EMODnet shallow contours are decoded from its official styled-raster colour
-ramp and retraced when the map zooms in. They are clipped to water polygons from
-the visible basemap. The smoother screen-resolution trace does not add survey
-precision: the source grid is still about 115 m in EMODnet coverage and its
-coastline can differ from the general-purpose basemap.
+ramp and retraced off the main UI thread when the map zooms in. Sub-pixel line
+simplification keeps map interaction responsive without visibly changing the
+trace, and the result is clipped to water polygons from the visible basemap. The
+smoother screen-resolution trace does not add survey precision: the source grid
+is still about 115 m in EMODnet coverage and its coastline can differ from the
+general-purpose basemap.
 
 Run locally from the repository root:
 
