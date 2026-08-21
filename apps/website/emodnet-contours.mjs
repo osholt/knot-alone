@@ -7,16 +7,18 @@ export const EMODNET_COVERAGE = Object.freeze({
 export const SHALLOW_CONTOUR_LEVELS = Object.freeze([2, 5, 10, 20, 30]);
 
 const WCS_URL = "https://ows.emodnet-bathymetry.eu/wcs";
+const WMS_URL = "https://ows.emodnet-bathymetry.eu/wms";
 const GEBCO_DAP_URL =
   "https://dap.ceda.ac.uk/thredds/dodsC/bodc/gebco/global/gebco_2026/ice_surface_elevation/netcdf/GEBCO_2026.nc";
 const NATIVE_STEP_DEGREES = 1 / 960;
 const GEBCO_CELLS_PER_DEGREE = 240;
 const MAX_GRID_WIDTH = 512;
 const MAX_GRID_HEIGHT = 384;
+const MAX_SHADING_WIDTH = 1024;
+const MAX_SHADING_HEIGHT = 768;
 const NUMBER_PATTERN = /[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][-+]?\d+)?/g;
 
-export function createContourRequest(bounds, zoom) {
-  if (!bounds || zoom < 8 || bounds.east <= bounds.west) return null;
+function paddedEmodnetBounds(bounds) {
   const width = bounds.east - bounds.west;
   const height = bounds.north - bounds.south;
   const requested = {
@@ -25,7 +27,15 @@ export function createContourRequest(bounds, zoom) {
     east: Math.min(EMODNET_COVERAGE.east, bounds.east + width * 0.16),
     north: Math.min(EMODNET_COVERAGE.north, bounds.north + height * 0.16),
   };
-  if (requested.east <= requested.west || requested.north <= requested.south) return null;
+  return requested.east > requested.west && requested.north > requested.south
+    ? requested
+    : null;
+}
+
+export function createContourRequest(bounds, zoom) {
+  if (!bounds || zoom < 8 || bounds.east <= bounds.west) return null;
+  const requested = paddedEmodnetBounds(bounds);
+  if (!requested) return null;
 
   const nativeWidth = Math.max(2, Math.ceil((requested.east - requested.west) / NATIVE_STEP_DEGREES));
   const nativeHeight = Math.max(2, Math.ceil((requested.north - requested.south) / NATIVE_STEP_DEGREES));
@@ -48,6 +58,47 @@ export function createContourRequest(bounds, zoom) {
     gridHeight,
     resolutionLimited: scale < 0.999,
     url: `${WCS_URL}?${parameters}`,
+  };
+}
+
+export function createShadingContourRequest(bounds, zoom, viewport = {}) {
+  if (!bounds || zoom < 8 || bounds.east <= bounds.west) return null;
+  const requested = paddedEmodnetBounds(bounds);
+  if (!requested) return null;
+
+  const viewportWidth = Math.max(256, Number(viewport.width) || 768);
+  const viewportHeight = Math.max(192, Number(viewport.height) || 576);
+  const width = Math.min(MAX_SHADING_WIDTH, Math.round(viewportWidth * 1.32));
+  const height = Math.min(MAX_SHADING_HEIGHT, Math.round(viewportHeight * 1.32));
+  const parameters = new URLSearchParams({
+    service: "WMS",
+    version: "1.1.1",
+    request: "GetMap",
+    layers: "emodnet:mean",
+    styles: "multicolour",
+    format: "image/png",
+    transparent: "true",
+    srs: "EPSG:4326",
+    bbox: [requested.west, requested.south, requested.east, requested.north]
+      .map((value) => value.toFixed(6))
+      .join(","),
+    width: String(width),
+    height: String(height),
+  });
+  const legendParameters = new URLSearchParams({
+    service: "WMS",
+    version: "1.1.1",
+    request: "GetLegendGraphic",
+    layer: "emodnet:mean",
+    style: "multicolour",
+    format: "application/json",
+  });
+  return {
+    bounds: requested,
+    gridWidth: width,
+    gridHeight: height,
+    legendUrl: `${WMS_URL}?${legendParameters}`,
+    url: `${WMS_URL}?${parameters}`,
   };
 }
 
@@ -116,6 +167,14 @@ export function boundsContain(outer, inner) {
       outer.south <= inner.south &&
       outer.east >= inner.east &&
       outer.north >= inner.north,
+  );
+}
+
+export function contourSampleSupportsZoom(sampleZoom, visibleZoom) {
+  return Boolean(
+    Number.isFinite(sampleZoom) &&
+      Number.isFinite(visibleZoom) &&
+      visibleZoom <= sampleZoom + 0.35,
   );
 }
 
@@ -198,6 +257,112 @@ export function parseGebcoGrid(text) {
   };
 }
 
+function parseHexColour(value) {
+  const match = String(value || "").match(/^#([0-9a-f]{6})$/i);
+  if (!match) return null;
+  const colour = Number.parseInt(match[1], 16);
+  return [(colour >> 16) & 255, (colour >> 8) & 255, colour & 255];
+}
+
+export function parseEmodnetColourScale(payload) {
+  const document = typeof payload === "string" ? JSON.parse(payload) : payload;
+  const entries = document?.Legend
+    ?.flatMap((legend) => legend.rules || [])
+    .flatMap((rule) => rule.symbolizers || [])
+    .map((symbolizer) => symbolizer.Raster?.colormap?.entries)
+    .find(Array.isArray);
+  if (!entries) throw new Error("The depth shading service returned no colour scale.");
+
+  const scale = entries
+    .map((entry) => ({ elevation: Number(entry.quantity), colour: parseHexColour(entry.color) }))
+    .filter((entry) => Number.isFinite(entry.elevation) && entry.colour)
+    .sort((first, second) => first.elevation - second.elevation);
+  if (scale.length < 2) throw new Error("The depth shading colour scale was incomplete.");
+  return scale;
+}
+
+function elevationFromColour(colour, scale) {
+  let closest = { distanceSquared: Number.POSITIVE_INFINITY, elevation: 0 };
+  for (let index = 1; index < scale.length; index += 1) {
+    const first = scale[index - 1];
+    const second = scale[index];
+    const vector = second.colour.map((value, channel) => value - first.colour[channel]);
+    const lengthSquared = vector.reduce((sum, value) => sum + value * value, 0);
+    const offset = colour.map((value, channel) => value - first.colour[channel]);
+    const ratio = lengthSquared === 0
+      ? 0
+      : Math.max(0, Math.min(1,
+        offset.reduce((sum, value, channel) => sum + value * vector[channel], 0) /
+          lengthSquared));
+    const distanceSquared = colour.reduce((sum, value, channel) => {
+      const rendered = first.colour[channel] + vector[channel] * ratio;
+      return sum + (value - rendered) ** 2;
+    }, 0);
+    if (distanceSquared < closest.distanceSquared) {
+      closest = {
+        distanceSquared,
+        elevation: first.elevation + (second.elevation - first.elevation) * ratio,
+      };
+    }
+  }
+  return closest.elevation;
+}
+
+export function parseEmodnetShadingGrid(imageData, colourScale, bounds) {
+  const width = Number(imageData?.width);
+  const height = Number(imageData?.height);
+  const pixels = imageData?.data;
+  if (
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    width < 2 ||
+    height < 2 ||
+    pixels?.length !== width * height * 4 ||
+    !bounds ||
+    bounds.east <= bounds.west ||
+    bounds.north <= bounds.south ||
+    !Array.isArray(colourScale) ||
+    colourScale.length < 2
+  ) {
+    throw new Error("The depth shading image was incomplete.");
+  }
+
+  const colourCache = new Map();
+  const rows = Array.from({ length: height }, () => Array(width));
+  for (let row = 0; row < height; row += 1) {
+    for (let column = 0; column < width; column += 1) {
+      const offset = (row * width + column) * 4;
+      if (pixels[offset + 3] < 128) {
+        rows[row][column] = Number.NaN;
+        continue;
+      }
+      const key = (pixels[offset] << 16) | (pixels[offset + 1] << 8) | pixels[offset + 2];
+      if (!colourCache.has(key)) {
+        colourCache.set(
+          key,
+          elevationFromColour(
+            [pixels[offset], pixels[offset + 1], pixels[offset + 2]],
+            colourScale,
+          ),
+        );
+      }
+      rows[row][column] = colourCache.get(key);
+    }
+  }
+
+  const longitudeStep = (bounds.east - bounds.west) / width;
+  const latitudeStep = -(bounds.north - bounds.south) / height;
+  return {
+    rows,
+    transform: {
+      longitudeStep,
+      longitudeOrigin: bounds.west + longitudeStep / 2,
+      latitudeStep,
+      latitudeOrigin: bounds.north + latitudeStep / 2,
+    },
+  };
+}
+
 function interpolate(first, second, level) {
   if (first === second) return 0.5;
   return Math.max(0, Math.min(1, (level - first) / (second - first)));
@@ -235,6 +400,7 @@ function contourSegments(grid, level) {
         grid[row + 1][column + 1],
         grid[row + 1][column],
       ];
+      if (corners.some((corner) => !Number.isFinite(corner))) continue;
       const contourCase = corners.reduce(
         (value, corner, index) => value + (corner >= level ? 1 << index : 0),
         0,
