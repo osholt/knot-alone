@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   boundsContain,
   clipContoursToWater,
+  contourQualityForZoom,
   contourSampleSupportsZoom,
   createContourRequest,
   createGebcoContourRequest,
@@ -16,7 +17,11 @@ import {
   parseGebcoGrid,
 } from "./emodnet-contours.mjs";
 import { sampleWindAt, windFieldGeoJson, windGrid, windRequestUrl } from "./wind-field.mjs";
-import { buildShadingContours } from "./contour-worker.mjs";
+import {
+  buildShadingContours,
+  handleContourMessage,
+  renderContoursForDisplay,
+} from "./contour-worker.mjs";
 import {
   currentEffect,
   currentFieldGeoJson,
@@ -51,7 +56,7 @@ test("builds a bounded EMODnet request across England", () => {
   assert.ok(boundsContain(request.bounds, { west: -5, south: 50, east: 1, north: 55 }));
 });
 
-test("builds a screen-resolution request for the EMODnet depth shading colours", () => {
+test("caps the EMODnet colour trace at the real model-cell resolution", () => {
   const request = createShadingContourRequest(
     { west: -5.2, south: 50.05, east: -4.95, north: 50.25 },
     12,
@@ -61,16 +66,34 @@ test("builds a screen-resolution request for the EMODnet depth shading colours",
   assert.match(request.url, /layers=emodnet%3Amean/i);
   assert.match(request.url, /styles=multicolour/i);
   assert.match(request.legendUrl, /GetLegendGraphic/i);
-  assert.equal(request.gridWidth, 896);
-  assert.equal(request.gridHeight, 672);
+  assert.equal(request.gridWidth, 317);
+  assert.equal(request.gridHeight, 254);
+  assert.equal(request.nativeResolution, true);
+  assert.equal(request.smoothPasses, 1);
+  assert.equal(request.simplifyToleranceCells, 0.45);
   assert.ok(boundsContain(request.bounds, { west: -5.2, south: 50.05, east: -4.95, north: 50.25 }));
+
+  const broadRequest = createShadingContourRequest(
+    { west: -5.8, south: 49.8, east: 1.8, north: 55.9 },
+    9,
+    { width: 900, height: 700 },
+  );
+  assert.equal(broadRequest.gridWidth, 612);
+  assert.equal(broadRequest.gridHeight, 476);
+  assert.equal(broadRequest.nativeResolution, false);
 });
 
 test("refreshes a cached colour trace as the map zooms in", () => {
-  assert.equal(contourSampleSupportsZoom(10, 10.7), true);
-  assert.equal(contourSampleSupportsZoom(10, 10.8), false);
+  assert.equal(contourSampleSupportsZoom(10, 10.5), true);
+  assert.equal(contourSampleSupportsZoom(10, 10.9), true);
+  assert.equal(contourSampleSupportsZoom(10.9, 11), false);
+  assert.equal(contourSampleSupportsZoom(13, 13.5), true);
   assert.equal(contourSampleSupportsZoom(10, 9), true);
   assert.equal(contourSampleSupportsZoom(null, 10), false);
+  assert.equal(contourQualityForZoom(10).smoothPasses, 0);
+  assert.equal(contourQualityForZoom(12).smoothPasses, 1);
+  assert.equal(contourQualityForZoom(14).smoothPasses, 2);
+  assert.equal(contourQualityForZoom(15).smoothPasses, 3);
 });
 
 test("recovers shallow depths from the official shading colour ramp", () => {
@@ -150,6 +173,36 @@ test("recovers shallow depths from the official shading colour ramp", () => {
   assert.ok(
     workerFiveMetreContours[0].geometry.coordinates.length <
       contours.features[0].geometry.coordinates.length,
+  );
+});
+
+test("collapses repeated display pixels before tracing native depth cells", () => {
+  const colourScale = [
+    { elevation: -10, colour: [0, 0, 255] },
+    { elevation: 0, colour: [255, 0, 0] },
+  ];
+  const pixels = new Uint8ClampedArray(8 * 8 * 4);
+  for (let row = 0; row < 8; row += 1) {
+    for (let column = 0; column < 8; column += 1) {
+      const offset = (row * 8 + column) * 4;
+      const deep = row >= 2 && row < 6 && column >= 2 && column < 6;
+      pixels.set(deep ? [0, 0, 255, 255] : [255, 0, 0, 255], offset);
+    }
+  }
+  const parsed = parseEmodnetShadingGrid(
+    { width: 8, height: 8, data: pixels },
+    colourScale,
+    { west: 0, south: 0, east: 4 / 960, north: 4 / 960 },
+  );
+  assert.equal(parsed.rows.length, 4);
+  assert.equal(parsed.rows[0].length, 4);
+
+  const unsmoothed = deriveShallowContours(parsed, [5]);
+  const smoothed = deriveShallowContours(parsed, [5], { smoothPasses: 2 });
+  assert.equal(smoothed.features.length, unsmoothed.features.length);
+  assert.notDeepEqual(
+    smoothed.features[0].geometry.coordinates,
+    unsmoothed.features[0].geometry.coordinates,
   );
 });
 
@@ -236,6 +289,59 @@ test("clips only the on-land pieces of a connected contour", () => {
   assert.deepEqual(
     clipped.features.map((feature) => feature.geometry.coordinates),
     [[[0, 0], [1, 0]], [[3, 0], [4, 0]]],
+  );
+});
+
+test("clips and tide-adjusts contours in the worker display pipeline", () => {
+  const contours = {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      id: "five-metres",
+      properties: { depthM: 5, label: "5 m" },
+      geometry: { type: "LineString", coordinates: [[0, 0.5], [1, 0.5], [2, 0.5]] },
+    }],
+  };
+  const displayed = renderContoursForDisplay(contours, {
+    adjustment: { chartDatum: "LAT", heightM: 1.2, validTime: "2026-08-22T00:00:00Z" },
+    bounds: { west: 0, south: 0, east: 2, north: 1 },
+    waterGeometries: [{
+      type: "Polygon",
+      coordinates: [[[0, 0], [1.1, 0], [1.1, 1], [0, 1], [0, 0]]],
+    }],
+  });
+  assert.equal(displayed.features.length, 1);
+  assert.deepEqual(displayed.features[0].geometry.coordinates, [[0, 0.5], [1, 0.5]]);
+  assert.equal(displayed.features[0].properties.adjustedDepthM, 6.2);
+  assert.match(displayed.features[0].properties.displayLabel, /~6\.2 m/);
+});
+
+test("reuses a stored contour sample for later viewport renders", async () => {
+  const contours = {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      id: "ten-metres",
+      properties: { depthM: 10, label: "10 m" },
+      geometry: { type: "LineString", coordinates: [[0, 0], [1, 0], [2, 0]] },
+    }],
+  };
+  const stored = await handleContourMessage({
+    contours,
+    display: {},
+    sampleId: "sample-a",
+    type: "store",
+  });
+  assert.equal(stored.sourceFeatureCount, 1);
+  const rerendered = await handleContourMessage({
+    display: { adjustment: { chartDatum: "LAT", heightM: 0.8 } },
+    sampleId: "sample-a",
+    type: "render",
+  });
+  assert.equal(rerendered.contours.features[0].properties.adjustedDepthM, 10.8);
+  await assert.rejects(
+    handleContourMessage({ display: {}, sampleId: "sample-b", type: "render" }),
+    /no longer available/,
   );
 });
 

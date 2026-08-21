@@ -14,18 +14,20 @@ const NATIVE_STEP_DEGREES = 1 / 960;
 const GEBCO_CELLS_PER_DEGREE = 240;
 const MAX_GRID_WIDTH = 512;
 const MAX_GRID_HEIGHT = 384;
-const MAX_SHADING_WIDTH = 896;
-const MAX_SHADING_HEIGHT = 672;
+const MAX_SHADING_WIDTH = 1280;
+const MAX_SHADING_HEIGHT = 960;
 const NUMBER_PATTERN = /[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][-+]?\d+)?/g;
 
 function paddedEmodnetBounds(bounds) {
   const width = bounds.east - bounds.west;
   const height = bounds.north - bounds.south;
+  const longitudePadding = Math.max(width * 0.16, NATIVE_STEP_DEGREES * 6);
+  const latitudePadding = Math.max(height * 0.16, NATIVE_STEP_DEGREES * 6);
   const requested = {
-    west: Math.max(EMODNET_COVERAGE.west, bounds.west - width * 0.16),
-    south: Math.max(EMODNET_COVERAGE.south, bounds.south - height * 0.16),
-    east: Math.min(EMODNET_COVERAGE.east, bounds.east + width * 0.16),
-    north: Math.min(EMODNET_COVERAGE.north, bounds.north + height * 0.16),
+    west: Math.max(EMODNET_COVERAGE.west, bounds.west - longitudePadding),
+    south: Math.max(EMODNET_COVERAGE.south, bounds.south - latitudePadding),
+    east: Math.min(EMODNET_COVERAGE.east, bounds.east + longitudePadding),
+    north: Math.min(EMODNET_COVERAGE.north, bounds.north + latitudePadding),
   };
   return requested.east > requested.west && requested.north > requested.south
     ? requested
@@ -68,8 +70,25 @@ export function createShadingContourRequest(bounds, zoom, viewport = {}) {
 
   const viewportWidth = Math.max(256, Number(viewport.width) || 768);
   const viewportHeight = Math.max(192, Number(viewport.height) || 576);
-  const width = Math.min(MAX_SHADING_WIDTH, Math.round(viewportWidth));
-  const height = Math.min(MAX_SHADING_HEIGHT, Math.round(viewportHeight));
+  const quality = contourQualityForZoom(zoom);
+  const nativeWidth = Math.max(
+    2,
+    Math.ceil((requested.east - requested.west) / NATIVE_STEP_DEGREES),
+  );
+  const nativeHeight = Math.max(
+    2,
+    Math.ceil((requested.north - requested.south) / NATIVE_STEP_DEGREES),
+  );
+  const width = Math.min(
+    MAX_SHADING_WIDTH,
+    nativeWidth,
+    Math.max(2, Math.round(viewportWidth * quality.rasterScale)),
+  );
+  const height = Math.min(
+    MAX_SHADING_HEIGHT,
+    nativeHeight,
+    Math.max(2, Math.round(viewportHeight * quality.rasterScale)),
+  );
   const parameters = new URLSearchParams({
     service: "WMS",
     version: "1.1.1",
@@ -97,6 +116,9 @@ export function createShadingContourRequest(bounds, zoom, viewport = {}) {
     bounds: requested,
     gridWidth: width,
     gridHeight: height,
+    nativeResolution: width === nativeWidth && height === nativeHeight,
+    simplifyToleranceCells: quality.simplifyToleranceCells,
+    smoothPasses: quality.smoothPasses,
     legendUrl: `${WMS_URL}?${legendParameters}`,
     url: `${WMS_URL}?${parameters}`,
   };
@@ -174,8 +196,23 @@ export function contourSampleSupportsZoom(sampleZoom, visibleZoom) {
   return Boolean(
     Number.isFinite(sampleZoom) &&
       Number.isFinite(visibleZoom) &&
-      visibleZoom <= sampleZoom + 0.75,
+      (visibleZoom <= sampleZoom ||
+        contourQualityForZoom(visibleZoom).level === contourQualityForZoom(sampleZoom).level),
   );
+}
+
+export function contourQualityForZoom(zoom) {
+  const value = Number(zoom);
+  if (value >= 15) {
+    return { level: 3, rasterScale: 1.3, simplifyToleranceCells: 0.18, smoothPasses: 3 };
+  }
+  if (value >= 13) {
+    return { level: 2, rasterScale: 1.12, simplifyToleranceCells: 0.3, smoothPasses: 2 };
+  }
+  if (value >= 11) {
+    return { level: 1, rasterScale: 0.92, simplifyToleranceCells: 0.45, smoothPasses: 1 };
+  }
+  return { level: 0, rasterScale: 0.68, simplifyToleranceCells: 0.65, smoothPasses: 0 };
 }
 
 export function parseEmodnetGrid(text) {
@@ -309,15 +346,15 @@ function elevationFromColour(colour, scale) {
 }
 
 export function parseEmodnetShadingGrid(imageData, colourScale, bounds) {
-  const width = Number(imageData?.width);
-  const height = Number(imageData?.height);
+  const sourceWidth = Number(imageData?.width);
+  const sourceHeight = Number(imageData?.height);
   const pixels = imageData?.data;
   if (
-    !Number.isInteger(width) ||
-    !Number.isInteger(height) ||
-    width < 2 ||
-    height < 2 ||
-    pixels?.length !== width * height * 4 ||
+    !Number.isInteger(sourceWidth) ||
+    !Number.isInteger(sourceHeight) ||
+    sourceWidth < 2 ||
+    sourceHeight < 2 ||
+    pixels?.length !== sourceWidth * sourceHeight * 4 ||
     !bounds ||
     bounds.east <= bounds.west ||
     bounds.north <= bounds.south ||
@@ -327,11 +364,31 @@ export function parseEmodnetShadingGrid(imageData, colourScale, bounds) {
     throw new Error("The depth shading image was incomplete.");
   }
 
+  // GeoServer expands the roughly 1/960° EMODnet cells with nearest-neighbour
+  // pixels when the requested image is larger than the source grid. Trace one
+  // sample per real model cell so marching squares interpolates between depth
+  // samples instead of following the edges of those repeated display pixels.
+  const width = Math.min(
+    sourceWidth,
+    Math.max(2, Math.ceil((bounds.east - bounds.west) / NATIVE_STEP_DEGREES)),
+  );
+  const height = Math.min(
+    sourceHeight,
+    Math.max(2, Math.ceil((bounds.north - bounds.south) / NATIVE_STEP_DEGREES)),
+  );
   const colourCache = new Map();
   const rows = Array.from({ length: height }, () => Array(width));
   for (let row = 0; row < height; row += 1) {
+    const sourceRow = Math.min(
+      sourceHeight - 1,
+      Math.floor(((row + 0.5) / height) * sourceHeight),
+    );
     for (let column = 0; column < width; column += 1) {
-      const offset = (row * width + column) * 4;
+      const sourceColumn = Math.min(
+        sourceWidth - 1,
+        Math.floor(((column + 0.5) / width) * sourceWidth),
+      );
+      const offset = (sourceRow * sourceWidth + sourceColumn) * 4;
       if (pixels[offset + 3] < 128) {
         rows[row][column] = Number.NaN;
         continue;
@@ -521,12 +578,37 @@ function simplifyLine(coordinates, tolerance) {
   return coordinates.filter((_, index) => keep[index]);
 }
 
+function smoothLine(points, passes) {
+  let result = points;
+  const passCount = Math.max(0, Math.min(4, Math.floor(Number(passes) || 0)));
+  for (let pass = 0; pass < passCount && result.length > 3; pass += 1) {
+    const closed = pointKey(result[0]) === pointKey(result.at(-1));
+    const uniqueLength = closed ? result.length - 1 : result.length;
+    const next = result.map((point) => [...point]);
+    const start = closed ? 0 : 1;
+    const end = closed ? uniqueLength : uniqueLength - 1;
+    for (let index = start; index < end; index += 1) {
+      const previous = result[(index - 1 + uniqueLength) % uniqueLength];
+      const current = result[index];
+      const following = result[(index + 1) % uniqueLength];
+      next[index] = [
+        previous[0] * 0.25 + current[0] * 0.5 + following[0] * 0.25,
+        previous[1] * 0.25 + current[1] * 0.5 + following[1] * 0.25,
+      ];
+    }
+    if (closed) next[next.length - 1] = [...next[0]];
+    result = next;
+  }
+  return result;
+}
+
 export function deriveShallowContours(
   parsed,
   levels = SHALLOW_CONTOUR_LEVELS,
   {
     featurePrefix = "emodnet-live",
     simplifyTolerance = 0,
+    smoothPasses = 0,
     sourceName = "EMODnet Bathymetry DTM 2024",
     warning = "Model-derived contour; not a charted sounding or safe clearance.",
   } = {},
@@ -537,7 +619,7 @@ export function deriveShallowContours(
     const lines = stitchSegments(contourSegments(depthGrid, level));
     lines.forEach((line, index) => {
       if (line.length < 3) return;
-      const coordinates = simplifyLine(line.map(([row, column]) => [
+      const coordinates = simplifyLine(smoothLine(line, smoothPasses).map(([row, column]) => [
         Number((parsed.transform.longitudeOrigin + column * parsed.transform.longitudeStep).toFixed(6)),
         Number((parsed.transform.latitudeOrigin + row * parsed.transform.latitudeStep).toFixed(6)),
       ]), simplifyTolerance);

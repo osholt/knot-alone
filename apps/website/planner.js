@@ -14,15 +14,12 @@ import {
 } from "./planner-storage.mjs";
 import {
   boundsContain,
-  clipContoursToWater,
   contourSampleSupportsZoom,
   createGebcoContourRequest,
   createShadingContourRequest,
-  deriveShallowContours,
   EMODNET_COVERAGE,
   geometryContainsCoordinate,
   parseEmodnetColourScale,
-  parseGebcoGrid,
 } from "./emodnet-contours.mjs";
 import { windFieldGeoJson, windGrid, windRequestUrl } from "./wind-field.mjs";
 import {
@@ -142,8 +139,14 @@ let shallowContourData = EMPTY_FEATURE_COLLECTION;
 let shallowContourBounds = null;
 let shallowContourProvider = null;
 let shallowContourSampleZoom = null;
+let shallowContourSampleId = null;
+let shallowContourSampleSequence = 0;
 let shallowContourAbortController = null;
-let shallowContourWorkerJob = null;
+let shallowContourWorker = null;
+let shallowContourWorkerJobSequence = 0;
+let shallowContourWorkerJobs = new Map();
+let shallowContourRenderSequence = 0;
+let shallowContourRenderTimer = null;
 let emodnetColourScalePromise = null;
 let windRequestSequence = 0;
 let currentFieldRequestSequence = 0;
@@ -156,6 +159,7 @@ let marineRefreshPending = { field: false, route: false };
 let tideTableRequestSequence = 0;
 let sunRequestSequence = 0;
 let environmentRefreshTimer = null;
+let mapMoveRefreshTimer = null;
 
 restoreDraft();
 syncTimeSliderFromStart();
@@ -591,11 +595,26 @@ window.addEventListener("tideandseekthemechange", (event) => {
   map.setStyle(MAP_STYLE_URLS[theme]);
 });
 
+map.on("movestart", () => {
+  clearTimeout(mapMoveRefreshTimer);
+  clearTimeout(shallowContourRenderTimer);
+  shallowContourAbortController?.abort();
+  shallowContourAbortController = null;
+  shallowContourRenderSequence += 1;
+  windRequestSequence += 1;
+  currentFieldRequestSequence += 1;
+  tideTableRequestSequence += 1;
+  sunRequestSequence += 1;
+});
+
 map.on("moveend", () => {
-  updateShallowContours();
-  if (elements.windVisible.checked) updateWindField();
-  if (elements.currentVisible.checked) updateCurrentField();
-  scheduleEnvironmentRefresh();
+  clearTimeout(mapMoveRefreshTimer);
+  mapMoveRefreshTimer = setTimeout(() => {
+    updateShallowContours();
+    if (elements.windVisible.checked) updateWindField();
+    if (elements.currentVisible.checked) updateCurrentField();
+  }, 180);
+  scheduleEnvironmentRefresh(420);
 });
 
 map.on("click", async (event) => {
@@ -1261,7 +1280,8 @@ async function updateCurrentField() {
   const canvas = map.getCanvas();
   const dimensions = currentGridDimensions(canvas.clientWidth, canvas.clientHeight, map.getZoom());
   const candidates = marineGrid(bounds, dimensions.columns, dimensions.rows);
-  const points = waterOnlyModelPoints(candidates);
+  const waterContainsPoint = renderedWaterContainsPoint();
+  const points = waterOnlyModelPoints(candidates, waterContainsPoint);
   if (points.length === 0) {
     map.getSource("current-field")?.setData(EMPTY_FEATURE_COLLECTION);
     elements.currentStatus.textContent = "No basemap water cells are visible for the current field.";
@@ -1286,8 +1306,8 @@ async function updateCurrentField() {
       dimensions.columns,
       dimensions.rows,
     );
-    const waterSamples = field.samples.filter((sample) => basemapShowsWater(sample.point));
-    const visibleField = currentFeaturesOverWater(field.geojson);
+    const waterSamples = field.samples.filter((sample) => waterContainsPoint(sample.point));
+    const visibleField = currentFeaturesOverWater(field.geojson, waterContainsPoint);
     if (visibleField.features.length === 0) throw new Error("no visible model sea cells");
     map.getSource("current-field")?.setData(visibleField);
     const centre = {
@@ -1719,34 +1739,49 @@ function refreshDepthAdjustment() {
 
 function syncAdjustedContourData() {
   if (!mapReady) return shallowContourData;
-  const waterPredicate = renderedWaterPredicate();
-  const waterClippedData = waterPredicate
-    ? clipContoursToWater(shallowContourData, waterPredicate, visibleMapBounds())
-    : shallowContourData;
-  const data = currentDepthAdjustment
-    ? {
-        ...waterClippedData,
-        features: waterClippedData.features.map((feature) => {
-          const adjustedDepth = Number(feature.properties?.depthM) + currentDepthAdjustment.heightM;
-          return {
-            ...feature,
-            properties: {
-              ...feature.properties,
-              adjustedDepthM: adjustedDepth,
-              displayLabel: `${feature.properties.depthM} m ${currentDepthAdjustment.chartDatum} → ~${adjustedDepth.toFixed(1)} m`,
-              tideHeightM: currentDepthAdjustment.heightM,
-              tideValidTime: marineDepthContext?.validTime,
-            },
-          };
-        }),
+  clearTimeout(shallowContourRenderTimer);
+  const sampleId = shallowContourSampleId;
+  if (!sampleId || !shallowContourWorker) {
+    map.getSource("shallow-contours")?.setData(shallowContourData);
+    return shallowContourData;
+  }
+  const renderSequence = ++shallowContourRenderSequence;
+  shallowContourRenderTimer = setTimeout(async () => {
+    try {
+      const result = await contourWorkerRequest("render", {
+        display: contourDisplayContext(),
+        sampleId,
+      });
+      if (
+        renderSequence !== shallowContourRenderSequence ||
+        sampleId !== shallowContourSampleId
+      ) return;
+      shallowContourData = result.contours;
+      map.getSource("shallow-contours")?.setData(shallowContourData);
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        elements.shallowContourStatus.textContent = `Contours could not be refreshed (${error.message}).`;
       }
-    : waterClippedData;
-  map.getSource("shallow-contours")?.setData(data);
-  return data;
+    }
+  }, 0);
+  return shallowContourData;
 }
 
-async function responseImageData(response) {
-  const blob = await response.blob();
+function contourDisplayContext(adjustment = currentDepthAdjustment) {
+  return {
+    adjustment
+      ? {
+          chartDatum: adjustment.chartDatum,
+          heightM: adjustment.heightM,
+          validTime: marineDepthContext?.validTime,
+        }
+      : null,
+    bounds: visibleMapBounds(),
+    waterGeometries: renderedWaterGeometries(),
+  };
+}
+
+async function imageDataFromBlob(blob) {
   let objectUrl = null;
   const bitmap = typeof createImageBitmap === "function"
     ? await createImageBitmap(blob)
@@ -1787,43 +1822,78 @@ function loadEmodnetColourScale(url) {
   return emodnetColourScalePromise;
 }
 
-function cancelShadingContourWorker() {
-  if (!shallowContourWorkerJob) return;
-  const { reject, worker } = shallowContourWorkerJob;
-  shallowContourWorkerJob = null;
-  worker.terminate();
-  reject(new DOMException("Contour generation superseded.", "AbortError"));
+function ensureContourWorker() {
+  if (shallowContourWorker) return shallowContourWorker;
+  const worker = new Worker("/contour-worker.mjs?v=20260822-1", { type: "module" });
+  shallowContourWorker = worker;
+  worker.addEventListener("message", (event) => {
+    const job = shallowContourWorkerJobs.get(event.data?.jobId);
+    if (!job) return;
+    shallowContourWorkerJobs.delete(event.data.jobId);
+    if (event.data?.error) {
+      const error = new Error(event.data.error);
+      error.code = event.data.code;
+      job.reject(error);
+    } else {
+      job.resolve(event.data);
+    }
+  });
+  worker.addEventListener("error", () => {
+    if (shallowContourWorker !== worker) return;
+    const error = new Error("The browser contour worker failed.");
+    for (const job of shallowContourWorkerJobs.values()) job.reject(error);
+    shallowContourWorkerJobs.clear();
+    shallowContourWorker = null;
+  });
+  return worker;
 }
 
-function deriveShadingContoursInWorker(imageData, colourScale, bounds, options) {
-  cancelShadingContourWorker();
+function restartContourWorker() {
+  const error = new DOMException("Contour generation superseded.", "AbortError");
+  for (const job of shallowContourWorkerJobs.values()) job.reject(error);
+  shallowContourWorkerJobs.clear();
+  shallowContourWorker?.terminate();
+  shallowContourWorker = null;
+  return ensureContourWorker();
+}
+
+function contourWorkerRequest(type, payload, transfer = []) {
+  const worker = ensureContourWorker();
+  const jobId = ++shallowContourWorkerJobSequence;
   return new Promise((resolve, reject) => {
-    const worker = new Worker("/contour-worker.mjs", { type: "module" });
-    shallowContourWorkerJob = { reject, worker };
-    const finish = (callback, value) => {
-      if (shallowContourWorkerJob?.worker === worker) shallowContourWorkerJob = null;
-      worker.terminate();
-      callback(value);
-    };
-    worker.addEventListener("message", (event) => {
-      if (event.data?.error) {
-        finish(reject, new Error(event.data.error));
-      } else {
-        finish(resolve, event.data.contours);
-      }
-    });
-    worker.addEventListener("error", () => {
-      finish(reject, new Error("The browser contour worker failed."));
-    });
-    worker.postMessage({
-      bounds,
-      colourScale,
+    shallowContourWorkerJobs.set(jobId, { reject, resolve });
+    worker.postMessage({ ...payload, jobId, type }, transfer);
+  });
+}
+
+async function deriveShadingContoursInWorker(
+  imageBlob,
+  colourScale,
+  bounds,
+  options,
+  sampleId,
+  display,
+) {
+  const payload = {
+    bounds,
+    colourScale,
+    display,
+    imageBlob,
+    options,
+    sampleId,
+  };
+  try {
+    return await contourWorkerRequest("derive-blob", payload);
+  } catch (error) {
+    if (error.code !== "IMAGE_DECODE_UNAVAILABLE") throw error;
+    const imageData = await imageDataFromBlob(imageBlob);
+    return contourWorkerRequest("derive-pixels", {
+      ...payload,
       height: imageData.height,
-      options,
       pixels: imageData.data.buffer,
       width: imageData.width,
     }, [imageData.data.buffer]);
-  });
+  }
 }
 
 async function updateShallowContours(force = false) {
@@ -1846,13 +1916,16 @@ async function updateShallowContours(force = false) {
     shallowContourBounds = null;
     shallowContourProvider = null;
     shallowContourSampleZoom = null;
+    shallowContourSampleId = null;
     shallowContourData = EMPTY_FEATURE_COLLECTION;
+    map.getSource("shallow-contours")?.setData(shallowContourData);
     refreshDepthAdjustment();
     return;
   }
   if (
     !force &&
     shallowContourProvider === provider &&
+    shallowContourSampleId &&
     boundsContain(shallowContourBounds, visibleBounds) &&
     contourSampleSupportsZoom(shallowContourSampleZoom, zoom)
   ) {
@@ -1861,9 +1934,15 @@ async function updateShallowContours(force = false) {
   }
 
   shallowContourAbortController?.abort();
-  cancelShadingContourWorker();
+  restartContourWorker();
+  shallowContourSampleId = null;
   shallowContourAbortController = new AbortController();
   const controller = shallowContourAbortController;
+  const sampleId = `contour-${++shallowContourSampleSequence}`;
+  const nextDepthAdjustment = marineDepthContext
+    ? depthAdjustmentFor({ provider, ...marineDepthContext })
+    : null;
+  const display = contourDisplayContext(nextDepthAdjustment);
   elements.shallowContourStatus.textContent = provider === "emodnet"
     ? "Tracing shallow contours from the visible EMODnet depth colours…"
     : "Loading the global GEBCO grid and deriving contours for this map area…";
@@ -1873,48 +1952,59 @@ async function updateShallowContours(force = false) {
       signal: controller.signal,
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    let contours;
+    let result;
     if (provider === "emodnet") {
-      const [imageData, colourScale] = await Promise.all([
-        responseImageData(response),
+      const [imageBlob, colourScale] = await Promise.all([
+        response.blob(),
         loadEmodnetColourScale(request.legendUrl),
       ]);
-      contours = await deriveShadingContoursInWorker(
-        imageData,
+      result = await deriveShadingContoursInWorker(
+        imageBlob,
         colourScale,
         request.bounds,
         {
           featurePrefix: "emodnet-shading",
+          simplifyToleranceCells: request.simplifyToleranceCells,
+          smoothPasses: request.smoothPasses,
           sourceName: "EMODnet DTM 2024 multicolour depth shading",
           warning:
             "Dynamically traced from modelled depth-shading colours; not a charted sounding or safe clearance.",
         },
+        sampleId,
+        display,
       );
     } else {
-      contours = deriveShallowContours(
-        parseGebcoGrid(await response.text()),
-        undefined,
-        {
+      result = await contourWorkerRequest("derive-gebco", {
+        display,
+        options: {
           featurePrefix: "gebco-live",
           sourceName: "GEBCO 2026 Grid",
           warning:
             "Coarse global model-derived contour; not a charted sounding or safe clearance.",
         },
-      );
+        sampleId,
+        text: await response.text(),
+      });
     }
     if (controller !== shallowContourAbortController) return;
-    shallowContourData = contours;
+    shallowContourData = result.contours;
     shallowContourBounds = request.bounds;
     shallowContourProvider = provider;
     shallowContourSampleZoom = zoom;
+    shallowContourSampleId = sampleId;
+    currentDepthAdjustment = nextDepthAdjustment;
+    map.getSource("shallow-contours")?.setData(shallowContourData);
     refreshDepthAdjustment();
     if (provider === "emodnet") {
-      elements.shallowContourStatus.textContent = `${shallowContourData.features.length.toLocaleString("en-GB")} lines dynamically traced from the ${request.gridWidth}×${request.gridHeight} EMODnet colour surface · underlying model cells remain about 115 m · clipped to visible basemap water.`;
+      const resolution = request.nativeResolution
+        ? "native model-cell sampling"
+        : "screen-adaptive sampling";
+      elements.shallowContourStatus.textContent = `${result.sourceFeatureCount.toLocaleString("en-GB")} smoothed lines dynamically traced with ${resolution} from the ${request.gridWidth}×${request.gridHeight} EMODnet colour surface · underlying model cells remain about 115 m · clipped to visible basemap water off the UI thread.`;
     } else {
       const resolution = request.resolutionLimited
         ? "high-detail view sampling; zoom closer for the native grid"
         : "native 15 arc-second model grid";
-      elements.shallowContourStatus.textContent = `${shallowContourData.features.length.toLocaleString("en-GB")} connected GEBCO global fallback lines for this area · ${resolution} · clipped to visible basemap water.`;
+      elements.shallowContourStatus.textContent = `${result.sourceFeatureCount.toLocaleString("en-GB")} connected GEBCO global fallback lines for this area · ${resolution} · clipped to visible basemap water off the UI thread.`;
     }
   } catch (error) {
     if (error.name === "AbortError") return;
@@ -1932,12 +2022,12 @@ function visibleMapBounds() {
   };
 }
 
-function waterOnlyModelPoints(points) {
+function waterOnlyModelPoints(points, waterContainsPoint = renderedWaterContainsPoint()) {
   if (!mapReady || !map.getLayer("water")) return points;
-  return points.filter(basemapShowsWater);
+  return points.filter(waterContainsPoint);
 }
 
-function currentFeaturesOverWater(geojson) {
+function currentFeaturesOverWater(geojson, waterContainsPoint = renderedWaterContainsPoint()) {
   if (!mapReady || !map.getLayer("water")) return geojson;
   return {
     ...geojson,
@@ -1945,39 +2035,31 @@ function currentFeaturesOverWater(geojson) {
       const longitude = Number(feature.properties?.anchorLongitude);
       const latitude = Number(feature.properties?.anchorLatitude);
       return !Number.isFinite(longitude) || !Number.isFinite(latitude) ||
-        basemapShowsWater({ longitude, latitude });
+        waterContainsPoint({ longitude, latitude });
     }),
   };
 }
 
-function basemapShowsWater(point) {
-  try {
-    return map.queryRenderedFeatures(
-      map.project([point.longitude, point.latitude]),
-      { layers: ["water"] },
-    ).length > 0;
-  } catch {
-    return true;
-  }
-}
-
-function renderedWaterPredicate() {
-  if (!mapReady || !map.getLayer("water")) return null;
-  let geometries;
+function renderedWaterGeometries() {
+  if (!mapReady || !map.getLayer("water")) return [];
   try {
     const canvas = map.getCanvas();
-    geometries = map.queryRenderedFeatures(
+    return map.queryRenderedFeatures(
       [[0, 0], [canvas.clientWidth, canvas.clientHeight]],
       { layers: ["water"] },
     )
       .map((feature) => feature.geometry)
       .filter(Boolean);
   } catch {
-    return null;
+    return [];
   }
-  if (!geometries.length) return null;
-  return (coordinate) => geometries.some((geometry) =>
-    geometryContainsCoordinate(geometry, coordinate));
+}
+
+function renderedWaterContainsPoint() {
+  const geometries = renderedWaterGeometries();
+  if (!geometries.length) return () => true;
+  return ({ longitude, latitude }) => geometries.some((geometry) =>
+    geometryContainsCoordinate(geometry, [longitude, latitude]));
 }
 
 function fitPassage() {

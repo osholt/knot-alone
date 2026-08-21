@@ -16,7 +16,7 @@ motorcycle preferences or cafe discovery.
 - OpenFreeMap general context and a toggleable OpenSeaMap seamark overlay;
 - toggleable EMODnet Bathymetry DTM 2024 depth shading with three transparent
   water-only palettes, on-demand 2/5/10/20/30 m contours dynamically traced at
-  screen resolution from the same official multicolour shading surface throughout
+  zoom-adaptive native-cell resolution from the same official multicolour shading surface throughout
   its North Atlantic and European coverage, a coarser GEBCO 2026 fallback elsewhere
   in the world, and EMODnet's generalised 50 m-and-deeper European overlay;
 - a zoom-adaptive wind field with downwind arrows, speed/time labels, gust detail,
@@ -49,12 +49,14 @@ OpenSeaMap, EMODnet, tide and weather data remain visibly attributed and carry
 their source limitations.
 
 The EMODnet shallow contours are decoded from its official styled-raster colour
-ramp and retraced off the main UI thread when the map zooms in. Sub-pixel line
-simplification keeps map interaction responsive without visibly changing the
-trace, and the result is clipped to water polygons from the visible basemap. The
-smoother screen-resolution trace does not add survey precision: the source grid
-is still about 115 m in EMODnet coverage and its coastline can differ from the
-general-purpose basemap.
+ramp and retraced off the main UI thread when the map zooms in. Repeated WMS
+display pixels are collapsed back to real model cells before interpolation;
+zoom-adaptive smoothing increases while simplification decreases as the user
+zooms closer. Image decoding and visible-water clipping also run in the worker,
+and map-driven overlay refreshes are coalesced after interaction settles. This
+smoother trace does not add survey precision: the source grid is still about
+115 m in EMODnet coverage and its coastline can differ from the general-purpose
+basemap.
 
 Run locally from the repository root:
 
