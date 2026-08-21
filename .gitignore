@@ -1,5 +1,6 @@
 # Project-local tooling
 .tools/
+.wrangler/
 .venv/
 __pycache__/
 .pytest_cache/

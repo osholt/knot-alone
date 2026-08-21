@@ -1,0 +1,25 @@
+name: tide-and-seek-web
+
+services:
+  planner:
+    build:
+      context: ../apps/website
+    image: tide-and-seek-planner:${TIDE_AND_SEEK_WEB_IMAGE_TAG:-local}
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /config:size=1m,mode=0700
+      - /data:size=1m,mode=0700
+      - /tmp:size=1m,mode=1777
+    ports:
+      - "${TIDE_AND_SEEK_WEB_BIND:-127.0.0.1}:${TIDE_AND_SEEK_WEB_PORT:-4180}:8080"
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8080/planner.html]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s

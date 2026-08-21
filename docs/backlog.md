@@ -18,6 +18,7 @@ not a claim that every P0 item is small.
 | 11 | P1 | Implement six-digit crew sharing, handover, and observations | 2, 4 |
 | 12 | P1 | Evaluate anchor watch and manual MOB assistance | 4, 7 |
 | 13 | P2 | Explore NMEA instrument and authorised AIS integrations | 4 |
+| 14 | P1 | Web passage planner and sailing atlas — [#86](https://github.com/osholt/knot-alone/issues/86) | 3–5, 8–10 |
 
 Each implementation issue must add automated acceptance tests and update the
 product claim in `README.md` only after its evidence gate passes.
@@ -30,3 +31,9 @@ tests. These backlog items are not release-complete: physical-device, field,
 trusted-reference, and representative-receiver evidence remains outstanding.
 Network AIS, tidal streams, official charts/depth, and paid or account-based
 providers remain deferred.
+
+The web-planner epic now has a local first slice: marine waypoint editing,
+rhumb-line leg calculations, GPX import/export, plan-code handoff, OpenSeaMap
+seamark context and a reproducible 549-feature Solent sailing-place catalogue.
+Public hosting, a real app-link domain, complete tide/wind timelines, pilotage
+packs and licensed nautical charts remain open delivery issues #87–#92.

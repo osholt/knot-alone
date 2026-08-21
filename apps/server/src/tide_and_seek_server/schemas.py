@@ -241,11 +241,40 @@ class TrafficRerouteRequest(BaseModel):
 
 
 DiscoveryCategory = Literal[
+    "harbour",
+    "marina",
+    "anchorage",
+    "mooring",
+    "slipway",
+    "small_craft_service",
+    "marine_structure",
+    "pilotage_note",
+    "hazard_notice",
+    # Accepted while the inherited Tail End Charlie discovery records are
+    # migrated or retired. New Tide and Seek clients do not expose these.
     "twisty_highlight",
     "mountain_pass",
     "good_biking_road",
     "biker_stop",
 ]
+
+PUBLIC_DISCOVERY_CATEGORIES = frozenset(
+    {
+        "harbour",
+        "marina",
+        "anchorage",
+        "mooring",
+        "slipway",
+        "small_craft_service",
+        "marine_structure",
+        "pilotage_note",
+        "hazard_notice",
+        "twisty_highlight",
+        "mountain_pass",
+        "good_biking_road",
+        "biker_stop",
+    }
+)
 
 
 class DiscoveryGeometry(BaseModel):

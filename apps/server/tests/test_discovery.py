@@ -23,13 +23,13 @@ def _admin_client(settings):
 def _suggestion(client_submission_id: str = "browser-draft-1") -> dict:
     return {
         "clientSubmissionId": client_submission_id,
-        "category": "mountain_pass",
+        "category": "anchorage",
         "action": "add",
         "targetFeatureId": None,
-        "name": "Test summit",
-        "reason": "Mapped summit sign and public road access",
+        "name": "Test anchorage",
+        "reason": "Mapped small-craft anchorage with reusable source evidence",
         "evidenceUrl": "https://www.openstreetmap.org/copyright",
-        "geometry": {"type": "Point", "coordinates": [-3.115, 52.01]},
+        "geometry": {"type": "Point", "coordinates": [-1.4, 50.72]},
         "createdAt": "2026-07-22T12:00:00Z",
     }
 
@@ -53,7 +53,7 @@ def test_unreviewed_suggestion_is_private_until_admin_approval(settings):
 
         bounds = (
             "/api/v1/discovery/features"
-            "?west=-3.2&south=51.9&east=-3&north=52.1&categories=mountain_pass"
+            "?west=-1.5&south=50.65&east=-1.3&north=50.8&categories=anchorage"
         )
         assert client.get(bounds).json()["features"] == []
         assert client.get("/api/v1/admin/discovery/suggestions").status_code == 401
@@ -64,7 +64,7 @@ def test_unreviewed_suggestion_is_private_until_admin_approval(settings):
             headers=admin_headers,
         )
         assert queue.status_code == 200
-        assert queue.json()["suggestions"][0]["reason"].startswith("Mapped summit")
+        assert queue.json()["suggestions"][0]["reason"].startswith("Mapped small-craft")
 
         approved = client.post(
             f"/api/v1/admin/discovery/suggestions/{suggestion_id}:moderate",
@@ -101,7 +101,7 @@ def test_rejected_and_superseded_suggestions_never_publish(settings):
 
         public = client.get(
             "/api/v1/discovery/features"
-            "?west=-3.2&south=51.9&east=-3&north=52.1&categories=mountain_pass"
+            "?west=-1.5&south=50.65&east=-1.3&north=50.8&categories=anchorage"
         )
         assert public.json()["features"] == []
 
@@ -113,13 +113,13 @@ def test_submission_identifier_is_idempotent_but_cannot_change_body(client):
     assert replay.json()["id"] == first.json()["id"]
 
     changed = _suggestion()
-    changed["name"] = "Different summit"
+    changed["name"] = "Different anchorage"
     conflict = client.post("/api/v1/discovery/suggestions", json=changed)
     assert conflict.status_code == 409
 
 
 def test_public_discovery_requests_must_be_geographically_bounded(client):
     response = client.get(
-        "/api/v1/discovery/features?west=-10&south=40&east=10&north=60&categories=mountain_pass"
+        "/api/v1/discovery/features?west=-10&south=40&east=10&north=60&categories=anchorage"
     )
     assert response.status_code == 400

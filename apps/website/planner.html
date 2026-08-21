@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Plan a sailing passage, explore source-attributed marine places and export it to Tide and Seek."
+    />
+    <meta name="theme-color" content="#092f3d" />
+    <meta name="tide-and-seek-api" content="https://relay.tailendcharlie.app" />
+    <title>Passage planner | Tide and Seek</title>
+    <link rel="stylesheet" href="/styles.css?v=20260821-5" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css"
+      integrity="sha384-uTttxo/aOKbdE5RlD/SPzSDoDmNvGlUYPjONi2MN/b7c9HPSvW07OIuyP7uL6jxK"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="/planner.css?v=20260821-5" />
+    <script src="/theme.js?v=20260821-5" defer></script>
+  </head>
+  <body class="planner-page">
+    <header class="planner-header">
+      <a class="brand" href="/" aria-label="Tide and Seek home">
+        <span class="brand-mark" aria-hidden="true">T&amp;S</span>
+        <span>Tide and Seek</span>
+      </a>
+      <div class="planner-heading">
+        <strong>Passage planner</strong>
+        <span>Plan ashore, then take it aboard.</span>
+      </div>
+      <div class="header-actions planner-header-actions">
+        <div class="theme-switch" role="group" aria-label="Colour theme">
+          <button type="button" data-theme-choice="light"><span aria-hidden="true">&#9728;</span> Light</button>
+          <button type="button" data-theme-choice="dark"><span aria-hidden="true">&#9790;</span> Dark</button>
+        </div>
+        <a class="header-link" href="/">Back to website</a>
+      </div>
+    </header>
+
+    <main class="planner-layout">
+      <aside class="planner-panel" aria-label="Passage details">
+        <section class="planner-intro">
+          <p class="eyebrow">New passage</p>
+          <h1>Shape the passage.</h1>
+          <p>
+            Tap the map or choose a sailing place. Waypoints are joined by
+            rhumb-line legs; the planner does not check land, depth or hazards.
+          </p>
+        </section>
+
+        <div class="safety-banner" role="note">
+          <strong>Planning context, not a nautical chart.</strong>
+          Check the passage against current official charts, Notices to Mariners,
+          weather, tides and local information.
+        </div>
+
+        <section class="form-grid" aria-label="Passage assumptions">
+          <label class="wide-field">
+            Passage name
+            <input id="passage-name" maxlength="100" value="Solent passage" autocomplete="off" />
+          </label>
+          <label>
+            Assumed speed
+            <span class="input-with-unit">
+              <input id="speed-knots" type="number" min="0.5" max="50" step="0.5" value="5" />
+              <span>kn</span>
+            </span>
+          </label>
+          <label class="start-time-field">
+            Passage start time
+            <input id="start-time" type="datetime-local" step="900" />
+            <small>Entered in this device’s local time zone.</small>
+          </label>
+          <p class="local-note" id="draft-status">Saved on this device only.</p>
+        </section>
+
+        <details class="planner-section" open>
+          <summary>Marine places</summary>
+          <label class="search-field">
+            Search the starter catalogue
+            <input id="poi-search" type="search" maxlength="100" placeholder="Marina, anchorage, fuel…" />
+          </label>
+          <div class="filter-grid" id="poi-filters">
+            <label><input type="checkbox" value="harbour" checked /> Harbours</label>
+            <label><input type="checkbox" value="marina" checked /> Marinas</label>
+            <label><input type="checkbox" value="anchorage" checked /> Anchorages</label>
+            <label><input type="checkbox" value="mooring" checked /> Moorings</label>
+            <label><input type="checkbox" value="slipway" /> Slipways</label>
+            <label><input type="checkbox" value="service" /> Services</label>
+            <label><input type="checkbox" value="structure" /> Locks &amp; bridges</label>
+            <label><input type="checkbox" value="tide_station" checked /> Tide stations</label>
+          </div>
+          <div class="poi-results" id="poi-results" aria-live="polite"></div>
+          <p class="source-note">
+            Catalogue data ©
+            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>,
+            ODbL. Coverage and details may be incomplete.
+          </p>
+        </details>
+
+        <details class="planner-section" open>
+          <summary>Chart context &amp; conditions</summary>
+          <label class="layer-toggle">
+            <input id="bathymetry-visible" type="checkbox" checked />
+            <span><strong>EMODnet depth shading</strong><small>2024 modelled DTM, about 115 m cells. Not soundings and not for navigation.</small></span>
+          </label>
+          <div class="layer-options">
+            <label class="palette-field">
+              Depth colours
+              <select id="depth-palette">
+                <option value="nautical" selected>Nautical blue</option>
+                <option value="multicolour">Survey multicolour</option>
+                <option value="high-contrast">High contrast</option>
+              </select>
+            </label>
+            <label class="layer-toggle compact-toggle">
+              <input id="shallow-contours-visible" type="checkbox" checked />
+              <span><strong>Worldwide shallow contours</strong><small>Model-derived 2, 5, 10, 20 and 30 m lines. Higher-resolution EMODnet data covers all English coasts; GEBCO provides a coarser worldwide fallback.</small></span>
+            </label>
+            <p class="layer-status" id="shallow-contour-status">Contours load for the visible area at zoom level 8 or closer.</p>
+            <label class="layer-toggle compact-toggle">
+              <input id="offshore-contours-visible" type="checkbox" />
+              <span><strong>European offshore contours</strong><small>EMODnet's generalised 50 m and deeper model lines. Mostly outside this starter area.</small></span>
+            </label>
+          </div>
+          <label class="layer-toggle">
+            <input id="gebco-visible" type="checkbox" />
+            <span><strong>GEBCO world-ocean overview</strong><small>Global 15 arc-second relief shown only below zoom 9. It is deliberately hidden at local sailing zooms where it becomes blocky.</small></span>
+          </label>
+          <label class="layer-toggle">
+            <input id="noaa-visible" type="checkbox" />
+            <span><strong>NOAA official ENC imagery</strong><small>Current chart display service, updated weekly and visible only in US chart coverage.</small></span>
+          </label>
+          <label class="layer-toggle">
+            <input id="seamarks-visible" type="checkbox" checked />
+            <span><strong>OpenSeaMap seamarks</strong><small>Crowd-sourced aids and marine features; not an official chart.</small></span>
+          </label>
+          <label class="layer-toggle">
+            <input id="pois-visible" type="checkbox" checked />
+            <span><strong>Sailing places</strong><small>Source-attributed catalogue filtered above.</small></span>
+          </label>
+          <div class="conditions-card">
+            <label class="layer-toggle condition-toggle">
+              <input id="wind-visible" type="checkbox" />
+              <span><strong>Current wind field</strong><small>Show map-wide arrows and speeds from the best available Open-Meteo model.</small></span>
+            </label>
+            <p id="wind-status">Wind field hidden. Turn it on to load current model wind.</p>
+            <div class="wind-key" aria-label="Wind arrow colour key">
+              <span><i class="wind-calm"></i>&lt;10 kn</span>
+              <span><i class="wind-fresh"></i>10–17 kn</span>
+              <span><i class="wind-strong"></i>18–27 kn</span>
+              <span><i class="wind-gale"></i>28+ kn</span>
+            </div>
+          </div>
+          <div class="conditions-card current-card">
+            <label class="layer-toggle condition-toggle">
+              <input id="current-visible" type="checkbox" checked />
+              <span><strong>Model current field</strong><small>Show a zoom-adaptive ocean-current field. Arrows near the passage use its expected time; arrows farther away use current time.</small></span>
+            </label>
+            <p id="current-status">Current field will load for the selected passage start.</p>
+            <p id="tide-depth-status">Tide-adjusted contour labels will appear where the chart and water-level datums can be reconciled.</p>
+            <div class="current-key" aria-label="Current vector key">
+              <span><i class="current-now"></i>Current time</span>
+              <span><i class="current-blend"></i>Blended time</span>
+              <span><i class="current-route"></i>Expected route time</span>
+              <span><i class="current-cts"></i>Course to steer</span>
+              <span><i class="current-drift"></i>Uncorrected drift</span>
+              <span>Arrows point with the flow</span>
+            </div>
+          </div>
+          <p class="source-note">
+            Regional depth shading and contours: EMODnet Bathymetry DTM 2024, EU, CC BY 4.0.
+            Worldwide fallback and global overview: GEBCO 2026 Grid. Shallow contours
+            are derived on demand for the visible map, with detail increasing as you
+            zoom in; GEBCO is substantially coarser, and neither source describes
+            dredged marina basins or safe under-keel clearance. US chart imagery:
+            NOAA Chart Display Service. Wind, sea level and ocean-current guidance:
+            Open-Meteo model forecasts, CC BY 4.0. Current and sea-level fields are
+            about 8 km resolution and explicitly unsuitable for coastal navigation.
+            Solent LAT/MSL datum transforms: TICON-4 via Neaps, CC BY 4.0. None of
+            these model values is observed pilotage data.
+          </p>
+          <ul class="provider-ledger" aria-label="Marine data provider status">
+            <li>
+              <span class="provider-status active">External access</span>
+              <p><strong>LINZ New Zealand</strong> — free official S-63 ENCs require registration and a compatible chart system; CC BY chart-image services require a free LDS key.</p>
+              <a href="https://www.linz.govt.nz/products-services/charts/nz-enc-service" target="_blank" rel="noreferrer">Open LINZ ENC service</a>
+            </li>
+            <li>
+              <span class="provider-status restricted">Licence blocked</span>
+              <p><strong>UKHO free marine datasets</strong> — not loaded because their current terms prohibit use in creating navigational products.</p>
+              <a href="https://www.admiralty.co.uk/access-data/marine-data" target="_blank" rel="noreferrer">Review UKHO source</a>
+            </li>
+          </ul>
+        </details>
+
+        <section class="planner-section waypoints-section" aria-labelledby="waypoints-title">
+          <div class="section-heading">
+            <div>
+              <span>Passage points</span>
+              <h2 id="waypoints-title">Waypoints</h2>
+            </div>
+            <button class="text-button" id="clear-passage" type="button">Clear</button>
+          </div>
+          <ol class="waypoint-list" id="waypoint-list"></ol>
+          <div class="empty-waypoints" id="empty-waypoints">
+            <strong>Add the first waypoint</strong>
+            <p>Tap the map or add a marine place.</p>
+          </div>
+        </section>
+
+        <section class="passage-summary" aria-label="Passage summary">
+          <div><span>Distance</span><strong id="passage-distance">—</strong></div>
+          <div><span>Model-adjusted time</span><strong id="passage-duration">—</strong><small id="still-water-duration"></small></div>
+          <div><span>Expected arrival</span><strong id="passage-arrival">—</strong></div>
+          <div><span>Legs</span><strong id="passage-leg-count">0</strong></div>
+        </section>
+
+        <div class="leg-table-wrap" id="leg-table-wrap" hidden>
+          <table class="leg-table">
+            <thead><tr><th>Leg</th><th>Course</th><th>Distance</th><th>Model current</th><th>ETA</th></tr></thead>
+            <tbody id="leg-table"></tbody>
+          </table>
+          <p>Courses are rhumb-line degrees true. Model-adjusted times and amber course-to-steer arrows use current samples about every 2.5 NM. The magenta dashed line shows modelled drift if the planned ground-track bearings are held without correction. These are planning estimates, not helm instructions.</p>
+        </div>
+
+        <section class="planner-actions" aria-label="Passage actions">
+          <label class="button secondary-button file-button">
+            Import GPX
+            <input id="import-gpx" type="file" accept=".gpx,application/gpx+xml" />
+          </label>
+          <button class="button secondary-button" id="download-gpx" type="button" disabled>Download GPX</button>
+          <button class="button button-primary" id="publish-plan" type="button" disabled>Send to Tide and Seek</button>
+          <button class="text-button clear-local" id="clear-local" type="button">Clear saved planner data</button>
+          <p class="action-status" id="action-status" aria-live="polite"></p>
+        </section>
+      </aside>
+
+      <section class="map-shell" aria-label="Interactive passage map">
+        <div id="map"></div>
+        <div class="map-callout" id="map-callout">
+          <strong>Tap water to add a waypoint</strong>
+          <span>Drag waypoint markers to refine the passage.</span>
+        </div>
+        <div class="map-provenance">
+          <span>Modelled depth shading and contours + general basemap + crowd-sourced seamarks</span>
+          <strong>Not a nautical chart</strong>
+        </div>
+      </section>
+    </main>
+
+    <noscript><p class="noscript-message">The passage planner needs JavaScript to display the map and export GPX.</p></noscript>
+    <script
+      src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"
+      integrity="sha384-5+cfbwT0iiub6VsQAdn6yz16nr6sDiQoHx6tm4O8OVYXHYOxcffFmCJBL0dgdvGp"
+      crossorigin="anonymous"
+    ></script>
+    <script type="module" src="/planner.js?v=20260821-5"></script>
+  </body>
+</html>

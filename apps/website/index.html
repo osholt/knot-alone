@@ -1,16 +1,60 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex" />
-    <title>Tide and Seek — concept scaffold</title>
+    <meta
+      name="description"
+      content="Tide and Seek is a solo-first sailing companion with passage planning and optional account-free crew sharing."
+    />
+    <meta name="theme-color" content="#092f3d" />
+    <title>Tide and Seek — plan ashore, sail with context</title>
+    <link rel="stylesheet" href="/styles.css?v=20260821-3" />
+    <script src="/theme.js?v=20260821-3" defer></script>
   </head>
-  <body>
-    <main>
-      <h1>Tide and Seek</h1>
-      <p>A solo-first, offline sailing companion with optional account-free crew sharing.</p>
-      <p>This development scaffold is not a chartplotter or certified navigation system.</p>
+  <body class="home-page">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Tide and Seek home">
+        <span class="brand-mark" aria-hidden="true">T&amp;S</span>
+        <span>Tide and Seek</span>
+      </a>
+      <div class="header-actions">
+        <div class="theme-switch" role="group" aria-label="Colour theme">
+          <button type="button" data-theme-choice="light"><span aria-hidden="true">&#9728;</span> Light</button>
+          <button type="button" data-theme-choice="dark"><span aria-hidden="true">&#9790;</span> Dark</button>
+        </div>
+        <a class="header-link" href="/planner.html">Open passage planner</a>
+      </div>
+    </header>
+
+    <main class="home-main">
+      <section class="hero">
+        <p class="eyebrow">Sailing companion</p>
+        <h1>Plan ashore.<br />Carry the passage with you.</h1>
+        <p class="hero-copy">
+          Build a waypoint passage, explore sailing places and seamarks, then
+          export GPX or hand the plan to Tide and Seek for use aboard.
+        </p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="/planner.html">Plan a passage</a>
+          <span>No account required</span>
+        </div>
+      </section>
+
+      <aside class="home-card" aria-label="Planner capabilities">
+        <p class="card-kicker">Passage desk</p>
+        <h2>Solent starter coverage</h2>
+        <ul>
+          <li>User-drawn rhumb-line legs with course, distance and ETA</li>
+          <li>Harbours, marinas, anchorages, moorings and facilities</li>
+          <li>OpenSeaMap seamark context and source-attributed layers</li>
+          <li>GPX export and Tide and Seek plan codes</li>
+        </ul>
+        <p class="safety-note">
+          This is a planning aid, not a nautical chart or a substitute for
+          current official charts, publications and seamanship.
+        </p>
+      </aside>
     </main>
   </body>
 </html>

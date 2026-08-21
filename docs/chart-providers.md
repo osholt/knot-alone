@@ -93,11 +93,54 @@ says plainly that it is not a chart.
 - Free WMTS covering European seas at EMODnet DTM resolution and the rest of
   the world from GEBCO, in Web Mercator among other projections.
 - Capabilities: `https://tiles.emodnet-bathymetry.eu/wmts/1.0.0/WMTSCapabilities.xml`
+- The companion WMS exposes three depth colour styles and a generalised contour
+  layer. Those contours start at 50 m (then 100, 200, 500, 1,000, 2,000 and
+  5,000 m), so they add offshore shape but not chart-like shallow-water detail.
+- The public mean-depth WCS supports bounded derived contours. The web planner
+  requests a capped grid for the current view at zoom 8 and closer, then derives
+  2/5/10/20/30 m lines in the browser across the service's North Atlantic and
+  European coverage (including every English coast). Wider views deliberately
+  use a reduced-resolution preview; zooming closer restores model detail. The
+  planner requests a similarly bounded subset of the global 15 arc-second GEBCO
+  2026 grid through CEDA OPeNDAP outside that coverage and derives the same levels
+  as a substantially coarser worldwide fallback. The result remains interpolation
+  rather than charted soundings, surveyed marina depth or safe clearance.
+- Non-negative land and shoreline cells are retained as an explicit wet/dry
+  mask. The contour generator omits any cell with a dry corner instead of interpolating
+  a depth line across that coastal transition. This creates deliberate coastal
+  gaps and avoids apparent over-land lines such as the mixed cells around St
+  Anthony Head; the roughly 115 m DTM and the basemap coastline can still differ.
 - Survey-derived and citable, so depth shading has provenance an official chart
   would recognise, even though the product is not a navigational chart.
 
 **Verdict:** the right source for depth *shading* — it makes the water stop
 being an empty polygon. Not soundings, not a substitute for charted depths.
+
+### Open-Meteo marine currents and sea level
+
+- The free marine endpoint supplies hourly ocean-current velocity and direction
+  plus sea-level height relative to MSL. The current combines Eulerian flow,
+  waves and tides; it is not a pure tidal-atlas prediction.
+- The underlying current/tide model is about 0.08° (roughly 8 km). Open-Meteo
+  explicitly says coastal accuracy is limited and the data is not suitable for
+  coastal navigation.
+- The planner uses a zoom-adaptive grid across the visible map. Samples farther
+  than 8 NM from the route use current time; samples nearer the route smoothly
+  blend to the expected time at the closest route point and are colour coded
+  teal, blue and purple. Route calculations sample about every 2.5 NM, project
+  each vector onto the planned track, show an amber course-to-steer estimate and
+  separately plot the drift expected if the uncorrected ground-track bearing is
+  held. The still-water estimate remains visible and none of these calculations
+  is presented as helm guidance.
+- EMODnet depths are LAT-referenced, while the model sea level is MSL-referenced.
+  The planner only adjusts those contour labels within 60 km of one of the three
+  bundled TICON-4 Solent stations, using that station's explicit MSL↔LAT offset.
+  GEBCO's MSL reference can be adjusted directly, but remains much too coarse
+  for local clearance decisions.
+
+**Verdict:** useful planning context for visualising likely set and drift and
+comparing departure times. It is not a tidal atlas, observed current, or an
+under-keel-clearance calculation.
 
 ## Do you legally need official charts?
 
@@ -255,11 +298,26 @@ and it is the reason a hobby app cannot simply open a purchased ENC.
 
 ## Recommendation
 
-**Build on the free stack, and do not open the UKHO commercial conversation
-yet.** UKHO wrecks and obstructions, UKHO or EMODnet bathymetry for depth
-shading, and OpenSeaMap for seamarks and buoyage together make a legitimate,
-attributable, offline-cacheable passage-planning aid. For leisure sailing that
-may be the whole product.
+**Build on the unambiguous free stack, and do not open the UKHO commercial
+conversation yet.** EMODnet Bathymetry DTM depth shading and OpenSeaMap
+seamarks and buoyage make a legitimate, attributable passage-planning aid when
+their limitations remain prominent. GEBCO is a global fallback for terrain
+context, not near-shore clearance. Do not ingest UKHO bathymetry, wrecks or
+obstructions until UKHO confirms in writing that the field-of-use wording
+permits this navigational product.
+
+The August 2026 re-check found the same restriction in current Marine Data
+Portal metadata for wrecks and obstructions, ships' routeing measures, and UK
+territorial limits: the data is not suitable for marine navigation **or for the
+creation of navigational products**. The planner therefore links to the UKHO
+source and explains the restriction but does not copy, query, cache or render
+those features. "Free to download" is not permission for this field of use.
+
+For real charted soundings, use official national ENCs only where their terms
+allow it. NOAA supplies free current S-57 ENCs and derived web/offline display
+services for US waters; LINZ supplies free regularly updated S-63 ENCs after
+registration for New Zealand and its charted regions. These are provider
+adapters for those regions, not a free route to UK chart coverage.
 
 Revisit paid ENCs only on a deliberate product decision — that Tide and Seek
 should claim to be a chart plotter, or should carry commercial credibility.

@@ -45,9 +45,8 @@ void main() {
     // now because renaming by hand has missed them three times.
     r'\blead\b(?! time)': 'Skipper',
     r'\btec\b': 'Sweeper',
-    // Not a road word, which is why the first pass missed it: there is no Tide
-    // and Seek web planner for a route code to come from (#68).
-    r'\bweb planner\b': 'the relay, or nothing',
+    // “Web planner” is now valid: Tide and Seek ships a passage planner that
+    // creates the route codes accepted by the mobile app.
     // "stop" is deliberately absent. A passage has marks and you pass them
     // rather than stop at them, so the noun is wrong - but "Stop sharing",
     // "location sharing stops" and "emergency stop" are all correct, and no
