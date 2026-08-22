@@ -59,8 +59,15 @@ test("the invitation fallback cannot transmit its URL fragment", async () => {
   assert.match(page, /name="referrer" content="no-referrer"/);
   assert.doesNotMatch(page, /<script\b/i);
   assert.match(page, /not sent to this website/i);
-  assert.match(headers, /\/join\.html[\s\S]*Referrer-Policy: no-referrer/);
-  assert.match(headers, /\/join\.html[\s\S]*connect-src 'none'/);
+  for (const path of ["/join.html", "/join"]) {
+    const start = headers.indexOf(`${path}\n`);
+    assert.notEqual(start, -1, `${path} must have a header rule`);
+    const next = headers.indexOf("\n/", start + path.length + 1);
+    const rule = headers.slice(start, next === -1 ? undefined : next);
+    assert.match(rule, /Referrer-Policy: no-referrer/);
+    assert.match(rule, /connect-src 'none'/);
+    assert.match(rule, /X-Robots-Tag: noindex/);
+  }
 });
 
 test("public privacy, terms and tester destinations are linked", async () => {
