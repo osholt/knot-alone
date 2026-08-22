@@ -79,8 +79,7 @@ uv run pytest
 ```
 
 ```bash
-node --check apps/website/planner.js
-node --test apps/website/planner-core.test.mjs
+node --test apps/website/browser-syntax.test.mjs apps/website/planner-core.test.mjs apps/website/map-data.test.mjs
 python3 -m unittest tools/places/test_generate_sailing_pois.py
 ```
 

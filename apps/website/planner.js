@@ -1769,7 +1769,7 @@ function syncAdjustedContourData() {
 
 function contourDisplayContext(adjustment = currentDepthAdjustment) {
   return {
-    adjustment
+    adjustment: adjustment
       ? {
           chartDatum: adjustment.chartDatum,
           heightM: adjustment.heightM,
@@ -1824,7 +1824,7 @@ function loadEmodnetColourScale(url) {
 
 function ensureContourWorker() {
   if (shallowContourWorker) return shallowContourWorker;
-  const worker = new Worker("/contour-worker.mjs?v=20260822-1", { type: "module" });
+  const worker = new Worker("/contour-worker.mjs?v=20260822-2", { type: "module" });
   shallowContourWorker = worker;
   worker.addEventListener("message", (event) => {
     const job = shallowContourWorkerJobs.get(event.data?.jobId);
