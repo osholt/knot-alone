@@ -663,6 +663,43 @@ test("builds a daylight chart and flags arrival after sunset", () => {
   assert.ok(Math.abs(chart.rows[0].startPercent - 100 / 3) < 1e-9);
 });
 
+test("calculates daylight locally outside the provider forecast window", () => {
+  const epoch = (value) => Date.parse(value) / 1000;
+  const chart = sunChartRows(
+    {
+      timezone: "Europe/London",
+      timezone_abbreviation: "GMT",
+      daily: {
+        time: [epoch("2026-08-22T00:00:00Z")],
+        sunrise: [epoch("2026-08-22T05:00:00Z")],
+        sunset: [epoch("2026-08-22T19:00:00Z")],
+      },
+    },
+    new Date("2026-12-21T10:00:00Z"),
+    new Date("2026-12-21T17:00:00Z"),
+    { latitude: 50.15, longitude: -5.07 },
+  );
+  assert.equal(chart.locallyCalculated, true);
+  assert.equal(chart.rows.length, 1);
+  assert.equal(chart.rows[0].date, "2026-12-21");
+  assert.match(chart.rows[0].sunriseLabel, /^08:\d{2}$/);
+  assert.match(chart.rows[0].sunsetLabel, /^16:\d{2}$/);
+  assert.equal(chart.rows[0].arrivalAfterSunset, true);
+});
+
+test("keeps daylight available without a forecast response", () => {
+  const chart = sunChartRows(
+    {},
+    new Date("2026-08-21T08:00:00Z"),
+    null,
+    { latitude: 50.75, longitude: -1.4 },
+  );
+  assert.equal(chart.locallyCalculated, true);
+  assert.equal(chart.rows.length, 1);
+  assert.notEqual(chart.rows[0].sunriseLabel, "");
+  assert.notEqual(chart.rows[0].sunsetLabel, "");
+});
+
 test("adjusts each leg estimate using the current expected at its midpoint", () => {
   const effect = currentEffect(5, 90, 1, 90);
   assert.equal(effect.effectiveSpeedKnots, 6);

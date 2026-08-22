@@ -38,7 +38,7 @@ import {
   tideRequestUrl,
   tideSeriesFromResponse,
 } from "./tide-current.mjs";
-import { sunChartRows, sunRequestUrl } from "./sun-times.mjs";
+import { sunChartRows, sunRequestUrl } from "./sun-times.mjs?v=20260822-3";
 import { fetchForecastJson } from "./forecast-cache.mjs";
 
 const MAP_STYLE_URLS = {
@@ -1608,19 +1608,26 @@ async function updateSunChart() {
       persist: true,
     });
     if (requestSequence !== sunRequestSequence) return;
-    const chart = sunChartRows(data, start, arrival);
+    const chart = sunChartRows(data, start, arrival, point);
     renderSunChart(chart);
-    elements.sunChartStatus.textContent = `${stops.length > 1 ? "final waypoint" : "map centre"} · ${chart.timezoneAbbreviation}${forecastCacheSuffix(cacheStatus)}`;
+    const calculationSuffix = chart.locallyCalculated ? " · calculated locally" : "";
+    elements.sunChartStatus.textContent = `${stops.length > 1 ? "final waypoint" : "map centre"} · ${chart.timezoneAbbreviation}${calculationSuffix}${forecastCacheSuffix(cacheStatus)}`;
   } catch (error) {
-    elements.sunChart.replaceChildren(environmentEmpty("Sunrise and sunset unavailable."));
-    elements.sunChartStatus.textContent = error.message;
+    try {
+      const chart = sunChartRows({}, start, arrival, point);
+      renderSunChart(chart);
+      elements.sunChartStatus.textContent = `${stops.length > 1 ? "final waypoint" : "map centre"} · ${chart.timezoneAbbreviation} · calculated locally`;
+    } catch {
+      elements.sunChart.replaceChildren(environmentEmpty("Sunrise and sunset unavailable."));
+      elements.sunChartStatus.textContent = error.message;
+    }
   }
 }
 
 function renderSunChart(chart) {
   elements.sunChart.replaceChildren();
   if (chart.rows.length === 0) {
-    elements.sunChart.append(environmentEmpty("Selected time is outside the 16-day daylight window."));
+    elements.sunChart.append(environmentEmpty("Daylight calculation unavailable for this passage date."));
     return;
   }
   chart.rows.forEach((row) => {
