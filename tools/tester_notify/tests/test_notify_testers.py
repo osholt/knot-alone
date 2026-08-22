@@ -4,6 +4,7 @@ import io
 import sys
 import tempfile
 import unittest
+from email.utils import getaddresses
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -279,7 +280,9 @@ class MainTest(unittest.TestCase):
         self.assertEqual(message["To"], RECIPIENT)
         self.assertEqual(message["From"], "releases@example.invalid")
         self.assertEqual(message["Auto-Submitted"], "auto-generated")
-        self.assertIn("Play closed testing (alpha)", message.get_content())
+        plain = message.get_body(preferencelist=("plain",))
+        assert plain is not None
+        self.assertIn("Play closed testing (alpha)", plain.get_content())
         self.assertEqual(settings.password, FAKE_LOGIN_VALUE)
         output = self.out.getvalue()
         self.assertNotIn(FAKE_LOGIN_VALUE, output)
@@ -323,11 +326,61 @@ class MainTest(unittest.TestCase):
         self.assertIn("t***@example.invalid", markdown)
         self.assertIn("Sent to", markdown)
 
-    def test_builds_a_plain_text_message(self) -> None:
+    def test_a_display_name_reaches_the_header_but_not_the_envelope(self) -> None:
+        message = build_message(
+            render_email(context()),
+            "Tide and Seek <releases@example.invalid>",
+            RECIPIENT,
+        )
+
+        self.assertEqual(
+            message["From"],
+            "Tide and Seek <releases@example.invalid>",
+        )
+        self.assertEqual(
+            getaddresses([message["From"]])[0][1],
+            "releases@example.invalid",
+        )
+
+    def test_builds_plain_and_html_alternatives(self) -> None:
         message = build_message(render_email(context()), "releases@example.invalid", RECIPIENT)
 
-        self.assertEqual(message.get_content_type(), "text/plain")
-        self.assertIn("HOW TO GET IT", message.get_content())
+        self.assertEqual(message.get_content_type(), "multipart/alternative")
+        plain = message.get_body(preferencelist=("plain",))
+        html = message.get_body(preferencelist=("html",))
+        assert plain is not None and html is not None
+        self.assertIn("HOW TO GET IT", plain.get_content())
+        self.assertIn("is ready to test on Android", html.get_content())
+        self.assertIn("About &amp; build", html.get_content())
+
+    def test_commit_subjects_cannot_inject_html(self) -> None:
+        email = render_email(
+            context(changes=('- fix <script>alert("x")</script> & tidy',)),
+        )
+
+        self.assertNotIn("<script>", email.html)
+        self.assertIn("&lt;script&gt;", email.html)
+        self.assertIn("&amp; tidy", email.html)
+
+    def test_icon_is_embedded_by_cid_and_can_degrade_cleanly(self) -> None:
+        with_icon = build_message(
+            render_email(context(), with_icon=True),
+            "releases@example.invalid",
+            RECIPIENT,
+            icon=b"\x89PNG fake bytes",
+        )
+        images = [part for part in with_icon.walk() if part.get_content_type() == "image/png"]
+        self.assertEqual(len(images), 1)
+        self.assertEqual(images[0]["Content-ID"], "<app-icon>")
+
+        without_icon = build_message(
+            render_email(context(), with_icon=False),
+            "releases@example.invalid",
+            RECIPIENT,
+        )
+        html = without_icon.get_body(preferencelist=("html",))
+        assert html is not None
+        self.assertNotIn("cid:", html.get_content())
 
 
 if __name__ == "__main__":

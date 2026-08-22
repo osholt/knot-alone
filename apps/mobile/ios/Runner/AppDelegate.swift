@@ -334,7 +334,7 @@ import UserNotifications
   func handleIncomingAppLink(url: URL) {
     guard
       url.scheme == "https",
-      url.host?.lowercased() == "tideandseek.invalid",
+      url.host?.lowercased() == "tide-and-seek.tailendcharlie.app",
       url.absoluteString.count <= 2048
     else { return }
     switch url.path {

@@ -1,5 +1,7 @@
 import 'package:flutter/services.dart';
 
+import '../domain/product_links.dart';
+
 abstract interface class IncomingPlannerLinkSource {
   Future<String?> consumePending();
 }
@@ -29,8 +31,8 @@ String? planCodeFromPlannerLink(String value) {
   final uri = Uri.tryParse(value);
   if (uri == null ||
       uri.scheme != 'https' ||
-      uri.host.toLowerCase() != 'tideandseek.invalid' ||
-      uri.path != '/planner.html' ||
+      uri.host.toLowerCase() != tideAndSeekWebsiteHost ||
+      uri.path != tideAndSeekPlannerPath ||
       uri.userInfo.isNotEmpty ||
       uri.hasFragment) {
     return null;

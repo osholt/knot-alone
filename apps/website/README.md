@@ -76,7 +76,7 @@ The public static build is assembled and deployed to Cloudflare Pages using
 Focused verification:
 
 ```sh
-node --test apps/website/browser-syntax.test.mjs apps/website/planner-core.test.mjs apps/website/map-data.test.mjs
+node --test apps/website/browser-syntax.test.mjs apps/website/planner-core.test.mjs apps/website/map-data.test.mjs apps/website/app-links.test.mjs
 python3 -m unittest tools/places/test_generate_sailing_pois.py
 python3 -m unittest tools/contours/test_generate_emodnet_shallow_contours.py
 ```

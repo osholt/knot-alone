@@ -33,15 +33,25 @@
 			<string>com.topografix.gpx</string>
 			<key>UTTypeDescription</key>
 			<string>GPS Exchange Format</string>
+			<!-- A .gpx delivered by a channel which dropped its type can be
+			     generic public.data. Claim that type without broadening the
+			     document picker to every data file. -->
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.xml</string>
+				<string>public.data</string>
 			</array>
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>
 				<array>
 					<string>gpx</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/gpx+xml</string>
+					<string>application/xml</string>
+					<string>text/xml</string>
 				</array>
 			</dict>
 		</dict>

@@ -1,3 +1,5 @@
+import 'product_links.dart';
+
 /// The six-digit voyage code is brute-forceable over the public internet on
 /// its own, so anything shared as text (rather than spoken/typed) also
 /// carries the high-entropy join token. `#` never appears in a six-digit
@@ -20,8 +22,8 @@ String joinInviteText(String voyageCode, String joinToken) =>
   var searchable = pastedText;
   if (uri != null &&
       uri.scheme == 'https' &&
-      uri.host.toLowerCase() == 'tideandseek.invalid' &&
-      uri.path == '/join.html' &&
+      uri.host.toLowerCase() == tideAndSeekWebsiteHost &&
+      uri.path == tideAndSeekVoyageInvitationPath &&
       uri.hasFragment) {
     try {
       searchable = Uri.decodeComponent(uri.fragment);

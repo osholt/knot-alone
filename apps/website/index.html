@@ -3,58 +3,78 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="Tide and Seek is a solo-first sailing companion with passage planning and optional account-free crew sharing."
-    />
+    <meta name="description" content="Tide and Seek is an account-free sailing companion with passage planning, marine context and optional private crew sharing." />
     <meta name="theme-color" content="#092f3d" />
     <title>Tide and Seek — plan ashore, sail with context</title>
-    <link rel="stylesheet" href="/styles.css?v=20260821-3" />
-    <script src="/theme.js?v=20260821-3" defer></script>
+    <link rel="stylesheet" href="/styles.css?v=20260822-1" />
+    <script src="/theme.js?v=20260822-1" defer></script>
   </head>
   <body class="home-page">
     <header class="site-header">
-      <a class="brand" href="/" aria-label="Tide and Seek home">
-        <span class="brand-mark" aria-hidden="true">T&amp;S</span>
-        <span>Tide and Seek</span>
-      </a>
+      <a class="brand" href="/" aria-label="Tide and Seek home"><span class="brand-mark" aria-hidden="true">T&amp;S</span><span>Tide and Seek</span></a>
+      <nav class="site-nav" aria-label="Primary navigation"><a href="#features">Features</a><a href="#testing">Testing</a><a href="/privacy.html">Privacy</a></nav>
       <div class="header-actions">
         <div class="theme-switch" role="group" aria-label="Colour theme">
           <button type="button" data-theme-choice="light"><span aria-hidden="true">&#9728;</span> Light</button>
           <button type="button" data-theme-choice="dark"><span aria-hidden="true">&#9790;</span> Dark</button>
         </div>
-        <a class="header-link" href="/planner.html">Open passage planner</a>
+        <a class="header-link" href="/planner.html">Open planner</a>
       </div>
     </header>
 
-    <main class="home-main">
-      <section class="hero">
-        <p class="eyebrow">Sailing companion</p>
-        <h1>Plan ashore.<br />Carry the passage with you.</h1>
-        <p class="hero-copy">
-          Build a waypoint passage, explore sailing places and seamarks, then
-          export GPX or hand the plan to Tide and Seek for use aboard.
-        </p>
-        <div class="hero-actions">
-          <a class="button button-primary" href="/planner.html">Plan a passage</a>
-          <span>No account required</span>
+    <main>
+      <section class="home-main">
+        <div class="hero">
+          <p class="eyebrow">Sailing companion</p>
+          <h1>Plan ashore.<br />Sail with context.</h1>
+          <p class="hero-copy">Build a waypoint passage, explore source-labelled marine context, carry the route aboard and optionally coordinate a private crew — without creating an account.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="/planner.html">Plan a passage</a>
+            <a class="button button-secondary" href="#testing">Join field testing</a>
+          </div>
+          <p class="hero-detail">Solo-first · offline-first · iPhone and Android</p>
+        </div>
+
+        <aside class="home-card" aria-label="Passage planner capabilities">
+          <p class="card-kicker">Passage desk</p>
+          <h2>One plan, from desk to deck.</h2>
+          <ul>
+            <li>Editable rhumb-line legs with distance, course and estimated time</li>
+            <li>Harbours, marinas, anchorages, moorings and seamark context</li>
+            <li>Time-aware wind, model currents, tides and daylight planning</li>
+            <li>GPX export and verified links into the Tide and Seek app</li>
+          </ul>
+          <p class="safety-note">Tide and Seek is a planning and coordination aid, not a nautical chart, certified navigation system or substitute for current official information and seamanship.</p>
+        </aside>
+      </section>
+
+      <section class="feature-section" id="features" aria-labelledby="features-title">
+        <p class="eyebrow">Built for a passage</p>
+        <h2 id="features-title">Useful alone. Connected when the crew needs it.</h2>
+        <div class="feature-grid">
+          <article><span>01</span><h3>Passage planning</h3><p>Create and adjust waypoints, review leg assumptions, inspect marine places and export GPX before leaving shore.</p></article>
+          <article><span>02</span><h3>Underway context</h3><p>Keep route, live GNSS state, wind, calculated tide information, local AIS targets and manual MOB recovery context together.</p></article>
+          <article><span>03</span><h3>Private crew sharing</h3><p>Share a temporary voyage by code, QR or private app link. A solo voyage remains useful without a relay or account.</p></article>
         </div>
       </section>
 
-      <aside class="home-card" aria-label="Planner capabilities">
-        <p class="card-kicker">Passage desk</p>
-        <h2>Solent starter coverage</h2>
-        <ul>
-          <li>User-drawn rhumb-line legs with course, distance and ETA</li>
-          <li>Harbours, marinas, anchorages, moorings and facilities</li>
-          <li>OpenSeaMap seamark context and source-attributed layers</li>
-          <li>GPX export and Tide and Seek plan codes</li>
-        </ul>
-        <p class="safety-note">
-          This is a planning aid, not a nautical chart or a substitute for
-          current official charts, publications and seamanship.
-        </p>
-      </aside>
+      <section class="testing-section" id="testing" aria-labelledby="testing-title">
+        <div>
+          <p class="eyebrow">Closed field testing</p>
+          <h2 id="testing-title">Help test before it goes to sea.</h2>
+          <p>Tester releases are private and experimental. Install through the invitation channel for your platform, report the version and build shown under <strong>Settings → About &amp; build</strong>, and never rely on a test build as your only source of navigation information.</p>
+        </div>
+        <div class="testing-actions">
+          <a class="button button-primary" href="https://testflight.apple.com/" rel="noreferrer">Open TestFlight for iPhone</a>
+          <a class="button button-secondary" href="https://play.google.com/apps/testing/dev.osholt.tideandseek" rel="noreferrer">Join Android closed testing</a>
+          <a class="testing-contact" href="mailto:testing@tailendcharlie.app?subject=Tide%20and%20Seek%20testing">Ask to join the tester group</a>
+        </div>
+      </section>
     </main>
+
+    <footer class="site-footer">
+      <span>Tide and Seek · account-free sailing companion</span>
+      <nav aria-label="Footer navigation"><a href="/planner.html">Planner</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="mailto:support@tailendcharlie.app">Support</a></nav>
+    </footer>
   </body>
 </html>

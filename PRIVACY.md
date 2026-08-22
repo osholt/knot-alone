@@ -1,8 +1,8 @@
 # Tide and Seek Privacy Policy
 
-Effective date: 20 August 2026
+Effective date: 22 August 2026
 
-Tide and Seek is an offline-first sailing companion published by Oliver Holt.
+Tide and Seek is an offline-first sailing companion operated by Holt Racing Limited.
 This policy explains what the Android and iOS apps process, what can leave the
 device, and the choices available to a sailor. Tide and Seek is currently a
 private field-test product, not a certified navigation or distress system.
@@ -18,8 +18,9 @@ private field-test product, not a certified navigation or distress system.
   a request to the named provider. Weather requests include coordinates.
 - Optional nearby crew sharing sends selected voyage data directly to accepted
   nearby devices over an encrypted connection.
-- This Play release does not configure an internet crew relay or push
-  notifications.
+- An external-test build can use the optional encrypted internet crew relay and
+  notifications only when those endpoints are explicitly configured at build
+  time; an unconfigured build remains solo/nearby-only.
 
 ## Data kept on the device
 
@@ -102,15 +103,18 @@ Provider information: [Google Nearby Connections overview](https://developers.go
 - The camera is used to scan voyage-invitation QR codes. Images are processed on
   the device and are not uploaded by Tide and Seek.
 
-## Features not configured in this release
+## Build-specific optional features
 
-The current Google Play field-test build has no live internet crew relay,
-network AIS provider, advertising SDK, publisher analytics, or configured push
-notification service. Source code contains guarded adapters for some future
-services, but their invalid or absent build configuration prevents those
-services from operating in this release. This policy and the store declaration
-will be updated before a distributed build enables a materially different data
-flow.
+A distributed build may configure the private Tide and Seek relay and push
+notifications. When enabled, relay positions expire after no more than 30
+minutes, optional contact and emergency shares after no more than two hours,
+and other voyage data after no more than 72 hours. Web-planner codes expire
+after no more than 30 days. A build with an invalid or absent relay endpoint
+cannot use those services and says so in **Settings → About & build**.
+
+No build configures a network AIS provider, advertising SDK, behavioural
+analytics, or public vessel-history service. The store declaration will be
+updated before a distributed build enables any materially different data flow.
 
 ## Retention and sharing choices
 
@@ -156,6 +160,9 @@ substitute for seamanship, emergency equipment, or official information.
 ## Contact and changes
 
 Privacy contact: [privacy@tailendcharlie.app](mailto:privacy@tailendcharlie.app).
+
+The public copy of this policy is at
+[tide-and-seek.tailendcharlie.app/privacy.html](https://tide-and-seek.tailendcharlie.app/privacy.html).
 
 Material changes will be dated and published at this same location. The Play
 Data safety declaration will be updated when a distributed app version changes

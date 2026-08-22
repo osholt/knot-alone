@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["UY4624PH6X.dev.osholt.tideandseek"],
+        "components": [
+          { "/": "/planner.html", "?": { "code": "?*" }, "comment": "Open a shared Tide and Seek passage code in the installed app." },
+          { "/": "/join.html", "comment": "Open a private Tide and Seek voyage invitation in the installed app; capability material stays in the URL fragment." }
+        ]
+      }
+    ]
+  }
+}

@@ -268,7 +268,7 @@ class MainActivity : FlutterActivity() {
         val uri = intent.data ?: return
         if (
             uri.scheme != "https" ||
-            !uri.host.equals("tideandseek.invalid", ignoreCase = true) ||
+            !uri.host.equals("tide-and-seek.tailendcharlie.app", ignoreCase = true) ||
             uri.toString().length > 2048
         ) {
             return

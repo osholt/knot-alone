@@ -6,6 +6,8 @@ Public support email: `support@tailendcharlie.app`
 
 Privacy contact: `privacy@tailendcharlie.app`
 
+Privacy policy URL: `https://tide-and-seek.tailendcharlie.app/privacy.html`
+
 ## App name
 
 Tide and Seek
@@ -66,8 +68,7 @@ build should be relied on for safe navigation at sea.
 - Health: Emergency and First Aid. The app provides a non-medical MOB recovery
   aid and can hold sailor-entered emergency/medical notes for deliberate crew
   sharing; it does not diagnose, treat, or claim to be a medical device.
-- Data safety: approximate location, precise location, diagnostics, and app
-  interactions. Each is collected and shared, optional, not treated as
-  ephemeral, and encrypted in transit. Location is used for app functionality;
-  diagnostics and app interactions are used for analytics. There is no account
-  creation or publisher-operated deletion-request service.
+- Data safety declarations must match the exact features configured in the
+  uploaded build. There is no account creation, advertising or behavioural
+  analytics. Optional relay, notification, diagnostic, forecast and nearby
+  sharing flows are described at the privacy-policy URL above.

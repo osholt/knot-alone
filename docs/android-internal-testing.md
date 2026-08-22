@@ -43,6 +43,17 @@ The closed tester group address is stored as the environment variable
 optional. The workflow defaults to `dry-run`, so its tester email is rendered
 in the run summary but cannot be sent accidentally.
 
+`TIDE_AND_SEEK_TESTER_NOTIFY_FROM` may carry a friendly display name. Use
+`Tide and Seek <testing@tailendcharlie.app>`; the mail library derives the bare
+envelope address required by the authenticated SMTP account, and a test pins
+that distinction. Sent mail includes a plain-text part and a TestFlight-style
+HTML part with the checked-in Tide and Seek icon.
+
+The selected group is `tide-and-seek-testers@googlegroups.com`. Testers must
+join that group with the Google account used on their Android phone and then
+accept the Play opt-in invitation. Tester feedback goes to
+`testing@tailendcharlie.app`.
+
 No keystore, password, service-account JSON, tester address list, or provider
 credential belongs in the repository.
 
@@ -50,7 +61,8 @@ credential belongs in the repository.
 
 Run **Android closed testing** from GitHub Actions on `main` with:
 
-- `build_number: 26` for the first release;
+- `build_number` left blank to derive a unique code, or an explicitly verified
+  unused Play version code;
 - `promote_to: alpha`; and
 - `notification_mode: dry-run`.
 

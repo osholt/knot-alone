@@ -20,9 +20,14 @@ show the expected app version, build number, and
 
 ## iOS
 
-Open TestFlight, pull to refresh, and choose Update for Tide and Seek. Confirm
-the version and build in **Settings → About & build** before reporting a
-problem.
+Accept the emailed Tide and Seek external TestFlight invitation with the Apple
+Account used on the test iPhone. Open TestFlight, pull to refresh, and choose
+Install or Update. The first external build of a version appears only after
+Apple completes beta review.
+
+Confirm the version, build and `TestFlight` track in **Settings → About &
+build** before reporting a problem. Send feedback to
+`testing@tailendcharlie.app` with those build details.
 
 Tester builds remain subject to the product and safety warnings in
 [`PLAN.md`](../PLAN.md). They are not approved for navigation.

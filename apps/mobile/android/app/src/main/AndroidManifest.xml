@@ -97,7 +97,7 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data
                     android:scheme="https"
-                    android:host="tideandseek.invalid"
+                    android:host="tide-and-seek.tailendcharlie.app"
                     android:path="/planner.html" />
             </intent-filter>
             <intent-filter android:autoVerify="true">
@@ -106,7 +106,7 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data
                     android:scheme="https"
-                    android:host="tideandseek.invalid"
+                    android:host="tide-and-seek.tailendcharlie.app"
                     android:path="/join.html" />
             </intent-filter>
             <!-- Opening a .gpx file (Files, a browser download, Mail) with a

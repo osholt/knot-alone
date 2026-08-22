@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "dev.osholt.tideandseek",
+      "sha256_cert_fingerprints": ["80:06:4C:53:43:1C:5C:64:96:09:4B:0C:57:0A:FB:29:7D:F0:11:E5:CC:C3:6E:7C:76:C9:F5:57:9D:C4:26:17"]
+    }
+  }
+]
