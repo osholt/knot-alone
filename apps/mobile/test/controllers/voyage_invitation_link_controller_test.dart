@@ -24,7 +24,7 @@ void main() {
     'warm refresh replaces a malformed notice with a later valid link',
     () async {
       final source = _QueuedSource([
-        'https://tideandseek.invalid/join.html#bad',
+        'https://tide-and-seek.tailendcharlie.app/join.html#bad',
       ]);
       final controller = await VoyageInvitationLinkController.load(
         source: source,

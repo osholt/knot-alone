@@ -11,7 +11,7 @@ void main() {
     final uri = Uri.parse(value);
 
     expect(uri.scheme, 'https');
-    expect(uri.host, 'tideandseek.invalid');
+    expect(uri.host, 'tide-and-seek.tailendcharlie.app');
     expect(uri.path, '/join.html');
     expect(uri.hasQuery, isFalse);
     expect(Uri.decodeComponent(uri.fragment), '$code#$token');
@@ -34,7 +34,7 @@ void main() {
   test('rejects capability material outside the exact private fragment', () {
     expect(
       voyageInvitationFromLink(
-        'https://tideandseek.invalid/join.html?token=$token#$code',
+        'https://tide-and-seek.tailendcharlie.app/join.html?token=$token#$code',
       ),
       isNull,
     );
@@ -44,12 +44,14 @@ void main() {
     );
     expect(
       voyageInvitationFromLink(
-        'https://tideandseek.invalid/join.html#open-$code%23$token',
+        'https://tide-and-seek.tailendcharlie.app/join.html#open-$code%23$token',
       ),
       isNull,
     );
     expect(
-      voyageInvitationFromLink('https://tideandseek.invalid/join.html#$code'),
+      voyageInvitationFromLink(
+        'https://tide-and-seek.tailendcharlie.app/join.html#$code',
+      ),
       isNull,
     );
   });

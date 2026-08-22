@@ -13,7 +13,7 @@ void main() {
 
   test('cold-start planner link fetches and stages a GPX route', () async {
     final source = _PlannerLinkSource([
-      'https://tideandseek.invalid/planner.html?code=7f3k9qrt',
+      'https://tide-and-seek.tailendcharlie.app/planner.html?code=7f3k9qrt',
     ]);
     final directory = _PlanDirectory(
       result: const FetchedPlan(name: 'Sunday / Loop', gpx: '<gpx />'),
@@ -45,7 +45,9 @@ void main() {
     addTearDown(controller.dispose);
     expect(controller.pending, isNull);
 
-    source.values.add('https://tideandseek.invalid/planner.html?code=AB12CD34');
+    source.values.add(
+      'https://tide-and-seek.tailendcharlie.app/planner.html?code=AB12CD34',
+    );
     await controller.refreshForTesting();
 
     expect(directory.codes, ['AB12CD34']);
@@ -58,7 +60,7 @@ void main() {
       final controller = await SharedRouteController.load(
         channel: const _NoGpxChannel(),
         plannerLinkSource: _PlannerLinkSource([
-          'https://tideandseek.invalid/planner.html?code=EXPIRED1',
+          'https://tide-and-seek.tailendcharlie.app/planner.html?code=EXPIRED1',
         ]),
         planDirectory: _PlanDirectory(
           error: const PlanDirectoryException(
@@ -89,7 +91,7 @@ void main() {
     final controller = await SharedRouteController.load(
       channel: const _NoGpxChannel(),
       plannerLinkSource: _PlannerLinkSource([
-        'https://tideandseek.invalid/planner.html?code=AB12CD34',
+        'https://tide-and-seek.tailendcharlie.app/planner.html?code=AB12CD34',
       ]),
       planDirectory: directory,
     );

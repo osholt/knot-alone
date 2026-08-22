@@ -100,6 +100,7 @@ const elements = {
   mapEnvironmentTime: document.querySelector("#map-environment-time"),
   noaaVisible: document.querySelector("#noaa-visible"),
   offshoreContoursVisible: document.querySelector("#offshore-contours-visible"),
+  openInApp: document.querySelector("#open-plan-in-app"),
   passageName: document.querySelector("#passage-name"),
   passageArrival: document.querySelector("#passage-arrival"),
   poiFilters: document.querySelector("#poi-filters"),
@@ -1166,6 +1167,8 @@ function downloadGpx() {
 
 async function publishPlan() {
   elements.publish.disabled = true;
+  elements.openInApp.hidden = true;
+  elements.openInApp.removeAttribute("href");
   elements.actionStatus.textContent = "Creating a short plan code…";
   try {
     const gpx = buildGpx({ passageName: elements.passageName.value, stops });
@@ -1180,7 +1183,11 @@ async function publishPlan() {
     if (!response.ok) throw new Error(`The plan service returned HTTP ${response.status}.`);
     const result = await response.json();
     if (!/^[A-Z0-9]{4,16}$/.test(result.code || "")) throw new Error("The plan service returned an invalid code.");
-    elements.actionStatus.textContent = `Plan code ${result.code}. Enter it in Tide and Seek; it expires ${formatExpiry(result.expiresAt)}.`;
+    const appLink = new URL("/planner.html", "https://tide-and-seek.tailendcharlie.app");
+    appLink.searchParams.set("code", result.code);
+    elements.openInApp.href = appLink.toString();
+    elements.openInApp.hidden = false;
+    elements.actionStatus.textContent = `Plan code ${result.code}. It expires ${formatExpiry(result.expiresAt)}.`;
   } catch (error) {
     elements.actionStatus.textContent = `Could not create a plan code. ${error.message}`;
   } finally {

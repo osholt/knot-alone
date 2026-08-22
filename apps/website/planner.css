@@ -285,6 +285,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--sea); box-shadow
 .planner-actions { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .planner-actions .button { min-height: 41px; padding: 0 10px; font-size: 0.75rem; }
 .planner-actions .button-primary { grid-column: 1 / -1; border: 0; }
+.open-in-app { grid-column: 1 / -1; color: var(--sea); font-size: 0.78rem; font-weight: 800; text-align: center; text-underline-offset: 4px; }
 .secondary-button { color: var(--sea-dark); background: #fff; }
 .file-button { position: relative; overflow: hidden; }
 .file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; }

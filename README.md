@@ -44,7 +44,8 @@ AIS receiver is documented in
 network-AIS account or provider key.
 
 Tester distribution is documented in
-[docs/android-internal-testing.md](docs/android-internal-testing.md) and
+[docs/android-internal-testing.md](docs/android-internal-testing.md),
+[docs/testflight.md](docs/testflight.md), and
 [docs/tester-update-guide.md](docs/tester-update-guide.md).
 
 ## Repository layout
@@ -79,14 +80,14 @@ uv run pytest
 ```
 
 ```bash
-node --test apps/website/browser-syntax.test.mjs apps/website/planner-core.test.mjs apps/website/map-data.test.mjs
+node --test apps/website/browser-syntax.test.mjs apps/website/planner-core.test.mjs apps/website/map-data.test.mjs apps/website/app-links.test.mjs
 python3 -m unittest tools/places/test_generate_sailing_pois.py
 ```
 
-App/API and associated-domain defaults still use `*.invalid`. The static web
-planner is the deliberate exception: its selected Pages and custom hostnames
-are documented in [docs/cloudflare-pages.md](docs/cloudflare-pages.md). Other
-network providers and app-store identifiers remain separate release decisions.
+App and Universal Links use the selected public host
+`tide-and-seek.tailendcharlie.app`; the optional relay remains build-configured
+and uses guarded `*.invalid` defaults when it is absent. Deployment details are
+in [docs/cloudflare-pages.md](docs/cloudflare-pages.md).
 
 ## Licence and attribution
 

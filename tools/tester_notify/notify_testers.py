@@ -28,9 +28,12 @@ Usage:
       --recipient "$TESTER_GROUP" --mode auto
 """
 
+# ruff: noqa: E501 - HTML email source lines are intentionally kept readable.
+
 from __future__ import annotations
 
 import argparse
+import html as html_module
 import os
 import re
 import smtplib
@@ -42,6 +45,22 @@ from email.message import EmailMessage
 from pathlib import Path
 
 PACKAGE_NAME = "dev.osholt.tideandseek"
+
+# Reuse the checked-in app icon rather than maintaining a second binary copy.
+# A missing icon degrades to text-only branding and never blocks a release.
+MAIL_ICON_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "apps/mobile/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"
+)
+MAIL_ICON_CID = "app-icon"
+
+
+def load_mail_icon() -> bytes | None:
+    try:
+        return MAIL_ICON_PATH.read_bytes()
+    except OSError:
+        return None
+
 
 # Must stay identical to DistributionTrack's labels in
 # apps/mobile/lib/services/build_identity.dart: the mail tells a tester what
@@ -106,6 +125,7 @@ class ReleaseContext:
 class RenderedEmail:
     subject: str
     body: str
+    html: str
 
 
 @dataclass(frozen=True)
@@ -196,20 +216,68 @@ def assert_safe(text: str) -> None:
             raise UnsafeContentError("refusing to send a link to " + host)
 
 
-def render_email(context: ReleaseContext) -> RenderedEmail:
-    email = RenderedEmail(render_subject(context), render_body(context))
+def render_html(context: ReleaseContext, *, with_icon: bool) -> str:
+    """Render a compact TestFlight-style HTML alternative."""
+    esc = html_module.escape
+    build = esc(f"{context.app_version} ({context.build_number})")
+    baseline = esc(context.changes_baseline or "the previous notified build")
+    raw_changes = context.changes or ("(no commit list available for this release)",)
+    changes = [line[2:] if line.startswith("- ") else line for line in raw_changes]
+    change_items = "".join(f"<li>{esc(line)}</li>" for line in changes)
+    icon = (
+        f'<img src="cid:{MAIL_ICON_CID}" width="112" height="112" '
+        'alt="Tide and Seek" style="display:block;margin:0 auto 28px" />'
+        if with_icon
+        else ""
+    )
+    link_style = "color:#075f78;text-decoration:none;font-weight:600"
+    return f"""<!doctype html>
+<html><body style="margin:0;background:#f4f0e7;color:#12303a">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;background:#fffdf7;border-radius:24px">
+<tr><td style="padding:42px">{icon}
+<h1 style="margin:0 0 24px;text-align:center;font-size:28px;line-height:34px">Tide and Seek {build} is ready to test on Android.</h1>
+<p style="font-size:17px;line-height:25px">Open the <a href="{esc(context.opt_in_url)}" style="{link_style}">closed-testing opt-in page</a> on the phone you sail with, signed in with the Google account you test on, then install the update from Google Play.</p>
+<p style="font-size:17px;line-height:25px">Confirm <strong>Settings &#8594; About &amp; build</strong> shows app version {esc(context.app_version)}, build {esc(context.build_number)} and {esc(context.track_label)}.</p>
+<h2 style="margin:28px 0 8px;font-size:17px">What changed since {baseline}</h2>
+<ul style="font-size:15px;line-height:22px;padding-left:22px">{change_items}</ul>
+<p style="font-size:14px;line-height:22px"><a href="{esc(context.doc_url("tester-release-notes.md"))}" style="{link_style}">Tester notes</a> &nbsp;·&nbsp; <a href="{esc(context.doc_url("tester-update-guide.md"))}" style="{link_style}">Tester guide</a> &nbsp;·&nbsp; <a href="{esc(context.run_url)}" style="{link_style}">Build run</a></p>
+<p style="border-top:1px solid #cdd8d6;padding-top:18px;color:#5d7177;font-size:12px;line-height:18px">Built from <a href="{esc(context.commit_url)}" style="{link_style}">{esc(context.short_commit)}</a>. You are receiving this because you are on the Tide and Seek closed tester list. Include the About &amp; build details in every report.</p>
+</td></tr></table></td></tr></table></body></html>"""
+
+
+def render_email(context: ReleaseContext, *, with_icon: bool = True) -> RenderedEmail:
+    email = RenderedEmail(
+        render_subject(context),
+        render_body(context),
+        render_html(context, with_icon=with_icon),
+    )
     assert_safe(email.subject)
     assert_safe(email.body)
+    assert_safe(email.html)
     return email
 
 
-def build_message(email: RenderedEmail, sender: str, recipient: str) -> EmailMessage:
+def build_message(
+    email: RenderedEmail,
+    sender: str,
+    recipient: str,
+    icon: bytes | None = None,
+) -> EmailMessage:
     message = EmailMessage()
     message["Subject"] = email.subject
     message["From"] = sender
     message["To"] = recipient
     message["Auto-Submitted"] = "auto-generated"
     message.set_content(email.body)
+    message.add_alternative(email.html, subtype="html")
+    if icon is not None:
+        message.get_payload()[-1].add_related(
+            icon,
+            maintype="image",
+            subtype="png",
+            cid=f"<{MAIL_ICON_CID}>",
+        )
     return message
 
 
@@ -407,8 +475,9 @@ def main(
         changes=read_changes(args.changes_file),
         changes_baseline=args.changes_baseline,
     )
+    icon = load_mail_icon()
     try:
-        email = render_email(context)
+        email = render_email(context, with_icon=icon is not None)
     except UnsafeContentError as error:
         stream.write(f"::error::Tester notification not sent: {error}\n")
         return 0
@@ -417,7 +486,12 @@ def main(
     decision = decide(args.mode, args.recipient, missing)
     delivered = False
     if decision.action == "send" and settings is not None:
-        message = build_message(email, settings.sender, args.recipient.strip())
+        message = build_message(
+            email,
+            settings.sender,
+            args.recipient.strip(),
+            icon=icon,
+        )
         try:
             send(message, settings)
             delivered = True

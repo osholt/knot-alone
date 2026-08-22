@@ -1,8 +1,9 @@
 import 'package:flutter/services.dart';
 
 import '../domain/join_invite.dart';
+import '../domain/product_links.dart';
 
-const voyageInvitationPath = '/join.html';
+const voyageInvitationPath = tideAndSeekVoyageInvitationPath;
 
 /// A private, server-resolvable invitation captured from an App/Universal Link.
 ///
@@ -47,18 +48,7 @@ class VoyageInvitationLinkChannel
   }
 }
 
-/// Builds the invitation URL format the app will share once it has a domain.
-///
-/// Nothing in `lib/` calls this today (#51). The share message leads with the
-/// voyage code instead, because `tideandseek.invalid` is a reserved TLD that
-/// can never resolve and the build carries no Associated Domain and no custom
-/// URL scheme - so the link was the one part of an invitation that failed when
-/// tapped.
-///
-/// It is kept rather than deleted because the receiving half is real:
-/// `VoyageInvitationLinkController` parses links that arrive from anywhere, and
-/// it needs a builder to be tested against. The day #40 gets a real domain, the
-/// host constant changes here and the share message gets its link back.
+/// Builds a private invitation on the verified Tide and Seek web origin.
 ///
 /// [Uri.replace] percent-encodes the `#` inside `code#token`; it remains inside
 /// the outer URL fragment and is decoded again by [Uri.fragment].
@@ -69,7 +59,7 @@ String voyageInvitationUrl(String voyageCode, String joinToken) {
     throw const FormatException('Cannot create an invalid voyage invitation.');
   }
   return Uri.https(
-    'tideandseek.invalid',
+    tideAndSeekWebsiteHost,
     voyageInvitationPath,
   ).replace(fragment: invitation).toString();
 }
@@ -80,7 +70,7 @@ VoyageInvitationLink? voyageInvitationFromLink(String value) {
   final uri = Uri.tryParse(value);
   if (uri == null ||
       uri.scheme != 'https' ||
-      uri.host.toLowerCase() != 'tideandseek.invalid' ||
+      uri.host.toLowerCase() != tideAndSeekWebsiteHost ||
       uri.path != voyageInvitationPath ||
       uri.userInfo.isNotEmpty ||
       uri.hasPort ||

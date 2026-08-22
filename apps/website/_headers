@@ -10,3 +10,17 @@
 
 /planner.html
   Cache-Control: no-cache
+
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+  Cache-Control: no-store
+
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Cache-Control: no-store
+
+/join.html
+  Cache-Control: no-store
+  Referrer-Policy: no-referrer
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Content-Security-Policy: default-src 'self'; script-src 'none'; connect-src 'none'; style-src 'self'; img-src 'self' data:; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'

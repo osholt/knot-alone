@@ -1,14 +1,19 @@
 # Oracle web-planner deployment
 
-The Tide and Seek passage planner runs as an isolated static container. It does
-not join, restart or depend on the Tail End Charlie Compose projects, database,
-relay or Caddy network.
+The Tide and Seek passage planner can run as an isolated static container for
+private preview or fallback use. The public site is deployed independently to
+Cloudflare Pages at `tide-and-seek.pages.dev` and
+`tide-and-seek.tailendcharlie.app`.
+
+The Oracle container does not join, restart or depend on the Tail End Charlie
+Compose projects, database, relay or Caddy network.
 
 ## Exposure boundary
 
-The host port defaults to `127.0.0.1:4180`. This keeps the preview off the
-public internet and avoids changing TEC's production TLS proxy or DNS before a
-Tide and Seek domain is selected.
+The host port defaults to `127.0.0.1:4180`. This keeps the Oracle copy off the
+public internet and avoids changing TEC's production TLS proxy or DNS. Public
+deployment and custom-domain routing are documented in
+[`cloudflare-pages.md`](cloudflare-pages.md).
 
 Reach it through an SSH tunnel:
 

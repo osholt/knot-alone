@@ -12,6 +12,7 @@ import '../../controllers/spoken_guidance_controller.dart';
 import '../../controllers/test_control_controller.dart';
 import '../../domain/distance_unit.dart';
 import '../../domain/map_style_mode.dart';
+import '../../domain/product_links.dart';
 import '../../domain/sailor_color.dart';
 import '../../services/basemap_configuration.dart';
 import '../../services/build_identity.dart';
@@ -787,12 +788,7 @@ class _AboutBuildTile extends StatelessWidget {
 }
 
 Future<void> _openLegalPage(BuildContext context, String page) async {
-  final uri = switch (page) {
-    'privacy.html' => Uri.parse(
-      'https://github.com/osholt/knot-alone/blob/main/PRIVACY.md',
-    ),
-    _ => Uri.https('tideandseek.invalid', '/$page'),
-  };
+  final uri = Uri.https(tideAndSeekWebsiteHost, '/$page');
   final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (!opened && context.mounted) {
     ScaffoldMessenger.of(

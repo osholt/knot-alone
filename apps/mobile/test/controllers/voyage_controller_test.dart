@@ -23,6 +23,7 @@ import 'package:tide_and_seek/services/voyage_event_authenticator.dart';
 import 'package:tide_and_seek/services/voyage_lifecycle.dart';
 import 'package:tide_and_seek/services/sailor_contact_share.dart';
 import 'package:tide_and_seek/services/situation_event_factory.dart';
+import 'package:tide_and_seek/services/voyage_invitation_link.dart';
 
 void main() {
   late InMemoryEventStore eventStore;
@@ -514,34 +515,26 @@ void main() {
     },
   );
 
-  // #51. The message used to open with an `https://tideandseek.invalid/...`
-  // address: a reserved TLD that cannot resolve, on a build with no Associated
-  // Domain and no custom URL scheme. Every invitation therefore led with the
-  // one thing in it that failed when tapped.
-  test(
-    'voyage code share text contains nothing that fails when tapped',
-    () async {
-      await controller.createVoyage('Lead');
+  test('voyage code share text carries a verified web invitation', () async {
+    await controller.createVoyage('Lead');
+    final activeSession = controller.session!;
 
-      expect(controller.voyageCodeShareText, isNot(contains('http')));
-      expect(controller.voyageCodeShareText, isNot(contains('.invalid')));
-    },
-  );
+    expect(
+      controller.voyageCodeShareText,
+      contains(
+        voyageInvitationUrl(activeSession.voyageCode, activeSession.joinToken),
+      ),
+    );
+    expect(controller.voyageCodeShareText, isNot(contains('.invalid')));
+  });
 
-  test(
-    'the voyage code is the first actionable thing in the share text',
-    () async {
-      await controller.createVoyage('Lead');
-      final text = controller.voyageCodeShareText;
-      final activeSession = controller.session!;
+  test('the voyage code remains available as a manual fallback', () async {
+    await controller.createVoyage('Lead');
+    final text = controller.voyageCodeShareText;
+    final activeSession = controller.session!;
 
-      expect(
-        text.indexOf('Voyage code: ${activeSession.voyageCode}'),
-        lessThan(text.indexOf(activeSession.joinToken)),
-        reason: 'the six digits are what a recipient will actually type',
-      );
-    },
-  );
+    expect(text, contains('Voyage code: ${activeSession.voyageCode}'));
+  });
 
   test('non-numeric voyage code is rejected before lookup', () async {
     await controller.joinVoyage('ABC234', 'Oliver');
