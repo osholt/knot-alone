@@ -16,6 +16,9 @@ const androidActivity = await read(
 const iosDelegate = await read("../mobile/ios/Runner/AppDelegate.swift");
 const iosEntitlements = await read("../mobile/ios/Runner/Release.entitlements");
 const dartLinks = await read("../mobile/lib/domain/product_links.dart");
+const androidClosedTestingWorkflow = await read(
+  "../../.github/workflows/android-closed-testing.yml",
+);
 
 const HOST = "tide-and-seek.tailendcharlie.app";
 const PLAY_FINGERPRINT =
@@ -70,16 +73,30 @@ test("the invitation fallback cannot transmit its URL fragment", async () => {
   }
 });
 
-test("public privacy, terms and tester destinations are linked", async () => {
-  const [home, privacy, terms] = await Promise.all([
+test("public legal and tester surfaces keep Android access invitation-only", async () => {
+  const [home, join, privacy, terms] = await Promise.all([
     read("./index.html"),
+    read("./join.html"),
     read("./privacy.html"),
     read("./terms.html"),
   ]);
   assert.match(home, /\/privacy\.html/);
   assert.match(home, /\/terms\.html/);
-  assert.match(home, /play\.google\.com\/apps\/testing\/dev\.osholt\.tideandseek/);
   assert.match(home, /testflight\.apple\.com/);
+  assert.match(home, /Android closed testing[\s\S]*Invitation-only/);
+  assert.match(join, /Android test builds are invitation-only/);
+  for (const publicPage of [home, join, privacy, terms]) {
+    assert.doesNotMatch(publicPage, /play\.google\.com\/apps\/testing\//);
+  }
   assert.match(privacy, /privacy@tailendcharlie\.app/);
   assert.match(terms, /support@tailendcharlie\.app/);
+});
+
+test("Android tester releases cannot select an open or production track", () => {
+  const promoteInput = androidClosedTestingWorkflow.match(
+    /promote_to:[\s\S]*?notification_mode:/,
+  )?.[0];
+  assert.ok(promoteInput);
+  assert.match(promoteInput, /options: \[alpha, none\]/);
+  assert.doesNotMatch(promoteInput, /\bbeta\b|\bproduction\b/);
 });
