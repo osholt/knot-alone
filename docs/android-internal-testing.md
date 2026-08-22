@@ -5,10 +5,10 @@ release path. The manual **Android closed testing** workflow builds a signed App
 Bundle, uploads it to Google Play's `internal` track, and promotes the exact same
 bundle to the private closed `alpha` track.
 
-The Android package is permanently fixed as `dev.osholt.tideandseek`. The tester
-opt-in page is:
-
-`https://play.google.com/apps/testing/dev.osholt.tideandseek`
+The Android package is permanently fixed as `dev.osholt.tideandseek`. The
+closed-track opt-in link is distributed only to accepted testers through the
+private group/release message. Do not publish it on the Tide and Seek website
+or use it as an open-enrolment call to action.
 
 ## One-time setup
 
@@ -70,9 +70,10 @@ If upload succeeds but promotion fails, run **Promote Android tester release**
 with the existing version code. Run **Play track status** afterward and confirm
 the version is on `alpha`.
 
-Finally, open the opt-in page on a physical Android phone using a member of the
-tester group. Install or update and confirm **Settings → About & build** reports
-the expected version code and `Play closed testing (alpha)`.
+Finally, open the private opt-in link from the tester invitation on a physical
+Android phone using a member of the tester group. Install or update and confirm
+**Settings → About & build** reports the expected version code and `Play closed
+testing (alpha)`.
 
 Google Play API success cannot prove that a phone has received the build. That
 physical check remains part of every first-time setup.

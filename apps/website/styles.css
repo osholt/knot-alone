@@ -287,7 +287,7 @@ button, .button { cursor: pointer; }
 .testing-actions .button { min-height: 52px; justify-content: center; text-align: center; }
 .testing-actions .button-primary { color: var(--sea-dark); background: #fff; }
 .testing-actions .button-secondary { color: #fff; border-color: rgba(255, 255, 255, 0.65); }
-.testing-contact { margin-top: 6px; color: #d8edef; text-align: center; text-underline-offset: 4px; }
+.testing-restricted { margin: 6px 0 0; padding: 16px 18px; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 14px; text-align: center; }
 
 .site-footer {
   padding: 28px 0 38px;

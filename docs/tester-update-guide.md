@@ -6,9 +6,9 @@ Android testers use Google Play **closed testing**, track `alpha`.
 
 1. Join `tide-and-seek-testers@googlegroups.com` with the Google account used
    on the test phone.
-2. Open
-   `https://play.google.com/apps/testing/dev.osholt.tideandseek` with that same
-   account and accept the invitation.
+2. Open the private closed-testing opt-in link sent to the tester group with
+   that same account and accept the invitation. It is deliberately not linked
+   from the public website.
 3. Follow **Download it on Google Play**, then choose Install or Update.
 
 Play may take several minutes to offer a new build. If necessary, refresh
