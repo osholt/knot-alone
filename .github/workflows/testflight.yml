@@ -76,9 +76,15 @@ jobs:
             echo "::error::The provisioning profile belongs to $app_identifier, not UY4624PH6X.$BUNDLE_ID." >&2
             exit 1
           fi
-          if ! /usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.developer.associated-domains' "$profile_plist" \
-            | grep -q 'applinks:tide-and-seek.tailendcharlie.app'; then
-            echo "::error::The provisioning profile must include the Tide and Seek Associated Domain." >&2
+          profile_domains="$(/usr/libexec/PlistBuddy \
+            -c 'Print :Entitlements:com.apple.developer.associated-domains' \
+            "$profile_plist" 2>/dev/null || true)"
+          # Apple represents the enabled Associated Domains capability as `*`
+          # in current App Store profiles. The signed app entitlement below is
+          # still checked for the exact Tide and Seek applinks hostname.
+          if ! grep -Eq '(^|[[:space:]])(\*|applinks:tide-and-seek\.tailendcharlie\.app)([[:space:]]|$)' \
+            <<<"$profile_domains"; then
+            echo "::error::The provisioning profile must enable Associated Domains." >&2
             exit 1
           fi
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
