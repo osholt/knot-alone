@@ -162,7 +162,7 @@ jobs:
             DEVELOPMENT_TEAM="UY4624PH6X" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="$CODE_SIGN_IDENTITY" \
-            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            TIDE_AND_SEEK_PROFILE_NAME="$PROFILE_NAME" \
             archive
 
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST

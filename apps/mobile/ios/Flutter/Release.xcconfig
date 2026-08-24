@@ -1,2 +1,7 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
+
+// Runner-only manual profile selection for headless App Store archives. The
+// workflow supplies this user-defined setting; Swift package and Pod resource
+// bundles do not inherit PROVISIONING_PROFILE_SPECIFIER from this target file.
+PROVISIONING_PROFILE_SPECIFIER = $(TIDE_AND_SEEK_PROFILE_NAME)
