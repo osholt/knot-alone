@@ -16,7 +16,10 @@ class FakeClient:
 
     def request(self, method, path, **kwargs):
         self.requests.append((method, path, kwargs))
-        return self.responses.pop(0)
+        response = self.responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
 
 
 class SubmitExternalTests(unittest.TestCase):
@@ -110,6 +113,28 @@ class SubmitExternalTests(unittest.TestCase):
                 build_id="build-1",
                 dry_run=False,
             )
+
+    def test_active_review_for_same_train_defers_without_failing(self):
+        client = FakeClient(
+            [
+                {"data": []},
+                SUBMIT_EXTERNAL.AppStoreConnectError(
+                    "POST /betaAppReviewSubmissions returned HTTP 422: "
+                    "Another build in the same train is already in beta review. "
+                    "Please submit it again once it gets completed."
+                ),
+            ]
+        )
+
+        state, submitted = SUBMIT_EXTERNAL.submit_for_review(
+            client,
+            build_id="build-2",
+            dry_run=False,
+        )
+
+        self.assertEqual(state, "DEFERRED_ACTIVE_TRAIN_REVIEW")
+        self.assertFalse(submitted)
+        self.assertEqual([request[0] for request in client.requests], ["GET", "POST"])
 
 
 if __name__ == "__main__":
