@@ -17,6 +17,7 @@ from typing import Any
 API_ROOT = "https://api.appstoreconnect.apple.com/v1"
 TERMINAL_PROCESSING_FAILURES = {"FAILED", "INVALID"}
 ACTIVE_REVIEW_STATES = {"APPROVED", "IN_REVIEW", "WAITING_FOR_REVIEW"}
+ACTIVE_TRAIN_REVIEW_DETAIL = "another build in the same train is already in beta review"
 
 
 class AppStoreConnectError(RuntimeError):
@@ -194,24 +195,33 @@ def submit_for_review(client: Any, *, build_id: str, dry_run: bool) -> tuple[str
         )
     if dry_run:
         return "READY_FOR_SUBMISSION", True
-    response = client.request(
-        "POST",
-        "/betaAppReviewSubmissions",
-        body={
-            "data": {
-                "type": "betaAppReviewSubmissions",
-                "relationships": {
-                    "build": {
-                        "data": {
-                            "type": "builds",
-                            "id": build_id,
+    try:
+        response = client.request(
+            "POST",
+            "/betaAppReviewSubmissions",
+            body={
+                "data": {
+                    "type": "betaAppReviewSubmissions",
+                    "relationships": {
+                        "build": {
+                            "data": {
+                                "type": "builds",
+                                "id": build_id,
+                            }
                         }
-                    }
-                },
-            }
-        },
-        expected=(201,),
-    )
+                    },
+                }
+            },
+            expected=(201,),
+        )
+    except AppStoreConnectError as error:
+        # Apple accepts only one build from a version train into beta review at
+        # a time. The new build is still valid and assigned to the private
+        # tester group, so this is an expected deferred submission rather than
+        # a failed release.
+        if ACTIVE_TRAIN_REVIEW_DETAIL in str(error).lower():
+            return "DEFERRED_ACTIVE_TRAIN_REVIEW", False
+        raise
     state = response["data"].get("attributes", {}).get("betaReviewState", "SUBMITTED")
     return state, True
 
