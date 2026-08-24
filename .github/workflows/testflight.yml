@@ -120,8 +120,10 @@ jobs:
             echo "BUILD_NUMBER=$REQUESTED" >> "$GITHUB_ENV"
             exit 0
           fi
-          python3 -m pip install --quiet --disable-pip-version-check cryptography
-          number="$(python3 tools/testflight/next_build_number.py "$BUNDLE_ID")"
+          venv="$RUNNER_TEMP/testflight-build-number-venv"
+          python3 -m venv "$venv"
+          "$venv/bin/python" -m pip install --quiet --disable-pip-version-check cryptography
+          number="$("$venv/bin/python" tools/testflight/next_build_number.py "$BUNDLE_ID")"
           echo "BUILD_NUMBER=$number" >> "$GITHUB_ENV"
 
       - name: Build App Store IPA
