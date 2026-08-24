@@ -91,10 +91,14 @@ jobs:
           cp "$profile" "$HOME/Library/MobileDevice/Provisioning Profiles/$profile_uuid.mobileprovision"
           echo "PROFILE_NAME=$profile_name" >> "$GITHUB_ENV"
 
-          if ! security find-identity -v -p codesigning "$keychain" | grep -q "Apple Distribution"; then
-            echo "::error::The imported certificate is not an Apple Distribution certificate." >&2
+          code_sign_identity="$(security find-identity -v -p codesigning "$keychain" \
+            | sed -nE 's/.*"(Apple Distribution|iPhone Distribution):[^"]*".*/\1/p' \
+            | head -1)"
+          if [ -z "$code_sign_identity" ]; then
+            echo "::error::The imported certificate is not an Apple or iPhone Distribution certificate." >&2
             exit 1
           fi
+          echo "CODE_SIGN_IDENTITY=$code_sign_identity" >> "$GITHUB_ENV"
 
       - name: Resolve build number
         env:
@@ -154,7 +158,7 @@ jobs:
             -sdk iphoneos \
             -archivePath "$PWD/build/ios/archive/Runner.xcarchive" \
             CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
+            CODE_SIGN_IDENTITY="$CODE_SIGN_IDENTITY" \
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
             archive
 
@@ -188,7 +192,8 @@ jobs:
             echo "::error::The IPA has no Tide and Seek applinks entitlement." >&2
             exit 1
           }
-          codesign -dv --verbose=2 "$app" 2>&1 | grep -q "Authority=Apple Distribution"
+          codesign -dv --verbose=2 "$app" 2>&1 \
+            | grep -Eq "Authority=(Apple Distribution|iPhone Distribution)"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app/Info.plist")" = "$BUILD_NUMBER"
 
       - name: Upload to TestFlight
